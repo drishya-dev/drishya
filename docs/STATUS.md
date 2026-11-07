@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-1 | @harsh + Codex | `codex/land-1-design-plan` | 2026-11-07 | `docs/superpowers/plans/2026-11-07-drishya-landing-page.md`, this claim and TASKS completion. Design plan only, including public demo and local app handoff. |
 | FILES-12 | @yash + Codex (Sol 6.1) | `codex/files-12` | 2026-11-07 | Evidence-resolved prose path module/provider, markdown.tsx inline/bare links only, SessionWorkspace.tsx provider wiring and Files folder reveal only, OpImages.tsx export its existing ImageReader and keep nested image Escape in its own dialog only (no appearance/motion changes); focused unit/browser/real-session tests and docs, at most 15 paths. Preserve FILES-2 peek links; no History/motion/scroll edits without a separate reservation. Existing classes/tokens only; look left to FINISH-3. Builder resolved #357: file references open the existing file preview and show contents; preserve captured/current consent and FILES-2. No extra icon action. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
@@ -52,6 +51,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 7 November: LAND-1 landing page plan
+
+- [Design proposal](superpowers/plans/2026-11-07-drishya-landing-page.md) uses Sui's visual rhythm and Linear's product-first presentation. Its central visual links the sample repository map to a readable investigation. The plan covers public pages, UI states, motion, a static sample replay, authenticated local setup and release verification under REL-4.
+- Verified all four chapter positions against the committed synthetic bundle (4, 24, 26, 28), checked plan links and 22 motion entries, and measured five proposed text/background pairs at 6.12:1 or higher. Docs-only validation. Public routes, budgets and release states remain proposals until implementation and acceptance.
 
 ### Harsh with Codex — 7 November: DOCS-1 product README
 
