@@ -212,3 +212,23 @@ for(const width of [600,1440])test(`raised connected-turn controls reserve layou
  expect(await reader.boundingBox()).toEqual(resting);
  await page.evaluate(()=>(window as any).__composerScale.cancel());await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
 });
+
+test('fractional composer bounds keep the reader inside its exact reserved gap',async({page})=>{
+ await page.setViewportSize({width:1440,height:900});await open(page);
+ await page.getByRole('button',{name:'Open toolbox',exact:true}).click();const reader=windowFor(page);await safe(page,reader);
+ const clearance=await page.locator('.prompt-composer').evaluate(composer=>{
+  const node=composer as HTMLElement;node.style.height='160.25px';node.style.minHeight='160.25px';node.style.maxHeight='160.25px';node.style.bottom='12px';
+  const queue=document.createElement('div');queue.className='queued-input-receipts';queue.style.cssText='position:absolute;bottom:calc(100% + 12.25px);height:32.75px;display:block!important';queue.textContent='Synthetic fractional receipt';composer.append(queue);
+  return queue.getBoundingClientRect().top;
+ });
+ await expect.poll(async()=>{const b=(await reader.boundingBox())!;return b.y+b.height;}).toBeLessThanOrEqual(clearance-12);
+});
+for(const width of [600,1440])test(`file navigation without pointer input dismisses the reader at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});await open(page);
+ await page.getByRole('button',{name:'Open toolbox',exact:true}).click();const reader=windowFor(page);await expect(reader).toBeVisible();
+ const material=reader.locator('[data-toolbox-part="toolbox"]');await material.evaluate(el=>(window as any).__fileNavigationMaterial=el);
+ // Use the app's file-navigation event without the outside pointer handler closing the reader first.
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:'0.ts'}})));
+ await expect(page.locator('.file-peek-reader')).toBeVisible();await expect(reader).toHaveCount(0);
+ expect(await page.locator('[data-toolbox-part="toolbox"]').evaluate(el=>el===(window as any).__fileNavigationMaterial&&el.parentElement?.classList.contains('toolbox-part-home'))).toBe(true);
+});

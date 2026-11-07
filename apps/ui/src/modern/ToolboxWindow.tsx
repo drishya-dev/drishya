@@ -21,7 +21,8 @@ function composerClearance(composer:HTMLElement|undefined){
   while(parent&&parent!==composer){offset+=parent.offsetTop;parent=parent.offsetParent as HTMLElement|null;}
   if(parent===composer)clearance=Math.min(clearance,top+composer.clientTop+offset);
  }
- return clearance;
+ // offsetHeight/offsetTop round fractional CSS pixels; keep that rounding inside the reserved gap.
+ return clearance-1;
 }
 
 const WindowContext=createContext<WindowApi|undefined>(undefined);
@@ -127,7 +128,7 @@ export function ToolboxWindowOwner({children}:{children:ReactNode}){
   const dock=viewer?.querySelector<HTMLElement>('.modern-tool-station');
   // A narrow viewport hides the dock, but the reader must survive resize.
   // Navigation away from the work view or an unavailable owner dismisses it.
-  const unavailable=()=>!viewer?.isConnected||viewer.inert||!viewer.checkVisibility({visibilityProperty:true})||viewer.matches('.developer-workspace-open,.exploring')||!dock?.isConnected||dock.inert||dock.hidden;
+  const unavailable=()=>!viewer?.isConnected||viewer.inert||!viewer.checkVisibility({visibilityProperty:true})||viewer.matches('.developer-workspace-open,.exploring,.file-peek-open')||!dock?.isConnected||dock.inert||dock.hidden;
   const settle=()=>{if(closing.current){finish(false);return;}cancel();place();node.dataset.phase='open';};
   const escape=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!event.isComposing){event.preventDefault();event.stopImmediatePropagation();close(false);}};
   const outside=(event:PointerEvent)=>{
