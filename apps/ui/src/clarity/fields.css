@@ -1,0 +1,30 @@
+/* Clarity's inputs (FINISH-0a): the text field and the search field. */
+@layer clarity {
+:root[data-ui-skin=clarity] :is(.cl-field, .cl-search) {
+  --field-h: var(--control-md);
+  box-sizing: border-box; height: var(--field-h); border: 1px solid var(--line-2); border-radius: var(--round-sm); background: var(--s1); color: var(--t1);
+  font: var(--weight-regular) var(--text-sm)/1.2 var(--sans);
+}
+:root[data-ui-skin=clarity] .cl-field { width: 100%; padding: 0 var(--sp-2); }
+:root[data-ui-skin=clarity] :is(.cl-field.lg, .cl-search.lg) { --field-h: var(--control-lg); }
+:root[data-ui-skin=clarity] :is(.cl-field, .cl-search input)::placeholder { color: var(--t4); opacity: 1; }
+@media (hover: hover) { :root[data-ui-skin=clarity] :is(.cl-field, .cl-search):not(:focus-within, :focus-visible):hover { border-color: var(--line-3); } }
+:root[data-ui-skin=clarity] .cl-field:focus-visible { outline: none; }
+:root[data-ui-skin=clarity] :is(.cl-field:focus-visible, .cl-search:focus-within) { border-color: var(--focus); box-shadow: 0 0 0 3px var(--field-ring); }
+:root[data-ui-skin=clarity] :is(.cl-field, .cl-search)[aria-invalid=true], :root[data-ui-skin=clarity] .cl-search:has(input[aria-invalid=true]) { border-color: var(--fail); }
+:root[data-ui-skin=clarity] .cl-field-error { margin: var(--sp-1) 0 0; font-size: var(--text-xs); line-height: 1.4; color: var(--fail); }
+:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.cl-field, .cl-search) { transition: border-color var(--dur-hover-out) var(--ease-out), box-shadow var(--dur-hover-out) var(--ease-out); }
+:root[data-ui-skin=clarity][data-ui-motion]:not([data-low-resource]) :is(.cl-field:hover, .cl-field:focus-visible, .cl-search:hover, .cl-search:focus-within) { transition-duration: var(--dur-hover-in); }
+
+/* Search: icon, input, clear. */
+:root[data-ui-skin=clarity] .cl-search { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--sp-1) 0 var(--sp-2); }
+:root[data-ui-skin=clarity] .cl-search-icon { flex: none; color: var(--t3); }
+:root[data-ui-skin=clarity] .cl-search > input {
+  flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; color: inherit; font: inherit; outline: none;
+}
+:root[data-ui-skin=clarity] .cl-search > input::-webkit-search-cancel-button { display: none; }
+:root[data-ui-skin=clarity] .cl-search-clear { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: var(--round-xs); background: none; color: var(--t3); cursor: pointer; }
+@media (hover: hover) { :root[data-ui-skin=clarity] .cl-search-clear:hover { background: var(--s3); color: var(--t1); } }
+/* Home: the search takes the row, the filters sit at its end. */
+:root[data-ui-skin=clarity] .mh-filters .mh-search-field { flex: 1; }
+}

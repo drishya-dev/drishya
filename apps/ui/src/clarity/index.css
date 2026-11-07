@@ -1,5 +1,10 @@
 /* Clarity's sheets, in order. Each is written inside `@layer clarity` and scoped to `:root[data-ui-skin=clarity]`
    once it has rules, so Modern (which never sets that attribute) cannot be touched. */
+@import './fonts.css';
 @import './tokens.css';
+@import './palettes.css';
 @import './base.css';
+@import './controls.css';
+@import './switch.css';
+@import './fields.css';
 @import './inherited-important.css';

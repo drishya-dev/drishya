@@ -1,0 +1,40 @@
+/* Clarity's two palettes (FINISH-0a): Graphite (dark, the default) and Porcelain (light). The saved palette id still lives in
+   `data-palette` (`jet` / `paper`) so every legacy rule keyed on it keeps matching; under Clarity those two ids ARE Graphite and Porcelain.
+   Settings offers only these two. A saved Modern palette maps to the one of the same scheme (state.ts), and is stored separately.
+   Every text and meaning colour clears 4.5:1 on the canvas and both panel surfaces (`--s1`, `--s2`); the table is in the PR. */
+@layer clarity {
+:root[data-ui-skin=clarity][data-theme][data-palette=jet] {
+  /* Canvas, panels and the raised fill. */
+  --bg: #000000; --s1: #0b0b0c; --s2: #121212; --s3: #1b1b1e;
+  /* Hairline, border, strong border. */
+  --line: #1f1f22; --line-2: #27272a; --line-3: #333337;
+  --t1: #ededed; --t2: #b5b7c1; --t3: #9b9da8; --t4: #8b8d98;
+  --focus: #8b92ec; --accent: #8b92ec; --palette-active: #5e6ad2; --palette-active-hover: #5662c8;
+  /* Identity and meaning. */
+  --claude: #e08a5f; --codex: #6fc3b3;
+  --live: #80d7aa; --pass: #80d7aa; --fail: #ff939b; --edited: #eac18a;
+  --read: #9fc8f3; --source: #9fc8f3; --external: #c8b0ec;
+  --syntax-keyword: #c0a8e8; --syntax-string: #adc9b2; --syntax-function: #a9c5eb; --syntax-number: #d4bc96;
+  --graph-node: #e8edf5; --graph-edge: #b4bfce; --canvas-dot: #ffffff14;
+  --elev-pop: 0 8px 24px rgb(0 0 0 / .36), 0 0 0 1px var(--line-2);
+  --elev-dialog: 0 18px 48px rgb(0 0 0 / .48), 0 0 0 1px var(--line-2);
+  color-scheme: dark;
+}
+:root[data-ui-skin=clarity][data-theme][data-palette=paper] {
+  --bg: #f5f5f7; --s1: #ffffff; --s2: #f0f0f3; --s3: #e6e6eb;
+  --line: #e4e4e9; --line-2: #d6d6dd; --line-3: #c0c0ca;
+  --t1: #16161a; --t2: #43444d; --t3: #585963; --t4: #61626d;
+  --focus: #4650c2; --accent: #4650c2; --palette-active: #4f5bd5; --palette-active-hover: #4651c8;
+  --claude: #a8481f; --codex: #0f7366;
+  --live: #16743f; --pass: #16743f; --fail: #bd2339; --edited: #8f5508;
+  --read: #1a5fa6; --source: #1a5fa6; --external: #7439b0;
+  --syntax-keyword: #a02a74; --syntax-string: #1a6a3c; --syntax-function: #1a5fa6; --syntax-number: #8f5508;
+  --graph-node: #2c3140; --graph-edge: #7a8094; --canvas-dot: #16161a1a;
+  --elev-pop: 0 8px 24px rgb(0 0 0 / .12), 0 0 0 1px var(--line-2);
+  --elev-dialog: 0 18px 48px rgb(0 0 0 / .18), 0 0 0 1px var(--line-2);
+  color-scheme: light;
+}
+/* The Settings chooser's swatches. */
+:root[data-ui-skin=clarity] .theme-graphite { --swatch-bg: #000000; --swatch-node: #0b0b0c; --swatch-raised: #121212; --swatch-accent: #8b92ec; --swatch-border: #27272a; }
+:root[data-ui-skin=clarity] .theme-porcelain { --swatch-bg: #f5f5f7; --swatch-node: #ffffff; --swatch-raised: #f0f0f3; --swatch-accent: #4f5bd5; --swatch-border: #d6d6dd; }
+}

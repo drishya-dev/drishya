@@ -1,3 +1,29 @@
-/* CLARITY-1 placeholder: FINISH-0a fills this. It changes nothing yet. */
+/* Clarity's base (FINISH-0a): the interface face, tabular counts, group labels and the one focus ring. */
 @layer clarity {
+:root[data-ui-skin=clarity] body { font-family: var(--sans); letter-spacing: 0; font-feature-settings: 'cv11', 'ss03'; }
+:root[data-ui-skin=clarity] :is(button, input, select, textarea) { font-family: inherit; letter-spacing: inherit; }
+
+/* Counts, durations, sizes and times: tabular and lining, so columns of figures align (Toolbox "Available tools": 4,867 above 4,420).
+   `.num` is the shared class for new markup; the rest are the existing count and time classes. */
+:root[data-ui-skin=clarity] :is(.num, td, th, time, output, .count, [data-count], .tool-uses, .tool-group-name > span, .tool-heading > span, .inst-uses,
+  .workspace-group-count, .home-overview strong, .mh-count, .context-metric, .context-report dd) {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* One focus ring everywhere, on :focus-visible only. Keyboard users see it settle from a 4 px offset to 2 px; pointer users never see the motion. */
+:root[data-ui-skin=clarity] :focus-visible { outline: var(--focus-ring) solid var(--focus); outline-offset: var(--focus-offset); }
+:root[data-ui-skin=clarity]:not([data-ui-press])[data-ui-motion]:not([data-low-resource]) :focus-visible:is(a, button, summary, input, select, textarea, [tabindex], [role=switch]) {
+  animation: cl-focus-settle var(--dur-focus) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) { :root[data-ui-skin=clarity] :focus-visible { animation: none !important; } }
+@keyframes cl-focus-settle { from { outline-offset: var(--focus-offset-start); } to { outline-offset: var(--focus-offset); } }
+/* A pointer click on a control inside a dialog never shows the ring (kept from UI-8); text fields always do. */
+:root[data-ui-skin=clarity][data-ui-press] .product-dialog :is(button, summary, [role=switch]):focus-visible { outline: none; }
+/* Group labels: sentence case, 12 px, medium, --t3. No tracked capitals anywhere (Home's "WORKSPACES", "TODAY", "YESTERDAY" read "Workspaces", "Today", "Yesterday"). */
+:root[data-ui-skin=clarity] :is(.mh-workspaces > header, .mh-time-group h3, .mh-active > .mh-active-label, .utility-heading, .modern-settings-nav > span, .session-time-section > h3, .search-turn, .question-header, .dock > h3) {
+  text-transform: none; letter-spacing: 0; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--t3);
+}
+:root[data-ui-skin=clarity] :is(.atlas-eyebrow, .mh-eyebrow, .plan-change) { text-transform: none; letter-spacing: 0; }
+/* Inter sets tighter than the display face the legacy sheets were tuned for. */
+:root[data-ui-skin=clarity] :is(h1, h2, h3, .brand, .mh-header > .brand) { letter-spacing: -.012em; }
 }

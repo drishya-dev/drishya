@@ -7,6 +7,7 @@ import type { Projection, RecordingSummary, RepoGraph } from '@drishya/contracts
 import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
 import type { Config, DataSource, ReaderRecording } from './api.ts';
 import { latestOnly } from './lib/sync.ts';
+import { selectedUISkin } from './lib/ui-version.ts';
 import { materialCache } from './lib/artifact-cache.ts';
 import { workspaceMemory } from './lib/workspace-memory.ts';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
@@ -335,9 +336,32 @@ export function setMapVisible(on: boolean) {
 }
 
 /** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
-export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system' | 'mocha' | 'tokyo' | 'nord' | 'gruvbox';
+export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system' | 'mocha' | 'tokyo' | 'nord' | 'gruvbox' | ClarityPalette;
+/** Clarity's two palettes (FINISH-0a). Stored under their own key, so Modern's saved palette is never touched. */
+export type ClarityPalette = 'graphite' | 'porcelain';
+export const CLARITY_THEME_KEY = 'drishya.clarity.theme';
+
+/**
+ * A Modern palette maps to the Clarity palette of the same scheme: the light ones (Daylight, Royal) to Porcelain, every dark one to Graphite.
+ * Used until the person makes a Clarity choice of their own, which is then saved separately.
+ */
+export function clarityPaletteFor(modern: string | null | undefined, prefersLight: boolean): ClarityPalette {
+  if (modern === 'light' || modern === 'tokyo') return 'porcelain';
+  if (modern === 'system') return prefersLight ? 'porcelain' : 'graphite';
+  return 'graphite';
+}
+function storedClarityTheme(): ClarityPalette {
+  try {
+    const own = localStorage.getItem(CLARITY_THEME_KEY);
+    if (own === 'graphite' || own === 'porcelain') return own;
+    return clarityPaletteFor(localStorage.getItem('drishya.theme'), matchMedia('(prefers-color-scheme: light)').matches);
+  } catch {
+    return 'graphite';
+  }
+}
 
 function storedTheme(): ThemePreference {
+  if (selectedUISkin() === 'clarity') return storedClarityTheme();
   try {
     const value = localStorage.getItem('drishya.theme');
     return ['midnight','light','system','mocha','tokyo','nord','gruvbox'].includes(value ?? '') ? value as ThemePreference : 'dark';
@@ -348,7 +372,9 @@ function storedTheme(): ThemePreference {
 
 export function setTheme(theme: ThemePreference) {
   useApp.setState({ theme });
-  try { localStorage.setItem('drishya.theme', theme); } catch { /* Optional local preference. */ }
+  // Clarity keeps its own choice; the Modern preference stays exactly as the person left it.
+  const key = theme === 'graphite' || theme === 'porcelain' ? CLARITY_THEME_KEY : 'drishya.theme';
+  try { localStorage.setItem(key, theme); } catch { /* Optional local preference. */ }
 }
 
 export function setDocumentSize(size: DocumentSize) {

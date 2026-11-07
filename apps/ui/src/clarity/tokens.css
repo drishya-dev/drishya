@@ -1,3 +1,35 @@
-/* CLARITY-1 placeholder: FINISH-0a fills this. It changes nothing yet. */
+/* Clarity's scales (FINISH-0a). Everything Clarity draws takes its space, layer, elevation, motion and type from here.
+   The remaining components are converted by their own FINISH items. */
 @layer clarity {
+:root[data-ui-skin=clarity] {
+  /* Interface face. The mono stays as it is. */
+  --sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Spacing, 4-based. 0h and 1h are only for control internals. */
+  --sp-0h: 2px; --sp-1: 4px; --sp-1h: 6px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-8: 32px; --sp-10: 40px; --sp-12: 48px; --sp-16: 64px;
+
+  /* Layers. */
+  --z-stage: 1; --z-raised: 10; --z-sticky: 20; --z-panel: 30; --z-popover: 40; --z-dialog: 50; --z-toast: 60;
+
+  /* Motion. A little slower and smoother than MOTION-1; one curve for arrivals and exits, one for travel. */
+  --ease-out: cubic-bezier(.23, 1, .32, 1);
+  --ease-move: cubic-bezier(.65, 0, .35, 1);
+  --dur-press: 120ms; --dur-release: 160ms;
+  --dur-hover-in: 140ms; --dur-hover-out: 200ms;
+  --dur-pop-in: 200ms; --dur-pop-out: 150ms;
+  --dur-tip-in: 140ms; --dur-tip-out: 100ms;
+  --dur-dialog-in: 240ms; --dur-dialog-out: 180ms;
+  --dur-panel-in: 240ms; --dur-panel-out: 180ms;
+  --dur-move: 280ms;
+  --dur-switch: 160ms;
+  --dur-focus: 140ms;
+
+  /* The one interface type scale stays where it is (`--text-2xs` 11 to `--text-3xl` 32): 11 px for marks and counts only,
+     12 px the floor for any sentence or label, 13 px the body. */
+  --focus-ring: 2px;
+  --focus-offset: 2px;
+  --focus-offset-start: 4px;
+  --field-ring: color-mix(in srgb, var(--focus) 25%, transparent);
+}
 }

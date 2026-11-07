@@ -9,6 +9,8 @@ import { useDismissMenus } from '../lib/dismiss-menus.ts';
 import { SettingsSections } from './UIVersions.tsx';
 import {useReadingWindow} from './ReadingWindow.tsx';
 import { useNotify, setNotifications } from '../lib/notifications.ts';
+import { useSkin } from '../lib/ui-version.ts';
+import { Switch } from '../clarity/Switch.tsx';
 
 /** Open modeless readers, oldest first; Escape closes only the newest, wherever focus is. */
 const modelessReaders: HTMLDialogElement[] = [];
@@ -85,10 +87,11 @@ export function ProductShell({ children }: { children: ReactNode }) {
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
       // Royal keeps its saved id (tokyo) but is a light palette since UI-8.
-      const lightPalette = theme === 'tokyo';
-      const scheme = theme === 'light' || lightPalette || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      const clarity = useSkin() === 'clarity';
+      const lightPalette = !clarity && theme === 'tokyo';
+      const scheme = theme === 'light' || theme === 'porcelain' || lightPalette || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = lightPalette ? 'tokyo' : scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
+      document.documentElement.dataset.palette = clarity ? scheme === 'light' ? 'paper' : 'jet' : lightPalette ? 'tokyo' : scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
     };
     apply();
     const preference = matchMedia('(prefers-color-scheme: light)');
@@ -115,6 +118,12 @@ const MODERN_THEMES = [
   ['gruvbox', 'Ember', 'Warm black · cantaloupe orange'],
 ] as const;
 
+// Clarity offers two palettes (FINISH-0a); more follow in FINISH-12.
+const CLARITY_THEMES = [
+  ['graphite', 'Graphite', 'Black and indigo · dark'],
+  ['porcelain', 'Porcelain', 'White and indigo · light'],
+] as const;
+
 function Settings() {
   const theme = useApp((s) => s.theme);
   const motion = useApp((s) => s.motion);
@@ -128,21 +137,25 @@ function Settings() {
   const source = useApp((s) => s.source);
   const config = useApp((s) => s.config);
   const notify = useNotify();
+  const clarity = useSkin() === 'clarity';
+  const toggle = (title: ReactNode, description: ReactNode, checked: boolean, set: (on: boolean) => void, disabled = false) => clarity
+    ? <Switch label={title} description={description} checked={checked} disabled={disabled} onChange={set} />
+    : <label className="setting-row"><span>{title}<small>{description}</small></span><input type="checkbox" checked={checked} disabled={disabled} onChange={e => set(e.target.checked)} /></label>;
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
     <SettingsSections categories={['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']}>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
-      <div className="theme-options" aria-label="Colour theme">{(document.documentElement.dataset.uiVersion==='modern'?MODERN_THEMES:THEMES.slice(0,3)).map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
+      <div className="theme-options" aria-label="Colour theme">{(clarity?CLARITY_THEMES:document.documentElement.dataset.uiVersion==='modern'?MODERN_THEMES:THEMES.slice(0,3)).map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>
     <section><h3>Reading and resources</h3>
-      <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>
-      <label className="setting-row"><span>Repository map<small>Static imports and session locations. No inferred execution flow.</small></span><input type="checkbox" checked={map} onChange={(e) => setMapVisible(e.target.checked)} /></label>
-      <label className="setting-row"><span>3D repository map<small>Spatial points and connections. Drag to orbit; Shift drag to pan; wheel to zoom. Depth is layout only.</small></span><input type="checkbox" checked={depth} onChange={e => setPresentationPreferences({ mapDepth: e.target.checked })} /></label>
-      <label className="setting-row"><span>Slow background orbit<small>15 fps maximum. Resumes 12 seconds after manual camera movement; off in hidden tabs, low resource mode or reduced motion.</small></span><input type="checkbox" checked={orbit} disabled={!depth} onChange={e => setPresentationPreferences({ mapOrbit: e.target.checked })} /></label>
+      {toggle("Low resource mode", "Smaller material cache and history overscan. Turns map and motion off.", low, on => setLowResource(on))}
+      {toggle("Repository map", "Static imports and session locations. No inferred execution flow.", map, on => setMapVisible(on))}
+      {toggle("3D repository map", "Spatial points and connections. Drag to orbit; Shift drag to pan; wheel to zoom. Depth is layout only.", depth, on => setPresentationPreferences({ mapDepth: on }))}
+      {toggle("Slow background orbit", "15 fps maximum. Resumes 12 seconds after manual camera movement; off in hidden tabs, low resource mode or reduced motion.", orbit, on => setPresentationPreferences({ mapOrbit: on }), !depth)}
       <label className="setting-row"><span>Exposed reasoning<small>Display only; never unlocks private reasoning or changes model effort.</small></span><span className="settings-select"><select aria-label="Exposed reasoning detail" value={reasoningDetail} onChange={e => setPresentationPreferences({ reasoningDetail: e.target.value as 'expanded' | 'collapsed' | 'hidden' })}><option value="expanded">Full available detail</option><option value="collapsed">Collapsed</option><option value="hidden">Hide</option></select></span></label>
-      <label className="setting-row"><span>Relationship motion<small>Finite origin and outcome cues; text is always immediately readable.</small></span><input type="checkbox" checked={motion} onChange={(e) => setMotion(e.target.checked)} /></label>
+      {toggle("Relationship motion", "Finite origin and outcome cues; text is always immediately readable.", motion, on => setMotion(on))}
       <label className="setting-row"><span>Largest rendered document<small>Markdown files up to this size open as a formatted document; larger ones open as Source, which is always available. Bigger limits render more slowly. Files over 2 MiB are never read.</small></span><span className="settings-select"><select aria-label="Largest rendered document" value={documentSize} onChange={e => setDocumentSize(e.target.value as DocumentSize)}>{(Object.keys(DOCUMENT_SIZES) as DocumentSize[]).map(key => <option key={key} value={key}>{DOCUMENT_SIZES[key].label}</option>)}</select></span></label>
-      <label className="setting-row"><span>Hover reading focus<small>After a short dwell, enlarge the real preview within the viewport without moving history. Escape restores it. Desktop pointer only.</small></span><input type="checkbox" checked={hoverReading} onChange={e => setHoverReading(e.target.checked)} /></label>
-      <label className="setting-row"><span>Notify when the agent needs me or finishes<small>{notify.permission === 'unsupported' ? 'This browser does not support notifications.' : notify.permission === 'denied' ? 'Blocked in your browser’s site settings; allow notifications there to turn this on.' : 'Only while this tab is hidden. Shows the session title and state, never content. The browser asks for permission when you turn this on.'}</small></span><input type="checkbox" checked={notify.enabled} disabled={notify.permission === 'unsupported' || notify.permission === 'denied'} onChange={e => void setNotifications(e.target.checked)} /></label>
+      {toggle("Hover reading focus", "After a short dwell, enlarge the real preview within the viewport without moving history. Escape restores it. Desktop pointer only.", hoverReading, on => setHoverReading(on))}
+      {toggle("Notify when the agent needs me or finishes", notify.permission === 'unsupported' ? 'This browser does not support notifications.' : notify.permission === 'denied' ? 'Blocked in your browser’s site settings; allow notifications there to turn this on.' : 'Only while this tab is hidden. Shows the session title and state, never content. The browser asks for permission when you turn this on.', notify.enabled, on => void setNotifications(on), notify.permission === 'unsupported' || notify.permission === 'denied')}
       <p className="muted small">Low resource mode sets economical defaults; you can explicitly re-enable map or motion. Your browser's reduced-motion preference always suppresses animated cues.</p>
     </section>
     <section className="settings-secondary"><details><summary>Sequence diagnostics</summary><p className="muted small">Optional playback of the order things happened. Ordinary reading uses scroll and prompt navigation.</p><button className="btn" onClick={() => { const app = useApp.getState(); app.set({ replayDiagnostics: true, settingsOpen: false }); app.togglePlay(); }}>Replay sequence</button></details></section>
