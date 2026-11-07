@@ -75,9 +75,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
   - #346 and #344 stay draft. #346 waits on AUDIT-1's gate; #344 waits on the schema agreement.
   - #351 (FINISH-0a in Modern's sheets) is closed as superseded.
 - **Next:** verify CLARITY-1, then FINISH-0a in Clarity (Inter, palettes, tokens, buttons, switch, inputs), then 0b, 0c and FINISH-1 (Home A).
-### Yash with Codex — 5 Nov: HOME-3 complete
+### Yash with Codex — 6 Nov: CONNECT-3 complete; stopped before FILES-12
 
-- HOME-3: recently written discovered journals appear before opening, with a writing-time explanation, and open live. Both genuine harness runs passed at 600/1440 px, including expiry after the final write. [Acceptance](review/home-3-writing.md). PR #347 is separate from CONNECT-2; no PR was merged. Final gate numbers and its clean-main comparison are in the PR.
+- **CONNECT-3 / #355:** real connected Codex and Claude Code turns each received a clipboard screenshot and a picked image and identified both. Confirmed two captured image blobs per turn. Fixed valid images misclassified by missing/generic/provider MIME, added clipboard file collection fallback and explained active-turn rejection. Existing limits and native policies stay intact; look is left to FINISH-4. [Evidence](review/connect-3-screenshot-attachments.md).
+- **Checks:** affected and 21 named composer/connected browsers passed. Isolated full gate: both types, build, package; 1,209 units / one existing skip; 632 parallel + 33 serial browsers / 28 existing skips, zero failures/retries, Edge with three parallel workers and one serial worker.
+- **Handoff:** #353 (CONTENT-17 tables), #354 (CONTENT-16 desktop envelopes), and #355 (CONNECT-3 screenshots) are ready for review and unmerged. TASKS ticks and claim removal are in their finishing PRs. FILES-12 is not started or claimed: builder asked to stop after the current tests. No Clarity or visual redesign changes.
 
 ### Yash with Claude — 5 Nov: MOTION-1 merged, AUDIT-1 walk finished, A3 next
 
