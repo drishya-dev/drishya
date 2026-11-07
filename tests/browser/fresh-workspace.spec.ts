@@ -135,9 +135,9 @@ test('Modern settings resets section reading, follows responsive tab orientation
   await expect(select).toBeFocused();await expect(select).toHaveValue('collapsed');await expect(settings).toBeVisible();
   await page.setViewportSize({width:390,height:844});await expect(nav).toHaveAttribute('aria-orientation','horizontal');
   await settings.getByRole('tab',{name:'Reading',exact:true}).focus();await page.keyboard.press('End');
-  // UI-4: the UI versions tab is a developer switch now, so Keyboard is the last section.
-  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toBeFocused();
-  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toHaveAttribute('aria-selected','true');
+  // CLARITY-1: the UI versions tab is offered to everyone again (Clarity), so it is the last section.
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toBeFocused();
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveAttribute('aria-selected','true');
   expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/settings-phone-navigation-refined.png')});
   await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
@@ -1562,7 +1562,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);await expect(page.locator('.history')).toBeVisible();
   const launch=async(name:string)=>{await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();};
   await launch('Review findings');let dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await expect(dialog).toContainText('Same command failed 7 of 45 runs');await expect(dialog).toContainText('npm test');
-  await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
+  await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.insights-intro p')).toHaveText('The work recorded between each prompt and the next, with its latest outcomes.');await expect(dialog.locator('.insights-intro p')).not.toContainText(/led to|started/);await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
   await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
   await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();

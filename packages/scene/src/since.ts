@@ -122,7 +122,9 @@ function item(kind: SinceItem['kind'], o: Operation, sequence:number,sequenceBas
   let detail: string | undefined;
   if (o.detail.kind === 'test' && o.detail.summary && o.detail.summary.passed + o.detail.summary.failed > 0) detail = `${o.detail.summary.passed} passed, ${o.detail.summary.failed} failed`;
   else if (o.detail.kind === 'test' || o.detail.kind === 'shell') detail = o.detail.exitCode === undefined || o.detail.exitCode === null ? undefined : `exit ${o.detail.exitCode}`;
-  if (kind === 'failure' && o.failure) detail = detail ? `${detail} · ${o.failure}` : o.failure;
+  // A captured status line can carry terminal colour codes; they are formatting, not text (AUDIT-1, 5 Nov).
+  const failure = o.failure?.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
+  if (kind === 'failure' && failure) detail = detail ? `${detail} · ${failure}` : failure;
   return { kind, operationId: o.id, sequence, sequenceBasis, title: o.title, detail, paths: o.paths.map((p) => p.path), status: o.status };
 }
 

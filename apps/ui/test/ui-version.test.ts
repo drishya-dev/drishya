@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveUIVersion, versionChoiceEnabled, versionURL } from '../src/lib/ui-version';
+import { resolveUISkin, resolveUIVersion, versionChoiceEnabled, versionURL } from '../src/lib/ui-version';
 
 describe('UI version navigation', () => {
   it('lets explicit links override the saved version and rejects unknown saved choices', () => {
@@ -25,6 +25,17 @@ describe('UI version navigation', () => {
     expect(versionChoiceEnabled('?versions')).toBe(true);
     expect(versionChoiceEnabled('?experience=classic&versions=all')).toBe(true);
     expect(versionChoiceEnabled('?experience=classic')).toBe(false);
+  });
+  it('treats Clarity as a skin of Modern: the shell stays Modern and the skin follows the link, then the saved choice', () => {
+    expect(resolveUIVersion('?experience=clarity')).toBe('modern');
+    expect(resolveUIVersion('', 'clarity')).toBe('modern');
+    expect(resolveUISkin('?experience=clarity')).toBe('clarity');
+    expect(resolveUISkin('', 'clarity')).toBe('clarity');
+    expect(resolveUISkin('?experience=modern', 'clarity')).toBe('modern');
+    expect(resolveUISkin('?experience=classic', 'clarity')).toBe('modern');
+    expect(resolveUISkin('', 'modern')).toBe('modern');
+    expect(resolveUISkin('')).toBe('modern');
+    expect(new URL(versionURL('http://localhost/?demo#/r/x', 'clarity')).searchParams.get('experience')).toBe('clarity');
   });
   it('drops presentation-specific subviews when changing shells', () => {
     expect(new URL(versionURL('http://localhost/?experience=modern#/r/recording/settings', 'classic')).hash).toBe('#/r/recording');
