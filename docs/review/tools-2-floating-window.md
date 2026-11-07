@@ -1,6 +1,8 @@
 # TOOLS-2 — centred floating Toolbox
 
-Draft [PR #349](https://github.com/drishya-dev/drishya/pull/349), branch `codex/tools-2`, claim `895fde2`. Updated 7 November 2026. Implementation and targeted checks are verified; the genuine-session matrix is in progress and the finished-task full gate has not started. **TOOLS-2 remains open.** Harsh subsequently authorized agent-run tests/builds/acceptance, superseding the original user-run-only plan. UI-26 is paused with Yash and is not part of this batch.
+[PR #349](https://github.com/drishya-dev/drishya/pull/349), branch `codex/tools-2`, claim `895fde2`. Updated 7 November 2026. Implementation, fixture acceptance, genuine Claude/Codex readers and the genuine Codex connected-turn names are verified. All required check types pass on frozen runtime source `7bd9ea87e5d0429eb4f2140f1fc76c63be237ac7` with **3 unit workers, 3 parallel browser workers and 1 serial browser worker**. The original 4-unit-worker gate remains failed and preserved; see the exact results below. **TOOLS-2 stays open/claimed for Yash's external acceptance**, not further source work. UI-26 remains paused with Yash.
+
+Harsh authorized agent-run tests/builds/acceptance, superseding the original user-run-only plan. Current main's later changes were documentation-only and were merged without changing any tested runtime file.
 
 ## Behavior and ownership
 
@@ -12,7 +14,7 @@ Allocation measures layout, excluding the composer's temporary scale, and reserv
 
 ## Scope and review
 
-Harsh approved **17 files** on 7 November: the original 13 authored paths, palette-contrast and plan-living-acceptance updates, and coordinator STATUS/TASKS. Dedicated component CSS remains separate; shared styles and other claims' components are unchanged. Main `7a84b02baf4c60ad73024e79f1e0c87cee822134` is integrated, including TEST-2, HOME-3 and CONNECT-2. No direct path conflicts.
+Harsh approved **17 files** for this whole task: the original 13 authored paths, palette-contrast and plan-living-acceptance updates, and coordinator STATUS/TASKS. Dedicated component CSS remains separate; shared styles and other claims' components are unchanged. Main `7a84b02baf4c60ad73024e79f1e0c87cee822134` is integrated, including TEST-2, HOME-3 and CONNECT-2. No direct path conflicts.
 
 Independent review identified unavailable-owner dismissal gaps. Workspace, responsive resize and pointer-free file navigation now have focused coverage. The latter failed at both widths before its fix and passed afterward. No other confirmed source blocker was reported. Native screenshots and diagnostics stay in `.local/`, never committed or published.
 
@@ -27,7 +29,7 @@ Applied the installed [Emil design skill](C:/Users/Harsh%20Jain/.codex/skills/em
 | Composer transforms and fractional metrics can distort clearance | Layout-based raised-control bounds with rounding headroom | Preserve the real reading and interaction area |
 | A sibling top-layer reader can outlive the hidden dock | Explicit owner-navigation dismissal; resize remains supported | Preserve view ownership and Escape/focus behavior |
 
-## Verification so far
+## Targeted verification
 
 All commands use this isolated worktree's own frozen install. Retries are zero; no timeout increases, new skips or relaxed content/geometry/contrast assertions.
 
@@ -41,7 +43,7 @@ All commands use this isolated worktree's own frozen install. Retries are zero; 
 
 Private named receipts: `.local/tools-2/named-final-check.json`, `fresh-final-check.json`, `integrated-named-check.json`, `review-fixed-check.json`, `legacy-reader-fixed.json`. Native matrix receipts/frames: `.local/tools-2/real-screens/`.
 
-### Genuine cases (counts verified; final screen matrix in progress)
+### Genuine cases — final 600/1440 screens and checks passed
 
 | Harness / session prefix | Native bytes | Observations | Operations | Agents | MCP operations | Inventory / listed |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -51,7 +53,32 @@ Private named receipts: `.local/tools-2/named-final-check.json`, `fresh-final-ch
 
 The second Codex case checks the long inventory; sub-agent acceptance belongs to the first. Existing genuine Claude capture avoids requiring a new signed-in account. Sources remain read-only; imports use scratch Drishya homes. No real journal content is printed.
 
-## Failures retained and resolved
+
+All six reader cases passed with exact inventory/agent/server counts, safe centring, no horizontal clipping, local scroll reachability, returned focus, all four trail controls and measured real-origin/same-material reversal. Private frames were inspected. Claude's selected trail had 287 uses; Codex's combined case 600; its long-list companion 574. Final receipt: `.local/tools-2/real-screens/complete-receipt.json`.
+
+A further **genuine Codex connected turn** passed at 600/1440: native session `01a1b0f9`, 304,395 bytes, 73 observed records / 14 operations, **73 actual runtime tools**. Run tools and the separately labelled recorded inventory were visible together; both native frames were inspected. The selected stopped throwaway session was resumed through Drishya's normal UI, including workspace consent and the idle-other-clients acknowledgement. It read the synthetic file, waited ten seconds and completed; the existing tracked patch stayed byte-identical. No native policy/settings/credential override or direct journal write was used. Private receipt/frames: `.local/tools-2/runtime-naming/`. A new Claude connected turn could not be run because its CLI is signed out; Harsh explicitly left that account-dependent case to Yash. The Claude runtime-list shape/naming has fixture coverage, not a new genuine connected-turn claim.
+
+## Finished-task check record
+
+Frozen runtime candidate `7bd9ea87e5d0429eb4f2140f1fc76c63be237ac7`, own isolated install, zero retries. Browser selection is exactly the parallel/serial split of `scripts/test-browser.ts`; the passes were invoked separately solely to preserve distinct JSON and traces. The original results are never overwritten by later measurements.
+
+| Check | Workers | Result |
+| --- | ---: | --- |
+| Both project typechecks | — | Pass |
+| Original all-unit run | 4 | **1,210 passed / 2 timed out / 1 existing skip** |
+| UI build | — | Pass |
+| Complete parallel browsers | 3 | **650 passed / 27 existing skips / 0 failures**, 784.92 s |
+| Complete serial browsers | 1 | **33 passed / 1 existing skip / 0 failures**, 123.10 s |
+| Package verification | — | Pass: isolated offline install, both harness imports, demo, authenticated API, persisted restart |
+| Clean-main all units at `7a84b02` | 4 | **1,206 passed / 1 existing skip** |
+| Clean-main history file alone | 1 actual file worker | **11 passed** |
+| Candidate history file alone | 1 actual file worker | **11 passed** |
+| Additional candidate all-unit configuration | 3 | **1,212 passed / 1 existing skip**, 64.03 s |
+
+The original failures were the unchanged daemon history tests for bounded historical material and append/out-of-order parity, each at the original 5,000 ms limit. Their backend/test/configuration source matches main. They did **not** reproduce on clean main, so they are not labelled a proven main flake. Their exact original cause remains unproven; no assertion or timeout was changed. This establishes the measured three-worker configuration only, not a clean four-worker candidate gate or a new three-run TEST-2 streak.
+
+Raw record: `.local/tools-2/full-gate-20261107-041305/`, including `results.json`, separate browser JSON/traces, original unit log, `candidate-history-isolated.log`, `candidate-units-3.log` and `unit-configuration-measurement.json`. Clean-main comparison: the existing paused UI-26 checkout's private `.local/tools2-main-diagnostic/`; its original `codex/ui-26` branch and exact `ab00b1d` head were restored afterward. No new worktree was created; the managed creation request did not return and was stopped before reusing that clean checkout.
+## Observed failures and what changed
 
 1. First named run: 8 passes / 7 observed failures before interruption. Direct normalized fixture calls omitted intent, so the reducer correctly treated them as other-kind operations. Added actual read/MCP intent and exact projection-count preconditions.
 2. The private/input checks then exposed an empty header's intentional pointer passthrough and a pre-mount visibility probe. Used a real outside gutter and waited for the recording Viewer before selecting wide/narrow controls. Assertions remain.
@@ -61,6 +88,9 @@ The second Codex case checks the long inventory; sub-agent acceptance belongs to
 6. Two older specs still queried expanded content inside the dock / asserted its former disclosure state. Their diagnosed red run had 2 failures / 1 unrun under fail-fast. Approved updates follow the central reader and preserve contrast, content and persistence requirements; all 3 passed.
 7. Private genuine-helper setup failures are retained: daemon reading memory required its supported reset (and JSON content type); motion preferences must enable motion; already-open disclosure attributes are empty strings; only relevant finite API loads gate Toolbox readiness (Home storage statistics remain independent). A trace also showed motion cancelling on a layout mutation; real motion is checked separately before tool-filter/trail selection. No product assertions were removed.
 
-## Remaining gates
+8. The full gate's first all-unit run timed out twice at four workers. Main and isolated diagnostics passed; one explicitly recorded three-worker configuration measurement passed all candidate units. The failed original gate remains failed in its raw results. No full browser command was retried.
+9. Private wrapper output-stream and final aggregation mistakes were corrected in the retained scripts. Per-step logs/exit codes remained intact; completed checks were not repeated because of those wrapper errors.
 
-Finish and inspect the 600/1440 genuine matrix, then run the single frozen finished-task full gate (both types, all units, UI build, full parallel/serial browser command, package verification). Record actual worker count and every failure. Yash's separately claimed MOTION-3 must include the final Toolbox in its ten-minute live/replay evaluation. Other-builder review is required before merge; no merge is authorized by an agent's source review.
+## External acceptance and review still required
+
+The local checks and genuine reader matrix are complete as measured above. Yash must run the signed-in Claude connected-turn naming case and include this final Toolbox in his separately claimed MOTION-3 ten-minute live/replay evaluation. Those are person/account-dependent acceptance lines outside this task's remaining local capability. They are explicit blockers, not demo-checked completion claims. Keep TOOLS-2 open/claimed pending that acceptance. The PR is ready for the other builder's review under AGENTS.md's external-blocker exception; no merge has occurred.
