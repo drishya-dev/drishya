@@ -30,14 +30,12 @@ Supplementary `pnpm check:real -- live-batches` passes against Claude `rec_c8e5c
 - Both typechecks pass.
 - 31 focused units pass: two-call batch boundaries, default single-step equivalence and existing goldens unchanged, as-of concealment, worker same-step paging, state query transport and replay query defaults.
 - Two browser regressions pass at 600/1440 on Edge, three workers, zero retries: both cards arrive/resolve in one update, scroll completely out of the virtual DOM and back without duplicate outcome markers, and invalid history boundary inputs are refused. These cases failed before the guard; assertions were retained.
-- No full gate or broad affected command was run for this still-partial draft, following AGENTS.md's rule against full gates on drafts. They remain required after the decision and whole acceptance below are resolved.
+- Before the decision, broad affected/full gates were deferred under AGENTS.md. The decision is now resolved; final frozen-revision verification is running before readiness is claimed.
 
-## Blocked decision — for the builder / FINISH-7 and TOOLS-3
+## Decision resolved — 7 November, Yash
 
-**At 600 px there is no visible dock instrument from which the existing Emit can travel.** The narrow layout hides the instrument; opening the available Tools control did not supply a measurable origin during these runs. Existing truth-preserving origin visibility checks therefore omit physical arrivals. Result resolution and both local/worker change intervals work.
+Yash explicitly selected the recommended fallback: when the actual tool instrument is hidden, show the card directly, with all content and its outcome animation intact. Omit only travel from an unavailable origin. Do not fabricate a location or wait for the Toolbox finishing pass. Visible-origin arrivals still animate once.
 
-LIVE-6 says every arriving card lifts once, and the common acceptance includes 600 px. This line is **not met**. This task was explicitly forbidden from changing Toolbox files or making a design decision. Do not invent an off-screen/fallback origin or mark the item done.
+The 600 px native results above therefore meet the clarified acceptance; their zero physical travel is intentional and is not described as a completed flight. This decision is also recorded in TASKS and the STATUS decisions log. Earlier draft #362 correctly remained blocked until that answer.
 
-**Question recorded on draft PR #362:** should the existing narrow Tools control be the real Emit origin, or should TOOLS-3 / FINISH-7 expose a measurable instrument first? Alternatively, the builder can explicitly agree that a hidden-origin, no-travel fallback satisfies this line. No option has been selected here.
-
-PR #362 remains draft, LIVE-6 unticked and claimed. Stop here pending that answer. FLOW-1, FILES-13, CONNECT-4, NATIVE-1 and the final IDEA-1–6 documentation repair have not been started, respecting the requested one-at-a-time order.
+Final affected/full checks are now pending. The task stays unticked/claimed and the PR stays draft until those checks finish. No Toolbox, style or additional motion implementation is needed for the selected fallback.
