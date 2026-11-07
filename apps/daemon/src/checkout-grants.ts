@@ -7,7 +7,7 @@ import type {Store} from '@drishya/store';
 
 export interface CheckoutIdentity {
   root:string; directory:string;
-  checkout:{root:string;directory:string};
+  checkout:{root:string;directory:string;gitDirectory?:{root:string;directory:string}};
   repository:{kind:'git';root:string;directory:string}|{kind:'directory'};
 }
 interface SavedGrant {version:1;identity:CheckoutIdentity;createdAt:string;revision:string}
@@ -49,12 +49,12 @@ export async function checkoutIdentity(given:string):Promise<CheckoutIdentity> {
     const path=join(cursor,'.git'),info=await lstat(path).catch(error=>{if((error as NodeJS.ErrnoException).code==='ENOENT')return undefined;throw error;});
     if(info) {
       if(info.isSymbolicLink())throw new CheckoutIdentityError('Redirected repository metadata cannot restore access.');
-      let common:string;
-      if(info.isDirectory())common=path;
+      let common:string,gitdir:string;
+      if(info.isDirectory())common=gitdir=path;
       else {
         const pointer=/^gitdir: ([^\r\n]+)\r?\n?$/.exec(await marker(path));
         if(!pointer)throw new CheckoutIdentityError('Repository identity is unavailable.');
-        const gitdir=resolve(cursor,pointer[1]!);
+        gitdir=resolve(cursor,pointer[1]!);
         if(normalize(await realpath(gitdir))!==normalize(gitdir))throw new CheckoutIdentityError('Redirected repository metadata cannot restore access.');
         await directory(gitdir);
         const relative=(await marker(join(gitdir,'commondir'))).trim();
@@ -65,7 +65,7 @@ export async function checkoutIdentity(given:string):Promise<CheckoutIdentity> {
       if(normalize(canonical)!==normalize(common))throw new CheckoutIdentityError('Repository identity changed.');
       // HEAD identifies a repository layout without reading remotes or user configuration.
       await marker(join(canonical,'HEAD'));
-      identity.checkout={root:cursor,directory:await directory(cursor)};
+      identity.checkout={root:cursor,directory:await directory(cursor),gitDirectory:{root:gitdir,directory:await directory(gitdir)}};
       identity.repository={kind:'git',root:canonical,directory:await directory(canonical)};
       break;
     }

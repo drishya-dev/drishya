@@ -158,7 +158,7 @@ export interface DataSource {
 export interface ReaderRecording extends RecordingSummary { sourceBytes?: number }
 
 export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace'; remembered?:boolean }
-export interface CheckoutIdentity {root:string;directory:string;checkout:{root:string;directory:string};repository:{kind:'git';root:string;directory:string}|{kind:'directory'}}
+export interface CheckoutIdentity {root:string;directory:string;checkout:{root:string;directory:string;gitDirectory?:{root:string;directory:string}};repository:{kind:'git';root:string;directory:string}|{kind:'directory'}}
 export interface CheckoutGrant {id:string;root:string;identity:CheckoutIdentity;createdAt:string}
 export interface WorkspaceSetup extends WorkspaceStatus {
   identity?:CheckoutIdentity;

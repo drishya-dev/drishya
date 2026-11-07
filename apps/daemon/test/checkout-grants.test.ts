@@ -70,6 +70,21 @@ it('revoking during approval prevents the asynchronous approval from saving a gr
   const pending=f.access.approve(f.id,true);await started;f.access.revoke(f.id);release();
   await expect(pending).rejects.toMatchObject({status:409});expect(await f.access.remembered.list()).toEqual([]);
 });
+it('revocation invalidates an in-flight read even if the checkout is approved again',async()=>{
+  const f=await fixture();await f.access.approve(f.id,true);
+  const original=f.access.root.bind(f.access);let entered!:()=>void,release!:()=>void;
+  const started=new Promise<void>(r=>entered=r),wait=new Promise<void>(r=>release=r);
+  vi.spyOn(f.access,'root').mockImplementationOnce(async id=>{const root=await original(id);entered();await wait;return root;});
+  const read=f.access.read(f.id,'file.ts');await started;f.access.revoke(f.id);await f.access.approve(f.id,true);release();
+  await expect(read).rejects.toMatchObject({status:403});
+});
+it('a different worktree administration identity never restores the original grant',async()=>{
+  const f=await fixture();execFileSync('git',['init','--quiet',f.root]);execFileSync('git',['-C',f.root,'-c','user.name=Synthetic','-c','user.email=synthetic@example.invalid','commit','--allow-empty','-qm','Synthetic']);
+  const sibling=join(f.dir,'sibling');execFileSync('git',['-C',f.root,'worktree','add','--quiet','-b','synthetic',sibling]);
+  const identity=await checkoutIdentity(sibling);await f.access.remembered.remember(sibling,identity);
+  const metadata=identity.checkout.gitDirectory!.root;await rename(metadata,metadata+'-old');await mkdir(metadata);await writeFile(join(metadata,'commondir'),'../..\n');
+  expect(await f.access.remembered.restore(sibling)).toBeUndefined();
+});
 it('the authenticated API reports setup without submitting and lists/revokes exact grants',async()=>{
   const f=await fixture();const server=await startServer({app:f.app,port:0,uiDir:f.dir,controllerFactory:(app,access)=>{
     // The fixture supplies no CLI so setup is independent of local account state.
@@ -97,8 +112,9 @@ it.each(['codex','claude-code'])('checks %s metadata only and never returns acco
   expect(await nativeReadiness(harness,f.dir,{resolveExecutable:()=>process.execPath,launch})).toEqual({available:true,signedIn:true,supported:true,state:'ready'});
   expect(calls).toEqual(harness==='codex'?[['app-server','--help'],['login','status']]:[['--help'],['auth','status','--json']]);
 });
-it.each(['signed-out','unsupported','unavailable'] as const)('reports %s without starting a turn',async state=>{
-  const f=await fixture();const launch=((_bin:string,args:string[])=>spawn(process.execPath,['-e',state==='unavailable'?'setTimeout(()=>{},1000)':`process.stdout.write(${JSON.stringify(state==='unsupported'?'old CLI':args.includes('status')?'Not logged in':'app-server --listen')})`],{stdio:['ignore','pipe','pipe'],windowsHide:true})) as typeof spawn;
-  expect((await nativeReadiness('codex',f.dir,{launch,resolveExecutable:()=>process.execPath,timeoutMs:state==='unavailable'?30:2000})).state).toBe(state);
+for(const harness of ['codex','claude-code'])it.each(['signed-out','unsupported','unavailable'] as const)(`${harness} reports %s without starting a turn`,async state=>{
+  const f=await fixture();const output=(args:string[])=>state==='unsupported'?'old CLI':args.includes('status')?harness==='codex'?'Not logged in':'{"loggedIn":false}':harness==='codex'?'app-server --listen':'--input-format --output-format --permission-prompt-tool --replay-user-messages';
+  const launch=((_bin:string,args:string[])=>spawn(process.execPath,['-e',state==='unavailable'?'setTimeout(()=>{},1000)':`process.stdout.write(${JSON.stringify(output(args))})`],{stdio:['ignore','pipe','pipe'],windowsHide:true})) as typeof spawn;
+  expect((await nativeReadiness(harness,f.dir,{launch,resolveExecutable:()=>process.execPath,timeoutMs:state==='unavailable'?30:2000})).state).toBe(state);
 });
 

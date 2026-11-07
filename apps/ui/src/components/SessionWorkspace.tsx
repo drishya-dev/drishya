@@ -445,6 +445,7 @@ export function PromptComposer() {
   const setPrompt = (text: string) => { if (source && id) promptDrafts(source).set(id, text); updatePrompt(text); };
   useEffect(() => { const changed = () => { if (source && id) { setChoice('open'); updatePrompt(promptDrafts(source).get(id)); requestAnimationFrame(() => input.current?.focus({ preventScroll: true })); } }; window.addEventListener('drishya-composer-draft', changed); return () => window.removeEventListener('drishya-composer-draft', changed); }, [source, id]);
   const exclusive=!!acknowledged, setExclusive=(value:boolean)=>acknowledge?.(value);
+  const [remember,setRemember]=useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
@@ -608,7 +609,7 @@ export function PromptComposer() {
     try { await fn(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   const modern = document.documentElement.dataset.uiVersion === 'modern';
-  const connectionSetup = <>      {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
+  const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<label><input type="checkbox" checked={remember} disabled={busy} onChange={event=>setRemember(event.target.checked)} /> Remember for this checkout</label>}</>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
   const nativeOptions = <>      <details className="permission-policy native-options"><summary>{modern ? <><svg className="native-options-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Connection & permissions</span></> : <>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</>}</summary><div className="native-options-menu">{modern && connectionSetup}<small title={workspace?.root}>Target: {workspace?.root ?? 'Workspace unavailable'} · recording {id.slice(-8)}</small><small>Native settings describe the last reported policy; the harness validates permissions when connecting.</small>
