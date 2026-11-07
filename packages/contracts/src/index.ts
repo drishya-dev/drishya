@@ -900,3 +900,5 @@ export interface ReplayBundle {
   artifactText: Record<string, string>;
 }
 export { asOfProjection } from './as-of.ts';
+
+export { injectedMessage, injectedLine, isPersonPrompt, type InjectedKind, type InjectedMessage } from './prompt-source.ts';
