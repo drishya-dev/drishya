@@ -62,9 +62,9 @@ test('toolbox minimizes from actual bounds and keeps its compact icon and indepe
  await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
  await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
  await expect(page.getByRole('complementary',{name:'Tools and agents'})).toBeVisible();
- const reader=page.getByRole('dialog',{name:'Toolbox',exact:true});await expect(reader).toBeVisible();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+ await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);
  await page.emulateMedia({reducedMotion:'reduce'});await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();expect(await toolbox.evaluate(node=>node.getAnimations().length)).toBe(0);
- await page.setViewportSize({width:600,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(reader).toBeVisible();await page.keyboard.press('Escape');await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
+ await page.setViewportSize({width:600,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(toolbox.locator('.modern-toolbox')).toBeVisible();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
 });
 
 test.beforeEach(async () => {
@@ -518,11 +518,11 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   await expect(mcpServer).toBeVisible();
   {
     await mcpServer.locator('summary').click();
-    const reader=page.getByRole('dialog',{name:/^MCP tools for /});await expect(reader).toBeVisible();
-    const tool=reader.locator('button[data-mcp-tool]').first();
+    await expect(mcpServer).toHaveAttribute('open','');
+    const tool=mcpServer.locator('button[data-mcp-tool]').first();
     await expect(tool).toBeVisible(); await tool.click();
     await expect(tool).toHaveAttribute('aria-pressed','true');
-    await reader.getByRole('button',{name:'Clear focus ×',exact:true}).click();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+    await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();await mcpServer.locator('summary').press('Escape');await expect(mcpServer).not.toHaveAttribute('open','');
   }
   await expect(page.getByRole('button',{name:'Show files',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Explore repository map',exact:true})).toHaveText('Repository');
@@ -1332,7 +1332,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await prompt.getByRole('button',{name:'Minimize prompt',exact:true}).click();
   await expect(input).toBeHidden();await prompt.getByRole('button',{name:'Expand prompt',exact:true}).click();await expect(input).toHaveValue('Retain this local draft while minimizing.');
   await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeHidden();
-  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-tool-station>.modern-toolbox')).toBeVisible();await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toBeVisible();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-tool-station>.modern-toolbox')).toBeVisible();await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);
   await input.fill('');
   for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();await page.getByRole('button',{name:name!,exact:true}).click();await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
