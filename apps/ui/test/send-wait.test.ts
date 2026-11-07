@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { sendWaitReason, type SendWaitState } from '../src/lib/send-wait.ts';
 
-const ready: SendWaitState = { unavailable: false, approved: true, cliAvailable: true, overLimit: false, attaching: false, hasPrompt: true };
+const ready: SendWaitState = { unavailable: false, approved: true, cliAvailable: true, overLimit: false, sending: false, attaching: false, hasPrompt: true };
 
 it('names the first thing a disabled Send waits for', () => {
   expect(sendWaitReason(ready)).toBe('Send prompt');
@@ -9,6 +9,8 @@ it('names the first thing a disabled Send waits for', () => {
   expect(sendWaitReason({ ...ready, cliAvailable: false })).toMatch(/not available for this session/);
   expect(sendWaitReason({ ...ready, overLimit: true })).toMatch(/size limit/);
   expect(sendWaitReason({ ...ready, attaching: true })).toMatch(/files to attach/);
+  // A send already in flight is not a file waiting to attach (Harsh's review: strings match their state).
+  expect(sendWaitReason({ ...ready, sending: true })).toMatch(/Sending the prompt/);
   expect(sendWaitReason({ ...ready, hasPrompt: false })).toMatch(/Write a prompt/);
 });
 
