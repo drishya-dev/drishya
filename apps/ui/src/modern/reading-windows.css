@@ -153,7 +153,7 @@
 :root[data-ui-version=modern] .workspace-navigation { top:14dvh;margin-block:0 auto; }
 :root[data-ui-version=modern] .workspace-navigation>header { position:absolute;right:6px;top:6px;padding:0;border:0;background:transparent;z-index:1; }
 :root[data-ui-version=modern] .workspace-navigation>header>h2 { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
-:root[data-ui-version=modern] .workspace-navigation-query { width:100%;margin:0;padding:14px 48px 14px 16px;border:0!important;border-bottom:1px solid var(--line)!important;border-radius:0;background:transparent!important;font:var(--text-md)/1.5 var(--sans);box-shadow:none!important;outline:0!important; }
+:root[data-ui-version=modern] .workspace-navigation-query {width:100%;margin:0;padding:14px 48px 14px 16px;border-radius:0;font:var(--text-md)/1.5 var(--sans)} :root:where(:not([data-ui-skin=clarity]))[data-ui-version=modern] .workspace-navigation-query { border:0!important; border-bottom:1px solid var(--line)!important; background:transparent!important; box-shadow:none!important; outline:0!important; }
 :root[data-ui-version=modern] .workspace-navigation-results { padding:6px; }
 :root[data-ui-version=modern] .workspace-navigation-results>button { min-height:36px;padding:6px 10px;gap:10px; }
 :root[data-ui-version=modern] .workspace-navigation-results>button>span:last-child { display:flex;align-items:baseline;gap:10px;min-width:0;flex:1; }

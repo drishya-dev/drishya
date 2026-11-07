@@ -110,7 +110,7 @@ UI-26 (one stylesheet layer behind a pixel guard, Harsh) is **paused until FINIS
 
 | Item | Spec | Build | Verified | Merged |
 |---|---|---|---|---|
-| CLARITY-1 | [written](finish/clarity-1-version.md) | — | — | — |
+| CLARITY-1 | [written](finish/clarity-1-version.md) | built (#352) | guard: Modern unchanged | merged 7 Nov |
 | FINISH-0a | [written](finish/finish-0-foundations.md) | — | — | — |
 | FINISH-0b | [written](finish/finish-0-foundations.md) | — | — | — |
 | FINISH-0c | [written](finish/finish-0-foundations.md) | — | — | — |

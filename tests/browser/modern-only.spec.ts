@@ -18,13 +18,15 @@ const openSettings = async (page: import('@playwright/test').Page) => {
   return dialog;
 };
 
-test('Settings offers no choice of workspace version, and its keyboard order ends at Keyboard', async ({ page }) => {
+test('Settings lists the UI versions last (CLARITY-1 offers Clarity to everyone, Legacy only to developers)', async ({ page }) => {
   await page.goto(url(''));
   await expect(page.locator('html')).toHaveAttribute('data-ui-version', 'modern');
   const settings = await openSettings(page);
-  await expect(settings.getByRole('tab')).toHaveText(['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']);
-  await expect(settings.getByRole('tab', { name: 'UI versions', exact: true })).toHaveCount(0);
-  await expect(settings.getByText('Choose your workspace')).toHaveCount(0);
+  await expect(settings.getByRole('tab')).toHaveText(['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard', 'UI versions']);
+  await settings.getByRole('tab', { name: 'UI versions', exact: true }).click();
+  await expect(settings.getByRole('button', { name: /^Modern/ })).toHaveAttribute('aria-pressed', 'true');
+  await expect(settings.getByRole('button', { name: /^Clarity/ })).toContainText('In progress');
+  await expect(settings.getByRole('button', { name: /^Legacy/ })).toHaveCount(0);
 });
 
 test('a Legacy or Canvas choice saved by an earlier build no longer applies', async ({ page }) => {
