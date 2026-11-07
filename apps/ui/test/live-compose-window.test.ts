@@ -1,0 +1,21 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { useApp } from '../src/state.ts';
+import { bundleSource } from '../src/api.ts';
+import bundle from '../public/demo/bundle.json';
+import type { ReplayBundle } from '@drishya/contracts';
+import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
+import { compose } from '@drishya/scene';
+const initial=useApp.getState();afterEach(()=>useApp.setState(initial,true));
+it('carries the last displayed step and retained interval, without changing replay queries', async()=>{
+ const p=(bundle as unknown as ReplayBundle).projection;
+ let step=4,since=1;
+ const history=vi.fn(async(_id?:string,_query?:HistoryQuery)=>({scene:{...compose(p,{step}),step,total:step},projection:p,since,revisions:{}} as HistoryPage));
+ const source={...bundleSource(bundle as unknown as ReplayBundle),history};
+ useApp.setState({source,recordingId:bundle.recording.id,projection:p,mode:'history',step,historyPage:await history()});history.mockClear();
+ await useApp.getState().loadHistoryWindow({count:1});expect(history.mock.calls[0]![1]).toMatchObject({since:4,previousSince:1,count:1});
+ await useApp.getState().loadHistoryWindow({count:2});expect(history.mock.calls[1]![1]).toMatchObject({since:4,previousSince:1,count:2});
+ step=8;since=4;await useApp.getState().loadHistoryWindow({});
+ await useApp.getState().loadHistoryWindow({});expect(history.mock.calls.at(-1)![1]).toMatchObject({since:8,previousSince:4});
+ useApp.setState({mode:'replay',step:3});await useApp.getState().loadHistoryWindow({});
+ expect(history.mock.calls.at(-1)![1]).toMatchObject({step:3});expect(history.mock.calls.at(-1)![1]).not.toHaveProperty('since');
+});

@@ -280,3 +280,17 @@ describe('worker-owned history pages', () => {
     await expect(app.history.page(recordingId)).rejects.toThrow('Recording not found');
   });
 });
+
+it('retains a batched live interval on same-step worker paging and leaves replay single-step', async () => {
+ dir=mkdtempSync(join(tmpdir(),'drishya-batched-history-'));app=new App(join(dir,'data'));
+ const rows=[{type:'user',uuid:'u',sessionId:'synthetic-live6',cwd:dir,message:{role:'user',content:'synthetic prompt'}},
+ {type:'assistant',uuid:'a',sessionId:'synthetic-live6',message:{id:'a',role:'assistant',content:['a','b'].map(id=>({type:'tool_use',id,name:'Bash',input:{command:'echo synthetic'}}))}},
+ {type:'user',uuid:'r',sessionId:'synthetic-live6',message:{role:'user',content:['a','b'].map(id=>({type:'tool_result',tool_use_id:id,content:'synthetic output'}))}},
+ {type:'assistant',uuid:'reply',sessionId:'synthetic-live6',message:{id:'reply',role:'assistant',content:[{type:'text',text:'synthetic reply'}]}}];
+ const file=join(dir,'synthetic.jsonl');writeFileSync(file,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
+ const id=(await app.ingest.importSource('claude-code',file)).recordingId;
+ const page=await app.history.page(id,{since:1,count:1}),ops=page.scene.passages.flatMap(ps=>ps.ops);
+ expect(ops).toHaveLength(2);expect(ops.every(op=>op.phase==='arriving'&&op.resolving)).toBe(true);
+ const same=await app.history.page(id,{since:page.scene.step,previousSince:page.since,count:1});expect(same.scene).toEqual(page.scene);expect(same.since).toBe(1);
+ const replay=await app.history.page(id,{step:page.scene.step,count:1});expect(replay.scene.passages.flatMap(ps=>ps.ops).some(op=>op.resolving)).toBe(false);
+});

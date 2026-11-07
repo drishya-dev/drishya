@@ -78,6 +78,9 @@ function readingClearance(history: HTMLElement): number {
   return Math.max(16, top - bounds.top + 16);
 }
 
+// Reading-window remounts do not repeat an outcome already shown in this live view.
+const OutcomeMotion = createContext<Set<string> | undefined>(undefined);
+
 type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> };
 
 export function History({ scene, projection, onWindow }: HistoryProps) {
@@ -99,7 +102,8 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
     promptStep === deferred.promptStep && filter === deferred.filter;
   const shown = liveArrival ? deferred : pair;
   const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
-  return <StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider>;
+  const outcomes = useMemo(() => new Set<string>(), [projection.recordingId, mode, mode === 'replay' ? shown.scene.step : undefined]);
+  return <OutcomeMotion.Provider value={outcomes}><StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider></OutcomeMotion.Provider>;
 }
 
 const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
@@ -826,6 +830,16 @@ function ReasoningGapLine({ pr, agent }: { pr: Prose; agent?: Agent }) {
 
 const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
   const experience = useExperience();
+  const outcomes = useContext(OutcomeMotion);
+  const resolvePermit = useRef<{ scope?: Set<string>; allowed: boolean }>(undefined);
+  const resolving = so.resolving && (resolvePermit.current?.scope === outcomes && resolvePermit.current
+    ? resolvePermit.current.allowed : !outcomes?.has(op.id));
+  useLayoutEffect(() => {
+    if (!so.resolving) { resolvePermit.current = undefined; return; }
+    if (!resolvePermit.current || resolvePermit.current.scope !== outcomes)
+      resolvePermit.current = { scope: outcomes, allowed: !outcomes?.has(op.id) };
+    if (resolvePermit.current.allowed) outcomes?.add(op.id);
+  }, [so.resolving, outcomes, op.id]);
   const workspaceRoot = useApp(s=>s.recording?.workspaceRoot);
   const card = useRef<HTMLElement>(null);
   const selected = useApp((s) => s.selectedOp === op.id);
@@ -860,7 +874,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const imageMaterial=imagePath||hasImage?<>
     {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
     {!imagePath&&['mcp','web'].includes(op.detail.kind)
-      ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
+      ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={resolving} onSource={measureSource}/>
       :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
   </>:null;
   return (
@@ -871,7 +885,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       data-origin={so.origin.type}
       data-tool-exchange={['shell','test','mcp','web','other'].includes(op.detail.kind) || undefined}
       data-diff={op.detail.kind === 'edit' && op.detail.hunks.length > 0 && presentation.shape === 'wide' ? (isProse(op.detail.path) ? 'prose' : 'code') : undefined}
-      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.declined ? 'declined' : so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
+      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.declined ? 'declined' : so.state} ph-${so.phase}${resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
       onClick={(e) => {
@@ -899,7 +913,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
       {!expanded && <div className="op-body">
-        {imageMaterial??<><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
+        {imageMaterial??<><OpPreview op={op} resolving={resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
       </div>}
       {expanded&&<ExpandedOperation op={op} image={imageMaterial}/>}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Shortened · Expand to read all of it</div>}
