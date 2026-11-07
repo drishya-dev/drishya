@@ -1,5 +1,4 @@
 import { NotesEntry } from './StepNotes.tsx';
-import { useSegmentedIndicator } from '../clarity/segmented.ts';
 import { ProductMenu } from './ProductMenu.tsx';
 import {Disclosure} from './Disclosure.tsx';
 import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
@@ -621,7 +620,6 @@ function ActivityTimeline({ scene, projection }: { scene: Scene; projection: Pro
 // ─── briefing: "while you were away" ─────────────────────────────────────────────────────
 
 function Briefing({ projection }: { projection: Projection }) {
-  const segments = useSegmentedIndicator<HTMLDivElement>();
   const paged = useApp((s) => !!s.historyPage);
   const open = useApp((s) => s.briefingOpen);
   const source = useApp((s) => s.source);
@@ -664,7 +662,7 @@ function Briefing({ projection }: { projection: Projection }) {
         <button className="icon-btn" onClick={() => set({ briefingOpen: false })} aria-label="Close">✕</button>
       </header>
       <SinceMarkSection projection={projection} />
-      <div className="seg" ref={segments}>
+      <div className="seg">
         <button className={range === 'all' ? 'on' : ''} onClick={() => setRange('all')}>Whole recording</button>
         <button className={range === 'since' ? 'on' : ''} onClick={() => setRange('since')}>Since step {step}</button>
       </div>
