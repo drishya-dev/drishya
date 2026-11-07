@@ -70,3 +70,19 @@ The eventual implementation must prove, on genuine local Codex and Claude Code s
 Implementation must reserve its files before work: session entry overlaps FINISH-0c; Settings/controls overlap FINISH-0a/0b and the Clarity finishing owners. This document grants no source reservation or schema change.
 
 **Stopping point:** this fulfils the assigned proposal-only step. CONNECT-4 stays unchecked until its approved implementation and acceptance are complete. NATIVE-1 and a new product review are not marked complete by this proposal.
+
+## Decision (Yash with Claude, 7 November)
+
+The proposal is approved with four adjustments toward Yash's ask ("all permissions are taken first, then it proceeds and opens, so no permission inside"):
+
+1. **Entry: one click.** The first open of a repository shows a compact setup sheet: **Allow and open** (primary) and **Open without** (secondary). It never blocks reading what was recorded.
+2. **Lifetime: remembered by default.** "Remember for this checkout" is offered **ticked by default**. It is still explicit: the user sees it and presses Allow, and can revoke it in Settings. The grant is bound to the exact canonical checkout and its validated identity, as proposed. A new worktree of a repository that already has a grant does not inherit it: it shows the same sheet **pre-filled**, so approving it is one click, not a new decision.
+3. **Native harness: approved as proposed.** Setup checks and prepares the selected CLI (available, signed in, supported). Resume and send, and the tool approvals and native questions a turn asks for, stay explicit at the moment they happen.
+4. **Idle-other-clients acknowledgement: once per connection, not per send.** Today it is asked before every send and reset after each submit and on a model or effort change. It is now asked at the first send to a selected session, then held until that connection ends: the app reloads, the user leaves the session, the controller disconnects, or the connection fails. A model or effort change no longer resets it.
+
+**Split** (AGENTS: a claim is a whole item):
+
+- **CONNECT-4a** (logic, Sol): remembered-grant persistence, checkout identity validation, revocation, the setup-state API, the pre-fill signal for sibling worktrees, the once-per-connection acknowledgement, and a "Remember for this checkout" checkbox (ticked by default) in Modern's existing workspace approval, using existing classes only.
+- **CONNECT-4b** (presentation, Claude in Clarity): the one-click setup sheet on first open, and the Settings list of remembered checkouts with revoke. After CONNECT-4a, FINISH-0b (overlays) and alongside FINISH-1 (Home and session open).
+
+Everything else in this document stands: no grant crosses checkouts silently, recorded-only viewing always works, no native policy, configuration or credential changes, and no persisted source bodies.

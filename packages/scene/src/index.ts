@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 // The scene composer. A PURE function: projection + playback position + preferences in,
 // the semantic scene out. No clock, no DOM, no randomness (AGENTS.md constraint 6). The UI
 // only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
@@ -70,6 +71,8 @@ export interface ScenePassage {
   matchesFilter: boolean;
   /** A user turn that opened this passage, if one did. */
   turnPrompt?: string;
+  /** Derived before worker preview clipping; false only for known harness-written notices. */
+  personPrompt?: false;
   /** Captured timestamp of the turn that opens this passage, when supplied. */
   turnTime?: string;
   /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
@@ -254,6 +257,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
+      ...(opensTurn && turn && !isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
       ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
@@ -272,6 +276,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     id: `prompt_${turn.id}`, agentId: turn.agentId, ops: [], prose: [],
     settled: turn.step !== turnAt.at(-1)?.step,
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
+    ...(!isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
     turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
     ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
     ...(turn.images ? { turnImages: turn.images } : {}),
@@ -415,7 +420,7 @@ export function markers(p: Projection): Marker[] {
   const out: Marker[] = [];
   p.timeline.forEach((it, i) => {
     const step = i + 1; // the step at which this item is visible
-    if (it.type === 'turn') out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
+    if (it.type === 'turn' && isPersonPrompt(it.prompt)) out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
     else if (it.type === 'gap') out.push({ step, type: 'gap', label: it.reason });
     else if (it.type === 'op-start') {
       const op = ops.get(it.operationId)!;
