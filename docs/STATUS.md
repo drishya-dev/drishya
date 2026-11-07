@@ -53,6 +53,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — 7 Nov: assigned queue through CONNECT-4 proposal delivered
+
+- Ready, not merged: CONTENT-18 #361 (person-prompt counts), LIVE-6 #362 (batch/outcome handling, approved hidden-origin fallback), FLOW-1 #363 (real endpoint connectors), FILES-13 #364 (evidence-backed Files placement and worktree/state identities). Each PR carries its own acceptance, exact gate results/limits, task tick and claim removal; main's source claim rows remain until those PRs merge. Their completion docs may need a careful combined resolution; keep every finished tick/removal.
+- [CONNECT-4 proposal](review/connect-4-repository-setup-proposal.md) is delivered on main, not implemented. Its three product/permission questions await the builders. The checkbox stays open and the proposal claim is released. Per the assignment, stop before NATIVE-1; do not silently implement remembered consent or broaden native access.
+- IDEA-1–6's missing detail entries are repaired in TASKS; all remain unchecked/deferred, IDEA-6 explicitly parked/not planned. No idea implementation was claimed. `sync-tasks.ts` now has no missing-entry warnings.
+- A fresh developer/product review is the requested next assessment after the ready fixes are merged into one running build: component scores, strengths/weaknesses, switching verdict and prioritized improvements, using real sessions and no inherited implementation chat. It is not claimed run yet. TASKS remains the sole active work list.
+
 ### Harsh with Codex — 7 November: DOCS-1 product README
 
 - Harsh requested a PR and Yash's review after the initial docs-only main landing. That landing was reverted without rewriting history; this branch restores the same verified documentation for normal review before merging.
