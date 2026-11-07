@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 import { SessionLineage } from './SessionLineage.tsx';
 import {desktopPrompt} from '../lib/desktop-prompt.ts';
 import {DesktopPromptAttachments} from './DesktopPromptAttachments.tsx';
@@ -620,7 +621,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false });
   };
 
-  const prompts = scene.passages.flatMap((ps, index) => ps.turnPrompt ? [{ ps, index }] : []);
+  const prompts = scene.passages.flatMap((ps, index) => (ps.turnPrompt || ps.turnImages?.length) && isPersonPrompt(ps.turnPrompt) ? [{ ps, index }] : []);
   const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 1));
   const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
 
@@ -707,7 +708,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
         setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const note = injectedMessage(ps.turnPrompt!); return note ? injectedLine(note) : ps.turnPrompt!; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const text = ps.turnPrompt ?? ''; const note = injectedMessage(text); return note ? injectedLine(note) : text; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));

@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 // The scene composer. A PURE function: projection + playback position + preferences in,
 // the semantic scene out. No clock, no DOM, no randomness (AGENTS.md constraint 6). The UI
 // only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
@@ -409,7 +410,7 @@ export function markers(p: Projection): Marker[] {
   const out: Marker[] = [];
   p.timeline.forEach((it, i) => {
     const step = i + 1; // the step at which this item is visible
-    if (it.type === 'turn') out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
+    if (it.type === 'turn' && isPersonPrompt(it.prompt)) out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
     else if (it.type === 'gap') out.push({ step, type: 'gap', label: it.reason });
     else if (it.type === 'op-start') {
       const op = ops.get(it.operationId)!;
