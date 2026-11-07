@@ -21,7 +21,7 @@ import { SourceVersionNotice } from './SourceVersions.tsx';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type PromptAttachment, type TurnOptions } from '../api.ts';
-import { promptFiles, promptSizeNote, PROMPT_BYTES, utf8Bytes, attachmentBytes } from '../lib/prompt-files.ts';
+import { pastedFiles, promptFiles, promptSizeNote, PROMPT_BYTES, utf8Bytes, attachmentBytes } from '../lib/prompt-files.ts';
 import { promptDrafts } from '../lib/prompt-drafts.ts';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNowText } from './NowWatcher.tsx';
@@ -387,6 +387,12 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   </ReadingDialog>;
 }
 
+/** Distance from the top of the offset-parent chain, ignoring CSS transforms (unlike getBoundingClientRect). */
+export function layoutTop(element: HTMLElement): number {
+  let top = 0;
+  for (let current: HTMLElement | null = element; current; current = current.offsetParent as HTMLElement | null) top += current.offsetTop;
+  return top;
+}
 export function PromptComposer() {
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
@@ -465,7 +471,8 @@ export function PromptComposer() {
   const active = useRef(true);
   useEffect(() => { active.current = true; return () => { active.current = false; rejectedFiles.current = []; }; }, []);
   const attach = async (files: File[]) => {
-    if (!files.length || busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) return;
+    if (!files.length) return;
+    if (busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) { setError('Wait for the current turn, then attach the files again. They were not added.'); return; }
     if (files.length + queuedFiles.current + attachmentRef.current.length > 32) { setError('Select at most 32 files, including files being prepared.'); return; }
     queuedFiles.current += files.length;
     setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false); setExclusive(false);
@@ -522,10 +529,31 @@ export function PromptComposer() {
     const node = element.current;
     const viewer = node?.closest<HTMLElement>('.viewer');
     if (!node || !viewer) return;
-    // The ordinary composer owns space; it must not cover the last captured result.
-    const observer = new ResizeObserver(([entry]) => viewer.style.setProperty('--composer-gap', `${(entry?.borderBoxSize?.[0]?.blockSize ?? node.offsetHeight) + 24}px`));
+    // Absolute approval/queue surfaces sit outside the composer's border box.
+    // Reserve their actual raised extent too, without feeding it back into the
+    // composer's own size constraints or changing the user's follow preference.
+    const observed = new Set<Element>();
+    const measure = () => {
+      viewer.style.setProperty('--composer-gap', `${node.offsetHeight + 24}px`);
+      // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
+      // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
+      const top = layoutTop(node);
+      let raised = 0;
+      for (const surface of node.querySelectorAll<HTMLElement>('.native-turn-details, .queued-input-receipts')) {
+        if (!observed.has(surface)) { observer.observe(surface); observed.add(surface); }
+        if (!surface.getClientRects().length) continue;
+        if (surface.matches('.queued-input-receipts') && surface.querySelector('button')?.checkVisibility({ visibilityProperty: true }) === false) continue;
+        raised = Math.max(raised, top - layoutTop(surface));
+      }
+      viewer.style.setProperty('--composer-raised-gap', `${Math.ceil(raised)}px`);
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(node);
-    return () => { observer.disconnect(); viewer.style.removeProperty('--composer-gap'); };
+    const children = new MutationObserver(measure);
+    // A receipt's visibility is an inline style that follows the Follow switch; it changes neither size nor children.
+    children.observe(node, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden', 'data-waiting'] });
+    measure();
+    return () => { observer.disconnect(); children.disconnect(); viewer.style.removeProperty('--composer-gap'); viewer.style.removeProperty('--composer-raised-gap'); };
   }, [source, id]);
   if (source?.kind !== 'daemon' || !id || id.includes('+')) return source?.kind === 'bundle' && id ? <QueuedInputs standalone/> : null;
   const running = controller && ['connecting', 'running', 'approval'].includes(controller.state);
@@ -567,7 +595,7 @@ export function PromptComposer() {
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setExclusive(false); setConfirmSend(false); }); }}>
         {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = [...e.clipboardData.items].filter(item => item.kind === 'file').map(item => item.getAsFile()).filter((file): file is File => !!file); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
       <small id="prompt-size-status" className={sizeNote.over ? 'bad' : sizeNote.quiet ? 'sr-only' : 'muted'} role={sizeNote.over ? 'alert' : undefined}>{sizeNote.text}</small>
         <div className="composer-actions">{modern ? <div className="modern-composer-input-tools"><button type="button" className="modern-attachment" title="Attach text or image" aria-label="Attach text or image files" disabled={!!running || busy || loadingFiles} onClick={() => fileInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 7-7a4 4 0 0 1 6 6L11 21a6 6 0 0 1-8-8L14 2m-6 10 7-7" /></svg></button><button type="button" className="modern-attachment" title="Attach folder contents" aria-label="Attach folder" disabled={!!running || busy || loadingFiles} onClick={() => folderInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg></button>{controller?.settings?.models.length ? <><select className="modern-model-select" aria-label="Native model" value={options.model ?? ''} disabled={!!running || busy} onChange={e => { setOptions(e.target.value ? {model:e.target.value} : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select>{!!controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.length && <select className="modern-effort-select" aria-label="Reasoning effort" value={options.effort ?? ''} disabled={!!running || busy} onChange={e => { setOptions({...options,effort:e.target.value || undefined}); setExclusive(false); setConfirmSend(false); }}><option value="">Default effort</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))!.efforts.map(effort => <option key={effort}>{effort}</option>)}</select>}</> : <span className="modern-native-model">{options.model ?? controller?.settings?.model ?? 'Native defaults'}</span>}</div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title={cannotSend ? sendWaits : 'Send prompt'} disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg>{modern && <span>Send</span>}</button>}</div>
         {!modern && <div className="composer-add-menu" hidden={!addOpen} data-pointer-menu={addPointer ? '' : undefined}><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}

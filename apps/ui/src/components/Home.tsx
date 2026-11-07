@@ -83,6 +83,8 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       if (document.visibilityState !== 'visible') return;
       void source.sources().then(found => {
         if (useApp.getState().source !== source) return;
+        // Age out writing journals even when discovery returns the same files.
+        setNow(new Date());
         setSources(old => sameSources(old, found.sources) ? old : found.sources);
         setSourceErrors(found.errors);
       }).catch(() => undefined);

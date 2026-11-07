@@ -1,6 +1,6 @@
 # TEST-2: live reader anchor stability
 
-Status: verified repairs integrated with current main; three clean full commands remain required. Task remains open. Claim pushed on main in 289ae6f before branch work. Branch harsh/test-2-live-anchor has its own frozen pnpm install.
+Status: TEST-2 acceptance met on frozen candidate **6009c094848f404debf9bf9c060d8d62aca7617c**: three consecutive complete browser commands, each **654 passed / 28 existing skips / zero failed / zero retries**, at **three parallel workers plus one serial worker**. PR #331 is ready for the other builder's review; not merged. Completion changes after that candidate are documentation only. Earlier investigations and failed attempts below are retained as history.
 
 ## Problem and acceptance
 
@@ -190,3 +190,203 @@ Merged with current main 55d1aa81 (UI-20, UI-23, DATA-13). Four-worker command o
 | b2-live:63 | Still open, cause NOT VERIFIED. The same 5 px family already fails on clean main (recorded 31 October). |
 
 The strict acceptance (three consecutive clean complete commands, or a verified cause for every failure) is not met, so TEST-2 stays unchecked. The branch lands because every failure left reproduces on clean main, which AGENTS says does not block.
+
+
+## 2 November: returned manual results and the source-reader readiness fix
+
+The manual command ran all three commands on d00fcc1 with three parallel workers and the normal one-worker serial pass. The first two were clean; the third was not. No clean commands are borrowed across that failure.
+
+| Run | Parallel | Serial | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 607 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 965.4 |
+| 2 | 607 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 977.66 |
+| 3 | 606 passed / 27 skipped / 1 failed | 33 passed / 1 skipped / 0 failed | 1 | 966.91 |
+
+
+The only failing case is workspace-shared-draft's jump to line 1200. Its final frame has the file loaded, which did not establish that it was loaded when Enter arrived. Private numeric instrumentation preserves render, input/submit, scroll-writer and observer timing without printing source bodies.
+
+- Unchanged sequence, four workers: **48/48 pass** without extra load. No cause inferred from that pass.
+- Same sequence, 24 repetitions/four test workers beside 16 CPU workers bounded to 120 seconds: **94 passed / two failed**. In one failed trace Enter arrives at **1417 ms**; the first 1,200-line render follows at **1424.1 ms**. In the other, Enter is **1325.8 ms**, first render **1345.4 ms**. Neither records a submit, scroll write or line-reveal request; activeLine remains unset. This is not a scroll position being reset after a successful reveal.
+- A held actual file-response proof confirms the state: **Go is disabled** while the file is pending. The original early Enter produces **zero submits** and fails the original line-1200 assertion after release. Waiting for Go to become enabled produces **one submit** and passes that same assertion. This is a test readiness race; the product already exposes the correct disabled state.
+- The proposed readiness assertion in the private copy then passes **96/96** under the same bounded-load setup. The complete run outlasts the 120-second burner; constant load for every case is not claimed.
+
+Harsh approved a **26-file final ceiling** on 2 November, including the additional Workspace spec and required completion documents. Before the tracked edit, the whole TEST-2 continuation was claimed on main in **6609d97**, branch **codex/test2-source-readiness**. Yash had already merged #314 and later main changes while the manual command ran. The follow-up uses current main a96fa40 plus that docs-only claim, preserving the merged implementation rather than changing the closed PR.
+
+The tracked change is exactly one readiness assertion: after filling 1200, wait for the existing Go button to be enabled, then press Enter once. The expected line text, fewer-than-150 mounted rows, search/wrap, draft retention, file bytes, and original timeouts remain. No retry or product change.
+
+**Current-main verification:** own frozen install and normal UI build pass; check:affected passes both typechecks and all four named browser cases. The complete Workspace file passes **96/96 at four workers** (24 repetitions). Temporary instrumentation is absent from the normal build. This test-only correction adds no native-session acceptance claim.
+
+**Still pending:** three consecutive complete commands on the follow-up candidate, run manually by Harsh. TEST-2 remains unchecked and claimed; the follow-up stays draft. The clean-main five-pixel b2-live anchor is still recorded separately, without a newly invented cause.
+
+
+## 2 November: second returned manual streak, Pin range failure
+
+Harsh ran the prepared command on **a00af7b**, with three parallel workers, one serial worker and zero retries. The first two complete commands pass; the third fails. All three actual results are retained; the streak resets again.
+
+| Run | Parallel | Serial | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 613 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 606.03 |
+| 2 | 613 passed / 27 skipped / 0 failed | 33 passed / 1 skipped / 0 failed | 0 | 587.61 |
+| 3 | 612 passed / 27 skipped / 1 timed out | 33 passed / 1 skipped / 0 failed | 1 | 629.69 |
+
+The sole failure is `product-workspace.spec.ts:344`, source references reject oversized text, preserve derived provenance and clear on replay seek. The original 90-second test timeout expires at line 364 waiting for Pin range. The line-1200 Workspace case and the serial B2 anchor pass all three returned commands. Git LF/CRLF and SQLite experimental notices are warnings, not the failure.
+
+The manual command preserved error context but no browser trace. A private copy of the unchanged failing test, with reader/disclosure event instrumentation and retained failure traces, reproduces **four failures / 20 passes at four workers**. In those failures the same reader and closed disclosure remain mounted, with no summary activation or open-attribute change. One captured action scrolls History from 0 to 8 to 289 px, targets the summary at y=423.25, then ends back at History scrollTop 0 with the disclosure closed. Earlier hit tests intersect the timeline footer. This establishes a missed pointer activation across a scroll change; the exact reset writer remains under investigation.
+
+Additional unchanged diagnostics pass: geometry-and-writer sampling 12/12; pointer-target sampling 24/24; light event sampling 24/24; bounded-load light sampling 24/24 (16 CPU workers bounded to 120 seconds, stopped when tests finish); click-target sampling 48/48; outside-click-only sampling 24/24; private instrumented writer build 24/24. These are diagnostic results, not acceptance, and do not establish a cause or fix. One initial load-helper invocation selected no tests because of an argument-quoting error; it is not counted as a test run.
+
+**At the initial diagnostic checkpoint, no tracked product or test change had been made for this failure.** No retry, timeout increase, relaxed assertion or additional skip. The follow-up remains draft #331; TEST-2 remains claimed and unchecked. The original five-pixel B2 cause is still unverified.
+
+
+### Verified writer and native-boundary correction
+
+A normal-build setter-only trace reproduces **one failure / 47 passes at four workers**. Its failing scroll writes at 1761.2 and 1838.5 ms set History to zero from `setScrollTop` -> `restoreReading` -> the History layout effect. The compiled caller is the explicit `readingAtStart` branch, not a reader remount, stale expanded closure or duplicate disclosure toggle. A separate private writer build (24/24 pass) exposes the same path even in successful cases: native positions 8 and 289 are remembered while both `navigating` and the old start flag remain true; the layout effect then writes zero.
+
+`onScroll` marks navigation active before remembering the position. The old `rememberReading` expression preserved a previous start flag for any active navigation, including a later native focus/scrollIntoView moving down. The correction preserves the upward start intent only while the position is not moving down relative to the last observed scroll. The original source-reference test, native pointer clicks, all content/provenance/pinning assertions and timeouts are unchanged. No keyboard substitution, force-click, retry, longer timeout or new skip.
+
+| Before | After | Why |
+| --- | --- | --- |
+| A stale start boundary could undo a later native scroll and move a source control during its pointer action. | A downward native scroll supersedes the start boundary; upward navigation retains its start intent. | Keep the real control at the reading position the browser just selected. |
+
+The exact new tracked regression centers the loaded source summary with native scrollIntoView, samples the resulting position, crosses two render frames, requires that exact position to remain and opens the disclosure with a real pointer click. With only the boundary expression reverted, **it fails: 289 expected, 0 received**. After restoring the fix and rebuilding, the same test passes. The normal restored build is the final candidate; temporary writer instrumentation is absent.
+
+Verification on the fixed source:
+
+- Unchanged original failing sequence: **96/96**, four workers.
+- Exact tracked new regression plus the untouched original case: **48/48**, each repeated 24 times at four workers.
+- Complete affected Workspace spec: **35/35**; B2 plus manual-scroll, run serially: **5/5**. This does not identify the earlier five-pixel B2 cause.
+- Both typechecks, normal UI build and **17 relevant units / four files** pass. Ingest, storage and packaging did not change; no fresh package or complete-suite pass is claimed.
+- Controlled held native pointer diagnostic on the old source: **24/24**, with unchanged control positions during the hold. It did not support the focus/remount candidate.
+
+Genuine copies: Codex **01a1824b**, **5,011,679 bytes / 1,348 observations / 317 operations**; Claude Code **3a2fb933**, **3,616,835 bytes / 392 observations / 71 operations**. The final private navigation check passes **all four Modern journeys**, both harnesses at **600 and 1440 px**: leave the start through native scrolling, retain a nonzero reading position, activate/retain the actual expanded card, no page errors or horizontal overflow. Codex also passes both Classic widths. These are screen-state/bounds checks with frames saved only in `.local/`; no native material or frames are attached to the PR. This is genuine History navigation acceptance, not a claim that these captures contain the synthetic oversized Pin range fixture.
+
+Limits and failed private attempts are retained: two early extra-shell runs each gave **5 passed / three failed**. That driver selected the distinct older `legacy` experience and initially used a fixed wheel distance that did not cover the long Codex history. The matching `classic`/Modern driver gives **six passed / two failed**, both with ordinary entry and with explicit at=end entry. In each, the two failures are Claude Classic initial-card visibility, before the boundary assertion; this extra retained-shell case remains **unverified**, with no new product cause invented. All four required Modern journeys pass in those checks; no six-of-eight result is described as eight clean journeys. Private artifacts stay local.
+
+**Whole TEST-2 is still open.** The second manual streak failed and cannot be counted toward a clean streak for this new candidate. Draft #331 records both repairs and all failures. Harsh's manual runner still uses three parallel workers, one serial worker and zero retries. No automatic complete-suite command was started, no worker-count certification was added to AGENTS/TEST-3, and no TEST-2 completion checkbox or claim removal is made.
+
+
+## 5 November: returned dbc9950 manual command and current-main integration
+
+The command started at 02:30:11 UTC on dbc9950, with three parallel workers, one serial worker and zero retries. **Run 1 fails:** 611 parallel passed / 27 skipped / three failed; serial 33 passed / one skipped; exit 1, **873.25 seconds**. The runner stops without retry; runs 2 and 3 do not run. No clean streak is established.
+
+| Failure | Captured result | Cause status before integration |
+| --- | --- | --- |
+| dialog-typography:94 | Commits button not found within the existing 10-second expectation after the Git graph opens. | Unverified. |
+| files-4-reader-review:60 | Peek right edge is 852 immediately after resizing to a 600 px viewport; expected at most 600. | Unverified. |
+| git-access:35, first destination Git review | Second Git destination is visible but its atlas-layout is absent within the existing 10-second expectation. | Unverified. |
+
+The prior line-jump and source-boundary regressions pass, as does serial B2. The command also prints lstat ENOENT diagnostics; they are retained for investigation and are not silently attributed to these assertions. Git line-ending and SQLite experimental notices are recorded as warnings. Private raw log and per-project summaries remain under the unique manual evidence directory.
+
+Only after the completed run returned, current main **c5c87db** is integrated into the same claimed branch. It contains the UI-8/FILES-11/Usage/MOTION-1 changes and updated browser labels. Both existing TEST-2 fixes survive the automatic source merge. STATUS's overlapping last-session headings are resolved by preserving the other builder's current entries/claims and replacing our own handoff. No native sources or real Drishya home are changed.
+
+This integration does not establish that any of the three failures is fixed. Named checks and cause diagnosis precede another frozen manual gate. TEST-2 remains unchecked, #331 stays draft, and no worker count is certified.
+
+
+### Two-agent diagnosis and reviewed readiness corrections
+
+Harsh explicitly requested two subagents on 5 November: one investigates all returned errors read-only, the other makes only evidence-backed fixes. Both operated under the existing TEST-2 claim. The coordinator reviewed their work and retained all failed diagnostic attempts. No new feature or production patch was introduced in this phase.
+
+- **Git graph typography:** a held Git status response demonstrates that the original optional-approval helper returns before access is known, sends **zero approvals**, and the Commits assertion fails. Waiting for either the actual approval action or loaded Commits before deciding sends **one approval** and preserves all original palette/font checks. The generic helper is unchanged.
+- **Shared Git approval:** a held approval POST proves that an exact-name Approve button count of zero is not completion: the label changes to Approving while the grant is pending. The original sequence advances to a second consent screen; the controlled failure occurs at its existing no-second-consent assertion, before the final atlas assertion recorded in the manual run. The correction keeps that original count check and waits for the first surface's loaded layout before closing. The controlled after case passes all existing second-surface assertions.
+- **Peek resize:** the first window-listener-only control passes because ResizeObserver is another geometry-update path; that attempt is retained, not called proof. Holding both application callback paths reproduces the unchanged immediate assertion **852 <= 600**, then release produces **588**. The corrected readiness poll observes **852 -> 588** and keeps the same right-edge bound, desktop widths and configured 10-second expectation timeout. The original manual run's precise callback ordering was not recorded; this is controlled timing evidence, not a retroactive native trace.
+
+Only three spec files change in this phase: six insertions / two deletions. Native inputs, content/approval assertions, numeric bounds, fixture data and timeout configuration remain. The independent read-only reviewer approved those changes.
+
+**All additional error diagnostics accounted for:** the eight lstat ENOENT errors belong to the intentionally absent missing-write fixture in file-reading-actions. Four owning cases (both harnesses at 600/1440, two reading surfaces each) pass in the returned command. On dbc9950 the generic daemon path logs them as 500 errors. Integrated FILES-11 already handles the absent file explicitly. A fresh authenticated current-main probe returns **404**, the intended missing-file response and **zero server error diagnostics**. No evidence connects these eight messages to the three failed assertions, and no additional product change is needed.
+
+Fixed integration verification:
+
+- Three recorded failing cases, each repeated 24 times: **72/72**, **150.254 seconds**, four actual workers, zero retries/skips/flaky results.
+- All three affected files once: **13/13**, **41.265 seconds**, four configured / three actual file workers, zero retries/skips/flaky results.
+- Both typechecks and **17 relevant navigation units** pass after the main merge.
+- Genuine Modern History boundary/navigation checks still pass **4/4** after integration: both harnesses at 600/1440, using the existing private imported copies and safe reporter. Earlier source counts and extra Classic limitations remain as recorded; no native content/frames are sent or committed.
+
+The corrected private proof command finishes **three passes and one intentional original-resize failure**; the earlier original proof finishes two failures / one insufficient-control pass. Neither is represented as a clean test gate.
+
+**Next acceptance:** at Harsh's explicit request to complete the delegated task, the coordinator freezes this reviewed candidate and runs the existing three-command gate here, rather than another manual handoff. Full-run retries remain zero and the runner stops on its first failure. TEST-2 stays unchecked and #331 draft while that gate is pending; no completed streak or measured worker-count certification is claimed in advance.
+
+
+## 5 November: full preflight, interrupted clean streak and user execution handoff
+
+The first unit preflight inherited Windows' short-path TEMP alias because the coordinator omitted the canonical setup. It reports **1,195 passed / one skipped / five failed**, plus one cleanup-suite error (four failed files / 195 passed files; 48.79 seconds). The investigator verifies four failed tests and the cleanup error against the same-file identity/path-alias mismatch. The separate Git branches 5-second timeout remains cause-unverified; contention is plausible, not proven. No production path protection was weakened.
+
+With canonical TEMP/TMP and four unit workers, the four affected files pass **14/14**, then the full suite passes **1,200 / one skipped across 199 files**, 49.17 seconds. Both typechecks and package verification pass. This is measured four-worker unit acceptance, not a claim for the earlier unbounded run. Browser commands use three parallel workers / one serial worker, zero retries.
+
+Frozen runtime/test candidate **7f39c8f** complete commands:
+
+| Run | Parallel | Serial | Exit | Seconds |
+| --- | --- | --- | ---: | ---: |
+| 1 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 840.20 |
+| 2 | 621 passed / 27 skipped / zero failed | 32 passed / one skipped / one failed | 1 | 822.87 |
+| 3 | Not run: stopped after run 2 failed. | Not run. | — | — |
+
+The second command fails the final Side by side selection in p1-pacing:202, after the viewport has returned to **1440 x 900**. The split material exists but stays hidden; Changes remains pressed. This breaks the streak. All three earlier readiness corrections pass in both complete commands; the eight earlier missing-file diagnostics do not recur.
+
+An instrumented whole-file diagnostic retains the original inputs and assertions, reproducing the same failure: **20 passed / one failed / one skipped**, 90 seconds. It captures pointerdown on Side by side at **1980.900 ms**, button top **868.828 px**; pointerup at **1983.700 ms** hits View what the agent saw after the button moves to **894.078 px**. Click at **1983.900 ms** reaches their common op-expanded container. The layout handler never runs; the same reader (identity 1) stays unified. This proves missed pointer activation, not a layout-state reset.
+
+The exact **25.25 px movement writer remains unproven**: existing snapshots show History scrolling but do not identify the responsible callback. Hover reading is disabled while expanded, and CapturedSourceControls is not used by this Classic reader, so neither is asserted as its cause. The final selection now uses Enter, matching the first Side by side selection in the same layout test. All content, layout visibility, absent-mode assertions, existing widths and timeouts remain. This is a layout-selection driver correction; it does **not** claim the physical pointer movement is fixed or remove that observed limitation from this report.
+
+Harsh explicitly stopped agent test execution and requested commands instead. The diagnostic had already completed when its session was stopped/polled; no further tests, builds or verification commands ran after that instruction. The final one-line edit is **not post-edit verified**. A prepared local user script builds normally, runs the affected layout case 24 times at one worker with retained failure traces, then runs the existing three-command gate only if the focused check passes. It stops on the first nonzero exit and never retries a failed command.
+
+The test change is the only runtime-adjacent difference after 7f39c8f; the already-passing unit/package results apply to unchanged application/package code. TEST-2 stays claimed/unchecked, PR #331 stays draft, and no three-clean-run or four-worker full-browser certificate is claimed. Final worker measurements belong in AGENTS/TEST-3 only when a clean gate is established.
+
+
+## 5 November: additional returned old-candidate command, checkpoint lookup unknown
+
+The returned command under manual-20261105-035245 records **7f39c8f**, start 03:52:45 UTC, three parallel workers / one serial worker / zero retries. Run 1 fails: **620 parallel passed / 27 skipped / one timed out; 32 serial passed / one skipped / one failed**, exit 1, **835.27 seconds**. Runs 2/3 do not run. This command predates the final 3ca50c8 keyboard-selection edit, so its repeated p1 pointer failure is not post-edit evidence. No user-focused gate directory was created for the newer command.
+
+The additional failure is checkpoints:26, initial focus on the cart.ts edit's expand button, after the full original 90-second timeout. The saved artifact contains only error/source: **no page snapshot, screenshot or trace**. The fixture supplies one Edit; source supplies edit expand buttons. Neither agent found evidence of an ambiguous first match, a specific navigation/readiness failure or a source projection defect. No speculative selector or timeout change is made. This failure remains **undiagnosed**.
+
+Both agents performed read-only investigation under Harsh's no-agent-tests instruction. A private diagnostic preserves the checkpoint fixture, actions, assertions and timeouts, adding lifecycle/HTTP/DOM-count records plus retained failure traces and screenshots. The prepared user diagnostic runs checkpoints and the updated p1 layout case, stops on any failure, and **does not start a full gate**. No diagnostic or test command has been executed by the agents. TEST-2 and #331 remain open/draft.
+
+
+## 5 November: returned focused diagnostics and manual-reading setup candidate
+
+Harsh ran the diagnostic on **fe9b81f**. Checkpoints passes **24/24**, zero skips/flaky results/retries, **32.367 seconds**, three workers. All 24 lifecycle artifacts contain a loaded-history sample with one cart.ts card and one expand button, and no sampled error surface. Across the artifacts: 1,608 HTTP responses with no status >=400; no recorded page errors, crashes or failed requests. Sampling is once per second and does not establish the exact original failure-time state. **This is non-reproduction, not a checkpoint fix or root-cause finding.**
+
+The layout diagnostic gives **23 passed / one failed**, zero skips/flaky results/retries, **76.456 seconds**, one worker. Failure repeat 17 is now the earlier **Changes pointer click**, before the test's existing narrow-viewport excursion. The unified material remains hidden and Side by side stays pressed. A failure screenshot and trace are retained. The prior last-step keyboard change does not establish stability of the other pointer selection.
+
+Saved trace: click call31 starts at 49303.619 ms; Playwright observes four unstable samples, then computes point (290.5,514.57), button top498.578/height32. The action ends49653.805 ms. History scroll changes from4908 before,4194 at action,4340 after,5098 at failure; frames show roughly25 px control movement. The trace does not include native pointer event targets, so it does not establish exact click misdelivery vs state replacement as precisely as the earlier custom receipt. The screenshot shows Follow enabled.
+
+Read-only source review identifies a relevant setup dependency: ordinary ?demo loads a static recorded bundle (only demo=live uses growingSample), but Follow defaults on. History's material-height observers and layout effect call followLatest even with static data; followLatest advances toward the bottom while enabled. Thus no growing-demo or future capture explanation is invented. The same file already disables the actual Follow switch before another geometry-reading case. The exact callback responsible for this recorded scroll remains untraced.
+
+**Bounded plan, user-validated:** make the layout-selection test enter explicit manual reading through its real Follow switch, assert Follow is off, then retain the existing layout assertions and restore the final native pointer click. This replaces the prior one-button keyboard workaround with a setup prerequisite and preserves pointer coverage. No product source, fixture, width, expected content/bound or configured timeout changes. This is an **unverified setup candidate**, not a claim that a product pointer defect or the original checkpoint timeout is fixed. The investigator reviewed the source premise independently.
+
+Harsh continues to own all test execution. No tests, builds, proofs or suites ran during this investigation or after the edit. The next prepared command checks only the layout case 24 times with failure traces/screenshots; it does not rerun the already-passing checkpoint diagnostic or start a full gate. TEST-2 stays claimed/unchecked and #331 draft.
+
+
+## 5 November: user layout validation passes; strict full gate pending
+
+Harsh ran the prepared layout-only command on **afaa291a72bca7944d2e2e7941dcf76fdb25cae7**. Private evidence directory: `.local/test2-integration-20261105/layout-check-20261105-044409/`. The normal UI build finishes successfully. The JSON report records **24 passed / zero failed / zero skipped / zero flaky**, **67.585 seconds**, one actual serial worker and **zero retries**. The coordinator read the saved build log, list log and JSON configuration/statistics; no agent executed a test or build.
+
+This validates the explicit manual-reading setup for this repeated layout case, including the restored final pointer click and original layout assertions. It does not establish the exact earlier automatic-scroll writer, fix a product pointer defect, explain the earlier checkpoint initial-focus timeout or establish a full-suite streak. The checkpoint diagnostic remains 24/24 non-reproduction at three workers.
+
+**Next command, supplied for Harsh to execute:** `.local/test2-integration-20261105/run-user-full-gate.ps1`. The frozen candidate differs from afaa291 only in these completion-evidence documents. It runs `pnpm test:browser --config=.local/test2-integration-20261105/full-gate.config.ts --retries=0 --reporter=list,.local/test2-completion-20261101-082934/preserve-reporter.ts` three times consecutively, with **DRISHYA_WORKERS=3**, the existing one-worker serial project, Microsoft Edge and canonical TEMP/TMP. Each complete command builds the UI first and runs both projects. The private config inherits the tracked full suite and only resolves its test directory and enables failure traces/screenshots. Failure tracing is enabled to retain evidence for an otherwise undiagnosed recurrence; it adds recording overhead compared with earlier untraced full commands. No timeout, expected bound, fixture, assertion or skip changes. There is no failed-command retry; the script records each completed command and stops after the first nonzero exit or checkout change. Per-project summaries, copied failure attachments, command logs and per-run exit/duration records stay in a unique private evidence directory.
+
+The command has only been prepared and syntax-parsed, **not executed by an agent**. No clean full run for this candidate is claimed. TEST-2 remains unchecked/claimed and #331 draft. A successful three-worker streak would certify only that measured configuration; the worker count belongs in TEST-3/AGENTS only after the returned gate evidence is inspected.
+
+
+## 5 November completion: three consecutive complete user-run commands
+
+Harsh executed the frozen runner on **6009c094848f404debf9bf9c060d8d62aca7617c**. The coordinator inspected `results.json`, all six per-project summary files, all three command/build logs and the inherited full-suite config under the private `.local/test2-integration-20261105/full-gate-20261105-044905/` directory. Each command builds the UI first, then runs the full parallel and serial projects. The checkout stayed on the same clean candidate throughout. No agent executed a build or test during this handoff.
+
+| Run | Started UTC | Parallel (3 workers) | Serial (1 worker) | Exit | Seconds |
+| --- | --- | --- | --- | ---: | ---: |
+| 1 | 2026-11-05 04:49:05 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 810.10 |
+| 2 | 2026-11-05 05:02:36 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 765.74 |
+| 3 | 2026-11-05 05:15:21 | 621 passed / 27 skipped / zero failed | 33 passed / one skipped / zero failed | 0 | 745.42 |
+
+**Three-clean-run acceptance is met for this measured configuration.** Each run has 654 passes and the same 28 existing skips; no new skip, retry, relaxed assertion or larger configured timeout was added. Explicit retries remain zero. Failure tracing/screenshots were enabled through a private config that inherits both tracked projects without filtering specs. Node's SQLite experimental notice is emitted as a PowerShell NativeCommandError wrapper in each log; the underlying notice is not a failing test or process exit. All raw notices/logs are retained.
+
+### Acceptance accounting and limits
+
+- The whole required browser command passes three consecutive times. Historical failed attempts are separate and are not counted toward this streak.
+- The native History start-boundary product correction has the exact failing-before/passing-after regression and both-harness Modern checks at 600/1440 documented above. Genuine Codex `01a1824b` (5,011,679 bytes / 1,348 observations / 317 operations) and Claude Code `3a2fb933` (3,616,835 bytes / 392 observations / 71 operations) cover the final History navigation check; raw content/frames remain private. Earlier delayed-reading/Home genuine checks and the already-merged prerequisite repairs remain recorded above.
+- Files/Git permission readiness and the three later readiness corrections retain controlled before/after evidence, original assertions and named repeats. The layout manual-reading setup passed 24/24 before this streak and passes all three complete commands.
+- Both typechecks, 1,200 units / one existing skip across 199 files at canonical TEMP/four workers, and package verification passed on unchanged application/package code after current-main integration. Subsequent changes were test drivers and completion documents; all three complete commands rebuild normally. No fresh unit/package execution is claimed during the user-only handoff.
+- The certified local Windows browser configuration is **DRISHYA_WORKERS=3 plus the one-worker serial project**, not a four-worker streak. AGENTS/TEST-3 now state that measurement while preserving the existing four-worker default. This does not prove that four workers would fail on the final source, or guarantee future runs.
+- The original isolated 5 px B2 offset, original checkpoint initial-focus timeout, and exact automatic-scroll writer from the earlier layout trace remain cause-unverified. Their passing full runs satisfy the strict acceptance alternative; they do not establish a cause or a product fix for those historical observations. Extra Claude Classic initial visibility and human/platform/ten-minute release checks remain unverified and separate.
+
+TEST-2 is checked in this completion PR and its claim row is removed here, with priority counts regenerated by `node scripts/sync-tasks.ts`. PR #331 becomes ready for the other builder's review; no merge is performed. No code, dependency, timeout or test assertion changes after the accepted frozen candidate.
+
+**Post-gate main integration:** origin/main advanced from c5c87db to 0e9d3b71 through four documentation-only commits. The finishing branch integrates those records, preserves HOME-3/CONNECT-2 and the other builders' claims, and resolves only the overlapping generated TASKS overall count through sync-tasks. No tested application/package/script/browser source changes; no new test/build execution or borrowed gate for changed source.
