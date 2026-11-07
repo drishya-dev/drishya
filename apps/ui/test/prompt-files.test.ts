@@ -1,7 +1,38 @@
-import { describe, expect, it } from 'vitest';
-import { attachmentBytes, formatBytes, promptFiles, promptSizeNote, utf8Bytes, PROMPT_BYTES } from '../src/lib/prompt-files.ts';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { attachmentBytes, formatBytes, pastedFiles, promptFiles, promptSizeNote, utf8Bytes, PROMPT_BYTES } from '../src/lib/prompt-files.ts';
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('local attachment preparation', () => {
+  it('uses actual image signatures when a clipboard or file provider omits or mislabels MIME', async () => {
+    vi.stubGlobal('FileReader', class {
+      result = ''; onload?: () => void; onerror?: () => void;
+      async readAsDataURL(file: File) { this.result = `data:;base64,${Buffer.from(await file.arrayBuffer()).toString('base64')}`; this.onload?.(); }
+    });
+    const signatures = [
+      ['image/png', [137,80,78,71,13,10,26,10]], ['image/jpeg', [255,216,255]],
+      ['image/webp', [82,73,70,70,0,0,0,0,87,69,66,80]], ['image/gif', [71,73,70,56,57,97]],
+    ] as const;
+    for (const [mime, signature] of signatures) for (const type of ['', 'application/octet-stream', 'image/x-png']) {
+      const files = await promptFiles([new File([new Uint8Array(signature)], 'clipboard-image', { type })], []);
+      expect(files).toEqual([{name:'clipboard-image', type:'image', mime, data:Buffer.from(signature).toString('base64')}]);
+    }
+  });
+  it('keeps plain text literal and explains unsupported, disguised and oversized images', async () => {
+    expect(await promptFiles([new File(['not an image'], 'notes.png')], [])).toEqual([{name:'notes.png',type:'text',data:'not an image'}]);
+    await expect(promptFiles([new File(['not an image'], 'fake.png', {type:'image/png'})], [])).rejects.toThrow('valid PNG');
+    await expect(promptFiles([new File(['<svg/>'], 'diagram.svg', {type:'image/svg+xml'})], [])).rejects.toThrow('not supported');
+    const header = new Uint8Array([137,80,78,71,13,10,26,10]);
+    await expect(promptFiles([new File([header, new Uint8Array(4 * 1024 * 1024)], 'large.png')], [])).rejects.toThrow('4 MiB');
+  });
+  it('uses clipboard files once, falls back to items, and leaves text pastes alone', () => {
+    const file = new File(['x'], 'image.png');
+    const item = {kind:'file', getAsFile:()=>file} as DataTransferItem;
+    const data = (files:File[], items:DataTransferItem[]) => ({files,items}) as unknown as Pick<DataTransfer,'files'|'items'>;
+    expect(pastedFiles(data([file],[item]))).toEqual([file]);
+    expect(pastedFiles(data([],[item]))).toEqual([file]);
+    expect(pastedFiles(data([],[{kind:'string'} as DataTransferItem,{kind:'file',getAsFile:()=>null} as DataTransferItem]))).toEqual([]);
+  });
   it('counts UTF-8 prompt bytes and exact base64 image padding', () => {
     expect(utf8Bytes('🙂')).toBe(4);
     expect(utf8Bytes('🙂'.repeat(16_385))).toBeGreaterThan(PROMPT_BYTES);
