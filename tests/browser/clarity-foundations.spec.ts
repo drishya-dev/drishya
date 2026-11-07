@@ -149,6 +149,8 @@ test('every button variant shows its states: default, hover, press, focus, disab
   await page.locator('#b-ghost').evaluate(el => el.blur());
   await page.keyboard.press('Tab');
   await page.locator('#b-secondary').focus(); await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+  // It settles from a 4 px offset to 2 px over 140 ms: the animation is running right after the keyboard lands on the button.
+  expect(await page.evaluate(() => document.getAnimations().filter(a => (a as CSSAnimation).animationName === 'cl-focus-settle').map(a => [a.effect!.getTiming().duration, (a.effect as KeyframeEffect).getKeyframes()[0]!.outlineOffset]))).toEqual([[140, '4px']]);
   await page.waitForTimeout(300);
   expect(await style('b-secondary', ['outline-width', 'outline-style', 'outline-offset'])).toEqual({ 'outline-width': '2px', 'outline-style': 'solid', 'outline-offset': '2px' });
   // Disabled: dimmed, not-allowed, no hover.
@@ -219,4 +221,14 @@ test('the search field: icon, clear button once there is text, Escape clears the
   });
   expect(ring.border).toBe(ring.focus);
   expect(ring.shadow).toContain('3px');
+});
+
+test('Settings in Clarity: every sentence and label is at least 12 px, every control and the palette cards too', async ({ page }) => {
+  await page.goto(url('clarity'));
+  const dialog = await openSettings(page);
+  for (const section of ['Appearance', 'Reading', 'Playback', 'Privacy', 'Keyboard']) {
+    await dialog.getByRole('tab', { name: section, exact: true }).click();
+    const small = await dialog.evaluate(root => [...root.querySelectorAll<HTMLElement>('*')].filter(el => el.getClientRects().length && [...el.childNodes].some(n => n.nodeType === 3 && n.textContent?.trim()) && parseFloat(getComputedStyle(el).fontSize) < 12).map(el => `${el.tagName} ${getComputedStyle(el).fontSize} ${el.textContent?.trim().slice(0, 30)}`));
+    expect(small, section).toEqual([]);
+  }
 });

@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | FILES-12 | @yash + Codex (Sol 6.1) | `codex/files-12` | 2026-11-07 | Evidence-resolved prose path module/provider, markdown.tsx inline/bare links only, SessionWorkspace.tsx provider wiring and Files folder reveal only, OpImages.tsx export its existing ImageReader and keep nested image Escape in its own dialog only (no appearance/motion changes); focused unit/browser/real-session tests and docs, at most 15 paths. Preserve FILES-2 peek links; no History/motion/scroll edits without a separate reservation. Existing classes/tokens only; look left to FINISH-3. Builder resolved #357: file references open the existing file preview and show contents; preserve captured/current consent and FILES-2. No extra icon action. |
-| FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a-clarity-343148` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
 | FINISH-0c | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0c` | 2026-11-06 | New state components; the empty and error call sites; the session-open loading path in `App.tsx`/`Viewer.tsx`; after 0a. |
 | FINISH-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-1` | 2026-11-06 | Home: `SessionHome.tsx`, `ModernSessions.tsx`, `Home.tsx`, `session-home.css`; concepts first. After #347. |
@@ -69,6 +68,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Codex — 6 Nov: CONTENT-17 prose table behaviour complete
 
 - PR #353: tables in agent prose, horizontal containment, inline code and safe links, exact Original/Copy. Genuine Claude/Codex narrow/wide/code/link replies pass at 600/1440 on all seven palettes (28 checks). Affected checks pass: both typechecks, 38 related units and 90 browsers / 15 existing skips. Final isolated gate is recorded in the PR; no merge. [Evidence](review/content-17-prose-tables.md). Presentation remains FINISH-3; Clarity and its control/style owners are untouched.
+
+### Yash with Claude (Sonnet 5.5) — 7 Nov: FINISH-0a built in Clarity
+
+- **FINISH-0a / #358 (draft, for Opus to verify):** Inter bundled for Clarity; Graphite and Porcelain palettes with the full role set; spacing, layer, elevation and motion tokens; one button system with every state; the segmented control with a sliding pill; Switch (Settings, Git review, Follow) and SearchField (Home); tabular counts; sentence-case group labels; the focus ring that settles. All Clarity-only, in `@layer clarity`; Modern's sheets untouched.
+- **Palette storage:** Clarity keeps its choice in `drishya.clarity.theme`; a saved Modern palette maps to Graphite (dark) or Porcelain (light) until Clarity is chosen, and `drishya.theme` is never written from Clarity.
+- **Not done here (by design):** legacy literal z-index and duration values stay in the shared sheets (Clarity's own sheets use the tokens; each FINISH item converts its component); native `<select>`s are FINISH-0b.
 
 ### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
 

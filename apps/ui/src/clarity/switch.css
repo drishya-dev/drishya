@@ -49,4 +49,7 @@
   :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :active > .mini-switch::before { width: 14px; }
   :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) :active > .mini-switch.on::before { transform: translateX(10px); }
 }
+/* Settings rows: the same rhythm as the rows that hold a select, a hairline between rows. */
+:root[data-ui-skin=clarity] .settings-dialog .cl-switch { padding: var(--sp-4) 0; border-bottom: 1px solid var(--line); }
+:root[data-ui-skin=clarity] .settings-dialog .cl-switch-text { gap: var(--sp-1); }
 }

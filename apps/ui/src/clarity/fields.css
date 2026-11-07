@@ -58,5 +58,5 @@
 :root[data-ui-skin=clarity][data-ui-motion][data-ui-press]:not([data-low-resource]) input[type=checkbox]::after { transition: clip-path var(--dur-press) var(--ease-out); }
 
 /* Settings: every sentence is at least 12 px (marks and counts keep 11). */
-:root[data-ui-skin=clarity] :is(.settings-dialog .setting-row small, .modern-settings-nav small, .modern-settings-nav p, .modern-settings-nav > div, .settings-dialog .muted.small, .settings-dialog p.small) { font-size: var(--text-xs); line-height: 1.5; }
+:root[data-ui-skin=clarity] :is(.settings-dialog .setting-row small, .settings-dialog .theme-option small, .modern-settings-nav small, .modern-settings-nav p, .modern-settings-nav > div, .settings-dialog .muted.small, .settings-dialog p.small) { font-size: var(--text-xs); line-height: 1.5; }
 }
