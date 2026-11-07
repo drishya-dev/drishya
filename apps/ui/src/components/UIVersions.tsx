@@ -1,10 +1,11 @@
 import { Children, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { selectedUIVersion, switchUIVersion, versionChoiceEnabled, type UIVersion } from '../lib/ui-version';
+import { selectedUISkin, selectedUIVersion, switchUIVersion, versionChoiceEnabled, type UIVersion } from '../lib/ui-version';
 import './ui-versions.css';
 
-const versions: { id: UIVersion; name: string; note: string; available: boolean }[] = [
+const versions: { id: UIVersion; name: string; note: string; available: boolean; tag?: string }[] = [
   { id: 'classic', name: 'Legacy', note: 'The established continuous canvas, spatial map and full reading tools.', available: true },
   { id: 'modern', name: 'Modern', note: 'Legacy’s full agent visualization, with a modern explorer, tools and prompt workspace.', available: true },
+  { id: 'clarity', name: 'Clarity', note: 'The same workspace, being rebuilt in one clean system. Modern stays here as the backup.', available: true, tag: 'In progress' },
 ];
 const narrowSettings = '(max-width: 600px)';
 const subscribeLayout = (notify: () => void) => { const media = matchMedia(narrowSettings); media.addEventListener('change', notify); return () => media.removeEventListener('change', notify); };
@@ -25,9 +26,9 @@ export function SettingsSections({ children, categories }: { children: ReactNode
   const id = useId();
   const modern = selected === 'modern' && categories;
   const sections = Children.toArray(children);
-  // Modern is the only product choice (UI-4): the chooser shows only behind the developer switch, or to someone already on another version so they can get back.
-  const choose = versionChoiceEnabled() || selected !== 'modern';
-  const versionPanel = <VersionPanel current={current} />;
+  // Clarity (CLARITY-1) is offered to everyone; Legacy still appears only behind the developer switch, or to someone already on it so they can get back.
+  const choose = true;
+  const versionPanel = <VersionPanel current={selected === 'modern' ? selectedUISkin() : current} />;
   if (modern) return <div className="modern-settings-layout">
     <div className="modern-settings-nav" role="tablist" aria-label="Settings sections" aria-orientation={narrow ? 'horizontal' : 'vertical'} onKeyDown={event => {
       const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role=tab]')];
@@ -49,9 +50,9 @@ export function SettingsSections({ children, categories }: { children: ReactNode
 function VersionPanel({ current }: { current: string }) {
   return <section role="tabpanel" aria-label="UI versions" className="dv-versions">
       <h3>Choose your workspace</h3><p>Same recordings and native connections. A different way to see the work.</p>
-      <div>{versions.map(v => <button key={v.id} className={`dv-version dv-${v.id}`} disabled={!v.available} aria-pressed={current === v.id} onClick={() => switchUIVersion(v.id)}>
+      <div>{versions.filter(v => v.id !== 'classic' || versionChoiceEnabled() || current === 'classic').map(v => <button key={v.id} className={`dv-version dv-${v.id}`} disabled={!v.available} aria-pressed={current === v.id} onClick={() => switchUIVersion(v.id)}>
         <span className="dv-version-preview" aria-hidden="true"><i /><i /><i /><b /></span>
-        <span><strong>{v.name}</strong><small>{v.note}</small></span><em>{current === v.id ? 'Active' : v.available ? 'Switch →' : 'Coming next'}</em>
+        <span><strong>{v.name}{v.tag && <i className="dv-tag">{v.tag}</i>}</strong><small>{v.note}</small></span><em>{current === v.id ? 'Active' : v.available ? 'Switch →' : 'Coming next'}</em>
       </button>)}</div>
       <p className="dv-note">Switching reloads the interface, keeps the selected session and saves your choice on this browser. Submit or save unsent drafts first.</p>
     </section>;
