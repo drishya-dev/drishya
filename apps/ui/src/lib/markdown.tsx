@@ -150,7 +150,7 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string, tableLink
         const fallback=reference && onPath
           ? <button type="button" key={k++} className="md-path md-link" title={path} aria-label={`Open work on ${reference.path}${line ? ` at line ${line}` : ''}`} onClick={() => onPath(reference.path, line)}><code>{label}</code></button>
           : <span key={k++} className="md-link" title={path}><code>{label}</code></span>;
-        out.push(<ProseFileLink key={k++} value={line?`${path}:${line}`:path} fallback={fallback}><code>{label}</code></ProseFileLink>);
+        out.push(<ProseFileLink key={k++} value={line?`${path}:${line}`:path} fallback={fallback}><span className="md-link" title={path}><code>{label}</code></span></ProseFileLink>);
       }
     } else if (m[1]) {
       const code = m[1].slice(1, -1);

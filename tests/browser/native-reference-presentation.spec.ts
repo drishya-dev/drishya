@@ -34,7 +34,7 @@ for (const width of [600,1440]) test(`native file references read and navigate s
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${claude}`);
   const reference=page.getByRole('button',{name:'Open work on 研究.md at line 1',exact:true});
-  await expect(reference).toBeVisible();await expect(reference).toHaveText('研究.md:1–2');
+  await expect(reference).toBeVisible();await expect(reference.locator('code')).toHaveText('研究.md:1–2');await expect(reference.locator('svg.file-format')).toBeVisible();
   await expect(page.locator('.prose')).not.toContainText(':codex-file-citation');
   await expect(page.locator('.md-link').filter({hasText:'read-only.txt'})).toHaveCount(1);
   await reference.focus();await page.keyboard.press('Enter');
