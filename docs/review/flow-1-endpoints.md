@@ -38,4 +38,19 @@ Dense pre-fix reproduction: Codex `rec_7afaca02` (11,984,727 bytes / 156 operati
 - The existing passage helper now distinguishes an intersecting body from a visible anchor. Fully visible neighbors still require their original wires; every drawn wire is checked for on-screen endpoints. All wrap/order goldens remain unchanged. All 17 targeted browser cases pass after a rebuild with Edge, requested three workers, zero retries.
 - `pnpm check:affected`: both project typechecks, ten related units, UI build and 17 browser cases pass. The final added moving-card assertions also pass in a separate focused run.
 - `pnpm check:real -- content-parity`: read-only scan and scratch import pass for both harnesses; this verifies source availability/counts, not SVG geometry. Geometry acceptance is the live matrix above.
-- Full isolated gate on `c33278a6`, with its own frozen install and three browser workers plus the existing serial pass: running; result to be recorded before readiness.
+- Full isolated gate on `c33278a6`, with its own frozen install: both typechecks, build and package verification pass. Units: **1,235 passed, one existing skip, one failed** (Git branches timeout). Browsers: **660 parallel + 32 serial = 692 passed**, 28 existing skips, **five failed**, Edge three parallel workers / one serial worker, zero retries. This is not a green complete command.
+
+## Existing gate failures, checked on clean main
+
+Clean main `9bab2cc9` has its own frozen install/build. Its only difference from this branch's base is the documentation-only FLOW-1 claim. No failing assertion, timeout, skip or retry was changed.
+
+| Failure in the frozen candidate | Clean-main evidence | Candidate isolated rerun |
+|---|---|---|
+| `git-branches.test.ts:25`, 5 s timeout | Same test times out in the parallel unit control; focused rerun passes 5/5. The parallel control has additional timeout failures under concurrent browser load, so it is not described as a clean baseline certification. | Reproduces during the browser gate; idle rerun passes all five tests. |
+| `compaction.spec.ts:33`, line 45, element detaches during scroll | Two of six one-worker runs fail with the same detached-element error; four pass. | Same error. |
+| `product-workspace.spec.ts:71`, Studio hover loses `data-hover-reading=focused` | One of three one-worker runs fails on the same hover assertion; two pass. | Pass. |
+| `prompt-timeline.spec.ts:44`, line 53 bottom bound | One of ten one-worker runs fails with the same bound: expected <=745.859375, received 796. Nine pass. | Pass. |
+| `prompt-rail-evidence.spec.ts:34`, Home focus target disappears | Eight one-worker repeats give five passes and three failures: two reproduce the missing first-prompt/Home assertion; one loses last-prompt/End focus. Earlier three repeats also reproduced End focus once. | Pass. |
+| `b2-live.spec.ts:63`, line 116, same passage shifts 5 px | Existing clean-main `anchor.log` reproduces the same line and 5 px delta (-292 to -287). Candidate full run is -297 to -292. | Same assertion and 5 px drift. |
+
+Logs and failure artifacts remain only in the gate/base `.local/` directories. These are recorded in TEST-2, rather than hidden by assertion or timing changes. AGENTS.md's clean-main failure exception permits unrelated FLOW-1 readiness. Every FLOW-1 acceptance line is met; the PR is ready for other-builder review, not merged.
