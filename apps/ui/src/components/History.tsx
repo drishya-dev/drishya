@@ -1,4 +1,6 @@
 import { SessionLineage } from './SessionLineage.tsx';
+import {desktopPrompt} from '../lib/desktop-prompt.ts';
+import {DesktopPromptAttachments} from './DesktopPromptAttachments.tsx';
 import {FileReadingActions,openCapturedFileReading} from './FileReadingActions.tsx';
 import { CompactionEvidence, CapturedContextReport, ContextEvidenceScope } from './ContextEvidence.tsx';
 import { contextReport } from '../lib/context-report.ts';
@@ -1128,10 +1130,12 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   const injected = injectedMessage(prompt);
   const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
   const report = contextReport(prompt);
-  const shown = report ? undefined : injected ? injected.detail : prompt;
+  const envelope = !injected && !report ? desktopPrompt(prompt) : undefined;
+  const shown = report ? undefined : injected ? injected.detail : envelope?.request ?? prompt;
+  const attachments = envelope ? <DesktopPromptAttachments files={envelope.attachments} hasImageBytes={!!images?.some(image=>image.sha)}/> : null;
   const captured = injected && !report ? <details className="turn-captured"><summary>Text</summary><pre className="output">{prompt}</pre></details> : null;
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
-  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{captured}{report && <CapturedContextReport report={report} time={time} />}{images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}</div>;
+  if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{attachments}{captured}{report && <CapturedContextReport report={report} time={time} />}{images?.length ? <div className="turn-images"><OpImages images={images} compact={!envelope} /></div> : null}</div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
   const basis = ledgerBasis(ledger);
   const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
@@ -1139,10 +1143,11 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
     <div className="turn">
       {who}
       {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
+      {attachments}
       {captured}
       {report && <CapturedContextReport report={report} time={time} />}
       {(overflows || expanded) && <button type="button" className="turn-more" aria-expanded={expanded} onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>{expanded ? 'Show less' : `Show full prompt · ${shown?.length.toLocaleString() ?? 0} characters`}</button>}
-      {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
+      {images?.length ? <div className="turn-images"><OpImages images={images} compact={!envelope} /></div> : null}
       {plan && <PinnedPlanList plan={plan} />}
       {permissionMode && <div className="turn-mode" title="Claude Code permission mode recorded with this prompt; shown when it changes">{PERMISSION_MODE[permissionMode] ?? permissionMode}</div>}
       {settings && <div className="turn-mode" title={settings.title}>{settings.text}</div>}
