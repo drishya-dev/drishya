@@ -30,7 +30,9 @@ Supplementary `pnpm check:real -- live-batches` passes against Claude `rec_c8e5c
 - Both typechecks pass.
 - 31 focused units pass: two-call batch boundaries, default single-step equivalence and existing goldens unchanged, as-of concealment, worker same-step paging, state query transport and replay query defaults.
 - Two browser regressions pass at 600/1440 on Edge, three workers, zero retries: both cards arrive/resolve in one update, scroll completely out of the virtual DOM and back without duplicate outcome markers, and invalid history boundary inputs are refused. These cases failed before the guard; assertions were retained.
-- Before the decision, broad affected/full gates were deferred under AGENTS.md. The decision is now resolved; final frozen-revision verification is running before readiness is claimed.
+- Frozen `ac4215ec` in `.local/wt-live6-gate`, with its own frozen install: both typechecks, 277 related units / one existing skip, build, all 1,237 units / one existing skip, and package verification pass. Browser run: **664 parallel + 32 serial = 696 passed**, 28 existing skips, **one failure**, Edge three parallel workers / one serial worker, zero retries. `check:affected` therefore exits 1; no clean complete command is claimed.
+- The failure is `b2-live.spec.ts:63`, assertion line 116: the same passage stays selected but its offset changes from −292 to −287 px. A separately installed/built clean-main checkout at `9bab2cc9` reproduces the **exact same assertion and 5 px difference** on its first one-worker, zero-retry run. The candidate's isolated rerun also fails identically. This is the already documented TEST-2 anchoring failure, not a newly passing test or a fix in this PR. All failed logs remain in the ignored gate/base `.local/` directories; no assertion, timeout or skip changed. AGENTS.md explicitly allows this baseline-reproduced failure not to block the unrelated task.
+- Main was integrated afterward with documentation-only SEC-1 task changes; implementation/test files remain exactly the tested frozen revision. No full gate was repeated for that documentation integration.
 
 ## Decision resolved — 7 November, Yash
 
@@ -38,4 +40,4 @@ Yash explicitly selected the recommended fallback: when the actual tool instrume
 
 The 600 px native results above therefore meet the clarified acceptance; their zero physical travel is intentional and is not described as a completed flight. This decision is also recorded in TASKS and the STATUS decisions log. Earlier draft #362 correctly remained blocked until that answer.
 
-Final affected/full checks are now pending. The task stays unticked/claimed and the PR stays draft until those checks finish. No Toolbox, style or additional motion implementation is needed for the selected fallback.
+LIVE-6 acceptance is complete under that explicit clarification. The task is ticked, claim removed in PR #362, and the PR is ready for other-builder review, not merged. The gate retains the baseline-reproduced TEST-2 failure above; it is not described as fully green. No Toolbox, style or additional motion implementation is needed for the selected fallback.
