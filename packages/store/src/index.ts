@@ -922,7 +922,7 @@ export class Store {
 
   // ── search and bookmarks ───────────────────────────────────────────────────
 
-  /** Hits carry the person-prompt number for their agent, excluding harness notices. */
+  /** Hits keep captured native turn numbers; otherwise count person prompts, excluding harness notices. */
   search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
     const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
@@ -930,15 +930,31 @@ export class Store {
     // every recognised harness wrapper is a leading shape, before any clipping.
     const prompts = new Map<string, number[]>();
     const entries = this.q("SELECT seq, agent_id AS agent, body FROM observations WHERE recording_id = ? AND kind = 'message.user' ORDER BY seq").all(recordingId) as { seq: number; agent: string; body: string }[];
+    const records = new Map<string, { seq: number; text?: string; images: boolean }[]>();
     for (const entry of entries) {
       if (entry.agent !== 'agent:main') continue;
-      const payload = (JSON.parse(entry.body) as Observation).payload as { text?: string | BlobText };
+      const observation = JSON.parse(entry.body) as Observation;
+      const payload = observation.payload as { text?: string | BlobText; images?: unknown[] };
       const text = typeof payload.text === 'string' ? payload.text : payload.text?.preview;
-      if (!isPersonPrompt(text)) continue;
-      const list = prompts.get(entry.agent) ?? []; list.push(entry.seq); prompts.set(entry.agent, list);
+      const key = `${observation.source.sourceId}|${observation.source.generation}|${observation.source.recordId ?? observation.id}`;
+      const list = records.get(key) ?? [];
+      list.push({ seq: entry.seq, text, images: !!payload.images?.length }); records.set(key, list);
+    }
+    const positions: number[] = [];
+    for (const record of records.values()) {
+      const texts = record.filter(part => part.text?.trim());
+      if (texts.length) positions.push(...texts.filter(part => isPersonPrompt(part.text)).map(part => part.seq));
+      else if (record.some(part => part.images)) positions.push(record[0]!.seq);
+    }
+    prompts.set('agent:main', positions.sort((a, b) => a - b));
+    // Native turn numbers are captured harness turns, not prompt counts. Preserve them;
+    // only the fallback for harnesses without turn records counts person prompts.
+    const nativeTurns = new Map<string, number[]>();
+    for (const row of this.q("SELECT agent_id AS agent, seq FROM observations WHERE recording_id = ? AND kind = 'turn.start' ORDER BY seq").all(recordingId) as { agent: string; seq: number }[]) {
+      const list = nativeTurns.get(row.agent) ?? []; list.push(row.seq); nativeTurns.set(row.agent, list);
     }
     const promptAt = (agent: string, seq: number) => {
-      const list = prompts.get(agent) ?? []; let lo = 0, hi = list.length;
+      const list = nativeTurns.get(agent) ?? prompts.get(agent) ?? []; let lo = 0, hi = list.length;
       while (lo < hi) { const mid = (lo + hi) >>> 1; if (list[mid]! <= seq) lo = mid + 1; else hi = mid; }
       return lo;
     };

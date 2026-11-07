@@ -621,7 +621,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false });
   };
 
-  const prompts = scene.passages.flatMap((ps, index) => (ps.turnPrompt || ps.turnImages?.length) && isPersonPrompt(ps.turnPrompt) ? [{ ps, index }] : []);
+  const prompts = scene.passages.flatMap((ps, index) => (ps.turnPrompt || ps.turnImages?.length) && ps.personPrompt !== false && isPersonPrompt(ps.turnPrompt) ? [{ ps, index }] : []);
   const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 1));
   const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
 

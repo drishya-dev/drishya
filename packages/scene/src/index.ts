@@ -69,6 +69,8 @@ export interface ScenePassage {
   matchesFilter: boolean;
   /** A user turn that opened this passage, if one did. */
   turnPrompt?: string;
+  /** Derived before worker preview clipping; false only for known harness-written notices. */
+  personPrompt?: false;
   /** Captured timestamp of the turn that opens this passage, when supplied. */
   turnTime?: string;
   /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
@@ -249,6 +251,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
+      ...(opensTurn && turn && !isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step}:{}),
       ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
@@ -267,6 +270,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     id: `prompt_${turn.id}`, agentId: turn.agentId, ops: [], prose: [],
     settled: turn.step !== turnAt.at(-1)?.step,
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
+    ...(!isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
     turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
     ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
     ...(turn.images ? { turnImages: turn.images } : {}),
