@@ -250,6 +250,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const m = req.method ?? 'GET';
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
+    if(a==='checkout-grants'&&!id&&m==='GET')return json(res,{items:await workspace.remembered.list()});
+    if(a==='checkout-grants'&&id&&m==='DELETE') {
+      if(!/^[a-f0-9]{64}$/.test(id))throw new HttpError(400,'Invalid checkout grant identity.');
+      workspace.revokeRemembered(id);return json(res,{revoked:true});
+    }
     if (a === 'storage' && m === 'GET') return json(res, await readStorageUsage());
     if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
     if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
@@ -335,13 +340,23 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!available) throw new HttpError(404, 'The original journal is unavailable. Captured history remains readable.');
         return json(res, await app.ingest.rescan(id));
       }
-      if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
+      if (sub === 'workspace' && !subId && m === 'GET') return json(res, await workspace.restoreStatus(id));
+      if(sub==='workspace'&&subId==='setup'&&m==='GET') {
+        if(id.includes('+'))throw new HttpError(400,'Choose one session workspace.');
+        const [setup,native]=await Promise.all([workspace.setup(id),controller.readiness(id)]);
+        return json(res,{...setup,native});
+      }
+      if(sub==='workspace'&&subId==='revoke'&&m==='POST'){workspace.revoke(id);return json(res,workspace.status(id));}
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
       if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
       if(sub==='git'&&subId==='commit'&&m==='GET')return json(res,await gitReview.commit(id,url.searchParams.get('hash')??'',intParam(url,'parent',0,0,1023),intParam(url,'start',0,0,10_000_000),url.searchParams.get('generation')??undefined));
-      if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
+      if (sub === 'workspace' && subId === 'approve' && m === 'POST') {
+        const body=await readJson(req);
+        if(body.remember!==undefined&&typeof body.remember!=='boolean')throw new HttpError(400,'Remember must be a boolean.');
+        return json(res, await workspace.approve(id,body.remember===true));
+      }
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
       if (sub === 'workspace' && subId === 'document' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', 0, Number.MAX_SAFE_INTEGER));
       if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));
@@ -599,7 +614,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'checkpoint' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'checkpoints are read per recording, not for a combined view');
         app.recording(firstId);
-        return json(res, await readCheckpointFile(app.store, firstId, subId, workspace.status(firstId).approved));
+        return json(res, await readCheckpointFile(app.store, firstId, subId, (await workspace.restoreStatus(firstId)).approved));
       }
       // READ-7: a failed command, the next run of the same command and the edits between them.
       if (sub === 'fix-chain' && subId && m === 'GET') {
