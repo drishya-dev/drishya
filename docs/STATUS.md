@@ -55,6 +55,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — 7 November: SEC-1 dependency remediation verified
+
+- [PR #365](https://github.com/drishya-dev/drishya/pull/365) opened before testing. Vite 8.3.6 and Vitest 4.1.12 resolve patched development dependencies. Workspace and standalone synthetic shop audits show zero findings. Scratch generation matches the patched shop manifest.
+- Full gate on 3f2204c passed the frozen install, typecheck, UI build and package verification, with 1,232 units at three workers and 695 browser tests at three parallel and one serial worker. Zero retries. The initial Windows TEMP alias failure and canonical-path confirmation are in the [verification report](review/sec-1-dependency-verification.md).
+- SEC-1 stays claimed until Dependabot confirms the default-branch alert closures after merge.
+
 ### Yash with Codex — 7 Nov: CONNECT-4a complete, review #366
 
 - Completed the approved logic half in **PR #366**, ready for other-builder review, **not merged**. Exact-checkout remembered reading consent, canonical directory/checkout/Git identity validation, change/revoke, setup metadata API, sibling pre-fill without inherited consent, default-checked Remember in Modern's existing approval, and one idle-client acknowledgement per selected-session connection. No Clarity, restyle, event schema, native policy/configuration or credential changes.
