@@ -45,8 +45,13 @@ export class WorkspaceAccess {
     if (id.includes('+')) throw new HttpError(400, 'choose one session workspace');
     const rec = this.app.recording(id);
     if (!rec.workspaceRoot) throw new HttpError(400, 'no captured workspace on this machine');
-    this.revoke(id);
-    const key=checkoutGrantKey(rec.workspaceRoot),epoch=this.rootEpoch.get(key)??0;
+    const key=checkoutGrantKey(rec.workspaceRoot);
+    // Changing this session's choice must not revoke another session's temporary grant.
+    // Explicit revoke still invalidates every reader of the exact checkout.
+    this.rootEpoch.set(key,(this.rootEpoch.get(key)??0)+1);this.remembered.remove(key);
+    this.accessEpoch.set(id,(this.accessEpoch.get(id)??0)+1);this.grants.delete(id);this.rememberedSessions.delete(id);
+    for(const image of this.imageGrants.keys())if(image.startsWith(id+'\0'))this.imageGrants.delete(image);
+    const epoch=this.rootEpoch.get(key)??0;
     const identity=remember?await checkoutIdentity(rec.workspaceRoot):undefined;
     // Uses the existing drive/home checks; the API cannot select an arbitrary root.
     await this.app.approveGraphRoot(id);

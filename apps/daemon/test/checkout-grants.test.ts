@@ -36,6 +36,15 @@ it('changing remembered to temporary approval removes the saved grant',async()=>
   expect(f.access.status(f.id)).toMatchObject({approved:true,remembered:false});
   expect((await new WorkspaceAccess(f.app).restoreStatus(f.id)).approved).toBe(false);
 });
+it('approving another session of the same checkout preserves existing temporary readers',async()=>{
+  const f=await fixture();await f.access.approve(f.id);
+  const journal=join(f.dir,'second.jsonl');await writeFile(journal,JSON.stringify({type:'user',uuid:'second',sessionId:'22222222-2222-4222-8222-222222222222',cwd:f.root,message:{role:'user',content:'Synthetic second connection'}})+'\n');
+  const other=(await f.app.ingest.importSource('claude-code',journal)).recordingId;
+  await f.access.approve(other);
+  expect((await f.access.read(f.id,'file.ts')).text).toContain('export const a');
+  expect((await f.access.read(other,'file.ts')).text).toContain('export const a');
+  f.access.revoke(other);expect(f.access.status(f.id).approved).toBe(false);
+});
 it.each(['missing','replaced','redirected'] as const)('never restores a %s root',async mode=>{
   const f=await fixture();await f.access.approve(f.id,true);await rename(f.root,f.root+'-old');
   if(mode==='replaced')await mkdir(f.root);
