@@ -1,6 +1,8 @@
 export interface RecordedFileRoot { root: string; prefix: string; recordedRoot?:string }
-export interface FileTreeRow { path: string; folder: boolean; depth: number; name: string; parent: string; location?: string; worktree?: boolean }
+export interface FileTreeRow { path: string; folder: boolean; depth: number; name: string; parent: string; location?: string; worktree?: boolean; unplaced?: boolean }
 export const WORKTREE_GROUP = '\u0000recorded-worktrees';
+export const UNPLACED_GROUP = '\u0000unplaced-paths';
+export interface FilePlacement { indexed: ReadonlySet<string>; direct: ReadonlySet<string> }
 const normalize = (value: string) => {
   const path = value.replace(/\\/g, '/').replace(/\/+$/, '');
   return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
@@ -14,36 +16,63 @@ export function currentWorkspacePath(path:string, roots:RecordedFileRoot[], work
 }
 
 /** Display structure only: every leaf keeps the projection's exact path identity. */
-export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], workspaceRoot: string | undefined, opened: Set<string>, query = ''): FileTreeRow[] {
+export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], workspaceRoot: string | undefined, opened: Set<string>, query = '', placement?: FilePlacement): FileTreeRow[] {
   const byPrefix = new Map(roots.map(root => [root.prefix, root]));
   const located = paths.map(path => {
     const root = byPrefix.get(path.split('/')[0]!);
-    return { path, root, other: !!root && !!workspaceRoot && normalize(root.root) !== normalize(workspaceRoot) };
+    const relative = root ? path.slice(root.prefix.length + 1) : path;
+    const main = !!root && !!workspaceRoot && normalize(root.root) === normalize(workspaceRoot);
+    const unplaced = !!placement && ((!root && /^worktree-[a-f0-9]{10}\//.test(path)) || !placement.direct.has(path) && !(placement.indexed.has(path) || main && placement.indexed.has(relative)));
+    return { path, root, unplaced, other: !!root && !!workspaceRoot && normalize(root.root) !== normalize(workspaceRoot) };
   });
-  if (query.trim()) return located.filter(({path, root}) => `${path} ${root?.root ?? ''}`.toLowerCase().includes(query.toLowerCase())).map(({path, root}) => ({path, folder:false, depth:0, name:root ? path.slice(root.prefix.length + 1) : path, parent:'', location:root ? `${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length + 1)}` : undefined}));
+  if (query.trim()) return located.filter(({path, root}) => `${path} ${root?.root ?? ''}`.toLowerCase().includes(query.toLowerCase())).map(({path, root, unplaced}) => ({path, folder:false, depth:0, name:root ? path.slice(root.prefix.length + 1) : path, parent:'', unplaced, location:root && !unplaced ? `${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length + 1)}` : undefined}));
   const rows: FileTreeRow[] = [], seen = new Set<string>();
   const append = (path: string, root: RecordedFileRoot | undefined, base: string, depth: number) => {
     const relative = root ? path.slice(root.prefix.length + 1) : path;
     const parts = relative.split('/'); let parent = base;
     for (let i = 0; i < parts.length; i++) {
       if (!opened.has(parent)) break;
-      const next = i ? `${parent}/${parts[i]}` : root ? `${root.prefix}/${parts[i]}` : parts[i]!;
+      const folder = i < parts.length - 1;
+      // Main folder identities survive the reducer adding worktree namespaces.
+      const next = !folder ? path : placement && base === '' ? parts.slice(0,i+1).join('/') : i ? `${parent}/${parts[i]}` : root ? `${root.prefix}/${parts[i]}` : parts[i]!;
       if (!seen.has(next)) {
         rows.push({path:next, folder:i < parts.length - 1, depth:depth+i, name:parts[i]!, parent, location:root ? `${root.root.replace(/[\\/]$/, '')}/${parts.slice(0,i+1).join('/')}` : undefined}); seen.add(next);
       }
       parent = next;
     }
   };
-  for (const item of located.filter(item => !item.other)) append(item.path, item.root, '', 0);
-  const others = located.filter(item => item.other);
+  const mainNamespaced = new Set(located.filter(item => item.root && !item.other && !item.unplaced).map(item => item.path.slice(item.root!.prefix.length + 1)));
+  for (const item of located.filter(item => !item.other && !item.unplaced && !(placement && !item.root && mainNamespaced.has(item.path)))) append(item.path, item.root, '', 0);
+  const others = located.filter(item => item.other && !item.unplaced);
   if (others.length) {
     rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Other working directories',parent:'',worktree:true});
     if (opened.has(WORKTREE_GROUP)) for (const root of roots) {
       const entries = others.filter(item => item.root === root);
       if (!entries.length) continue;
-      rows.push({path:root.prefix,folder:true,depth:1,name:root.root.replace(/\\/g,'/').split('/').filter(Boolean).at(-1) ?? root.root,parent:WORKTREE_GROUP,location:root.root,worktree:true});
+      rows.push({path:root.prefix,folder:true,depth:1,name:workingDirectoryName(root.root,roots),parent:WORKTREE_GROUP,location:root.root,worktree:true});
       for (const item of entries) append(item.path, root, root.prefix, 2);
     }
   }
+  const unplaced = located.filter(item => item.unplaced);
+  if (unplaced.length) {
+    rows.push({path:UNPLACED_GROUP,folder:true,depth:0,name:'Unplaced paths',parent:'',unplaced:true});
+    if (opened.has(UNPLACED_GROUP)) for (const {path,root} of unplaced) rows.push({path,folder:false,depth:1,name:root?path.slice(root.prefix.length+1):path,parent:UNPLACED_GROUP,unplaced:true});
+  }
   return rows;
+}
+
+/** Labels are independent of which other roots have arrived, so no relabelling on a new agent. */
+function workingDirectoryName(root:string, roots:RecordedFileRoot[]):string {
+  const parts=(value:string)=>value.replace(/\\/g,'/').split('/').filter(Boolean);
+  const names=parts(root),at=names.lastIndexOf('worktrees');
+  if(at>=0 && at+1<names.length) {
+    const short=names.slice(at+1).join('/');
+    const matches=roots.filter(item=>{const p=parts(item.root),i=p.lastIndexOf('worktrees');return i>=0&&p.slice(i+1).join('/')===short;});
+    return matches.length<2?short:root.replace(/\\/g,'/');
+  }
+  const last=names.at(-1)??root;
+  const same=roots.filter(item=>parts(item.root).at(-1)===last);
+  if(same.length<2)return last;
+  const suffix=names.slice(-2).join('/');
+  return same.filter(item=>parts(item.root).slice(-2).join('/')===suffix).length<2?suffix:root.replace(/\\/g,'/');
 }
