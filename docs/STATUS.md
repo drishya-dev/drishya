@@ -34,7 +34,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | FILES-12 | @yash + Codex (Sol 6.1) | `codex/files-12` | 2026-11-07 | Evidence-resolved prose path module/provider, markdown.tsx inline/bare links only, SessionWorkspace.tsx provider wiring and Files folder reveal only; focused unit/browser/real-session tests and docs, at most 15 paths. Preserve FILES-2 peek links; no History/motion/scroll edits without a separate reservation. Existing classes/tokens only; look left to FINISH-3. Builder resolved #357: file references open the existing file preview and show contents; preserve captured/current consent and FILES-2. No extra icon action. |
 | DOCS-1 | @harsh + Codex | `main` (docs only) | 2026-11-06 | README.md; docs/TASKS.md and docs/STATUS.md for this item's claim/completion only. Apply adewale/good-readme; verify examples against current source. No UI, runtime, publishing or other claimed work. |
 | CONNECT-3 | @yash + Codex (Sol 6.1) | `codex/connect-3` | 2026-11-06 | prompt-files.ts, SessionWorkspace.tsx attachment/paste handling only, controller attachment validation only if a proven cause requires it; focused tests, real screenshot acceptance and docs. No native policy changes or FINISH/Clarity redesign; look left to FINISH-4. |
-| CONTENT-17 | @yash + Codex (Sol 6.1) | `codex/content-17` | 2026-11-06 | Completed in ready PR #353; frozen pending review, no further source edits. Claim removed by that PR. |
 | CONTENT-16 | @yash + Codex (Sol 6.1) | `codex/content-16` | 2026-11-06 | New strict desktop-prompt parser and attachment presenter, History.tsx TurnBlock prompt/attachment section only (Yash explicitly approved); focused unit/browser/real-case tests and docs. No motion, scroll or layout edits. Look left to FINISH-3. |
 | CLARITY-1 | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/clarity-1` | 2026-11-06 | `lib/ui-version.ts`, `UIVersions.tsx`, `main.tsx`, `apps/ui/vite.config.ts`, new `apps/ui/src/clarity/`, `!important` guards in legacy sheets; scripts for the pixel guard. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
@@ -55,6 +54,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 6 Nov: CONTENT-17 prose table behaviour complete
+
+- PR #353: tables in agent prose, horizontal containment, inline code and safe links, exact Original/Copy. Genuine Claude/Codex narrow/wide/code/link replies pass at 600/1440 on all seven palettes (28 checks). Affected checks pass: both typechecks, 38 related units and 90 browsers / 15 existing skips. Final isolated gate is recorded in the PR; no merge. [Evidence](review/content-17-prose-tables.md). Presentation remains FINISH-3; Clarity and its control/style owners are untouched.
 
 ### Yash with Claude — 6 Nov: the finishing pass moves into Clarity
 
