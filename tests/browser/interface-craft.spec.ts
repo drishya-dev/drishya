@@ -21,6 +21,7 @@ test('settings preserve keyboard operation and fit short, narrow and wide readin
   await trigger.click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
   await expect(settings.getByText('Earlier design backups')).toHaveCount(0);
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
   const reasoning = settings.getByRole('combobox', { name: 'Exposed reasoning detail' });
   await reasoning.selectOption('collapsed'); await expect(reasoning).toHaveValue('collapsed');
   const map = settings.getByRole('checkbox', { name: /^3D repository map/ });
@@ -32,10 +33,12 @@ test('settings preserve keyboard operation and fit short, narrow and wide readin
     await page.setViewportSize({ width, height });
     await expect(settings).toBeVisible();
     expect(await settings.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    await settings.getByRole('tab',{name:'Playback',exact:true}).click();
     await settings.getByText('Sequence diagnostics', { exact: true }).click();
     await expect(settings.getByRole('button', { name: 'Replay sequence' })).toBeVisible();
     await settings.getByText('Sequence diagnostics', { exact: true }).click();
-    await settings.getByRole('button', { name: 'Paper', exact: true }).click();
+    await settings.getByRole('tab',{name:'Appearance',exact:true}).click();
+    await settings.getByRole('button', { name: 'Daylight', exact: true }).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
     await settings.getByRole('button', { name: 'Jet Black', exact: true }).click();
   }

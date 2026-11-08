@@ -38,7 +38,8 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
       await route.fulfill({ response });
     });
     await page.goto(server.launchUrl);
-    await page.locator('.home .row-main.link').first().click();
+    await expect(page.locator('.mh-home')).toBeVisible();
+    await page.goto(new URL(`/#/r/${recordingId}`,server.launchUrl).href);
     await expect(page.locator('.reading-status')).toContainText('12000 recorded steps');
     await expect(page.locator('.viewer')).toHaveClass(/still/);
     expect(requests.some((url) => url.endsWith('/projection'))).toBe(false);
@@ -65,13 +66,12 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await expect(page.locator('.search-results .search-hit small').first()).toContainText(/Reply|Call|Result|Prompt|Reasoning/, { timeout: 15000 });
     await page.locator('.search-results button').first().click();
     await expect(page.locator(`[data-op-id="${recordingId}.call-5999"]`)).toBeVisible();
-    await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-    await page.getByText('Sequence diagnostics', { exact: true }).click();
-    await page.getByRole('button', { name: 'Replay sequence' }).click();
+    await page.getByLabel('More workspace options',{exact:true}).click();
+    await page.getByRole('button', { name: 'Replay this session' }).click();
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByRole('button', { name: 'Step forward', exact: true }).click();
     await expect(page.locator('.viewer')).toBeVisible();
-    await page.getByRole('button', { name: '← History', exact: true }).click();
+    await page.getByRole('button', { name: 'Exit replay', exact: true }).click();
     await expect(page.locator('.reading-status')).toContainText('12002 recorded steps');
   } finally {
     await page.unrouteAll({ behavior: 'wait' });
