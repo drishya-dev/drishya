@@ -78,9 +78,10 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
   if (ids.length === 1 && incremental?.id === id) {
     const added = source.observations(ids[0]!, incremental.sequence, 10_001);
     const valid = added.length <= 10_000 && added.every((o) => {
-      const cwd = (o.payload as { cwd?: unknown }).cwd;
+      const {cwd, intent} = o.payload as {cwd?: unknown; intent?: {cwd?: unknown}};
       return !!o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime)) && new Date(o.sourceTime).toISOString() >= incremental!.clock &&
-        (!o.workspaceRoot || incremental!.roots.has(o.workspaceRoot)) && (typeof cwd !== 'string' || incremental!.roots.has(cwd));
+        (!o.workspaceRoot || incremental!.roots.has(o.workspaceRoot)) && (typeof cwd !== 'string' || incremental!.roots.has(cwd)) &&
+        (typeof intent?.cwd !== 'string' || incremental!.roots.has(intent.cwd));
     });
     if (valid) {
       const ordered = orderObservations(added);
@@ -112,8 +113,9 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
     rememberCapturedBlobs(o.payload);
     if (o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime))) clock = new Date(o.sourceTime).toISOString();
     if (o.workspaceRoot) roots.add(o.workspaceRoot);
-    const cwd = (o.payload as { cwd?: unknown }).cwd;
+    const {cwd, intent} = o.payload as {cwd?: unknown; intent?: {cwd?: unknown}};
     if (typeof cwd === 'string') roots.add(cwd);
+    if (typeof intent?.cwd === 'string') roots.add(intent.cwd);
     yield o;
   } } };
   const reducer = createReducer(id, tracked, io, { adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096 });
