@@ -1,6 +1,6 @@
 # SHIP-1 — Modern-only Release 1
 
-Implemented in [PR #369](https://github.com/drishya-dev/drishya/pull/369), branch `codex/ship-1`. Ready for the other builder's review; not merged. Release-candidate or all-green browser-gate readiness is not claimed.
+Implemented in [PR #369](https://github.com/drishya-dev/drishya/pull/369), branch `codex/ship-1`. Implementation is checked for the other builder's review; not merged. GitHub still marks the PR draft: the ready-for-review mutation is blocked by its GraphQL user quota. REST updated the description successfully; the ordinary browser is signed out. Toggle Ready when that external blocker clears. Release-candidate or all-green browser-gate readiness is not claimed.
 
 ## Scope and agreements
 
@@ -20,7 +20,7 @@ Genuine scratch-home acceptance (not demo acceptance): Claude Code `rec_ab67986c
 
 ## Checks and migrations
 
-Final both-project typecheck and 45 related units pass. Package verification and all 12 packaged cases pass. Seven final release/reading/browser guards pass together. All 17 connected-workspace cases pass together, including sending, approval, attachments, model/effort menus, native questions, drafts, source reading and map navigation. Their native process is a synthetic protocol stand-in; this is not a claim of fresh signed-in model turns.
+Final both-project typecheck and 45 related units pass. Package verification and all 12 packaged cases pass. Seven final release/reading/browser guards pass together. Eight additional anchor, local-scroll, hover and fit checks pass together after the gutter helper update. All 17 connected-workspace cases pass together, including sending, approval, attachments, model/effort menus, native questions, drafts, source reading and map navigation. Their native process is a synthetic protocol stand-in; this is not a claim of fresh signed-in model turns.
 
 Other focused passing checks include 21 Git/recovery/folding/version/source-control cases, the retained product-workspace journeys, discovery and virtualized grouping, B4 paging/replay, settings keyboard operation, distant stored-source search, dock identity/tether controls, Source range copying/pinning/paging, verification during replay, independent replay reading, replay camera continuity and paged replay. Core scroll, motion and coordinate predicates are retained.
 
