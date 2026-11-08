@@ -140,9 +140,9 @@ test('Modern settings resets section reading, follows responsive tab orientation
   await expect(select).toBeFocused();await expect(select).toHaveValue('collapsed');await expect(settings).toBeVisible();
   await page.setViewportSize({width:390,height:844});await expect(nav).toHaveAttribute('aria-orientation','horizontal');
   await settings.getByRole('tab',{name:'Reading',exact:true}).focus();await page.keyboard.press('End');
-  // CLARITY-1: the UI versions tab is offered to everyone again (Clarity), so it is the last section.
-  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toBeFocused();
-  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveAttribute('aria-selected','true');
+  // Modern-only Release 1 ends its settings sections at Keyboard.
+  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toBeFocused();
+  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toHaveAttribute('aria-selected','true');
   expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/settings-phone-navigation-refined.png')});
   await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
@@ -361,7 +361,7 @@ test('Modern colour and UI versions remain separate; scoped Modern chrome does n
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
   await settings.getByRole('button',{name:'Daylight',exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
-  await settings.getByRole('tab',{name:'UI versions',exact:true}).click();
+  await settings.getByRole('tab',{name:'Keyboard',exact:true}).click();
   await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
   await settings.getByRole('button',{name:/^Legacy/}).click();
   await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
