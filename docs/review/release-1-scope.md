@@ -7,6 +7,8 @@ Yash with Claude (Opus), 8 November. This decides what ships in the first packag
 
 I did not repeat a live walk for this document, to save the weekly limit. Section 4 has a prompt for a fresh reviewer to run on the release candidate instead.
 
+> **Correction, Yash, 8 November (binding).** Drishya is agent visualization: it presents what the agent is doing at runtime. Re-entry ("since you left") is not in scope, and replay is a developer tool because the history is already on screen. "Needs you" waits for the next version. Where this review argues otherwise, the correction wins. The Release 1 list is now TASKS P0, not the table that was here.
+
 ## 1. My review: will a developer use it?
 
 **The short answer:** they will open it for the visualization. They will keep it open if it answers three questions faster than their harness:
@@ -60,35 +62,7 @@ So Release 1 keeps the visualization at full strength and makes it calmer under 
 
 ## 3. The Release 1 list
 
-All of these are P0 in [TASKS](../TASKS.md), each with Do and Accept lines. The usual rules hold: claim first, one whole item per PR, accept on real sessions of both harnesses at 600 and 1440 px.
-
-| Order | ID | What | Builder | Why it ships |
-|---|---|---|---|---|
-| 1 | TOOLS-3 | Toolbox stays in the right dock, centred vertically by its own height, groups expand in place, no centred window (#359) | Harsh; Yash records one few-tool Claude session | The centred popup is the most visible wrong behaviour on main today |
-| 2 | SHIP-1 | Modern only: remove the UI-version chooser and Clarity from the package | Sol | Yash's direction; no unfinished choices for users |
-| 3 | SHIP-7 | Trust bugs: search result that doesn't move the reading position; Screen black held frame; return from Workspace collapses the open read | Sol | Each breaks the "I understand enough to act" promise |
-| 4 | SHIP-2 | Palettes and rich colour: every palette as finished as the light one; vivid semantic colour inside cards; type checked | Opus specs and approves, Sonnet builds | First impression; Yash's top visual concern |
-| 5 | SHIP-4 | "Since you left": a compact re-entry line in a session, linking to new actions, changed files, failures and any waiting request | Sol | Both reviews' top adoption item; the retention reason |
-| 6 | SHIP-5 | "Needs you": one active decision surface, distinct words for answer / approve / working / stopped by you, model list without a manual settings read; native question options are clickable and answer the harness whenever Drishya can answer them, and honestly say where to answer when it can't (a session started in the CLI or app) | Sol | Second adoption item; makes the second window safe to ignore. Yash, 8 Nov: options looked clickable, but it wasn't clear an answer was sent |
-| 6b | SHIP-12 | Plans, plan updates and task lists are shown open by default; no Show plan / collapse toggle | Sonnet | Yash, 8 Nov: a plan hidden behind a button is the thing you came to read |
-| 6c | SHIP-13 | Workspace reveals and highlights the open file in the Explorer, inside its expanded folders | Sonnet | Yash, 8 Nov: you should see where the file you're reading lives |
-| 6d | SHIP-14 | Queued inputs shows only what is still queued, not every receipt so far | Sol | Yash, 8 Nov: 137 old receipts read as a backlog |
-| 7 | SHIP-3 | Home hero above the session list, in LAND-1's visual language, saying what Drishya does | Sonnet, after LAND-1 is agreed | The first screen of the package and of every video |
-| 8 | SHIP-8 | Map: a quiet zone under reading material and labels that don't collide | Opus specs, Sonnet builds | Keeps the hook beautiful under text |
-| 9 | MOTION-4 | Every open has its matching close; a little slower and smoother | Sonnet | Yash's direction; "feels good" |
-| 10 | SHIP-6 | Reading and overlap defects from the presentation review (P01, P03–P05, P09, P11, P13, P17, P18, P20, P23) | Sonnet or Sol | Small, visible, cheap; premium bar |
-| 11 | SEC-1 | Close after Dependabot rescans main | Harsh | Already merged (#365) |
-| 12 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | Sol, then Harsh on a second machine | The thing users install |
-| 13 | SHIP-10 | Release-candidate review (prompt below) and Yash's human ten-minute pass | Fresh agent plus Yash | Last fixes come from here, not from new ideas |
-| 14 | LAND-2, VIDEO-1, SHIP-11 | Landing page, product videos on the release candidate, launch posts written and scheduled | Harsh and Yash | Launch |
-
-**Schedule:**
-- 8–9 November: items 1–3, and the SHIP-2 spec.
-- 10–13 November: items 4–10. Feature freeze at the end of 13 November.
-- 14–15 November: SHIP-10 and its fixes, the full gate, SHIP-9.
-- 16–18 November: videos on the release-candidate build, landing page, posts scheduled, release.
-
-**Avoid collisions.** SHIP-4, SHIP-5 and SHIP-7 all touch `History.tsx` and `SessionWorkspace.tsx`. One builder at a time per file, and each claim names its sections. SHIP-2, SHIP-8 and MOTION-4 are style and motion work; they share stylesheets, so they run one after another, not in parallel.
+See [TASKS P0](../TASKS.md). It replaced this section on 8 November after Yash's correction.
 
 ## 4. Release-candidate review prompt (SHIP-10)
 
