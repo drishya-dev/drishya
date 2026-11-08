@@ -76,3 +76,6 @@
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer textarea { max-height:min(240px,40dvh); overscroll-behavior:contain; }
 /* Once the text scrolls, its top and bottom edges fade instead of cutting a line in half against the status row and the controls. */
 :root[data-ui-version=modern] .modern-native-composer textarea[data-scrolls] { mask-image:linear-gradient(to bottom,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%); }
+
+/* The status is the one thing the first line says when something needs the person ("Approval needed"): it keeps its words and the folder name gives way. */
+:root[data-ui-version=modern] .modern-native-composer .modern-composer-state { flex:none; max-width:min(260px,70%); }
