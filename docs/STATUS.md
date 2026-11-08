@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-4 | @harsh + Codex | `codex/land-4-motion-plan` | 2026-11-08 | `docs/review/land-4-reference-motion.md`, `docs/superpowers/plans/2026-11-08-landing-motion.md`, TASKS/STATUS. REA-guided browser/source investigation and implementation plan only. LAND-5 and LAND-6 are separately bounded implementation items. |
 | FILES-14 | @harsh + Codex | `codex/files-14` | 2026-11-08 | Release queue 1, requested by Harsh on 8 Nov. Diagnose genuine nested and sibling worktree placement first. Own packages/projection/src/reduce.ts file-location/root assignment, apps/daemon/src/file-roots.ts and apps/ui/src/lib/worktree-files.ts only where the reproduced cause requires it; focused units/browser checks, real-session evidence and completion docs. At most 15 paths. Finish the whole item before SHIP-13 begins. Preserve captured path identities; any schema change requires both builders agreement. |
 | SHIP-14 | @harsh + Codex | `codex/ship-14` | 2026-11-08 | Release queue 2, requested by Harsh on 8 Nov. Own packages/scene/src/queued-inputs.ts pending/history resolution, apps/ui/src/components/QueuedInputs.tsx, daemon queued-inputs.ts and history-worker.ts queue-only path if required, focused units/browser/genuine queue evidence and completion docs. At most 15 paths. Preserve replay boundaries and evidence labels. Coordinator reserved QueueQuery/QueuePage optional API fields in contracts/index.ts and server.ts queue-route parsing on 8 Nov for complete as-of pending counts. Also reserved adapter-claude/src/index.ts assistant stop_reason=end_turn retention and its focused test on 8 Nov, using the existing turn.end event with stable identities. Preserve existing callers; no recorded-event definitions or UsagePayload changes. No native controller, composer styling or History motion edits. |
 | SHIP-13 | @harsh + Codex | `codex/ship-13` | 2026-11-08 | Release queue 3, requested by Harsh on 8 Nov; starts after FILES-14. Own SessionWorkspace.tsx FolderExplorer active-tab reveal/selection, DeveloperWorkspace.tsx active file identity, lib/worktree-files.ts only for this reveal, focused units/browser checks, genuine five-tab acceptance and completion docs. At most 15 paths. Preserve manual collapse until active file changes. No LAYOUT-1 stylesheet, SHIP-1 routing, History/Origins or Usage edits. |
@@ -53,6 +52,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex - 8 Nov: LAND-4 reference motion specification
+
+- REA-guided browser/source investigation and the [execution plan](superpowers/plans/2026-11-08-landing-motion.md) define original aperture/repository artwork, bounded scroll motion and evidence-story ownership. [Evidence and limitations](review/land-4-reference-motion.md) distinguish observed motion from source-supported implementation; REA MCP was unavailable, browser/source fallback used. No reference assets or scripts ship.
+- LAND-5 and LAND-6 are whole separate implementation tasks. User explicitly requested execution and separate PRs, so no new design approval checkpoint. LAND-3 remains in PR #371; no shared app/claimed product files enter scope.
 
 ### Harsh with Codex — 8 November: release claims and completed landing/security records
 
