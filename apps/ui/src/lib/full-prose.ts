@@ -1,5 +1,5 @@
 import type {ArtifactSlice} from '@drishya/contracts';
-import {legacyDeliveryEnvelope} from '@drishya/projection';
+import {legacyDeliveryEnvelope} from '../../../../packages/projection/src/agent-delivery.ts';
 import type {DataSource} from '../api.ts';
 
 /** Load immutable captured prose in bounded UTF-8 responses, not line slices. */
