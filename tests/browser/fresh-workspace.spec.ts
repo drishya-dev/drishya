@@ -156,7 +156,8 @@ test('Modern composer keeps its target and state visible, with direct Files and 
     await page.setViewportSize({width,height:900});
     await expect(composer.locator('.modern-composer-location')).toContainText('shop');
     await expect(composer.locator('.modern-composer-identity')).toHaveAttribute('title',new RegExp(`Recording: ${ids.codex!.replace(/[^\w-]/g,'.')}`));
-    await expect(composer.locator('.modern-composer-state')).toBeVisible();
+    // UI-28: no resting status word and no "replied 3 m ago" line; the composer says nothing while there is nothing to say.
+    await expect(composer.getByText(/replied .* ago|Native defaults/)).toHaveCount(0);
     expect(await composer.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
     const promptBox=(await composer.boundingBox())!;
     for(const control of [page.getByRole('button',{name:'Tools',exact:true}),page.getByRole('switch',{name:'Automatically follow new work',exact:true})]) {
@@ -337,12 +338,10 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await openComposer(page);
   await expect(composer).toBeVisible();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Inspect the checkout condition');
-  await expect(composer.getByRole('button',{name:'Attach text or image files',exact:true})).toBeVisible();
-  await expect(composer.getByRole('button',{name:'Attach folder',exact:true})).toBeVisible();
-  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Attach',exact:true})).toBeVisible();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});
-  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'note.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic attachment for local testing')});
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toBeVisible();
@@ -407,10 +406,9 @@ test('Modern compact composer keeps connection consent accessible and has no nee
   await input.fill('A short prompt');
   expect((await composer.boundingBox())!.height).toBeLessThan(170);
   expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
-  await composer.locator('.native-options>summary').click();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});
-  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
 });
 
 test('structured shell output renders decoded newlines and retains the exact raw envelope', async ({ page }) => {
@@ -694,8 +692,8 @@ for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} 
   await openComposer(page);
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Review the selected source');
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'context.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic context')});
-  await composer.getByRole('combobox',{name:'Native model',exact:true}).selectOption('native-one');
-  await composer.getByRole('combobox',{name:'Reasoning effort',exact:true}).selectOption('high');
+  await composer.getByRole('button',{name:'Model',exact:true}).click();await composer.getByRole('menuitemradio',{name:'Native One',exact:true}).click();
+  await composer.getByRole('button',{name:'Reasoning effort',exact:true}).click();await composer.getByRole('menuitemradio',{name:'high',exact:true}).click();
   await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
   expect(payload).toBeUndefined();
   await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();

@@ -31,13 +31,13 @@ for(const width of [600,1440])test(`remembered checkout and connection acknowled
     const confirm=composer.getByRole('group',{name:'Confirm session access'});await expect(confirm).toBeVisible();expect(sent).toBe(0);
     await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();
     await expect(input).toHaveValue('');expect(sent).toBe(1);
-    await composer.getByRole('combobox',{name:'Native model',exact:true}).selectOption('synthetic-b');
-    await composer.getByRole('combobox',{name:'Reasoning effort',exact:true}).selectOption('high');
+    await composer.getByRole('button',{name:'Model',exact:true}).click();await composer.getByRole('menuitemradio',{name:'Synthetic B',exact:true}).click();
+    await composer.getByRole('button',{name:'Reasoning effort',exact:true}).click();await composer.getByRole('menuitemradio',{name:'high',exact:true}).click();
     await input.fill('Synthetic second request');await input.press('Enter');await expect(input).toHaveValue('');expect(sent).toBe(2);await expect(confirm).toHaveCount(0);
     await page.reload();await expect(rail.getByRole('button',{name:'Enable workspace reading',exact:false})).toHaveCount(0);
     await input.fill('Synthetic after reload');await input.press('Enter');await expect(confirm).toBeVisible();expect(sent).toBe(2);
     await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();await expect(input).toHaveValue('');expect(sent).toBe(3);
-    failed=true;await expect(composer).toContainText('failed',{timeout:6000});failed=false;await expect(composer.locator('.modern-composer-state')).not.toContainText('failed',{timeout:6000});
+    failed=true;await expect(composer).toContainText('failed',{timeout:6000});failed=false;await expect(composer.locator('.modern-composer-state')).toHaveCount(0,{timeout:6000});
     await input.fill('Synthetic after failure');await input.press('Enter');await expect(confirm).toBeVisible();expect(sent).toBe(3);
     await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();await expect(input).toHaveValue('');expect(sent).toBe(4);
     await page.context().setOffline(true);await expect(composer).toContainText('Connection unavailable');

@@ -30,10 +30,8 @@ for(const width of [600,1440]) test(`screenshot paste and pick, honest failures,
   const composer=page.getByRole('region',{name:'Harness prompt'});
   await expect(composer.locator('.composer-minimize')).toBeVisible();
   if(await composer.locator('.composer-minimize').getAttribute('aria-expanded')==='false')await composer.locator('.composer-minimize').click();
-  await composer.locator('.native-options > summary').click();
   const enable=composer.getByRole('button',{name:'Enable this workspace',exact:true});
-  if(await enable.isVisible())await enable.click();
-  await composer.locator('.native-options > summary').click();
+  if(await enable.isVisible()){await enable.click();await expect(composer.locator('.composer-setup')).toHaveCount(0);}
   const input=composer.locator('input[aria-label="Choose prompt files"]');
   await input.setInputFiles({name:'unsupported.heic',mimeType:'image/heic',buffer:Buffer.from('not a supported image')});
   await expect(composer.getByRole('alert')).toContainText('not supported');
@@ -44,7 +42,7 @@ for(const width of [600,1440]) test(`screenshot paste and pick, honest failures,
   await page.evaluate(async data=>navigator.clipboard.write([new ClipboardItem({'image/png':new Blob([Uint8Array.from(atob(data),c=>c.charCodeAt(0))],{type:'image/png'})})]),png.toString('base64'));
   await textbox.focus();await page.keyboard.press('Control+v');
   await expect(composer.locator('.attachment-chip')).toHaveCount(1);await expect(textbox).toHaveValue('Keep this draft');
-  const chooser=page.waitForEvent('filechooser');await composer.getByRole('button',{name:'Attach text or image files',exact:true}).click();
+  const chooser=page.waitForEvent('filechooser');await composer.getByRole('button',{name:'Attach',exact:true}).click();await composer.getByRole('menuitem',{name:/Images or files/}).click();
   await(await chooser).setFiles({name:'picked-screenshot.png',mimeType:'application/octet-stream',buffer:png});
   await expect(composer.locator('.attachment-chip img')).toHaveCount(2);
   await expect.poll(()=>composer.locator('.attachment-chip img').evaluateAll(nodes=>nodes.every(node=>(node as HTMLImageElement).complete&&(node as HTMLImageElement).naturalWidth>0))).toBe(true);
