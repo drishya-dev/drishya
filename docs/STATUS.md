@@ -38,8 +38,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | LAND-3 | @harsh + Codex | `codex/land-3-jet-black` | 2026-11-08 | Landing background only: `apps/landing/src/site.css`, TASKS and STATUS. Set page/header ground to pure black; preserve product material and paper sections. |
 | LAYOUT-1 | @yash + Claude Sonnet 5.5 | `claude/layout-1` | 2026-11-08 | Modern large screens and browser zoom: new `apps/ui/src/modern/large-screens.css` (imported from `modern/entry.tsx`), measure and width rules in `stage.css`, `modern/composer.css`, `modern/toolbox-dock.css`, `modern/reading-windows.css`, `modern/hud.css`; layout specs in `tests/browser/` for geometry. Not prose, colour, Home (`session-home.css`, `home-active.css`), Usage or `clarity/`. |
 | SHIP-1 | @yash + Codex | `codex/ship-1` | 2026-11-08 | Release1 Modern-only boot and Settings: `src/main.tsx`, `lib/ui-version.ts`, `components/UIVersions.tsx`; version units, Modern/Clarity browser and shared legacy-test fixture, clarity guard/capture, genuine-session case/report, STATUS/TASKS/CONTINUITY (up to32 paths, Yash approved8 Nov: all obsolete version-selecting specs including b2-live URL only; no scroll-assertion changes). No product geometry, palette, composer, Toolbox or paused FINISH/UI-26 stylesheet migration. Release1 scope pauses FINISH and defers UI-26; this reserves only version routing/chooser removal, per Yash’s ordered SHIP-1 instruction. Yash additionally reserved8 Nov: fresh-workspace Legacy/Modern comparison only, connected-workspace retired-version/Home/Files selectors only; UI-28 keeps composer behavior/assertions. No composer/Toolbox logic or design changes. |
-| SEC-1 | @harsh + Codex | `codex/sec-1` | 2026-11-07 | Whole dependency remediation: root and UI manifests, pnpm lockfile and affected synthetic shop manifest; Vitest runner config only if migration requires it. Verification report and STATUS/TASKS. Harsh requested a regular implementation PR before testing, followed by the full gate and results. No product source or schema changes. |
-| LAND-1 | @harsh + Codex | `codex/land-1-design-plan` | 2026-11-07 | `docs/superpowers/plans/2026-11-07-drishya-landing-page.md`, this claim and TASKS completion. Design plan only, including public demo and local app handoff. |
 | FINISH-0a | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0a` | 2026-11-06 | `tokens.css`, shared and modern sheets (spacing, layer, motion tokens), button rules in `styles.css`/`atelier.css`, new `Switch.tsx`, `SearchField`; Settings toggles in `ProductShell.tsx`. |
 | FINISH-0b | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0b` | 2026-11-06 | New `components/overlay/*`; every file with a native select or a details menu; `ProductMenu.tsx`, `lib/dismiss-menus.ts`; after 0a. |
 | FINISH-0c | @yash + Claude Opus 5.5 (spec, verify) + Sonnet (build) | `claude/finish-0c` | 2026-11-06 | New state components; the empty and error call sites; the session-open loading path in `App.tsx`/`Viewer.tsx`; after 0a. |
@@ -54,6 +52,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 8 November: release claims and completed landing/security records
+
+- Claimed FILES-14, SHIP-14, SHIP-13 and SHIP-12 on main in 652febb8 at Harsh's request. The claim rows hold their execution order and file scopes. FILES-14 establishes correct worktree identity before SHIP-13 adds active-file reveal. Each remains a whole task with its own PR and acceptance.
+- LAND-1 is complete as a design deliverable. PR #360 contains the reviewable design and PR #368 implemented it and merged. The draft design PR stays available; publication is separate.
+- SEC-1 merged as PR #365 and the post-merge GitHub Dependabot query returned zero open alerts. Its task is ticked and claim removed. The passing full gate and initial Windows temporary-path failure remain in the verification report.
 
 ### Claude Sonnet 5.5 — 8 Nov: UI-28 composer to the premium bar, [PR #370](https://github.com/drishya-dev/drishya/pull/370)
 
