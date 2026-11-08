@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAYOUT-1 | @yash + Claude Sonnet 5.5 | `claude/layout-1` | 2026-11-08 | Modern large screens and browser zoom: new `apps/ui/src/modern/large-screens.css` (imported from `modern/entry.tsx`), measure and width rules in `stage.css`, `modern/composer.css`, `modern/toolbox-dock.css`, `modern/reading-windows.css`, `modern/hud.css`; layout specs in `tests/browser/` for geometry. Not prose, colour, Home (`session-home.css`, `home-active.css`), Usage or `clarity/`. |
 | SHIP-1 | @yash + Codex | `codex/ship-1` | 2026-11-08 | Release1 Modern-only boot and Settings: `src/main.tsx`, `lib/ui-version.ts`, `components/UIVersions.tsx`; version units, Modern/Clarity browser and shared legacy-test fixture, clarity guard/capture, genuine-session case/report, STATUS/TASKS/CONTINUITY (up to32 paths, Yash approved8 Nov: all obsolete version-selecting specs including b2-live URL only; no scroll-assertion changes). No product geometry, palette, composer, Toolbox or paused FINISH/UI-26 stylesheet migration. Release1 scope pauses FINISH and defers UI-26; this reserves only version routing/chooser removal, per Yash’s ordered SHIP-1 instruction. Yash additionally reserved8 Nov: fresh-workspace Legacy/Modern comparison only, connected-workspace retired-version/Home/Files selectors only; UI-28 keeps composer behavior/assertions. No composer/Toolbox logic or design changes. |
 | SEC-1 | @harsh + Codex | `codex/sec-1` | 2026-11-07 | Whole dependency remediation: root and UI manifests, pnpm lockfile and affected synthetic shop manifest; Vitest runner config only if migration requires it. Verification report and STATUS/TASKS. Harsh requested a regular implementation PR before testing, followed by the full gate and results. No product source or schema changes. |
 | LAND-1 | @harsh + Codex | `codex/land-1-design-plan` | 2026-11-07 | `docs/superpowers/plans/2026-11-07-drishya-landing-page.md`, this claim and TASKS completion. Design plan only, including public demo and local app handoff. |
@@ -49,6 +48,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Claude Sonnet 5.5 — 8 Nov: LAYOUT-1 large screens and browser zoom, [PR #372](https://github.com/drishya-dev/drishya/pull/372)
+
+- Modern: past 1920 CSS px the header groups, Files, history column, Toolbox, Workspace, file peek, Git drawer, search, follow pill, map reader and queued inputs stay inside one centred stage (`--stage-max`, `modern/large-screens.css`; the peek is placed in script, `ReadingWindow.tsx` reads `--stage-max`); the map stays full width behind it. At or below 1920 px (and so at 600 and 1440) nothing changes: every rule is gated and the peek's script bounds reduce to the old values. Zoom is the same thing as width: 67 % of 1440 is 2149 CSS px, 80 % is 1800, 150 % is 960.
+- Checked on real imported sessions (Claude Code `rec_b837071b`, 5.9 MB; Codex `rec_275b92f0`, 6 MB; scratch home): geometry at 600, 2149, 2560 and 3840 px (stage edges 0, 115, 320, 960), with the file peek open at 2560, Claude at 1440, 1800, 1920 and 960 before the change. The Workspace could not be opened in the browser pane on the real session; its placement is covered by `tests/browser/large-screens.spec.ts` (fixture, 1440 to 3840 plus 600 overflow, proven to fail without the CSS). Screenshots of real sessions were not kept.
+- Not done on purpose: Home and Settings (Home is FINISH-1's), prose measure (UI-27), a type-scale bump on large screens (px tokens and fixed dock widths make it unsafe without a zoom of the whole page; zooming out is the user's choice and the 11 px floor holds).
 
 ### Claude Sonnet 5.5 — 8 Nov: UI-28 composer to the premium bar, [PR #370](https://github.com/drishya-dev/drishya/pull/370)
 
@@ -1492,6 +1497,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **8 Nov, Claude Sonnet 5.5: wide screens use one centred 1920 px stage (LAYOUT-1).** Docks, header groups and readers align to a stage that stops at 1920 CSS px; the map alone runs edge to edge. Reason: the reading column already capped at 1280 px while docks stayed on the screen edges, so extra width (large monitors and browser zoom-out alike) became gaps between a dock and its content. Alternatives rejected: growing the column (breaks the prose measure, UI-27's job) and CSS `zoom` on the page (breaks script-measured popovers and the map canvas).
 
 - **8 Nov, Yash with Claude: the Release 1 scope is corrected and TASKS' priority tables are rebuilt.** Drishya is agent visualization: it presents what the agent is doing at runtime. "Since you left" (SHIP-4) is out of scope and removed; it came from a reviewer misreading the product. "Needs you" (SHIP-5) moves to the next version. Replay was built for developers; the history is already on screen, so it leaves the product menu (UI-29). SHIP-2 is the whole product, split into 2a (palettes and tokens), 2b (history), 2c (everything a click opens) and 2d (readers and tools). Release 1 also takes UI-27 (prose at full width, the prompt in a capsule), UI-28, UI-29, USAGE-1 (context and limits like Claude Code's panels, recorded data only), SHIP-15 (no prose preview limit) and MOTION-4 in Yash's words. The P0 to P3 tables now list open items only: P0 = Release 1, P1 = next, P2 = later, P3 = ideas.
 
