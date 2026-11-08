@@ -31,7 +31,7 @@ test('stored find reaches a distant actual source line without mounting the whol
   await page.locator('article.op-read').getByRole('button', { name: /Expand/ }).click();
   const reader = page.locator('article.op-read .source-reading');
   await reader.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('distantNeedle');
-  await expect(reader).toContainText('0 matching lines in this page');
+  await expect(reader.getByRole('status',{name:'0 matching lines in this page',exact:true})).toHaveText('0/0');
   await reader.getByRole('button', { name: 'Find next stored match' }).click();
   await expect(reader).toContainText('Stored match · source line 22346');
   await expect(reader.locator('[data-source-line="22346"]')).toContainText('distantNeedle');

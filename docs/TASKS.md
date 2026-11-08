@@ -175,7 +175,7 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
 | ☑ | 1 | TOOLS-3 | The Toolbox stays in the right panel, centred on it vertically by its own height; no centred window | `ui` `motion` |
-| ☐ | 1 | SHIP-1 | Modern only: remove the UI-version chooser and Clarity from the packaged product | `ui` `rel` |
+| ☑ | 1 | SHIP-1 | Modern only: remove the UI-version chooser and Clarity from the packaged product | `ui` `rel` |
 | ☑ | 2 | LAND-1 | Drishya landing page design and motion plan | `rel` `docs` |
 | ☐ | 3 | SHIP-2a | Palettes and semantic colour tokens for the whole product: every palette as finished as the light one, rich colour for content | `ui` |
 | ☐ | 4 | SHIP-2b | History readable at a glance: prose, prompts, cards, outcomes, compaction and notices each distinct from one another and from chrome | `ui` `content` |
@@ -300,9 +300,10 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 
 Decided by Yash with Claude, 8 November: [release-1-scope.md](review/release-1-scope.md). Release 1 ships Modern; Release 1 polish lands in Modern; feature freeze at the end of 13 November. Accept every item on real sessions of both harnesses at 600 and 1440 px unless it says otherwise. Claim first; one builder per file at a time (SHIP-4, SHIP-5, SHIP-7 and SHIP-12 share `History.tsx`/`SessionWorkspace.tsx`; SHIP-2, SHIP-8 and MOTION-4 share stylesheets).
 
-- [ ] **SHIP-1 · Modern only** · P0 · `ui` `rel` — Yash, 8 Nov: the UI-version choice is unfinished and must not reach users.
+- [x] **SHIP-1 · Modern only** · P0 · `ui` `rel` — Yash, 8 Nov: the UI-version choice is unfinished and must not reach users.
   - **Do:** remove the UI-versions tab and its developer switch from Settings, and remove every route by which Modern, Legacy or Clarity can be selected in the product (URL parameter, stored preference, keyboard). A stored non-Modern preference falls back to Modern silently. The packaged build loads only Modern; Clarity's sources stay in the repository, unreachable from the product. Remove or update the specs and the clarity-guard capture that select versions; keep Modern's pixels unchanged.
   - **Accept:** a fresh package and an existing home with a stored Clarity or Legacy preference both open in Modern with no version wording anywhere in Settings or menus; a search of the built UI bundle finds no version chooser strings; `package:verify` passes.
+  - **Checked 8 Nov, PR #369 (other-builder review pending):** packaged fresh/existing scratch homes and old preferences open only Modern, with five Settings sections; both genuine harnesses at 600/1440 px; four final history frames have zero changed pixels against main; package verification and related types/45 units pass. Version/controller/reading test migrations are complete. The broad browser snapshot is red; three Modern motion expectations reproduce on pre-change production code and are recorded for Claude/TEST-2 in [the verification record](review/ship-1-modern-only.md#claude-investigation). No all-green release gate is claimed.
 - [ ] **SHIP-2a · Palettes and semantic colour tokens** · P0 · `ui` — Yash, 8 Nov: SHIP-2 is the whole product, not one part. Some colours are dull; content should be rich everywhere, including the text inside cards.
   - **Do:** Opus writes the brief: which palettes ship, the token set (content text, secondary, metadata, chrome, paths, numbers, syntax, diff, outcome, agent identity), contrast targets and the one sans and one mono. Sonnet builds the tokens and moves every surface onto them. Palettes that cannot reach the light palette's finish are dropped from Release 1, not shipped dull.
   - **Accept:** every shipped palette side by side with the light one on the same real Codex and Claude sessions; body text 4.5:1, metadata 3:1; no hard-coded colour left outside the tokens (a grep in the PR); Opus signs off from screenshots in `.local/`.
