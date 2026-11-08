@@ -1,0 +1,6 @@
+{
+  "state": "preview",
+  "sourceUrl": null,
+  "releases": [],
+  "requirements": { "node": "24.x", "pnpm": "10.34.5", "minimumWidth": 600 }
+}
