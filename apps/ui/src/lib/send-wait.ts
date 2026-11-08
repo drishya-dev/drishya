@@ -4,7 +4,7 @@ export type SendWaitState = { unavailable: boolean; approved: boolean; cliAvaila
 export function sendWaitReason(state: SendWaitState): string {
   return state.unavailable ? 'Connection to the Drishya daemon is unavailable'
     : state.sending ? 'Sending the prompt…'
-    : !state.approved ? 'Enable this workspace in Connection & permissions to send'
+    : !state.approved ? 'Enable this workspace to send'
     : !state.cliAvailable ? 'Sending is not available for this session'
     : state.overLimit ? 'The prompt is over its size limit'
     : state.attaching ? 'Waiting for the files to attach'
