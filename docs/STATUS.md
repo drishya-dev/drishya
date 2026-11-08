@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-15 | @yash + Codex (Sol 6.1) | `codex/ship-15` | 2026-11-08 | Whole item: full agent prose in Modern using existing reading width and virtual history. Reserve only History.tsx Prose rendering (not arrival, hover, scrolling or plan mounting), full-prose helper/component and pure legacy-envelope parser, history-worker.ts artifactChunk prose eligibility guard only (separate from SHIP-14 queue code), related units/browser and real-case scanner/registry, STATUS/TASKS and verification report; at most 15 paths. Yash approved doing the necessary isolated sections on 8 Nov with exact PR merge notes for Claude; History arrival/hover/scroll/plan and the worker queue section remain untouched. No SHIP-12 PlanChecklist, SHIP-13 reader, SHIP-14 queue, FILES-14 projection, shared stylesheet, schema or policy edits. |
 | LAND-4 | @harsh + Codex | `codex/land-4-motion-plan` | 2026-11-08 | `docs/review/land-4-reference-motion.md`, `docs/superpowers/plans/2026-11-08-landing-motion.md`, TASKS/STATUS. REA-guided browser/source investigation and implementation plan only. LAND-5 and LAND-6 are separately bounded implementation items. |
 | FILES-14 | @harsh + Codex | `codex/files-14` | 2026-11-08 | Release queue 1, requested by Harsh on 8 Nov. Diagnose genuine nested and sibling worktree placement first. Own packages/projection/src/reduce.ts file-location/root assignment, apps/daemon/src/file-roots.ts and apps/ui/src/lib/worktree-files.ts only where the reproduced cause requires it; focused units/browser checks, real-session evidence and completion docs. At most 15 paths. Finish the whole item before SHIP-13 begins. Preserve captured path identities; any schema change requires both builders agreement. |
 | SHIP-14 | @harsh + Codex | `codex/ship-14` | 2026-11-08 | Release queue 2, requested by Harsh on 8 Nov. Own packages/scene/src/queued-inputs.ts pending/history resolution, apps/ui/src/components/QueuedInputs.tsx, daemon queued-inputs.ts and history-worker.ts queue-only path if required, focused units/browser/genuine queue evidence and completion docs. At most 15 paths. Preserve replay boundaries and evidence labels. Coordinator reserved QueueQuery/QueuePage optional API fields in contracts/index.ts and server.ts queue-route parsing on 8 Nov for complete as-of pending counts. Also reserved adapter-claude/src/index.ts assistant stop_reason=end_turn retention and its focused test on 8 Nov, using the existing turn.end event with stable identities. Preserve existing callers; no recorded-event definitions or UsagePayload changes. No native controller, composer styling or History motion edits. |
@@ -51,6 +50,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 8 Nov: SHIP-15 full prose, PR #375
+
+- Whole feature implemented: long assistant prose loads its recorded body automatically in the existing history; no read-full-text toggle or second reader. UTF-8 chunks handle a single line over 2 MiB without dropping characters. Projection paging, virtual history, reasoning preferences and motion stay intact.
+- Genuine Claude/Codex longest-message and paged-message checks pass at 600/1440 in scratch homes; both typechecks, 1,281 units / one skip, package verification and eight post-main focused browsers pass. Current main integrated at d7a63e76. Exact shared-file merge notes and all counts: [ship-15-full-prose.md](review/ship-15-full-prose.md).
+- Do not call the integrated gate completely green: one post-main B2 selection check opened Operation detail unexpectedly; four unchanged branch repeats and eleven rebuilt clean-main comparisons pass, so baseline reproduction remains unproven. Claude should investigate that existing click/hover path before merge. The earlier B4 build-file collision passes its post-build check. No assertion, timeout or retry was weakened. Feature acceptance is covered; PR review and that unresolved check remain visible.
+- Harsh retains SHIP-14/13/12 and FILES-14; no changes to their queue, plan or reader sections. Yash approved only the isolated ProseView material branch beside MOTION-3 plus the separate artifactChunk guard; PR documents both. No merge performed.
+
 
 ### Harsh with Codex - 8 Nov: LAND-3 jet-black landing background
 
