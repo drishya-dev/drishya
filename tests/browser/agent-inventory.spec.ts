@@ -32,9 +32,9 @@ test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!res
 for(const count of [3,300])test(`${count} agents keep their family and filter in a bounded disclosure`,async({page})=>{
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/#/r/${ids.get(count)}`);
  const toolbox=page.locator('.modern-tool-station>.modern-toolbox');await expect(toolbox).toBeVisible();
- const summary=toolbox.locator('.md-agents>summary');await expect(summary.locator('..')).not.toHaveAttribute('open');await summary.click();await expect(summary).toHaveAttribute('aria-expanded','true');
- const reader=page.getByRole('dialog',{name:'Agents',exact:true});await expect(reader).toBeVisible();
- const list=reader.getByRole('region',{name:'Agents',exact:true});await expect(list).toBeVisible();await expect(list).toHaveAttribute('data-size',count===3?'fit':'scroll');
+ const summary=toolbox.locator('.md-agents>summary');await expect(summary.locator('..')).not.toHaveAttribute('open');await summary.click();await expect(summary.locator('..')).toHaveAttribute('open','');
+ const group=summary.locator('..');
+ const list=group.getByRole('region',{name:'Agents',exact:true});await expect(list).toBeVisible();await expect(list).toHaveAttribute('data-size',count===3?'fit':'scroll');
  const children=list.locator('.station-subagents>summary');await expect(children).toContainText(String(count-1));await children.click();
  await expect(list.getByRole('switch')).toHaveCount(count);
  const size=await list.evaluate(el=>({client:el.clientHeight,scroll:el.scrollHeight}));
@@ -44,18 +44,19 @@ for(const count of [3,300])test(`${count} agents keep their family and filter in
   await list.focus();await page.keyboard.press('End');await expect(list.getByRole('switch').last()).toBeInViewport();await expect(summary).toBeInViewport();
  }
  const last=list.getByRole('switch').last();await last.scrollIntoViewIfNeeded();await last.click();await expect(last).toHaveAttribute('aria-checked','true');
- await reader.getByRole('button',{name:'Clear focus ×',exact:true}).click();await expect(last).toHaveAttribute('aria-checked','false');
+ await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();await expect(last).toHaveAttribute('aria-checked','false');
  for(const width of [1440,600]){
   await page.setViewportSize({width,height:844});
   if(!await page.locator('.workbench-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();
-  if(!await reader.isVisible())await summary.click();
+  if(await group.getAttribute('open')===null)await summary.click();
+  await list.scrollIntoViewIfNeeded();
   await list.evaluate(el=>el.scrollTop=el.scrollHeight);await expect(last).toBeInViewport();await expect(summary).toBeInViewport();
   const box=(await list.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:`.local/ui10-agents-${count}-${width}.png`});
  }
- await page.setViewportSize({width:600,height:568});await list.evaluate(el=>el.scrollTop=el.scrollHeight);
+ await page.setViewportSize({width:600,height:568});await list.scrollIntoViewIfNeeded();await list.evaluate(el=>el.scrollTop=el.scrollHeight);
  await expect(last).toBeInViewport();await expect(summary).toBeInViewport();
  expect(await list.evaluate(el=>el.clientHeight)).toBeLessThanOrEqual(Math.ceil(568*.36));
- await reader.getByRole('button',{name:'Close toolbox',exact:true}).click();await expect(list).toBeHidden();await expect(summary).toBeFocused();
+ await summary.press('Escape');await expect(list).toBeHidden();await expect(summary).toBeFocused();
 });
