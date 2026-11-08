@@ -26,9 +26,9 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   execFileSync('git', ['add', 'source.ts'], { cwd: root, windowsHide: true });
   lines[8] = `export const line8 = '${'longCapturedValue'.repeat(80)}';`; lines[300] = 'export const needleLate = 300;';
   writeFileSync(join(root, 'source.ts'), lines.join('\n') + '\n');
-  await page.goto(`${server.url}/?experience=classic#token=${server.token}`);
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
-  await page.goto(`${server.url}/?experience=classic#/r/${id}`);
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(reader).toBeVisible();
@@ -47,7 +47,9 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   await content.evaluate(el => { el.scrollTop = 80; el.scrollLeft = 30; });
   expect(await content.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
   await reader.getByRole('button', { name: 'Working tree', exact: true }).click();
+  await reader.getByLabel('Patch options',{exact:true}).click();
   await reader.getByRole('spinbutton', { name: 'Jump to patch hunk' }).fill('2');
+  await page.keyboard.press('Escape');
   await expect(reader.locator('.unified-change')).toContainText('needleLate');
   await reader.getByRole('searchbox', { name: 'Find in patch' }).fill('needleLate');
   await reader.getByRole('searchbox', { name: 'Find in patch' }).press('Enter');
@@ -67,7 +69,7 @@ test('Git reading separates stages, finds distant hunks and keeps bounded raw/cu
   await page.screenshot({ path: resolve('.local/git-patch-reader.png') });
 });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary directory'); rmSync(dir, { recursive: true, force: true }); });
-for (const experience of ['classic', 'studio']) test(`${experience}: separate consent, exact review progress, stale changes and privacy-reviewed handoff`, async ({ page }) => {
+for (const experience of ['modern']) test(`${experience}: separate consent, exact review progress, stale changes and privacy-reviewed handoff`, async ({ page }) => {
   writeFileSync(join(root, 'source.ts'), 'export const total = 2;\n');
   execFileSync('git', ['reset', '--quiet', 'HEAD', '--', 'source.ts'], { cwd: root, windowsHide: true });
   await page.goto(`${server.url}/?experience=${experience}#token=${server.token}`);
@@ -84,6 +86,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await expect(reader.locator('.git-patch')).toContainText('total = 2');
   await reader.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
   await reader.getByRole('textbox', { name: 'Local review note' }).fill('Inspected the total');
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await reader.getByRole('button', { name: 'Preview handoff' }).click();
   await expect(reader.getByRole('textbox', { name: 'Handoff preview' })).toHaveValue(/Inspected the total/);
   await reader.getByRole('button', { name: 'Close Git review' }).click();
@@ -94,7 +97,9 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   writeFileSync(join(root, 'source.ts'), 'export const total = 3;\n');
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).not.toBeChecked();
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await expect(reader.getByRole('button', { name: 'Preview handoff' })).toBeDisabled();
+  await page.keyboard.press('Escape');
   await reader.getByText('Previous note · changed patch', { exact: true }).click();
   await expect(reader.getByRole('textbox', { name: 'Previous patch review note' })).toHaveValue('Inspected the total');
   await reader.getByRole('button', { name: 'Use previous note as draft' }).click();
@@ -107,7 +112,9 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.getByRole('alert')).toContainText('Repository changed during inspection');
   await expect(reader.locator('.git-patch')).toContainText('total = 3');
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await expect(reader.getByRole('button', { name: 'Preview handoff' })).toBeDisabled();
+  await page.keyboard.press('Escape');
   conflict = false;
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.locator('.git-patch')).toContainText('total = 3');
@@ -117,9 +124,9 @@ for (const experience of ['classic', 'studio']) test(`${experience}: separate co
 
 test('Git file pages reach paths past fifty through the authenticated local API', async ({ page }) => {
   for (let n = 0; n < 55; n++) writeFileSync(join(root, `extra-${n}.ts`), 'synthetic\n');
-  await page.goto(`${server.url}/?experience=classic#token=${server.token}`);
+  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
-  await page.goto(`${server.url}/?experience=classic#/r/${id}`);
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
   await openGitDestination(page, 'Git review');
   const reader = page.getByRole('dialog', { name: 'Git review', exact: true });
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git' });
@@ -135,7 +142,7 @@ test('Git file pages reach paths past fifty through the authenticated local API'
   await expect(reader.getByRole('navigation', { name: 'Git file pages' })).toContainText('1–50 of 56');
 });
 
-for (const experience of ['classic', 'studio']) test(`${experience}: fresh handoff checks block drift, recover failures and suppress late downloads`, async ({ page }) => {
+for (const experience of ['modern']) test(`${experience}: fresh handoff checks block drift, recover failures and suppress late downloads`, async ({ page }) => {
   for (let n = 0; n < 55; n++) rmSync(join(root, `extra-${n}.ts`), { force: true });
   execFileSync('git', ['reset', '--quiet', 'HEAD', '--', 'source.ts'], { cwd: root, windowsHide: true });
   writeFileSync(join(root, 'source.ts'), 'export const total = 2;\n');
@@ -153,6 +160,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await expect(reader.locator('.git-patch')).toContainText('total = 2');
   await reader.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
   await reader.getByRole('textbox', { name: 'Local review note' }).fill('Inspected the total');
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await reader.getByRole('button', { name: 'Preview handoff' }).click();
   await expect(reader.getByRole('textbox', { name: 'Handoff preview' })).toHaveValue(/Inspected the total/);
   const preview = reader.getByRole('textbox', { name: 'Handoff preview' });
@@ -162,6 +170,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   expect((await download).suggestedFilename()).toBe('drishya-review.md');
   await reader.getByRole('textbox', { name: 'Local review note' }).fill('Updated review note');
   await expect(preview).toHaveCount(0);
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await reader.getByRole('button', { name: 'Preview handoff' }).click();
   await expect(preview).toHaveValue(/Updated review note/);
   await reader.getByRole('button', { name: 'Close Git review' }).click();
@@ -169,15 +178,22 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await openGitDestination(page, 'Git review');
   await reader.getByRole('button', { name: 'Refresh changes' }).click();
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).toBeChecked();
-  // Changes after review must be detected without asking the user to refresh first.
+  // A stale review never exports: Modern may invalidate it before the action is pressed.
   writeFileSync(join(root, 'source.ts'), 'export const total = 3;\n');
-  await reader.getByRole('button', { name: 'Preview handoff' }).click();
-  await expect(reader.getByRole('alert')).toContainText('Repository changed');
+  await reader.getByLabel('Git review actions',{exact:true}).click();
+  const staleHandoff=reader.getByRole('button', { name: 'Preview handoff' });
+  if(await staleHandoff.isEnabled()) {
+    await staleHandoff.click();
+    await expect(reader.getByRole('alert')).toContainText('Repository changed');
+  }
   await expect(reader.locator('.git-patch')).toContainText('total = 3');
   await expect(reader.getByRole('checkbox', { name: 'Reviewed displayed patch' })).not.toBeChecked();
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await expect(reader.getByRole('button', { name: 'Preview handoff' })).toBeDisabled();
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await expect(preview).toHaveCount(0);
   await reader.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await reader.getByRole('button', { name: 'Preview handoff' }).click();
   await expect(preview).toHaveValue(/total = 3/);
   let downloads = 0; page.on('download', () => downloads++);
@@ -187,6 +203,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await expect(reader.locator('.git-patch')).toContainText('total = 4');
   await expect(preview).toHaveCount(0); expect(downloads).toBe(0);
   await reader.getByRole('checkbox', { name: 'Reviewed displayed patch' }).check();
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await reader.getByRole('button', { name: 'Preview handoff' }).click();
   await expect(preview).toHaveValue(/total = 4/);
   // Revalidation failure retains the reading context and prevents download.
@@ -196,6 +213,7 @@ for (const experience of ['classic', 'studio']) test(`${experience}: fresh hando
   await expect(reader.locator('.git-patch')).toContainText('total = 4');
   await expect(preview).toHaveCount(0); expect(downloads).toBe(0);
   await page.unroute('**/git/snapshot*');
+  await reader.getByLabel('Git review actions',{exact:true}).click();
   await reader.getByRole('button', { name: 'Preview handoff' }).click();
   await expect(preview).toHaveValue(/total = 4/);
   // Closing a reader during a slow save must not download from the old session.

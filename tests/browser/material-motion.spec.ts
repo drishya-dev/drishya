@@ -36,7 +36,7 @@ test.afterEach(async () => {
 test('whole material zoom stays continuous while the result changes its allocation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await expect(page.locator('.origins')).toBeAttached();
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -72,7 +72,7 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'local-scroll-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 60 }, (_, n) => `Documentation ${n}`).join('\n') }] } });
@@ -107,7 +107,7 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
 test('hover reading preserves live follow and safely releases when new work arrives', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'live-hover-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'printf live-hover-proof' } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Hover output' }] } });
@@ -132,7 +132,7 @@ test('hover reading preserves live follow and safely releases when new work arri
 test('hover result boundaries scroll history without dismissing the same reading surface', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'hover-boundary-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 100 }, (_, n) => `Documentation ${n}`).join('\n') }] } });
