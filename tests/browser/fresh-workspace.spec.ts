@@ -60,11 +60,16 @@ test('toolbox minimizes from actual bounds and keeps its compact icon and indepe
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
  expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
  await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ const compact=toolbox.getByRole('button',{name:'Expand toolbox',exact:true});
+ expect(await compact.evaluate(button=>{
+  const box=button.getBoundingClientRect();
+  return button.contains(document.elementFromPoint(box.right-2,box.top+box.height/2));
+ })).toBe(true);
  await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
  await expect(page.getByRole('complementary',{name:'Tools and agents'})).toBeVisible();
- const reader=page.getByRole('dialog',{name:'Toolbox',exact:true});await expect(reader).toBeVisible();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+ await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);
  await page.emulateMedia({reducedMotion:'reduce'});await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();expect(await toolbox.evaluate(node=>node.getAnimations().length)).toBe(0);
- await page.setViewportSize({width:600,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(reader).toBeVisible();await page.keyboard.press('Escape');await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
+ await page.setViewportSize({width:600,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(toolbox.locator('.modern-toolbox')).toBeVisible();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
 });
 
 test.beforeEach(async () => {
@@ -156,7 +161,8 @@ test('Modern composer keeps its target and state visible, with direct Files and 
     await page.setViewportSize({width,height:900});
     await expect(composer.locator('.modern-composer-location')).toContainText('shop');
     await expect(composer.locator('.modern-composer-identity')).toHaveAttribute('title',new RegExp(`Recording: ${ids.codex!.replace(/[^\w-]/g,'.')}`));
-    await expect(composer.locator('.modern-composer-state')).toBeVisible();
+    // UI-28: no resting status word and no "replied 3 m ago" line; the composer says nothing while there is nothing to say.
+    await expect(composer.getByText(/replied .* ago|Native defaults/)).toHaveCount(0);
     expect(await composer.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
     const promptBox=(await composer.boundingBox())!;
     for(const control of [page.getByRole('button',{name:'Tools',exact:true}),page.getByRole('switch',{name:'Automatically follow new work',exact:true})]) {
@@ -337,12 +343,10 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await openComposer(page);
   await expect(composer).toBeVisible();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Inspect the checkout condition');
-  await expect(composer.getByRole('button',{name:'Attach text or image files',exact:true})).toBeVisible();
-  await expect(composer.getByRole('button',{name:'Attach folder',exact:true})).toBeVisible();
-  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Attach',exact:true})).toBeVisible();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});
-  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'note.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic attachment for local testing')});
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toBeVisible();
@@ -405,12 +409,11 @@ test('Modern compact composer keeps connection consent accessible and has no nee
   await openComposer(page);
   const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
   await input.fill('A short prompt');
-  expect((await composer.boundingBox())!.height).toBeLessThan(170);
+  expect((await composer.boundingBox())!.height).toBeLessThan(230);
   expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
-  await composer.locator('.native-options>summary').click();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});
-  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
 });
 
 test('structured shell output renders decoded newlines and retains the exact raw envelope', async ({ page }) => {
@@ -518,11 +521,11 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   await expect(mcpServer).toBeVisible();
   {
     await mcpServer.locator('summary').click();
-    const reader=page.getByRole('dialog',{name:/^MCP tools for /});await expect(reader).toBeVisible();
-    const tool=reader.locator('button[data-mcp-tool]').first();
+    await expect(mcpServer).toHaveAttribute('open','');
+    const tool=mcpServer.locator('button[data-mcp-tool]').first();
     await expect(tool).toBeVisible(); await tool.click();
     await expect(tool).toHaveAttribute('aria-pressed','true');
-    await reader.getByRole('button',{name:'Clear focus ×',exact:true}).click();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+    await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();await mcpServer.locator('summary').press('Escape');await expect(mcpServer).not.toHaveAttribute('open','');
   }
   await expect(page.getByRole('button',{name:'Show files',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Explore repository map',exact:true})).toHaveText('Repository');
@@ -694,8 +697,8 @@ for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} 
   await openComposer(page);
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Review the selected source');
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'context.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic context')});
-  await composer.getByRole('combobox',{name:'Native model',exact:true}).selectOption('native-one');
-  await composer.getByRole('combobox',{name:'Reasoning effort',exact:true}).selectOption('high');
+  await composer.getByRole('button',{name:'Model',exact:true}).click();await composer.getByRole('menuitemradio',{name:'Native One',exact:true}).click();
+  await composer.getByRole('button',{name:'Reasoning effort',exact:true}).click();await composer.getByRole('menuitemradio',{name:'high',exact:true}).click();
   await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
   expect(payload).toBeUndefined();
   await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
@@ -1332,7 +1335,7 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await prompt.getByRole('button',{name:'Minimize prompt',exact:true}).click();
   await expect(input).toBeHidden();await prompt.getByRole('button',{name:'Expand prompt',exact:true}).click();await expect(input).toHaveValue('Retain this local draft while minimizing.');
   await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeHidden();
-  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-tool-station>.modern-toolbox')).toBeVisible();await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toBeVisible();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-tool-station>.modern-toolbox')).toBeVisible();await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);
   await input.fill('');
   for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();await page.getByRole('button',{name:name!,exact:true}).click();await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();

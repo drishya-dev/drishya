@@ -32,10 +32,8 @@ for(const width of [600,1440]) test(`approval clearance grows and releases witho
   await page.goto(`${server.url}/#/r/${id}`);await page.locator('.history').waitFor();
   const composer=page.getByRole('region',{name:'Harness prompt'});
   const expand=composer.getByRole('button',{name:'Expand prompt',exact:true});if(await expand.count())await expand.click();
-  await composer.locator('.native-options > summary').click();
   const status=await (await page.request.get(`${server.url}/v1/recordings/${id}/workspace`)).json();
   if(!status.approved)await composer.getByRole('button',{name:'Enable this workspace',exact:true}).click();
-  await composer.locator('.native-options > summary').click();
   for(const decision of ['Decline','Allow once']){
     await composer.locator('textarea').fill('Synthetic approval regression');
     await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
@@ -59,10 +57,8 @@ async function openComposer(page: import('@playwright/test').Page, recording: st
   await page.goto(`${server.url}/#/r/${recording}`); await page.locator('.history').waitFor();
   const composer = page.getByRole('region', {name: 'Harness prompt'});
   const expand = composer.getByRole('button', {name: 'Expand prompt', exact: true}); if (await expand.count()) await expand.click();
-  await composer.locator('.native-options > summary').click();
   const status = await (await page.request.get(`${server.url}/v1/recordings/${recording}/workspace`)).json();
   if (!status.approved) await composer.getByRole('button', {name: 'Enable this workspace', exact: true}).click();
-  await composer.locator('.native-options > summary').click();
   return composer;
 }
 
