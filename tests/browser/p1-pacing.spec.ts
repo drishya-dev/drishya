@@ -62,7 +62,7 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation.locator('.state-running')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Emit');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 0 && material.height > 0))).toBe(true);
-  await expect.poll(()=>operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
+  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
 
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'drishya-live-output' }] } });
   await app.ingest.sync(recordingId);
@@ -280,7 +280,7 @@ test('file relationships start at measured renderer nodes and fall back when the
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
     // Keep this fixed planar fixture above the settled action row, outside prose.
     // The previous .76/.35 position was covered by the card after its final reflow.
-    node.x = .65; node.y = .1;
+    node.x = .8; node.y = .2;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
@@ -450,11 +450,11 @@ test('the dock keeps observed identities readable at rest and remains accessible
   expect(Number(coordinates[1])).toBeCloseTo(tool.x, 0);
   expect(Number(coordinates[2])).toBeCloseTo(tool.y + tool.height / 2, 0);
   await page.setViewportSize({width:600,height:900});
-  await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();
-  await expect(dock).toBeHidden();
-  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();
+  await page.getByRole('button',{name:'Tools',exact:true}).click();
   await expect(dock).toBeVisible();
   await expect(dock.locator('[data-mcp-tool="get-library-docs"]')).toBeVisible();
+  await page.getByRole('button',{name:'Close tools',exact:true}).click();
+  await expect(dock).toBeHidden();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(600);
 });
 

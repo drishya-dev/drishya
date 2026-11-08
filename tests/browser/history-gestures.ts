@@ -2,21 +2,22 @@ import { expect, type Locator, type Page } from '@playwright/test';
 
 /** Point at the exposed history gutter, below responsive chrome and inside native scrollbars. */
 export async function pointAtHistory(page: Page, history: Locator = page.locator('.history')) {
-  const point = await history.evaluate(el => {
+  let point:{x:number;y:number}|undefined;
+  await expect.poll(async()=>{point=await history.evaluate(el => {
     const rect = el.getBoundingClientRect();
     const header = document.querySelector('.workspace-header')?.getBoundingClientRect();
-    const top=Math.max(rect.top,header?.bottom??rect.top)+40;
+    const top=Math.max(rect.top+40,Math.min(header?.bottom??rect.top,rect.top+120));
     // Floating Modern controls can cover the old fixed gutter point. Pick a real
     // history target so the test's wheel reaches history, rather than a dock.
     for(const x of [rect.x+el.clientWidth-4,rect.x+el.clientWidth-24,rect.x+4]){
       for(let y=top;y<rect.bottom-24;y+=40){
         const hit=document.elementFromPoint(x,y);
-        if(hit&&(hit===el||el.contains(hit))&&!hit.closest('article,.prose,.turn-text,.prompt-rail'))return {x,y};
+        if(hit&&(hit===el||hit.closest('.connected-workspace'))&&!hit.closest('article,.prose,.turn-text,.prompt-rail,.prompt-composer,.folder-explorer,.modern-tool-station,dialog,button,input,textarea,select,summary,[role=complementary],[role=navigation]'))return {x,y};
       }
     }
-    throw new Error('No exposed history gutter for a native wheel');
-  });
-  await page.mouse.move(point.x, point.y);
+    return undefined;
+  });return !!point;},{message:'An exposed history gutter after floating chrome settles'}).toBe(true);
+  await page.mouse.move(point!.x, point!.y);
 }
 
 /** Expand a history card with the keyboard. A pointer would come to rest on the card, where hover reading
