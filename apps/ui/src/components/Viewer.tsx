@@ -801,13 +801,6 @@ function Search({ projection }: { projection: Projection }) {
         target=searchDestination(loaded.projection??projection,obs,loaded.historyPage?.scene);
       }
       if(!target){setError('No readable history location was recorded for this result.');return;}
-      if(target.kind==='operation'&&initial.mode==='history'){
-        set({searchOpen:false});
-        // Use the same bounded, exact-card route as Commands/keyboard reading.
-        // Selecting a card is not sufficient to navigate the virtual history.
-        window.dispatchEvent(new CustomEvent('drishya-reading-navigate',{detail:{type:'operation',id:target.id,step:target.step-1}}));
-        return;
-      }
       if(initial.mode==='replay')seek(target.step,{hold:true});
       set({selectedOp:target.kind==='operation'?target.id:undefined,expandedOp:undefined,promptStep:target.kind==='prompt'?target.step:undefined,focusObservationId:target.kind==='prose'?obs:undefined,searchOpen:false});
       if(initial.historyPage)await initial.loadHistoryWindow(target.kind==='prompt'?{promptStep:target.step}:target.kind==='operation'?{selectedOperationId:target.id}:{observationId:obs});

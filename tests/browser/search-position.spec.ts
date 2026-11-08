@@ -35,6 +35,7 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440])test(
   await page.keyboard.press('/');const response=page.waitForResponse(r=>r.url().includes(`/recordings/${id}/search?`));await page.getByLabel('Search prose, commands, paths',{exact:true}).fill(query);
   const hits=(await(await response).json()).hits;expect(hits).toHaveLength(1);const target=searchDestination(projection,hits[0].observationId)!;expect(target).toBeDefined();
   await page.locator('.search-hit').click();await expect(page.locator('.search:popover-open')).toHaveCount(0);
+  if(target.kind==='operation')await expect(page.getByRole('region',{name:'Operation detail',exact:true})).toBeVisible();
   const selector=target.kind==='operation'?`[data-op-id="${target.id}"]`:`.passage-slot[data-in-turn="${target.step-1}"]`;
   await expect.poll(()=>page.locator(selector).first().evaluate(el=>{const r=el.getBoundingClientRect(),h=el.closest('.history')!.getBoundingClientRect();return r.bottom>h.top&&r.top<h.bottom;}).catch(()=>false)).toBe(true);
   expect(await history.evaluate(el=>el.scrollTop)).toBeLessThan(end-500);
