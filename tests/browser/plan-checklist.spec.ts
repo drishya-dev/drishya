@@ -80,3 +80,44 @@ for (const width of [600,1440]) test(`Codex plan revisions keep all items, inlin
  await expect(cards.locator('.plan-change,.plan-removed')).toHaveCount(0);
  await expect(cards.locator('li.plan-completed')).toHaveCount(0);
 });
+
+for (const width of [600,1440]) test(`large native task replacements keep removed evidence inline and bounded at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:960});
+ await page.emulateMedia({reducedMotion:'reduce'});
+ const session=`native-removals-${width}`,source=join(dir,session+'.jsonl');
+ const tasks=Array.from({length:2000},(_,index)=>({id:String(index+1),subject:index===1999?`Final captured task · exact title ${'x'.repeat(600)}`:`Captured native task ${index+1}`,status:'pending'}));
+ const rows:object[]=[{type:'user',uuid:'p',cwd:dir,sessionId:session,message:{role:'user',content:'Replace the captured native task list'}}];
+ for(const [index,list] of [tasks,[{id:'replacement',subject:'Replacement task',status:'in_progress'}]].entries()){
+  rows.push({type:'assistant',uuid:`a-${index}`,cwd:dir,sessionId:session,message:{id:`m-${index}`,role:'assistant',content:[{type:'tool_use',id:`list-${index}`,name:'TaskList',input:{}}]}});
+  rows.push({type:'user',uuid:`r-${index}`,cwd:dir,sessionId:session,toolUseResult:{tasks:list},message:{role:'user',content:[{type:'tool_result',tool_use_id:`list-${index}`,content:'Synthetic native task list'}]}});
+ }
+ writeFileSync(source,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
+ const id=(await app.ingest.importSource('claude-code',source)).recordingId;
+ await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+ const cards=page.locator('article.op-plan');await expect(cards).toHaveCount(2);
+ await expect(cards.first().locator('.plan-list li')).toHaveCount(2000);
+ const replacement=cards.last();await expect(replacement.locator('.plan-list li')).toHaveCount(1);
+ await expect(replacement.locator('.plan-text')).toHaveText('Replacement task');
+ const removed=replacement.locator('.plan-removed');
+ const exact=`Left out of this revision: ${tasks.map(task=>task.subject).join(' · ')}`;
+ await expect(removed).toHaveText(exact);
+ await expect(page.getByRole('button',{name:/Show plan|Collapse plan|Show all.*items|Show fewer/})).toHaveCount(0);
+ const bounds=await removed.evaluate(el=>({height:el.clientHeight,max:getComputedStyle(el).maxBlockSize,overflowY:getComputedStyle(el).overflowY,scrollHeight:el.scrollHeight,widthOverflow:el.scrollWidth-el.clientWidth}));
+ expect(bounds.height).toBeLessThanOrEqual(360);expect(bounds.max).toBe('360px');
+ expect(bounds.overflowY).toBe('auto');expect(bounds.scrollHeight).toBeGreaterThan(bounds.height);
+ expect(bounds.widthOverflow).toBeLessThanOrEqual(1);
+ const cardBounds=await replacement.boundingBox();expect(cardBounds!.height).toBeLessThan(600);
+ await removed.scrollIntoViewIfNeeded();
+ // The last exact title remains reachable and selectable in the inline receipt, without expanding the card.
+ const selection=await removed.evaluate((el,title)=>{
+  el.scrollTop=el.scrollHeight;
+  const node=el.lastChild!;
+  const range=document.createRange();range.setStart(node,node.textContent!.length-title.length);range.setEnd(node,node.textContent!.length);
+  const selected=window.getSelection()!;selected.removeAllRanges();selected.addRange(range);
+  const text=selected.toString(),rect=range.getBoundingClientRect(),bounds=el.getBoundingClientRect();
+  return {text,visible:rect.top>=bounds.top-1&&rect.bottom<=bounds.bottom+1,atEnd:el.scrollTop+el.clientHeight>=el.scrollHeight-1};
+ },tasks.at(-1)!.subject);
+ expect(selection.text).toBe(tasks.at(-1)!.subject);expect(selection.visible).toBe(true);expect(selection.atEnd).toBe(true);
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+});

@@ -26,7 +26,8 @@
 .connected-workspace .history .op.op-plan:has(.plan-card:not(.plan-earlier)) {flex:0 1 min(620px,100%);max-width:100%;max-height:none;}
 .history .op-plan:has(.plan-card:not(.plan-earlier))>.op-body {max-height:none;mask-image:none;-webkit-mask-image:none;}
 :root[data-experience] .connected-workspace .history .op.op-plan:not(.expanded):not([data-hover-reading]):has(.plan-card:not(.plan-earlier)) {max-height:none;}
-.plan-card>.plan-list {max-block-size:360px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+.plan-card>:is(.plan-list,.plan-removed) {max-block-size:360px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+.plan-removed {overflow-wrap:anywhere;}
 .plan-document {max-block-size:360px;overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;}
 @media(prefers-reduced-motion:reduce){.plan-pinned .plan-list li,.plan-pinned .plan-list li .plan-text{transition:none;}}
 
