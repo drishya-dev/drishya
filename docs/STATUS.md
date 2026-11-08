@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-3 | @harsh + Codex | `codex/land-3-jet-black` | 2026-11-08 | Landing background only: `apps/landing/src/site.css`, TASKS and STATUS. Set page/header ground to pure black; preserve product material and paper sections. |
 | LAYOUT-1 | @yash + Claude Sonnet 5.5 | `claude/layout-1` | 2026-11-08 | Modern large screens and browser zoom: new `apps/ui/src/modern/large-screens.css` (imported from `modern/entry.tsx`), measure and width rules in `stage.css`, `modern/composer.css`, `modern/toolbox-dock.css`, `modern/reading-windows.css`, `modern/hud.css`; layout specs in `tests/browser/` for geometry. Not prose, colour, Home (`session-home.css`, `home-active.css`), Usage or `clarity/`. |
 | SHIP-1 | @yash + Codex | `codex/ship-1` | 2026-11-08 | Release1 Modern-only boot and Settings: `src/main.tsx`, `lib/ui-version.ts`, `components/UIVersions.tsx`; version units, Modern/Clarity browser and shared legacy-test fixture, clarity guard/capture, genuine-session case/report, STATUS/TASKS/CONTINUITY (up to32 paths, Yash approved8 Nov: all obsolete version-selecting specs including b2-live URL only; no scroll-assertion changes). No product geometry, palette, composer, Toolbox or paused FINISH/UI-26 stylesheet migration. Release1 scope pauses FINISH and defers UI-26; this reserves only version routing/chooser removal, per Yash’s ordered SHIP-1 instruction. Yash additionally reserved8 Nov: fresh-workspace Legacy/Modern comparison only, connected-workspace retired-version/Home/Files selectors only; UI-28 keeps composer behavior/assertions. No composer/Toolbox logic or design changes. |
 | SEC-1 | @harsh + Codex | `codex/sec-1` | 2026-11-07 | Whole dependency remediation: root and UI manifests, pnpm lockfile and affected synthetic shop manifest; Vitest runner config only if migration requires it. Verification report and STATUS/TASKS. Harsh requested a regular implementation PR before testing, followed by the full gate and results. No product source or schema changes. |
@@ -50,6 +49,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex - 8 Nov: LAND-3 jet-black landing background
+
+- Shared landing ground and sticky header use pure black (`#000000`), replacing charcoal. Captured-material surfaces, paper sections and mint actions retain their contrast. Only the landing stylesheet changes product appearance.
+- `node scripts/build-landing.ts` passed. Running preview checked at 600 and 1440 px: computed page/header backgrounds both `rgb(0, 0, 0)`, no horizontal overflow, fonts loaded; paper remains `rgb(244, 245, 243)` and product scene `rgb(20, 23, 25)`. Local preview at port 5176 restarted against this checkout. Screenshot stays in `.local/`. No full product gate or real-journal acceptance needed for this landing-only colour change.
 
 ### Claude Sonnet 5.5 — 8 Nov: UI-28 composer to the premium bar, [PR #370](https://github.com/drishya-dev/drishya/pull/370)
 
