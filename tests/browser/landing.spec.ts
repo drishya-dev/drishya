@@ -100,3 +100,18 @@ test('keyboard, rapid reversal, compact desktop reflow and lightweight home asse
   await page.goto(site.url);await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Skip to content'})).toBeFocused();
   await page.keyboard.press('Enter');await expect(page).toHaveURL(/#main$/);
 });
+
+
+test('each full replay bookmark opens at both supported desktop extremes with readable controls',async({page})=>{
+  for(const width of [600,1440]){
+    await page.setViewportSize({width,height:1000});
+    for(const step of [4,24,26,28]){
+      await page.goto(`${site.url}/demo/?demo&at=${step}`);
+      await expect(page.getByRole('slider',{name:'Timeline',exact:true})).toHaveValue(String(step));
+      await expect(page.getByRole('navigation',{name:'Public sample'})).toBeVisible();
+      await expect(page.locator('.t-controls').getByRole('button',{name:'Play',exact:true})).toBeVisible();
+      expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    }
+    await page.screenshot({path:`.local/landing-checks/full-replay-${width}.png`});
+  }
+});
