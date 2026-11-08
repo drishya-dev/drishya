@@ -1,5 +1,5 @@
 import './site.css';
-import chapters from './chapters.json';
+interface Chapter {key:string;title:string;step:number;kind:string;path?:string;command?:string;status:string;provenance:string;text:string}
 
 // All material is public synthetic text; render it as text, never as captured HTML.
 const escape=(s:string)=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -12,6 +12,7 @@ addEventListener('scroll',updateHeader,{passive:true});updateHeader();
 const menu=document.querySelector<HTMLDetailsElement>('.compact-nav');
 document.addEventListener('pointerdown',event=>{if(menu?.open&&!menu.contains(event.target as Node))menu.open=false;});
 document.addEventListener('keydown',event=>{if(event.key==='Escape'&&menu?.open){menu.open=false;menu.querySelector<HTMLElement>('summary')?.focus();}});
+menu?.addEventListener('toggle',()=>{if(menu.open&&!noMotion())menu.querySelector('nav')?.animate([{opacity:0,transform:'translateY(-4px)'},{opacity:1,transform:'translateY(0)'}],{duration:140,easing:'cubic-bezier(.22,1,.36,1)'});});
 menu?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{menu.open=false;}));
 document.querySelectorAll<HTMLAnchorElement>('a[href*="#"]').forEach(link=>link.addEventListener('click',()=>{
   const target=new URL(link.href);if(target.pathname!==location.pathname||!target.hash||link.matches('[data-chapter-key]'))return;
@@ -31,14 +32,17 @@ for(const button of document.querySelectorAll<HTMLButtonElement>('[data-copy]'))
 }
 
 const stage=document.getElementById('chapter-material'),section=document.getElementById('session');
-if(stage&&section){
+async function enhanceSample(){
+  const response=await fetch('/chapters.json');if(!response.ok)throw Error('Sample unavailable');
+  const data=await response.json(),chapters=data.chapters as Chapter[];
+  if(chapters.length!==4||chapters.some(c=>!Number.isInteger(c.step)||typeof c.text!=='string'))throw Error('Sample metadata invalid');
   const controls=[...document.querySelectorAll<HTMLAnchorElement>('[data-chapter-key]')],range=document.getElementById('sample-range') as HTMLInputElement,play=document.getElementById('play-sample') as HTMLButtonElement,counter=document.getElementById('chapter-counter')!,full=document.getElementById('full-replay') as HTMLAnchorElement,announce=document.getElementById('sample-announcement')!;
   let current=0,playing=false,visible=false,timer:ReturnType<typeof setTimeout>|undefined,raf=0;
   const durations=[1600,2200,2600,1800];
   const indexFromURL=()=>Math.max(0,chapters.findIndex(c=>c.key===new URLSearchParams(location.search).get('moment')));
   function pause(message=''){clearTimeout(timer);playing=false;play.textContent=current===3?'Replay sample ↻':'Play sample ▷';play.setAttribute('aria-pressed','false');if(message)announce.textContent=message;}
   function render(index:number,reason:'initial'|'pointer'|'play'|'keyboard'|'drag'|'restore',updateURL=true){
-    current=Math.max(0,Math.min(3,index));const c=chapters[current];stage!.getAnimations().forEach(a=>a.cancel());
+    current=Math.max(0,Math.min(3,index));const c=chapters[current]!;stage!.getAnimations().forEach(a=>a.cancel());
     const lines=c.text.split('\n').map((line,i)=>`<span class="code-line ${line.startsWith('+')?'added':line.startsWith('-')?'removed':''}"><span class="line-number" aria-hidden="true">${i+1}</span><span>${escape(line).replace(/\b(import|from|export|type|function|if|return|const|undefined|null)\b/g,'<span class="keyword">$1</span>')||' '}</span></span>`).join('');
     stage!.innerHTML=`<div class="evidence-heading"><span class="file-symbol" aria-hidden="true">${c.kind==='test'?'>_':'{ }'}</span><span>${escape(c.path??c.command??'')}</span><span class="result ${c.key==='failure'?'failed':c.key==='retest'?'passed':''}">${escape(c.status)}</span></div><div class="provenance">${escape(c.provenance)}</div><pre class="material" tabindex="0" aria-label="${escape(c.title)} material"><code>${lines}</code></pre>`;
     stage!.dataset.kind=c.kind;counter.textContent=`${current+1} of 4`;range.value=String(current+1);range.setAttribute('aria-valuetext',c.title);
@@ -59,9 +63,11 @@ if(stage&&section){
   addEventListener('pagehide',()=>pause());addEventListener('pageshow',()=>{pause();render(indexFromURL(),'restore',false);});
   addEventListener('popstate',()=>{pause();render(indexFromURL(),'restore',false);});
   addEventListener('resize',()=>{pause();stage!.getAnimations().forEach(a=>a.cancel());});
-  reduce.addEventListener('change',()=>{pause();stage!.getAnimations().forEach(a=>a.cancel());full.href=`/demo/?demo&at=${chapters[current].step}${noMotion()?'&motion=0':''}`;});
-  new IntersectionObserver(entries=>{visible=entries[0].isIntersecting;if(!visible)pause();},{threshold:.2}).observe(section);
+  reduce.addEventListener('change',()=>{pause();stage!.getAnimations().forEach(a=>a.cancel());full.href=`/demo/?demo&at=${chapters[current]!.step}${noMotion()?'&motion=0':''}`;});
+  new IntersectionObserver(entries=>{visible=entries[0]?.isIntersecting??false;if(!visible)pause();},{threshold:.2}).observe(section!);
   try{render(indexFromURL(),'initial',false);play.hidden=false;range.parentElement!.hidden=false;}
   catch{document.getElementById('sample-error')!.hidden=false;}
   if(!noMotion()&&!performance.getEntriesByType('navigation').some(entry=>(entry as PerformanceNavigationTiming).type==='back_forward'))document.querySelector('.evidence-tether')?.animate([{opacity:.25},{opacity:1}],{duration:360,easing:'cubic-bezier(.22,1,.36,1)'});
 }
+
+if(stage&&section)void enhanceSample().catch(()=>{document.getElementById('sample-error')!.hidden=false;});
