@@ -13,6 +13,10 @@ export function versionURL(href: string, _version: string): string {
   const url = new URL(href);
   url.searchParams.delete('experience');
   url.searchParams.delete('versions');
+  // Retired presentation subviews return to their recording, not an invalid recording ID.
+  const recording=/^#\/r\/([^/?]+)/.exec(url.hash);
+  if(recording)url.hash=`#/r/${recording[1]}`;
+  else if(url.hash==='#/settings')url.hash='#/';
   return url.href;
 }
 export function switchUIVersion(_version: UIVersion) { location.assign(versionURL(location.href, 'modern')); }

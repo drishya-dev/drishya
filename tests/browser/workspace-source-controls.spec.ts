@@ -35,12 +35,4 @@ test('Modern source keeps reading controls compact and Copy reachable by keyboar
  await desk.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(desk).toHaveCount(0);
 });
 
-test('Legacy retains its visible Copy and descriptive search counter',async({page})=>{
- await page.addInitScript(()=>{localStorage.setItem('drishya-experience-v4','classic');localStorage.setItem('drishya-dev-ui-versions','1');});
- await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=classic#/r/${id}`);
- await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();
- const desk=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=desk.getByRole('button',{name:'Approve workspace reading'});await grant.or(desk.getByRole('tablist')).waitFor();if(await grant.isVisible())await grant.click();
- await page.getByRole('textbox',{name:'Find session files',exact:true}).fill('reading.ts');await page.locator('[data-spine-path]').filter({has:page.getByText('reading.ts',{exact:true})}).click();
- const reader=desk.getByRole('region',{name:'Workspace file reading.ts',exact:true});await expect(reader.locator('.desk-source-tools').getByRole('button',{name:'Copy file',exact:true})).toBeVisible();
- await reader.getByRole('searchbox',{name:'Find in reading.ts'}).fill('captured300');await expect(reader.locator('.source-find [role=status]')).toHaveText('1 matching line in this file');
-});
+// SHIP-1 retires Legacy-only visible-Copy chrome; Modern's keyboard/source controls are tested above.

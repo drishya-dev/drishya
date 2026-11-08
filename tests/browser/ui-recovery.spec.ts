@@ -20,7 +20,7 @@ test('map and verification failures offer local retry without replacing history'
   await page.route('**/v1/recordings/*/graph', route => mapFails ? route.fulfill({ status: 500, json: { error: 'Synthetic map error' } }) : route.continue());
   await page.route('**/v1/recordings/*/verification/*', route => verificationFails ? route.fulfill({ status: 500, json: { error: 'Synthetic verification error' } }) : route.continue());
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await expect(page.getByRole('button', { name: 'Retry repository map' })).toBeVisible();
   const firstHistory = await page.locator('.history').evaluate(element => { element.setAttribute('data-recovery-reference', 'retained'); return element.getAttribute('data-recovery-reference'); });
   mapFails = false;
@@ -40,7 +40,7 @@ test('map and verification failures offer local retry without replacing history'
 
 test('keyboard search has one neutral container focus boundary with reduced motion', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
+  await page.goto(new URL('/?demo&experience=modern', server.launchUrl).href);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   const input = page.getByPlaceholder('Search prose, commands, paths…');
   await input.focus();

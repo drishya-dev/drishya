@@ -311,20 +311,5 @@ test('B3 expands content in place, pages it, and bounds file navigation', async 
   await expect(pinned).toHaveCount(0);
 });
 
-test('B3 navigation keeps the combined synthetic story while filtering tools', async ({ page }) => {
-  // This regression exercises the retained Legacy crown/dock composition;
-  // Classic's right-hand agent families have separate browser coverage.
-  const launch = new URL(server.launchUrl); launch.search = '?experience=legacy';
-  await page.goto(launch.href);
-  await page.getByRole('button', { name: 'Open demo' }).click();
-  await expect(page.locator('.viewer')).toBeVisible();
-  await expect(page.locator('.agents .agent')).toHaveCount(3);
-  const steps = await page.locator('.reading-status').innerText();
-  const read = page.locator('.dock .instrument.k-read');
-  await read.click();
-  await expect(read).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.passage.filtered-out').first()).toBeVisible();
-  expect(await page.locator('.reading-status').innerText()).toBe(steps);
-  await page.getByRole('button', { name: /Show everything/ }).click();
-  await expect(read).toHaveAttribute('aria-pressed', 'false');
-});
+// SHIP-1 retires the Legacy crown/dock composition and its filter-only navigation test.
+// Modern's recorded/native tool navigation remains covered by tools-trail.spec.ts.

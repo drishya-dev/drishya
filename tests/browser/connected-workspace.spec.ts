@@ -53,9 +53,9 @@ createInterface({input:process.stdin}).on('line',line=>{
 test.afterAll(async()=>{ await server?.close(); await app?.close(); if (dir) {if (!resolve(dir).startsWith(resolve(tmpdir())+sep)) throw new Error('unsafe test cleanup'); rmSync(dir,{recursive:true,force:true});} });
 
 test('Studio native workspace connects its composer, attachments, approval and evidence readers', async ({ page }) => {
-  await page.goto(new URL('/?experience=studio', server.launchUrl).href + new URL(server.launchUrl).hash);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
-  await expect(page.locator('.workbench-header')).toBeVisible();
+  await page.goto(new URL('/?experience=modern', server.launchUrl).href + new URL(server.launchUrl).hash);
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
+  await expect(page.locator('.studio-header')).toBeVisible();
   await expect(page.getByRole('group', { name: 'Agents' })).toHaveCount(0);
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
@@ -70,21 +70,21 @@ test('Studio native workspace connects its composer, attachments, approval and e
   await composer.getByRole('button', { name: 'Allow once', exact: true }).click();
   await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toBeVisible();
   await expect(page.locator('.runtime-tools')).toContainText('Available in connected runtime');
-  await page.getByRole('button', { name: 'Show session folders' }).click();
-  const folders = page.getByRole('complementary', { name: 'Session folders' });
+  await page.getByRole('button', { name: 'Show files' }).click();
+  const folders = page.getByRole('complementary', { name: 'Repository files' });
   await folders.getByRole('treeitem', { name: 'src', exact: true }).click();await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'src/actual.ts', exact: true })).toContainText('fromSelectedWorkspace');
 });
 
-for(const version of ['classic','modern']) test(`${version}: current source reading finds, navigates and wraps bounded disk pages without replacing evidence`, async ({ page }) => {
+for(const version of ['modern']) test(`${version}: current source reading finds, navigates and wraps bounded disk pages without replacing evidence`, async ({ page }) => {
   const target=new URL(server.launchUrl);target.searchParams.set('experience',version);
   await page.goto(target.href);
   // Home also lists sessions discovered on this machine and pages long lists, so a fixture dated in the past may sit
   // beyond the first page; find it the way a reader would.
-  if(version==='modern') await page.getByRole('textbox',{name:'Find sessions'}).fill('Connected workspace synthetic session');
-  const session=version==='modern'?page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}):page.getByRole('button', { name: /Connected workspace synthetic session/ });
+  await page.getByRole('textbox',{name:'Find sessions'}).fill('Connected workspace synthetic session');
+  const session=page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'});
   await session.click();
-  const folders = page.getByRole('complementary', { name: version==='modern'?'Repository files':'Session folders' });
+  const folders = page.getByRole('complementary', { name: 'Repository files' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
   await expect(folders).not.toHaveAttribute('data-reading-access','checking');
   if (await enable.count()) {await enable.click();await expect(folders.locator('.workspace-grant')).toHaveCount(0);}
@@ -138,10 +138,10 @@ const openImports=async(reader:import('@playwright/test').Locator)=>{const impor
 
 test('source reading links qualified current imports to a bounded map neighborhood', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   await expect(page.locator('.composer-target')).toBeVisible();
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
-  const folders = page.getByRole('complementary', { name: 'Session folders' });
+  const folders = page.getByRole('complementary', { name: 'Repository files' });
   const enable = folders.getByRole('button', { name: /Enable workspace reading/ });
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   if (await enable.count()) await enable.click();
@@ -179,7 +179,7 @@ test('source reading links qualified current imports to a bounded map neighborho
 
 test('native model settings and attachment menus dismiss outside without detaching Follow', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
@@ -211,8 +211,8 @@ test('native model settings and attachment menus dismiss outside without detachi
 });
 
 test('selected workspace folders read current files separately from the exact historical source',async({page})=>{
-  await page.goto(server.launchUrl); await page.getByRole('button',{name:/Connected workspace synthetic session/}).click();
-  const folder = page.getByRole('complementary',{name:'Session folders'});
+  await page.goto(server.launchUrl); await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
+  const folder = page.getByRole('complementary',{name:'Repository files'});
   await expect(folder).toHaveCount(1);
   await expect(folder).toContainText('session-repository');
   await expect(page.getByRole('group', { name: 'Agents' })).toHaveCount(0);
@@ -252,7 +252,7 @@ test('selected workspace folders read current files separately from the exact hi
 });
 
 test('composer attaches code and pasted screenshots, removes chips and sends them through the native API', async ({ page }) => {
-  await page.goto(server.launchUrl); await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.goto(server.launchUrl); await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
@@ -291,7 +291,7 @@ test('composer attaches code and pasted screenshots, removes chips and sends the
 });
 
 test('the composer submits through the real API transport, handles one approval and keeps session ownership visible',async({page})=>{
-  await page.goto(server.launchUrl); await page.getByRole('button',{name:/Connected workspace synthetic session/}).click();
+  await page.goto(server.launchUrl); await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   await expect(page.getByRole('textbox',{name:'Prompt for selected harness session'})).toBeVisible();
   const composer=page.getByRole('region',{name:'Harness prompt'});
   await expect(composer).toContainText('session-repository');
@@ -333,13 +333,13 @@ test('the composer submits through the real API transport, handles one approval 
   await expect(composer).not.toContainText('Synthetic native transport completed the submitted prompt.');
   await expect(promptInput).toHaveValue('Draft the next turn without sending it');
   expect((await composer.boundingBox())!.height).toBeLessThan(150);
-  await expect(page.getByRole('complementary',{name:'Session folders'})).toHaveCount(1);
+  await expect(page.getByRole('complementary',{name:'Repository files'})).toHaveCount(1);
   if(process.env.DRISHYA_REVIEW_SHOTS==='1') await page.screenshot({path:resolve('.local/connected-composer.png')});
 });
 
 test('composer text drafts survive returning to the same recording without persisting attachments', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' });
   await input.fill('Keep this local draft');
@@ -349,7 +349,7 @@ test('composer text drafts survive returning to the same recording without persi
   const add = (await composer.getByRole('button', { name: 'Add files or folders' }).boundingBox())!;
   expect(add.y).toBeGreaterThanOrEqual(field.y + field.height);
   await page.getByRole('button', { name: 'Drishya', exact: true }).click();
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   await expect(input).toHaveValue('Keep this local draft');
   await expect(composer.locator('.prompt-attachments')).toHaveCount(0);
   await page.screenshot({ path: resolve('.local/professional-composer.png') });
@@ -431,7 +431,7 @@ test('connected action flow and agent switches replace tabs without inventing ca
 test('a large repository groups spatial density and reveals files at the zoomed location', async ({ page }) => {
   await page.goto(server.launchUrl);
   await page.getByRole('button', { name: /Hierarchical map synthetic session/ }).click();
-  await page.getByRole('complementary', { name: 'Session folders' }).getByRole('button', { name: /Enable workspace reading/ }).click();
+  await page.getByRole('complementary', { name: 'Repository files' }).getByRole('button', { name: /Enable workspace reading/ }).click();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await expect.poll(() => page.locator('.map-group').count()).toBeGreaterThan(0);
   expect(await page.locator('.map-group').count()).toBeLessThan(48);
@@ -492,7 +492,7 @@ test('long labels and inputs remain inside material allocations on desktop and m
 test('map file reading leaves a usable graph beside the bounded reader', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('actual.ts');
   await page.locator('.map-matches').getByRole('button', { name: 'src/actual.ts', exact: true }).click();
@@ -587,7 +587,7 @@ test('compact native composer contains its decoration and narrow form without ar
 
 test('submission is visible before native output, exposed reasoning hands off to history', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Connected workspace synthetic session/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   const composer = page.getByRole('region', { name: 'Harness prompt' });
   const enable = composer.getByRole('button', { name: 'Enable this workspace', exact: true });
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
@@ -618,7 +618,7 @@ test('submission is visible before native output, exposed reasoning hands off to
 });
 
 test('Claude questions use the real local answer endpoint and preserve ordinary permission controls',async({page})=>{
-  await page.goto(server.launchUrl);await page.getByRole('button',{name:/Connected workspace synthetic session/}).click();
+  await page.goto(server.launchUrl);await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();
   const composer=page.getByRole('region',{name:'Harness prompt'});
   await expect(page.locator('.composer-target')).not.toContainText('Checking…');
   const grant=composer.getByRole('button',{name:'Enable this workspace',exact:true});if(await grant.count())await grant.click();

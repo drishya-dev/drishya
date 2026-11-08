@@ -10,9 +10,11 @@ describe('Release 1 Modern-only presentation',()=>{
     }
     expect(selectedUIVersion()).toBe('modern');expect(selectedUISkin()).toBe('modern');
   });
-  it('retains the exact session and reading route when an archived caller navigates',()=>{
+  it('retains the session, token and query while retiring presentation-specific subviews',()=>{
     const url=new URL(versionURL('http://127.0.0.1:8894/?demo&motion=0&versions=1&experience=clarity#/r/recording/settings','classic'));
-    expect(url.port).toBe('8894');expect(url.hash).toBe('#/r/recording/settings');
+    expect(url.port).toBe('8894');expect(url.hash).toBe('#/r/recording');
+    expect(new URL(versionURL('http://localhost/#token=synthetic-auth','clarity')).hash).toBe('#token=synthetic-auth');
+    expect(new URL(versionURL('http://localhost/#/settings','classic')).hash).toBe('#/');
     expect(url.searchParams.has('demo')).toBe(true);expect(url.searchParams.get('motion')).toBe('0');
     expect(url.searchParams.has('experience')).toBe(false);expect(url.searchParams.has('versions')).toBe(false);
   });

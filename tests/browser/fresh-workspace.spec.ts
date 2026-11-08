@@ -258,7 +258,7 @@ for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: importe
   await page.goBack(); await expect(page.locator('.history')).toBeVisible();
 });
 
-test('Modern preserves Legacy action materials, layout and native graph controls', async ({ page }) => {
+test('Modern preserves action materials, layout and native graph controls on reopening', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   const inspect = async (version:string) => {
     await page.goto(`${server.url}/?demo&experience=${version}&motion=0`);
@@ -272,9 +272,9 @@ test('Modern preserves Legacy action materials, layout and native graph controls
       const css=getComputedStyle(el), copy=el.cloneNode(true) as Element; copy.querySelectorAll('.mcp-tool').forEach(node=>node.remove()); return { id:el.getAttribute('data-op-id'), text:copy.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
-  const legacy=await inspect('classic'), modern=await inspect('modern');
+  const first=await inspect('modern'), modern=await inspect('modern');
   // Palettes intentionally differ; shared captured content, allocation and type remain equal.
-  expect(modern.map(({background:_,...material})=>material)).toEqual(legacy.map(({background:_,...material})=>material));
+  expect(modern.map(({background:_,...material})=>material)).toEqual(first.map(({background:_,...material})=>material));
   expect(modern.every(material=>material.background==='rgb(18, 18, 18)')).toBe(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();
   await expect(page.getByRole('button',{name:'Back to work',exact:true})).toBeVisible();

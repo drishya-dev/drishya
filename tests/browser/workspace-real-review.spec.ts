@@ -64,15 +64,15 @@ test('actual product surfaces keep evidence, current source, review and map navi
     const current=page.locator('.current-file-reader');if(await current.isVisible())await current.locator(':scope>header button[aria-label^="Close "]').click();
     await expect(page.locator('.history')).toBeVisible();
     await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
-    const review=page.getByRole('dialog',{name:'Review work',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
+    await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();
+    const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
     await frame(`review-${width}`);
     const changes=review.getByRole('region',{name:'Files with changes',exact:true}).getByRole('button');
     if(await changes.count()) {
       await changes.first().click();const evidence=page.locator('dialog.file-workspace');await expect(evidence).toBeVisible();
       await expect(evidence.getByText('Loading actions…',{exact:true})).toHaveCount(0);
       await frame(`captured-file-${width}`);await evidence.locator(':scope>header button[aria-label^="Close "]').click();
-    } else await review.getByRole('button',{name:'Close Review work',exact:true}).click();
+    } else await review.getByRole('button',{name:'Close Changes',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
     await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Notes/}).click();
     const questions=page.getByRole('dialog',{name:'Notes',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
@@ -126,7 +126,7 @@ test('actual session palette and settings survey keeps readable controls at desk
   await page.setViewportSize({width:390,height:844});
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
-  for(const name of ['Appearance','Reading','Playback','Privacy','Keyboard','UI versions']) {
+  for(const name of ['Appearance','Reading','Playback','Privacy','Keyboard']) {
     await settings.getByRole('tab',{name,exact:true}).click();
     const panel=settings.locator('.modern-settings-content');
     expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth),`${name} must fit its narrow reading space`).toBeLessThanOrEqual(1);
@@ -331,8 +331,8 @@ test('actual changes open import neighborhoods and current source without crowde
   for(const id of [ids[0]!,ids.at(-1)!]){
     await page.setViewportSize({width:1440,height:960});
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-    await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
-    const review=page.getByRole('dialog',{name:'Review work',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();
+    await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();
+    const review=page.getByRole('dialog',{name:'Changes',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();
     const consent=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await consent.isVisible())await consent.click();
     const drawer=page.getByRole('region',{name:'Direct import connections',exact:true});
     const missing=page.locator('.map-focus-notice');await expect(drawer.locator('.map-connection-root').or(missing)).toBeVisible();
