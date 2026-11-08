@@ -354,19 +354,18 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toHaveCount(0);
 });
 
-test('Modern colour and UI versions remain separate; scoped Modern chrome does not affect Legacy', async ({ page }) => {
-  await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
+test('Modern colour persists while retired version choices cannot replace the product',async({page})=>{
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
   await settings.getByRole('button',{name:'Daylight',exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
-  await settings.getByRole('tab',{name:'Keyboard',exact:true}).click();
-  await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
-  await settings.getByRole('button',{name:/^Legacy/}).click();
-  await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveCount(0);
+  await page.evaluate(()=>localStorage.setItem('drishya-ui-version','classic'));
+  await page.goto(`${server.url}/?demo&experience=classic&versions=all&motion=0`);
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version','modern');
+  await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
   await expect(page.locator('.history')).toBeVisible();
-  await expect(page.locator('.modern-session-header,.modern-native-composer,.modern-toolbox')).toHaveCount(0);
 });
 
 test('Modern settings have allocated spacing, keyboard navigation and reachable controls', async ({ page }) => {

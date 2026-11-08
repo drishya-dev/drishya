@@ -1,5 +1,3 @@
-// Keep the existing cascade order; Release 1 has one reachable presentation.
-import './modern/layers.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ScreenBoundary } from './components/ScreenBoundary.tsx';

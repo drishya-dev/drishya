@@ -1,3 +1,0 @@
-/* The cascade order, declared before any other stylesheet (CLARITY-1). Every legacy and Modern sheet is wrapped in
-   `legacy` by the Vite plugin; Clarity's sheets are written in `clarity`, which therefore wins whatever the specificity. */
-@layer legacy, clarity;
