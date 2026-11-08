@@ -6,7 +6,6 @@ import { contextReport, type ContextReport } from '../lib/context-report.ts';
 import './recorded-usage.css';
 import { recordedUsageApi } from '../api.ts';
 import { useApp } from '../state.ts';
-import { useSessionWorkspace } from './SessionWorkspace.tsx';
 
 type Row = [string, string | number | undefined];
 // UI-15: reported values, written the way a person reads them. Nothing is added or inferred; units follow the recorded field.
@@ -88,7 +87,6 @@ function Work({ point }: { point: UsagePayload }) {
 
 /** Recorded journal receipts and native-runtime receipts have separate, explicit sources. */
 export function UsagePeek() {
-  const { controller } = useSessionWorkspace();
   const { projection, mode, step, historyPage, recording } = useApp();
   const total = historyPage?.scene.total ?? projection?.timeline.length ?? 0;
   const readings = projection?.context?.readings.filter(r => mode === 'history' || step >= total || r.availableAfterStep < step);
@@ -109,25 +107,22 @@ export function UsagePeek() {
     }
     return undefined;
   }, [projection?.timeline, mode, step]);
-  const native = controller?.usage;
   const brief = usageBrief(recorded);
   const harness = recording?.harness;
   return <Disclosure surface="session/usage" initiallyOpen={false} className="usage-peek"><summary>Usage{brief && <small className="usage-brief">{brief}</small>}</summary><div>
     {mode === 'replay' && !reading && !report ? <p>Recorded accounting is available in full session history.</p> : <>
       <Limits point={recorded} harness={harness} />
       <Context reading={reading} report={report} main={!!main && readings?.some(r => r.agentId !== main)} />
-      {recorded ? <Tokens point={recorded} /> : <section aria-label="Tokens"><h4>Tokens</h4><p className="usage-absent">{joined ? 'This session continues across more than one journal, and each reports its own usage, so no single total is shown.' : 'No usage values recorded for this session.'}</p></section>}
-      {recorded && <Work point={recorded} />}
+      <Disclosure surface="session/usage-token-details" initiallyOpen={false}><summary>Token details</summary>
+        {recorded ? <Tokens point={recorded} /> : <section aria-label="Tokens"><h4>Tokens</h4><p className="usage-absent">{joined ? 'This session continues across more than one journal, and each reports its own usage, so no single total is shown.' : 'No usage values recorded for this session.'}</p></section>}
+        {recorded && <Work point={recorded} />}
+      </Disclosure>
     </>}
-    {native && <section aria-label="Native runtime usage"><h4>Native runtime · {controller?.harness === 'codex' ? 'last model request' : 'connected turn'}</h4><Rows rows={[
-      ['Input tokens', count(native.input)], ['Output tokens', count(native.output)], ['Cached input', count(native.cached)], ['Cost · harness estimate', native.costUsd === undefined ? undefined : money(native.costUsd)],
-      ['Context input', count(native.contextInput)], ['Context window', count(native.contextWindow)], ['Thread tokens so far', count(native.threadTotal)], ['Reasoning output tokens', count(native.reasoningOutput)],
-    ]} /></section>}
     <small className="usage-note">Every number is the harness's own unless its title says computed. Cumulative tokens are spending, not what fills the context. Subscription billing is not inferred.</small>
   </div></Disclosure>;
 }
 
-/** Re-reads the original journal for new records. It is about the journal, not about usage, so it lives with Share. */
+/** Re-reads the original journal for new records; shown inside Session details. */
 export function RescanEntry({ menuOpen }: { menuOpen: boolean }) {
   const { recordingId, source } = useApp();
   const [available, setAvailable] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState('');
