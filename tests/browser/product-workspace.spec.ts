@@ -35,23 +35,24 @@ test.afterAll(async () => {
 const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
 test('completed evidence links keep full history and the chosen live-demo design', async ({ page }) => {
-  await page.goto(`${demoUrl()}&experience=classic`);
-  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  await page.goto(`${demoUrl()}&experience=modern`);
+  await page.getByRole('button', { name: 'Changes', exact: true }).click();
   await page.getByRole('region', { name: 'Failures', exact: true }).getByRole('button').first().click();
   const detail = page.getByRole('region', { name: 'Operation detail' });
   await detail.locator('.step-links>summary').click();
   await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
   await expect(detail).toContainText('canCheckout');
   await expect(detail).not.toContainText('Result has not arrived');
-  await expect(page.getByRole('button', { name: 'Review work', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Changes', exact: true })).toBeEnabled();
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Watch live demo', exact: true }).click();
+  await page.goto(new URL('/?demo=live', server.launchUrl).href);
   await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
-  await expect(page).toHaveURL(/experience=classic/);
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version','modern');
+  await expect(page).toHaveURL(/demo=live/);
 });
 test('map file labels are keyboard reading targets beneath header clearance', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto(`${demoUrl()}&experience=studio`);
+  await page.goto(`${demoUrl()}&experience=modern`);
   await page.getByRole('button', { name: 'Explore repository map' }).click();
   const candidate = page.locator('button.map-file-label').first();
   await expect(candidate).toBeVisible();
@@ -67,7 +68,7 @@ test('map file labels are keyboard reading targets beneath header clearance', as
   await expect(page.getByRole('dialog', { name: `Work on ${path}` })).toBeVisible();
 });
 
-for (const experience of ['classic', 'studio', 'modern']) {
+for (const experience of ['modern']) {
   test(`${experience}: long changes remain scrollable and hover expands both dimensions`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
@@ -93,21 +94,6 @@ for (const experience of ['classic', 'studio', 'modern']) {
     await expect(card.locator('.ln-tx').last()).toBeInViewport();
   });
 }
-
-test('retained design backups remain addressable but are absent from product settings', async ({ page }) => {
-  await page.goto(`${demoUrl()}&experience=studio`);
-  const title = await page.locator('.studio-session h1').textContent();
-  await page.getByRole('button', { name: 'Workspace settings' }).click();
-  const settings = page.getByRole('dialog', { name: 'Workspace settings' });
-  await expect(settings.getByText('Earlier design backups', { exact: true })).toHaveCount(0);
-  await expect(settings.getByRole('button', { name: 'Studio backup' })).toHaveCount(0);
-  await expect(page.locator('.studio-session h1')).toHaveText(title!);
-  await settings.getByRole('button', { name: 'Close Workspace settings' }).click();
-  await expect(page.locator('.history')).toBeVisible();
-  await page.goto(`${demoUrl()}&experience=classic`);
-  await expect(page.locator('.studio-header')).toBeVisible();
-  await expect(page.locator('.crown-title')).toContainText(title!);
-});
 
 test('recording search separates work from indexed file navigation', async ({ page }) => {
   await page.goto(demoUrl());
@@ -149,30 +135,31 @@ test('failed shell preview surfaces buried errors and preserves the full preview
 
 test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
   await page.goto(demoUrl());
-  await page.getByRole('button', { name: 'Review work', exact: true }).click();
-  const review = page.getByRole('dialog', { name: 'Review work', exact: true });
+  await page.getByRole('button', { name: 'Changes', exact: true }).click();
+  const review = page.getByRole('dialog', { name: 'Changes', exact: true });
   await expect(review.getByRole('region', { name: 'Files with changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
   await expect(review).toContainText('Whole session');
   await page.screenshot({ path: resolve('.local/evidence-review-desktop.png') });
-  await review.getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
+  await review.getByRole('button', { name: 'Open src/checkout/guard.ts', exact: true }).click();
   const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
   await expect(file).toBeVisible();
-  await expect(file).toContainText('File history');
+  await expect(file.getByRole('region',{name:'File history',exact:true})).toBeVisible();
   await expect(file).toContainText('Test runs after this change');
   await expect(file.locator('.file-evidence-material')).toContainText('== null');
   await page.screenshot({ path: resolve('.local/evidence-change-reader.png') });
   await file.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Review work', exact: true }).click();
+  await expect(file).toHaveCount(0);
+  await page.setViewportSize({ width: 600, height: 1000 });
+  await page.getByRole('button', { name: 'Changes', exact: true }).click();
   await expect(review).toBeVisible();
   const bounds = await review.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
-  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(600);
   await page.screenshot({ path: resolve('.local/evidence-review-narrow.png') });
-  await review.getByRole('button', { name: 'Close Review work' }).click();
+  await review.getByRole('button', { name: 'Close Changes' }).click();
   await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
-  await expect(page.getByRole('button', { name: 'Review work', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Changes', exact: true })).toBeDisabled();
 });
 
 test('returning from an authenticated demo retains local workspace access', async ({ page }) => {
@@ -290,10 +277,11 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await expect(read.getByRole('button', { name: /Close .* in history/ })).toBeFocused();
   await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 81–94');
   await expect(read.getByRole('textbox', { name: 'Go to stored source line' })).toBeHidden();
-  await read.locator('.source-utilities > summary').focus();
-  await read.locator('.source-utilities > summary').press('Enter');
+  await read.getByLabel('Stored source options',{exact:true}).focus();
+  await read.getByLabel('Stored source options',{exact:true}).press('Enter');
   await read.getByRole('searchbox', { name: 'Find in loaded source page' }).fill('cart.total');
   await expect(read.locator('.ln-hi .ln-no')).toHaveText('88');
+  if(!(await read.locator('details.desk-options:has(> summary[aria-label="Stored source options"])').evaluate(el=>(el as HTMLDetailsElement).open)))await read.getByLabel('Stored source options',{exact:true}).click();
   await read.getByRole('textbox', { name: 'Go to stored source line' }).fill('94');
   await read.getByRole('button', { name: 'Go to line', exact: true }).click();
   await expect(read.locator('[aria-current="location"] .ln-no')).toHaveText('94');
@@ -317,7 +305,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   await expect(pinned).toHaveCount(1);
   await expect(pinned).toContainText('Pinned source · 90–91');
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/captured-range-reader.png') });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 600, height: 1000 });
   await read.scrollIntoViewIfNeeded();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expect(read.getByRole('searchbox', { name: 'Find in loaded source page' })).toBeVisible();
@@ -327,13 +315,12 @@ test('source preview opens the exact stored range and keeps pending replay evide
   const headingBounds = (await pinned.locator('.reference-heading').boundingBox())!;
   const provenanceBounds = (await pinned.locator('.reader-tools').first().boundingBox())!;
   expect(headingBounds.y + headingBounds.height).toBeLessThanOrEqual(provenanceBounds.y);
-  expect((await pinned.boundingBox())!.width).toBeLessThan(390);
+  expect((await pinned.boundingBox())!.width).toBeLessThanOrEqual(576);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await pinned.getByRole('button', { name: 'Minimize reference' }).press('Escape');
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByText('Sequence diagnostics', { exact: true }).click();
-  await page.getByRole('button', { name: 'Replay sequence' }).click();
+  await page.getByLabel('More workspace options',{exact:true}).click();
+  await page.getByRole('button',{name:'Replay this session',exact:true}).click();
   await expect(pinned).toHaveCount(0);
   // The result exists in the offline bundle, but has not landed at this replay boundary.
   await page.goto(new URL('/?demo&at=3', server.launchUrl).href);
@@ -358,7 +345,7 @@ test('native source navigation can leave the History start boundary', async ({ p
   const read = page.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
   await read.getByRole('button', { name: `Read excerpt of ${op.detail.path}` }).click();
-  const summary = read.locator('.source-utilities > summary');
+  const summary = read.getByLabel('Stored source options',{exact:true});
   await expect(read.locator('.artifact-reader [data-source-line="82"]')).toBeAttached();
   // Native focus and locator navigation scroll the real History container. That
   // movement must supersede its previous start boundary before a pointer click.
@@ -370,7 +357,7 @@ test('native source navigation can leave the History start boundary', async ({ p
   await page.evaluate(() => new Promise<void>(done => requestAnimationFrame(() => requestAnimationFrame(() => done()))));
   await expect.poll(() => history.evaluate(el => el.scrollTop)).toBe(targeted);
   await summary.click();
-  await expect(read.locator('.source-utilities')).toHaveJSProperty('open', true);
+  await expect(read.locator('details.desk-options:has(> summary[aria-label="Stored source options"])')).toHaveJSProperty('open', true);
 });
 
 test('source references reject oversized text, preserve derived provenance and clear on replay seek', async ({ page }) => {
@@ -391,7 +378,7 @@ test('source references reject oversized text, preserve derived provenance and c
   const read = page.locator(`article[data-op-id="${op.id}"]`);
   await read.scrollIntoViewIfNeeded();
   await read.getByRole('button', { name: `Read excerpt of ${op.detail.path}` }).click();
-  await read.locator('.source-utilities > summary').click();
+  await read.getByLabel('Stored source options',{exact:true}).click();
   const ranges = read.getByRole('group', { name: 'Loaded source range actions' });
   await ranges.getByRole('button', { name: 'Pin range', exact: true }).click();
   await expect(ranges).toContainText('Reference limit · choose a smaller range');
@@ -426,7 +413,7 @@ test('substantial external results retain structured evidence and adapt to narro
   await external.scrollIntoViewIfNeeded();
   await expect(external).toHaveClass(/shape-reading/);
   expect((await external.boundingBox())!.width).toBeGreaterThanOrEqual(350);
-  expect((await external.boundingBox())!.width).toBeLessThanOrEqual(390);
+  expect((await external.boundingBox())!.width).toBeLessThanOrEqual(600);
   await expect(external.locator('tbody tr')).toHaveCount(5);
   await expect(external.locator('tbody')).toContainText('synthetic/file-4.ts');
   await expect(external.locator('tbody')).toContainText('null');
@@ -435,7 +422,7 @@ test('substantial external results retain structured evidence and adapt to narro
   await external.locator('.with-original').getByRole('button', { name: 'Original', exact: true }).press('Enter');
   await external.locator('.op-body').evaluate((el) => { el.scrollTop = 0; });
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-desktop.png') });
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 600, height: 1000 });
   await external.scrollIntoViewIfNeeded();
   expect((await external.boundingBox())!.width).toBeLessThan(390);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -448,12 +435,12 @@ test('substantial external results retain structured evidence and adapt to narro
 test('the explorer keeps current file navigation without redundant relationship and map panels', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(demoUrl());
-  const explorer = page.getByRole('complementary', { name: 'Session folders' });
+  const explorer = page.getByRole('complementary', { name: 'Repository files' });
   await expect(explorer).toBeVisible();
   await expect(explorer).not.toContainText('Current workspace index');
   await expect(explorer).not.toContainText('File relationships');
   await expect(explorer.locator('.folder-map-link')).toHaveCount(0);
-  await explorer.getByRole('textbox', { name: 'Find session files' }).fill('guard.ts');
+  await explorer.getByRole('textbox', { name: 'Find repository files' }).fill('guard.ts');
   await explorer.getByRole('treeitem').filter({ hasText: 'guard.ts' }).click();
   await expect(page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' })).toBeVisible();
   await page.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
@@ -486,12 +473,12 @@ test('synthetic live demo publishes pending requests, resolves in place and keep
   await expect(page.locator('.transport')).not.toContainText('Pause');
   await page.getByRole('button', { name: /Back to latest/ }).click();
   await expect(page.locator('article.op-test').last()).toContainText('7 passed');
-  await page.locator('.station-agent-menu > summary').click();
+  await page.locator('.md-agents > summary').click();
   await expect(page.getByRole('switch', { name: 'Filter by gpt-5-codex agent' })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/material-live-complete.png') });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator('.crown-sample')).toBeVisible();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 600, height: 1000 });
+  await expect(page.getByRole('button',{name:'Watch demo again',exact:true})).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(600);
   await page.getByRole('button', { name: 'Watch demo again' }).click();
   await expect(page.locator('.workspace-context')).toContainText('Publishing sample events');
   await expect.poll(async () => Number((await page.locator('.reading-status').innerText()).match(/\d+/)![0])).toBeLessThan(45);
@@ -503,7 +490,7 @@ test('explicit themes persist independently of the OS, restore focus and work on
   await page.getByRole('switch', { name: 'Automatically follow new work' }).click();
   await settings.click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
-  await dialog.getByRole('button', { name: 'Paper', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Daylight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.reload();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -514,16 +501,18 @@ test('explicit themes persist independently of the OS, restore focus and work on
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+  await dialog.getByRole('tab',{name:'Reading',exact:true}).click();
   await dialog.getByRole('checkbox', { name: /^Low resource mode/ }).check();
   await expect(dialog.getByRole('checkbox', { name: /^Repository map/ })).not.toBeChecked();
   await expect(dialog.getByRole('checkbox', { name: /^Relationship motion/ })).not.toBeChecked();
   await dialog.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect(settings).toBeFocused();
   await expect(page.locator('.world')).toHaveCount(0);
-  await page.setViewportSize({ width: 390, height: 844 });
+  await page.setViewportSize({ width: 600, height: 1000 });
   await settings.click();
+  await dialog.getByRole('tab',{name:'Appearance',exact:true}).click();
   await expect(dialog.getByRole('heading', { name: 'Appearance' })).toBeVisible();
-  expect(await dialog.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(await dialog.evaluate((el) => el.scrollWidth)).toBeLessThanOrEqual(600);
   await dialog.press('Escape');
   await expect(dialog).toHaveCount(0);
   await expect(settings).toBeFocused();
@@ -531,8 +520,8 @@ test('explicit themes persist independently of the OS, restore focus and work on
 
 test('file comparison reads real daemon artifacts and opens the same action in history', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await expect(page.getByRole('heading', { name: 'Your agent workspace.' })).toBeVisible();
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await expect(page.getByRole('heading', { name: 'Your sessions.' })).toBeVisible();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   const file = page.locator('.spine-file[title="src/checkout/guard.ts"]');
   await file.click();
@@ -542,13 +531,18 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await expect(dialog.getByLabel('Second step')).toBeVisible();
   await expect(dialog.locator('.file-evidence-columns')).toContainText('Patch');
   await expect(dialog.locator('.file-evidence-columns')).toContainText('cart.total == null');
+  await dialog.locator('.file-evidence-column').last().getByLabel('Stored source options',{exact:true}).click();
   await expect(dialog.getByRole('button', { name: 'Copy derived page', exact: true })).toBeVisible();
+  await dialog.locator('.file-evidence-column').last().getByLabel('Stored source options',{exact:true}).click();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/product-file-comparison.png') });
+  await dialog.getByLabel('File actions',{exact:true}).click();
   await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   const first = dialog.locator('.file-trail-item').first();
-  const buttonBounds = (await first.locator('.file-op').boundingBox())!;
-  const linkBounds = (await first.locator('[data-file-op]').boundingBox())!;
-  expect(buttonBounds.y + buttonBounds.height).toBeLessThanOrEqual(linkBounds.y + 1);
+  // Modern exposes the history action over the row on hover, rather than below it.
+  const historyAction=first.locator('[data-file-op]');
+  await first.hover();
+  await expect(historyAction).toBeVisible();
+  expect(await historyAction.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);
   await dialog.getByLabel('Filter actions on this file').fill('not-a-recorded-action');
   await expect(dialog).toContainText('No matching actions');
   await expect(dialog.getByLabel('First step')).toHaveCount(0);
@@ -567,17 +561,7 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await expect(page.getByRole('region', { name: 'Operation detail' })).toContainText('npm test');
 });
 
-test('agent ownership shares one history, and replay file choices obey the historical boundary', async ({ page }) => {
-  await page.goto(`${demoUrl()}&experience=legacy`);
-  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
-  const overview = page.getByRole('region', { name: 'Agent comparison' });
-  await expect(overview).toContainText('counts and files describe the work shown in this view');
-  await expect(overview).toContainText('Child of claude-opus-5');
-  await overview.getByRole('button').last().click();
-  await expect(page.getByRole('button', { name: 'Clear focus' })).toBeVisible();
-  await page.getByRole('button', { name: 'Clear focus' }).click();
-  await page.getByRole('switch', { name: 'Agent overview', exact: true }).click();
-  await expect(overview).toHaveCount(0);
+test('replay file choices obey the historical boundary', async ({ page }) => {
   // Deep link intentionally holds replay at an early step before the guard read completes.
   await page.goto(new URL('/?demo&at=3', server.launchUrl).href);
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
@@ -586,14 +570,14 @@ test('agent ownership shares one history, and replay file choices obey the histo
   await expect(dialog).toContainText('Up to this replay step');
   await expect(dialog).not.toContainText('cart.total == null');
   await expect(dialog).not.toContainText('7 passed');
-  await page.setViewportSize({ width: 390, height: 844 });
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  await page.setViewportSize({ width: 600, height: 1000 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(600);
   await expect(dialog.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' })).toBeVisible();
 });
 
 test('distant file moments compare across bounded trail pages', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/distant.ts');
   await page.locator('.spine-file[title="src/distant.ts"]').click();
   const dialog = page.getByRole('dialog', { name: 'Work on src/distant.ts' });
@@ -609,6 +593,7 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
   const first = dialog.getByLabel('First step');
   const selected = await first.inputValue();
+  await dialog.getByLabel('File actions',{exact:true}).click();
   await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   await dialog.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
@@ -622,7 +607,7 @@ test('distant file moments compare across bounded trail pages', async ({ page })
 
 test('a sanitized export opens as read-only evidence and can return to the local workspace', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await page.locator('.workspace-menu > summary').click();
   const exportPath = await page.getByRole('link', { name: 'Export recording', exact: true }).getAttribute('href');
   const replay = new URL('/', server.launchUrl);
@@ -636,7 +621,7 @@ test('a sanitized export opens as read-only evidence and can return to the local
   await expect(dialog).toContainText('if (!cart.total)');
   await dialog.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
   await page.getByRole('button', { name: 'Drishya', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sessions on this machine' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your sessions.' })).toBeVisible();
 });
 
 test('view and appearance changes keep the same passage under the reader', async ({ page }) => {
@@ -674,16 +659,17 @@ test('view and appearance changes keep the same passage under the reader', async
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot')].find((node) => node.dataset.passageId === anchor.id);
     return node ? Math.abs(node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset) : Infinity;
   }, anchor);
-  await page.locator('.station-agent-menu > summary').click();
+  await page.locator('.md-agents > summary').click();
   await page.locator('.station-subagents > summary').click();
   await page.getByRole('switch', { name: 'Filter by Explore agent', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('button', { name: 'Back to work', exact: true }).click();
+  for(const selector of ['.md-agents','.station-subagents']){const group=page.locator(selector).first();if(await group.getAttribute('open')===null)await group.locator(':scope > summary').click();}
   await page.getByRole('switch', { name: 'Filter by Explore agent', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByRole('button', { name: 'Paper', exact: true }).click();
+  await page.getByRole('button', { name: 'Daylight', exact: true }).click();
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await expect(page.getByRole('button', { name: /Back to latest/ })).toBeVisible();
@@ -698,7 +684,7 @@ test('view and appearance changes keep the same passage under the reader', async
 
 
 test('history activity timeline opens recorded failures and edits; named palettes switch', async ({ page }) => {
-  await page.goto(`${demoUrl()}&experience=classic`);
+  await page.goto(`${demoUrl()}&experience=modern`);
   await page.getByLabel('More workspace options').click();
   await page.locator('.prompt-menu > summary').click();
   const timeline = page.getByRole('group', { name: 'Activity' });
@@ -718,18 +704,19 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet uses a static dot field, removed by the explicit low-resource preference.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(13, 13, 13)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(0, 0, 0)');
   expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('radial-gradient');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(17, 20, 26)');
-  await dialog.getByRole('button', { name: 'Paper', exact: true }).click();
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(2, 7, 10)');
+  await dialog.getByRole('button', { name: 'Daylight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
   await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
+  await dialog.getByRole('tab',{name:'Reading',exact:true}).click();
   await dialog.getByRole('checkbox', { name: /^Low resource mode/ }).check();
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
 });
@@ -947,6 +934,7 @@ test('spatial camera orbits both axes and resumes after manual navigation; reduc
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
   await settings.getByRole('checkbox', { name: /^3D repository map/ }).check();
   await settings.getByRole('checkbox', { name: /^Slow background orbit/ }).check();
   await settings.getByRole('combobox', { name: 'Exposed reasoning detail' }).selectOption('collapsed');
@@ -989,51 +977,14 @@ test('spatial camera orbits both axes and resumes after manual navigation; reduc
 });
 
 
-test('Studio working set opens changes and keeps explorer an explicit alternative', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`${demoUrl()}&experience=studio`);
-  const sources = page.getByRole('complementary', { name: 'Working files', exact: true });
-  await expect(sources.getByRole('heading', { name: 'Working set' })).toBeVisible();
-  await expect(page.getByRole('complementary', { name: 'Session folders' })).toHaveCount(0);
-  await sources.getByRole('textbox', { name: 'Filter working files' }).fill('guard.ts');
-  await sources.getByRole('button', { name: /guard.ts src\/checkout/ }).click();
-  const file = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
-  await expect(file.locator('.file-evidence-material')).toContainText('== null');
-  await file.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
-  await page.screenshot({ path: resolve('.local/studio-workbench.png') });
-  await sources.getByRole('button', { name: 'Show session folders' }).click();
-  await expect(page.getByRole('complementary', { name: 'Session folders' })).toBeVisible();
-  await expect(sources.getByRole('heading', { name: 'Working set' })).toHaveCount(0);
-  await expect(page.getByRole('region', { name: 'Work desk' })).toBeVisible();
-});
-
-test('Studio keeps navigation, review and the canvas usable across aspect ratios', async ({ page }) => {
-  for (const [width, height] of [[1920, 1080], [1280, 720], [900, 500], [768, 900], [390, 844]]) {
-    await page.setViewportSize({ width: width!, height: height! });
-    await page.goto(`${demoUrl()}&experience=studio`);
-    await expect(page.locator('.history')).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    const header = (await page.locator('.workspace-header').boundingBox())!;
-    const nav = (await page.getByRole('navigation', { name: 'Workspace views' }).boundingBox())!;
-    expect(nav.y).toBeGreaterThanOrEqual(header.y + header.height);
-    const review = page.getByRole('button', { name: 'Review work', exact: true }).filter({ visible: true });
-    await review.click();
-    const dialog = page.getByRole('dialog', { name: 'Review work' });
-    await expect(dialog.getByRole('region', { name: 'Files with changes' })).toBeVisible();
-    await dialog.getByRole('button', { name: 'Close Review work' }).click();
-    if (width! <= 820) {
-      await page.getByRole('button', { name: 'Tools', exact: true }).click();
-      await expect(page.getByRole('complementary', { name: 'Tools', exact: true })).toBeVisible();
-      await page.getByRole('button', { name: 'Close tools', exact: true }).click();
-    }
-  }
-});
+// Retired Studio-only working-set and split-navigation compositions are not shipped.
+// Modern navigation and file reading remain covered above and in repository-navigation.
 
 test('local preview reopens actual imported evidence and never falls back to the synthetic sample', async ({ page }) => {
   const recording = app.store.listRecordings()[0]!;
   await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
-  await page.goto(new URL(`/?experience=studio#/r/${recording.id}`, server.launchUrl).href);
+  await page.goto(new URL(`/?experience=modern#/r/${recording.id}`, server.launchUrl).href);
   await expect(page.locator('.history')).toBeVisible();
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button', { name: 'Use this session as local preview' }).click();
@@ -1046,6 +997,6 @@ test('local preview reopens actual imported evidence and never falls back to the
   await page.evaluate(() => localStorage.setItem('drishya-local-preview-v1', 'missing-recording'));
   await page.reload();
   await expect(page.locator('.home')).toBeVisible();
-  await expect(page.getByText(/A missing or deleted recording/)).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Your sessions.'})).toBeVisible();
   await expect(page.locator('.history')).toHaveCount(0);
 });

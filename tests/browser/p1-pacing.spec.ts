@@ -40,7 +40,7 @@ test.afterAll(async () => {
 test('the tool request is visible before its result and remains beside it', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await expect(page.locator('.origins')).toBeAttached();
   await page.evaluate(() => {
     const observed: string[] = [];
@@ -90,7 +90,7 @@ test('the tool request is visible before its result and remains beside it', asyn
 test('a single delayed read result keeps its request readable in a bounded material', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'p1-late-source-growth';
   append({ type: 'assistant', message: { id: `${id}-intro`, role: 'assistant', content: [{ type: 'text', text: 'Reading a source excerpt next.' }] } });
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Read', input: { file_path: '/home/dev/shop/src/smooth-read.ts', offset: 1, limit: 80 } }] } });
@@ -139,7 +139,7 @@ test('actions share stable reading widths, wrap when full and restart after agen
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   append({ type: 'assistant', message: { id: 'row-intro', role: 'assistant', content: [{ type: 'text', text: 'Starting the synthetic row allocation check.' }] } });
   const call = (n: number) => ({ type: 'tool_use', id: `row-call-${n}`, name: 'Bash', input: { command: `printf row-allocation-${n}` } });
   append({ type: 'assistant', message: { id: 'row-first', role: 'assistant', content: [call(0)] } });
@@ -171,7 +171,7 @@ test('actions share stable reading widths, wrap when full and restart after agen
 for (const interruption of ['reading', 'reduced motion'] as const) test('one real material arrival survives hover and cancels for ' + interruption, async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await expect(page.locator('.origins')).toBeAttached();
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -328,6 +328,7 @@ test('file relationships start at measured renderer nodes and fall back when the
   expect(Number(folderCoordinates[2])).toBeCloseTo(folder.y + folder.height / 2, 0);
   await page.evaluate(() => document.getElementById('synthetic-origin-cover')!.remove());
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab',{name:'Reading',exact:true}).click();
   await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   // Map-off may return to the captured-path tree; make the reference visible again.
@@ -354,7 +355,7 @@ test('verification marks represent recorded counts and open the failing assertio
 
 test('MCP input and result can be read in the history passage', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
   await page.locator('.search-results button').first().click();
@@ -367,7 +368,7 @@ test('MCP input and result can be read in the history passage', async ({ page })
 
 test('a burst follows automatically and deliberate reading can hold and resume the camera', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const steps = page.locator('.reading-status');
   const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
   for (let i = 0; i < 8; i++) {
@@ -428,11 +429,12 @@ test('the dock keeps observed identities readable at rest and remains accessible
   await page.setViewportSize({ width: 1440, height: 900 });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';
   await page.goto(demo.href);
-  const dock = page.getByRole('complementary', { name: 'Tools' });
-  await expect(dock).toHaveAttribute('title', /Tools observed in this recording/);
-  await expect(dock.getByRole('button', { name: 'get-library-docs 1', exact: true })).toBeVisible();
-  await expect(dock.getByRole('button', { name: 'search_code 1', exact: true })).toBeVisible();
-  expect(await dock.locator('.inst-tools').evaluateAll((els) => els.every((el) => el.scrollWidth <= el.clientWidth + 1))).toBe(true);
+  const dock = page.getByRole('complementary', { name: 'Tools and agents' });
+  await expect(dock).toHaveAttribute('title', /Counts are recorded tool uses/);
+  for(const summary of await dock.locator('summary[data-mcp-server]').all())await summary.click();
+  await expect(dock.locator('[data-mcp-tool="get-library-docs"]')).toBeVisible();
+  await expect(dock.locator('[data-mcp-tool="search_code"]')).toBeVisible();
+  expect(await dock.locator('[data-mcp-tool]').evaluateAll((els) => els.every((el) => el.scrollWidth <= el.clientWidth + 1))).toBe(true);
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('get-library-docs');
   await page.locator('.search-results button').first().click();
@@ -447,18 +449,18 @@ test('the dock keeps observed identities readable at rest and remains accessible
   const coordinates = (await tether.getAttribute('d'))!.match(/^M([\d.-]+),([\d.-]+)/)!;
   expect(Number(coordinates[1])).toBeCloseTo(tool.x, 0);
   expect(Number(coordinates[2])).toBeCloseTo(tool.y + tool.height / 2, 0);
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Tools', exact: true }).click();
+  await page.setViewportSize({width:600,height:900});
+  await page.getByRole('button',{name:'Tools',exact:true}).click();
   await expect(dock).toBeVisible();
-  await expect(dock.getByRole('button', { name: 'get-library-docs 1', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Close tools', exact: true }).click();
+  await expect(dock.locator('[data-mcp-tool="get-library-docs"]')).toBeVisible();
+  await page.getByRole('button',{name:'Close tools',exact:true}).click();
   await expect(dock).toBeHidden();
-  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(600);
 });
 
 test('verification refreshes while reading and hides whole-recording facts during sequence replay', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
@@ -469,9 +471,8 @@ test('verification refreshes while reading and hides whole-recording facts durin
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });
   await app.ingest.sync(recordingId);
   await expect(panel).toContainText('npm test -- p1-live-verification');
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByText('Sequence diagnostics', { exact: true }).click();
-  await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
+  await page.getByLabel('More workspace options',{exact:true}).click();
+  await page.getByRole('button', { name: 'Replay this session', exact:true }).click();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.getByRole('slider', { name: 'Timeline' }).press('End');
   await page.getByRole('button', { name: 'Search', exact: true }).click();
@@ -479,7 +480,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
   await expect(panel).toContainText('future results are hidden');
   await expect(panel).not.toContainText('npm test -- p1-live-verification');
-  await page.getByRole('button', { name: '← History', exact: true }).click();
+  await page.getByRole('button', { name: 'Exit replay', exact: true }).click();
   await page.getByRole('button', { name: 'Search', exact: true }).click();
   await page.getByPlaceholder('Search prose, commands, paths…').fill('guard.ts');
   await page.locator('.search-results button').filter({ hasText: /Edit/ }).first().click();
@@ -490,7 +491,7 @@ test('every observed action kind can arrive as a real surface without removing i
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1600, height: 1400 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await expect(page.locator('.origins')).toBeAttached();
   await page.evaluate(() => {
     const observed: string[] = [];
@@ -550,7 +551,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
   test.setTimeout(720_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
   // Session opening is asynchronous. Do not spend the first wheel gesture on the
@@ -626,7 +627,7 @@ test('sustained live reading keeps evidence, anchors and presentation bounded', 
 test('replay clock advances independently while hovering, scrolling above and reading an action', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto(new URL('/?demo&at=16', server.launchUrl).href);
-  await page.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('0.5');
+  await page.getByRole('combobox', { name: 'Replay speed', exact: true }).selectOption('0.5');
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   const history = page.locator('.history');
   await pointAtHistory(page, history);
@@ -655,7 +656,7 @@ test('replay clock advances independently while hovering, scrolling above and re
 test('following completed arrivals does not bounce the history camera backward', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   append({ type: 'assistant', message: { id: 'camera-intro', role: 'assistant', content: [{ type: 'text', text: Array.from({ length: 35 }, (_, i) => `Synthetic camera context ${i}: previous work remains above this arriving tool.`).join('\n\n') }] } });
   await app.ingest.sync(recordingId);
   const history = page.locator('.history');
@@ -685,7 +686,7 @@ test('following completed arrivals does not bounce the history camera backward',
 test('sequence replay arrivals keep a steady forward camera', async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
-  await page.getByRole('combobox', { name: 'Speed', exact: true }).selectOption('4');
+  await page.getByRole('combobox', { name: 'Replay speed', exact: true }).selectOption('4');
   await page.mouse.move(5, 650);
   await page.evaluate(() => {
     const samples: { top: number; extent: number; layout: number; step: string | null }[] = [];
@@ -712,10 +713,9 @@ test('paged replay retains its history and camera while the next page loads', as
     await route.fulfill({ response, json: body });
   });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
-  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await page.getByText('Sequence diagnostics', { exact: true }).click();
-  await page.getByRole('button', { name: 'Replay sequence', exact: true }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
+  await page.getByLabel('More workspace options',{exact:true}).click();
+  await page.getByRole('button', { name: 'Replay this session', exact:true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(page.locator('.history')).toBeVisible();

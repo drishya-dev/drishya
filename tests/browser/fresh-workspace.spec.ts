@@ -140,9 +140,9 @@ test('Modern settings resets section reading, follows responsive tab orientation
   await expect(select).toBeFocused();await expect(select).toHaveValue('collapsed');await expect(settings).toBeVisible();
   await page.setViewportSize({width:390,height:844});await expect(nav).toHaveAttribute('aria-orientation','horizontal');
   await settings.getByRole('tab',{name:'Reading',exact:true}).focus();await page.keyboard.press('End');
-  // CLARITY-1: the UI versions tab is offered to everyone again (Clarity), so it is the last section.
-  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toBeFocused();
-  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveAttribute('aria-selected','true');
+  // Modern-only Release 1 ends its settings sections at Keyboard.
+  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toBeFocused();
+  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toHaveAttribute('aria-selected','true');
   expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/settings-phone-navigation-refined.png')});
   await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
@@ -264,7 +264,7 @@ for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: importe
   await page.goBack(); await expect(page.locator('.history')).toBeVisible();
 });
 
-test('Modern preserves Legacy action materials, layout and native graph controls', async ({ page }) => {
+test('Modern preserves action materials, layout and native graph controls on reopening', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   const inspect = async (version:string) => {
     await page.goto(`${server.url}/?demo&experience=${version}&motion=0`);
@@ -278,9 +278,9 @@ test('Modern preserves Legacy action materials, layout and native graph controls
       const css=getComputedStyle(el), copy=el.cloneNode(true) as Element; copy.querySelectorAll('.mcp-tool').forEach(node=>node.remove()); return { id:el.getAttribute('data-op-id'), text:copy.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
-  const legacy=await inspect('classic'), modern=await inspect('modern');
-  // Palettes intentionally differ; shared captured content, allocation and type remain equal.
-  expect(modern.map(({background:_,...material})=>material)).toEqual(legacy.map(({background:_,...material})=>material));
+  const first=await inspect('modern'), modern=await inspect('modern');
+  // Reopening preserves captured content, allocation and type.
+  expect(modern.map(({background:_,...material})=>material)).toEqual(first.map(({background:_,...material})=>material));
   expect(modern.every(material=>material.background==='rgb(18, 18, 18)')).toBe(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();
   await expect(page.getByRole('button',{name:'Back to work',exact:true})).toBeVisible();
@@ -354,19 +354,18 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toHaveCount(0);
 });
 
-test('Modern colour and UI versions remain separate; scoped Modern chrome does not affect Legacy', async ({ page }) => {
-  await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
+test('Modern colour persists while retired version choices cannot replace the product',async({page})=>{
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
   await settings.getByRole('button',{name:'Daylight',exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
-  await settings.getByRole('tab',{name:'UI versions',exact:true}).click();
-  await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
-  await settings.getByRole('button',{name:/^Legacy/}).click();
-  await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveCount(0);
+  await page.evaluate(()=>localStorage.setItem('drishya-ui-version','classic'));
+  await page.goto(`${server.url}/?demo&experience=classic&versions=all&motion=0`);
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version','modern');
+  await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
   await expect(page.locator('.history')).toBeVisible();
-  await expect(page.locator('.modern-session-header,.modern-native-composer,.modern-toolbox')).toHaveCount(0);
 });
 
 test('Modern settings have allocated spacing, keyboard navigation and reachable controls', async ({ page }) => {

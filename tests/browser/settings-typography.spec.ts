@@ -6,13 +6,11 @@ import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 
 let dir:string,app:App,server:RunningServer;
-const sections=['Appearance','Reading','Playback','Privacy','Keyboard','UI versions'];
+const sections=['Appearance','Reading','Playback','Privacy','Keyboard'];
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-settings-type-'));app=new App(dir);server=await startServer({app,port:0});});
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 
 async function openSettings(page:Page){
- // UI-4: the UI versions panel is a developer switch; this guard keeps it readable too.
- await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);
  await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
  await expect(page.getByRole('dialog',{name:'Workspace settings'})).toBeVisible();
@@ -69,7 +67,6 @@ test('Settings descriptions, keyboard rows and controls remain reachable at narr
    if(section==='Keyboard'){
     const last=dialog.locator('.shortcut-list div').last();await last.scrollIntoViewIfNeeded();await expect(last).toBeInViewport();
    }
-   if(section==='UI versions'){const note=dialog.locator('.dv-note');await note.scrollIntoViewIfNeeded();await expect(note).toBeInViewport();}
   }
   await dialog.getByRole('tab',{name:'Appearance',exact:true}).click();
   await page.screenshot({path:`.local/ui2-settings-${size.width}.png`});
