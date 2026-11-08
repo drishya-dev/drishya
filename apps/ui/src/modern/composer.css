@@ -1,0 +1,81 @@
+/* UI-28: the Modern composer to the premium bar. Loaded after the sheets that first styled it, so these rules own the box's contents:
+   a status line only when there is something to say, one inline setup row, an image strip above the text, a box that grows then
+   scrolls, and product menus (model, effort, attach) in place of native selects. */
+:root[data-ui-version=modern] .modern-native-composer .composer-setup {
+  display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; margin:8px 12px 0; padding:9px 12px;
+  border-radius:var(--round-md); background:var(--s2); color:var(--t2); font:var(--text-xs)/1.5 var(--sans);
+}
+:root[data-ui-version=modern] .modern-native-composer .composer-setup>p { flex:1 1 180px; margin:0; }
+:root[data-ui-version=modern] .modern-native-composer .composer-setup label { display:inline-flex; align-items:center; gap:6px; color:var(--t3); font-size:var(--text-2xs); }
+:root[data-ui-version=modern] .modern-native-composer .composer-setup .cli-setup { flex:1 1 100%; }
+
+/* Attachments: images are square thumbnails in one strip above the text; the strip scrolls sideways when there are many. */
+:root[data-ui-version=modern] .modern-native-composer .prompt-attachments {
+  display:flex; flex-wrap:nowrap; align-items:center; gap:8px; max-height:none; margin:0; padding:10px 15px 2px; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin;
+}
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip { flex:none; }
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip:has(>img) {
+  position:relative; width:64px; height:64px; max-width:none; padding:0; gap:0; overflow:hidden; border-radius:var(--round-md); background:var(--s2);
+}
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip>img { width:100%; height:100%; object-fit:cover; border-radius:0; }
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip:has(>img)>.attachment-preview { position:absolute; inset:0; max-width:none; padding:0; border:0; background:none; overflow:hidden; white-space:nowrap; text-indent:110%; cursor:zoom-in; }
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip:has(>img)>button:last-child {
+  position:absolute; top:4px; right:4px; display:grid; place-items:center; width:20px; height:20px; padding:0; border-radius:50%;
+  border:1px solid var(--line); background:color-mix(in srgb,var(--s1) 90%,transparent); color:var(--t1); font-size:14px; line-height:1; opacity:0; cursor:pointer;
+}
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip:is(:hover,:focus-within)>button:last-child { opacity:1; }
+:root[data-ui-version=modern] .modern-native-composer .attachment-chip:not(:has(>img)) { padding:4px 4px 4px 10px; }
+
+/* The bottom row: menus on the left, one round Send on the right. */
+:root[data-ui-version=modern] .modern-native-composer .composer-actions { gap:8px; }
+:root[data-ui-version=modern] .modern-composer-input-tools { gap:2px; flex-wrap:nowrap; }
+.composer-menu-trigger {
+  display:inline-flex; align-items:center; gap:5px; flex:none; max-width:170px; height:28px; padding:0 8px; border:0; border-radius:var(--round-sm);
+  background:none; color:var(--t3); font:var(--text-xs)/1 var(--sans); cursor:pointer;
+}
+.composer-menu-trigger>span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.composer-menu-trigger svg { width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.composer-menu-trigger svg.composer-chevron { width:11px; height:11px; }
+.composer-menu-trigger.composer-attach { width:28px; padding:0; justify-content:center; }
+.composer-menu-trigger:is(:hover,[aria-expanded=true]):not(:disabled) { background:var(--s3); color:var(--t1); }
+.composer-menu-trigger:focus-visible { outline:1px solid var(--focus); outline-offset:1px; }
+.composer-menu-trigger:disabled { opacity:.5; cursor:default; }
+.composer-menu-trigger[aria-expanded=true] svg.composer-chevron { transform:rotate(180deg); }
+
+.composer-menu {
+  position:fixed; inset:auto; margin:0; min-width:200px; max-width:min(320px,calc(100vw - 16px)); padding:4px; overflow:auto;
+  border:1px solid var(--line); border-radius:var(--round-md); background:var(--s1); color:var(--t1); box-shadow:0 8px 24px #0003;
+}
+.composer-menu:popover-open { display:grid; gap:1px; }
+.composer-menu>button {
+  display:grid; grid-template-columns:14px minmax(0,1fr); align-items:start; gap:8px; padding:7px 10px 7px 8px; border:0; border-radius:var(--round-sm);
+  background:none; color:var(--t1); text-align:left; font:var(--text-xs)/1.4 var(--sans); cursor:pointer;
+}
+.composer-menu>button:is(:hover,:focus-visible):not(:disabled) { background:var(--s3); outline:0; }
+.composer-menu>button:disabled { color:var(--t3); cursor:default; }
+.composer-menu>button small { display:block; color:var(--t3); font-size:var(--text-2xs); line-height:1.4; }
+.composer-menu-check { width:14px; height:14px; margin-top:2px; fill:none; stroke:var(--focus); stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
+.composer-menu>button[aria-checked=true] .composer-menu-check { opacity:1; }
+
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions button.send-prompt {
+  width:32px; min-width:32px; height:32px; min-height:32px; padding:0; border-radius:var(--round-full); display:grid; place-items:center;
+}
+
+/* Open and close, from the trigger and on the product curve; the same gates as the rest of Modern's motion. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .composer-menu {
+    transform-origin:bottom left; transition:opacity 160ms var(--ease-out),transform 160ms var(--ease-out),overlay 120ms allow-discrete,display 120ms allow-discrete;
+  }
+  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .composer-menu:not(:popover-open) { opacity:0; transform:scale(.95); transition-duration:120ms; }
+  @starting-style { :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .composer-menu:popover-open { opacity:0; transform:scale(.95); } }
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .composer-menu-trigger svg.composer-chevron { transition:transform 160ms var(--ease-out); }
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .attachment-chip>button:last-child { transition:opacity 120ms var(--ease-out); }
+}
+
+/* The box grows with the prompt (the effect in SessionWorkspace sets the height) up to 40 % of the window or 240 px, then scrolls inside. */
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer textarea { max-height:min(240px,40dvh); overscroll-behavior:contain; }
+/* Once the text scrolls, its top and bottom edges fade instead of cutting a line in half against the status row and the controls. */
+:root[data-ui-version=modern] .modern-native-composer textarea[data-scrolls] { mask-image:linear-gradient(to bottom,transparent 0,#000 12px,#000 calc(100% - 12px),transparent 100%); }
+
+/* The status is the one thing the first line says when something needs the person ("Approval needed"): it keeps its words and the folder name gives way. */
+:root[data-ui-version=modern] .modern-native-composer .modern-composer-state { flex:none; max-width:min(260px,70%); }

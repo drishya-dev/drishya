@@ -1,3 +1,4 @@
+import {ProseFilesProvider} from './ProseFiles.tsx';
 import {QueuedInputs} from './QueuedInputs.tsx';
 import {currentReadingTarget,currentReadingFailure} from '../lib/file-reading.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
@@ -5,7 +6,7 @@ import {FileReadingActions} from './FileReadingActions.tsx';
 import {useFileRoots} from '../lib/use-file-roots.ts';
 import { documentFits, documentLimitMessage } from '../lib/document-limit.ts';
 import {FileRowName} from './FileRowName.tsx';
-import {worktreeFileRows, currentWorkspacePath} from '../lib/worktree-files.ts';
+import {worktreeFileRows, currentWorkspacePath, UNPLACED_GROUP, canonicalFileFolders} from '../lib/worktree-files.ts';
 import {rememberCurrentFileOrigin,currentFileOrigin} from '../lib/current-file-origin.ts';
 import { FileEvidenceMarks, fileEvidenceDescription, useFileEvidence } from './FileEvidenceMarks.tsx';
 import { touchedFiles } from '../../../../packages/scene/src/file-evidence.ts';
@@ -25,6 +26,7 @@ import { pastedFiles, promptFiles, promptSizeNote, PROMPT_BYTES, utf8Bytes, atta
 import { promptDrafts } from '../lib/prompt-drafts.ts';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNowText } from './NowWatcher.tsx';
+import { ComposerMenu } from './ComposerMenu.tsx';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -36,11 +38,13 @@ import { WholeSource } from './WholeSource.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
+import { sendWaitReason } from '../lib/send-wait.ts';
 
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
   workspace?: WorkspaceStatus; controller?: ControllerStatus; error?: string;
-  refresh: () => Promise<void>; approve: () => Promise<void>; inspect?: () => Promise<void>;
+  acknowledged?:boolean; acknowledge?:(value:boolean)=>void;
+  refresh: () => Promise<void>; approve: (remember?:boolean) => Promise<void>; inspect?: () => Promise<void>;
 }
 const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {}, submit: async () => {} });
 export const useSessionWorkspace = () => useContext(SessionContext);
@@ -48,6 +52,8 @@ export const useSessionWorkspace = () => useContext(SessionContext);
 export function SessionWorkspaceProvider({ children }: { children: ReactNode }) {
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
+  const connection=useApp(s=>s.connection),screen=useApp(s=>s.screen);
+  const [acknowledged,acknowledge]=useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceStatus>();
   const [controller, setController] = useState<ControllerStatus>();
   const [error, setError] = useState<string>();
@@ -67,10 +73,11 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     ]);
     if(!current())return;
     const errors=results.flatMap((result,index)=>result.status==='rejected'?[`${index===0?'Workspace':'Native runtime'}: ${result.reason.message}`]:[]);
+    if(errors.length)acknowledge(false);
     setError(errors.join(' · ')||undefined);
   };
   useEffect(() => {
-    setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false);
+    setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false); acknowledge(false);
     let active = true; let busy = false; let timer: ReturnType<typeof setTimeout>;
     const load = async () => {
       if (!active || busy) return;
@@ -85,11 +92,19 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     void load();
     return () => { active = false; clearTimeout(timer); revision.current++; wake.current = undefined; };
   }, [id, source]);
+  // Consent belongs to this selected-session connection, never to a saved checkout or turn.
+  useEffect(()=>{if(connection!=='connected'||screen!=='viewer'||controller?.state==='failed'||controller?.available===false||workspace?.approved===false)acknowledge(false);},[connection,screen,controller?.state,controller?.available,workspace?.approved]);
+  useEffect(()=>{
+    if(!eligible||!workspace?.approved)return;
+    let active=true;
+    void source!.graph(id!).then(graph=>{if(active&&useApp.getState().source===source&&useApp.getState().recordingId===id)useApp.setState({graph});}).catch(()=>{});
+    return()=>{active=false;};
+  },[id,source,workspace?.approved]);
   useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
-  const approve = async () => {
+  const approve = async (remember=false) => {
     if (!eligible) return;
     ++revision.current;
-    const w = await workspaceApi.approve(id!);
+    const w = await workspaceApi.approve(id!,remember);
     const graph = await source!.graph(id!);
     if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
     ++revision.current;
@@ -105,9 +120,10 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     setSubmitting(true);
     ++revision.current;
     try { const state = await workspaceApi.prompt(id!, prompt, exclusive, attachments, options); if (useApp.getState().source === source && useApp.getState().recordingId === id) { acceptInvestigation(source!,id!,state,prompt); ++revision.current; setController(state); } }
+    catch(error){acknowledge(false);throw error;}
     finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
-  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect }}>{children}</SessionContext.Provider>;
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ProseFilesProvider approved={!!workspace?.approved}>{children}</ProseFilesProvider></SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
@@ -163,7 +179,12 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const { workspace, approve } = useSessionWorkspace();
   const [query, setQuery] = useWorkspaceState('folders/query', '');
   const [approving,setApproving] = useState(false);
+  const [remember,setRemember]=useState(true);
   const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
+  useLayoutEffect(()=>{
+    const next=canonicalFileFolders(opened,fileRoots,capturedRoot ?? projection.workspaceRoot);
+    if(next!==opened)setOpened(next);
+  },[opened,fileRoots,capturedRoot,projection.workspaceRoot,setOpened]);
   useEffect(()=>{const reveal=(event:Event)=>{const path=(event as CustomEvent).detail;if(typeof path==='string'){setQuery(path);setTouchedOnly(false);}};window.addEventListener('drishya-reveal-captured-file',reveal);return()=>window.removeEventListener('drishya-reveal-captured-file',reveal);},[setQuery,setTouchedOnly]);
   const treeElement = useRef<HTMLDivElement>(null);
   const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
@@ -185,7 +206,29 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     return () => { active = false; };
   }, [source, id, graph, graphRetry]);
   const paths = useMemo(() => [...new Set([...(graph?.nodes.map(n => n.path) ?? []), ...(files?.map(f => f.path) ?? [])].filter(p => !(graph?.temporal === 'current' && p.startsWith('.local/')) && !p.startsWith('/') && !/^[A-Za-z]:/.test(p) && (!touchedOnly || touched.paths.has(p))))].sort(), [graph, files, touchedOnly, touched]);
-  const tree = useMemo(() => worktreeFileRows(paths,fileRoots,capturedRoot ?? projection.workspaceRoot,opened,query), [paths,fileRoots,capturedRoot,projection.workspaceRoot,query,opened]);
+  const placement = useMemo(() => ({
+    indexed: new Set(graph?.temporal === 'current' ? graph.nodes.map(node => node.path) : []),
+    // Search output alone does not say which directory a bare result came from.
+    direct: new Set((files ?? []).filter(file => file.roles.some(role => role === 'read' || role === 'write')).map(file => file.path)),
+  }), [graph, files]);
+  const tree = useMemo(() => worktreeFileRows(paths,fileRoots,capturedRoot ?? projection.workspaceRoot,opened,query,placement), [paths,fileRoots,capturedRoot,projection.workspaceRoot,query,opened,placement]);
+  const [revealedFolder,setRevealedFolder]=useWorkspaceState<string|undefined>('folders/revealed',undefined);
+  const pendingFolder=useRef<string|undefined>(undefined);
+  useEffect(()=>{
+    const reveal=(event:Event)=>{
+      const path=(event as CustomEvent).detail;
+      if(typeof path!=='string'||!paths.some(file=>file.startsWith(path+'/')))return;
+      const canonical=currentWorkspacePath(path,fileRoots,capturedRoot ?? projection.workspaceRoot) ?? path;
+      const matches=worktreeFileRows(paths,fileRoots,capturedRoot ?? projection.workspaceRoot,new Set(['',UNPLACED_GROUP]),path,placement).filter(row=>row.path.startsWith(path+'/'));
+      const unresolved=matches.some(row=>row.unplaced)&&!matches.some(row=>!row.unplaced);
+      const target=unresolved?UNPLACED_GROUP:canonical;
+      const parents=target.split('/').map((_,i,parts)=>parts.slice(0,i+1).join('/'));
+      pendingFolder.current=target;setRevealedFolder(target);setQuery('');setTouchedOnly(false);
+      setOpened(previous=>{const required=new Set(['',UNPLACED_GROUP,...(fileRoots.some(root=>path.startsWith(root.prefix+'/'))?['\u0000recorded-worktrees']:[]),...parents]);return new Set([...Array.from(previous).filter(path=>!required.has(path)).slice(-(256-required.size)),...required]);});
+    };
+    window.addEventListener('drishya-reveal-prose-folder',reveal);
+    return()=>window.removeEventListener('drishya-reveal-prose-folder',reveal);
+  },[paths,fileRoots,capturedRoot,projection.workspaceRoot,placement,setOpened,setQuery,setTouchedOnly,setRevealedFolder]);
   const siblingPositions = useMemo(() => {
     const groups = new Map<string, string[]>();
     for (const row of tree) {
@@ -246,6 +289,14 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     el.scrollTop = Math.max(0, Math.min(top, tree.length * rowHeight - el.clientHeight));
     setTreeScroll(el.scrollTop);
   }, [tree]);
+  useLayoutEffect(()=>{
+    const path=pendingFolder.current,element=treeElement.current;
+    if(!path||!element||!shown)return;
+    const index=tree.findIndex(row=>row.path===path);if(index<0)return;
+    pendingFolder.current=undefined;
+    element.scrollTop=Math.max(0,index*rowHeight-element.clientHeight/3);setTreeScroll(element.scrollTop);
+    requestAnimationFrame(()=>element.querySelector<HTMLElement>(`[data-tree-index="${index}"]`)?.focus({preventScroll:true}));
+  },[tree,shown,setTreeScroll]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (!shown) return null;
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
@@ -257,7 +308,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         <div className="tree-evidence-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Activity in this session. Badges describe tool calls, not current Git status.</small></div>
       </details>
     </div>
-    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve().catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<label><input type="checkbox" checked={remember} disabled={approving} onChange={event=>setRemember(event.target.checked)} /> Remember for this checkout</label>}</>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -277,15 +328,15 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
-      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-label={row.name} aria-description={fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
-        const currentPath=currentWorkspacePath(row.path,fileRoots,workspace?.root);
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-selected={row.path===revealedFolder} aria-label={row.name} aria-description={fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} data-file-location={row.unplaced ? 'unplaced' : undefined} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.unplaced ? `Captured path; repository location unresolved: ${row.path}` : row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+        const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);
         if(!row.folder&&currentPath!==undefined&&source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);
         if (row.folder) { folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
-        else if (row.location && currentPath===undefined) useApp.getState().set({filePanel:row.path,currentFile:undefined,...(narrow?{foldersHidden:true}:{})});
+        else if (row.unplaced || row.location && currentPath===undefined) useApp.getState().set({filePanel:row.path,currentFile:undefined,...(narrow?{foldersHidden:true}:{})});
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: currentPath ?? row.path }));
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
-      }} onDoubleClick={()=>{const currentPath=currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><FileRowName name={row.name} folder={row.folder}/><FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
+      }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><FileRowName name={row.name} folder={row.folder}/><FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
@@ -397,7 +448,7 @@ export function PromptComposer() {
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
   const connection = useApp(s => s.connection);
-  const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect } = useSessionWorkspace();
+  const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect, acknowledged, acknowledge } = useSessionWorkspace();
   // 'auto' collapses an idle composer to its pill so it never covers the newest work; the person's own open/close choice always wins.
   const [choice,setChoice]=useWorkspaceState<'auto'|'open'|'closed'>('composer/choice','auto');
   const now = useNowText();
@@ -407,7 +458,8 @@ export function PromptComposer() {
   const [prompt, updatePrompt] = useState(() => source && id ? promptDrafts(source).get(id) : '');
   const setPrompt = (text: string) => { if (source && id) promptDrafts(source).set(id, text); updatePrompt(text); };
   useEffect(() => { const changed = () => { if (source && id) { setChoice('open'); updatePrompt(promptDrafts(source).get(id)); requestAnimationFrame(() => input.current?.focus({ preventScroll: true })); } }; window.addEventListener('drishya-composer-draft', changed); return () => window.removeEventListener('drishya-composer-draft', changed); }, [source, id]);
-  const [exclusive, setExclusive] = useState(false);
+  const exclusive=!!acknowledged, setExclusive=(value:boolean)=>acknowledge?.(value);
+  const [remember,setRemember]=useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
   const element = useRef<HTMLElement>(null);
@@ -474,7 +526,7 @@ export function PromptComposer() {
     if (busy || controller && ['connecting', 'running', 'approval'].includes(controller.state)) { setError('Wait for the current turn, then attach the files again. They were not added.'); return; }
     if (files.length + queuedFiles.current + attachmentRef.current.length > 32) { setError('Select at most 32 files, including files being prepared.'); return; }
     queuedFiles.current += files.length;
-    setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false); setExclusive(false);
+    setLoadingFiles(true); setError(undefined); setAddOpen(false); setConfirmSend(false);
     const task = fileQueue.current.then(async () => {
       if (!active.current) return;
       try {
@@ -513,8 +565,11 @@ export function PromptComposer() {
       const style = getComputedStyle(node);
       // scrollHeight excludes borders; rounding otherwise leaves a needless one-pixel scrollbar.
       const required = node.scrollHeight + parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth) + 1;
-      node.style.height = `${Math.min(88, Math.ceil(required))}px`;
-      node.style.overflowY = required > 88 ? 'auto' : 'hidden';
+      // UI-28: the Modern box grows with the prompt up to 40 % of the window (at most 240 px), then scrolls inside; the older box stays at 88 px.
+      const limit = document.documentElement.dataset.uiVersion === 'modern' ? Math.max(88, Math.min(240, Math.floor(innerHeight * 0.4))) : 88;
+      node.style.height = `${Math.min(limit, Math.ceil(required))}px`;
+      node.style.overflowY = required > limit ? 'auto' : 'hidden';
+      node.toggleAttribute('data-scrolls', required > limit);
     };
     fit();
     let width = node.clientWidth;
@@ -522,7 +577,8 @@ export function PromptComposer() {
       if (node.clientWidth !== width) { width = node.clientWidth; fit(); }
     });
     resize.observe(node);
-    return () => resize.disconnect();
+    window.addEventListener('resize', fit);
+    return () => { resize.disconnect(); window.removeEventListener('resize', fit); };
   }, [prompt]);
   useLayoutEffect(() => {
     const node = element.current;
@@ -533,7 +589,11 @@ export function PromptComposer() {
     // composer's own size constraints or changing the user's follow preference.
     const observed = new Set<Element>();
     const measure = () => {
-      viewer.style.setProperty('--composer-gap', `${node.offsetHeight + 24}px`);
+      // UI-28b: the gap other surfaces reserve is the box at rest. A long prompt grows the box upward over the history instead of moving
+      // the history, the Follow switch, the rails and the Toolbox, so the textarea's growth past one line is not part of it.
+      const field = node.querySelector('textarea');
+      const grown = field ? Math.max(0, field.offsetHeight - (parseFloat(getComputedStyle(field).minHeight) || 0)) : 0;
+      viewer.style.setProperty('--composer-gap', `${node.offsetHeight - grown + 24}px`);
       // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
       // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
       const top = layoutTop(node);
@@ -561,40 +621,66 @@ export function PromptComposer() {
   const sizeNote = promptSizeNote(promptBytes, { count: attachments.length, bytes: attachments.reduce((sum, item) => sum + attachmentBytes(item), 0) });
   const unavailable = !!connectionError || connection !== 'connected';
   const cannotSend = busy || loadingFiles || queuedFiles.current > 0 || !prompt.trim() || overLimit || unavailable || !workspace?.approved || !controller?.available;
+  // AUDIT-1 (5 Nov): a disabled Send said only "Send prompt"; it now names the first thing it waits for.
+  const sendWaits = sendWaitReason({ unavailable, approved: !!workspace?.approved, cliAvailable: !!controller?.available, overLimit, sending: busy, attaching: loadingFiles || queuedFiles.current > 0, hasPrompt: !!prompt.trim() });
   const statusLabel = unavailable ? 'Connection unavailable' : submitting ? 'Sending…' : busy ? 'Working…' : !controller ? 'Checking…' : !controller.available ? 'CLI unavailable' : !workspace?.approved ? 'Workspace access required' : controller.state === 'failed' ? 'Turn failed' : controller.state === 'stopped' ? 'Stopped' : controller.inputRequests?.length ? 'Answer requested' : controller.state === 'approval' ? 'Approval needed' : controller.state === 'connecting' ? 'Connecting…' : controller.state === 'running' ? controller.phase === 'thinking' ? 'Thinking…' : 'Running here' : 'Ready';
   // Watching needs no permission, so the live line may replace a state that only invites setup.
   const quietStatus = statusLabel === 'Ready' || statusLabel === 'Workspace access required';
+  // UI-28: a person reads the composer's status only when something is happening or wrong. 'Ready', 'Checking…' and the setup states say
+  // nothing here (setup has its own row), and the line "replied 3 m ago" / "live" is not shown: only open work or a question to the person.
+  const liveNow = now && ['running', 'asking', 'working'].includes(now.tone) ? now : undefined;
+  const calm = quietStatus || statusLabel === 'Checking…' || statusLabel === 'CLI unavailable';
+  const stateText = quietStatus && liveNow ? liveNow.text : calm ? '' : statusLabel;
   const act = async (fn: () => Promise<unknown>) => {
     setBusy(true); setError(undefined);
     try { await fn(); await refresh(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   const modern = document.documentElement.dataset.uiVersion === 'modern';
-  const connectionSetup = <>      {!workspace?.approved && <button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(approve)}>Enable this workspace</button>}
+  const settingsModels = controller?.settings?.models ?? [];
+  const modelId = options.model ?? controller?.settings?.model;
+  const modelEfforts = settingsModels.find(model => model.id === modelId)?.efforts ?? [];
+  const modelLabel = settingsModels.find(model => model.id === modelId)?.name ?? modelId ?? 'Default model';
+  const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<label><input type="checkbox" checked={remember} disabled={busy} onChange={event=>setRemember(event.target.checked)} /> Remember for this checkout</label>}</>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
   const nativeOptions = <>      <details className="permission-policy native-options"><summary>{modern ? <><svg className="native-options-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Connection & permissions</span></> : <>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</>}</summary><div className="native-options-menu">{modern && connectionSetup}<small title={workspace?.root}>Target: {workspace?.root ?? 'Workspace unavailable'} · recording {id.slice(-8)}</small><small>Native settings describe the last reported policy; the harness validates permissions when connecting.</small>
         <button disabled={!!running || busy || !workspace?.approved} onClick={() => inspect && void act(inspect)}>Read native settings</button>
         {!!controller?.settings && <><small>{controller.settings.scope === 'connected-session' ? 'Connected session' : 'Workspace defaults'} · {controller.settings.permission ?? 'Policy reported after connecting'}{controller.settings.sandbox && ` · ${controller.settings.sandbox}`}</small>
-          <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
-          <label>Effort<select disabled={!!running || busy} value={options.effort ?? ''} onChange={e => { setOptions({ ...options, effort: e.target.value || undefined }); setExclusive(false); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select></label>
+          <label>Model<select disabled={!!running || busy} value={options.model ?? ''} onChange={e => { setOptions(e.target.value ? { model: e.target.value } : {}); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select></label>
+          <label>Effort<select disabled={!!running || busy} value={options.effort ?? ''} onChange={e => { setOptions({ ...options, effort: e.target.value || undefined }); setConfirmSend(false); }}><option value="">Use native default</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select></label>
         </>}
         <small>Each Allow once applies only to its native request. Full access and global settings remain in the native CLI.</small>
       </div></details></>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was recorded.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
   return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt" aria-keyshortcuts="Control+Shift+Enter Meta+Shift+Enter">
-    {modern && <button type="button" className="composer-minimize" data-now={collapsed&&now?now.tone:undefined} title={collapsed&&now?now.basis:statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setChoice(collapsed?'open':'closed');if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':now?now.text:'Ask your agent…':'⌄'}</span></button>}
+    {modern && <button type="button" className="composer-minimize" data-now={collapsed&&liveNow?liveNow.tone:undefined} title={collapsed&&liveNow?liveNow.basis:statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setChoice(collapsed?'open':'closed');if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':liveNow?liveNow.text:'Ask your agent…':'⌄'}</span></button>}
     {modern && collapsed && running && <button type="button" className="composer-mini-stop" aria-label="Stop turn" title="Stop this turn" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button>}
-    {modern ? <div className="modern-composer-top"><div className="modern-composer-target"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg></span><span className="modern-composer-location" title={workspace?.root}><span>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Checking workspace…'}</span></span></div><span role="status" className="modern-composer-state" data-now={quietStatus&&now?now.tone:undefined} title={quietStatus&&now?now.basis:statusLabel}>{quietStatus&&now?now.text:workspace?.approved ? statusLabel : 'Needs access'}</span>{nativeOptions}</div> : <>
+    {modern ? <div className="modern-composer-top"><div className="modern-composer-target"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg></span><span className="modern-composer-location" title={workspace?.root}><span>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Checking workspace…'}</span></span></div>{stateText&&<span role="status" className="modern-composer-state" data-now={quietStatus&&liveNow?liveNow.tone:undefined} title={quietStatus&&liveNow?liveNow.basis:statusLabel}>{stateText}</span>}</div> : <>
     <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div></>}
 
       {!modern && connectionSetup}
+      {modern && (!workspace?.approved || (controller && !controller.available)) && <div className="composer-setup" role="group" aria-label="Connect this session">{!workspace?.approved && <p>Enable this workspace to send prompts from here.</p>}{connectionSetup}</div>}
       <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
-      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setExclusive(false); setConfirmSend(false); }); }}>
-        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setExclusive(false); setConfirmSend(false); }}>×</button></span>)}</div>}
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setExclusive(false); setConfirmSend(false); }} />
+      <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setConfirmSend(false); }); }}>
+        {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setConfirmSend(false); }}>×</button></span>)}</div>}
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setConfirmSend(false); }} />
       <small id="prompt-size-status" className={sizeNote.over ? 'bad' : sizeNote.quiet ? 'sr-only' : 'muted'} role={sizeNote.over ? 'alert' : undefined}>{sizeNote.text}</small>
-        <div className="composer-actions">{modern ? <div className="modern-composer-input-tools"><button type="button" className="modern-attachment" title="Attach text or image" aria-label="Attach text or image files" disabled={!!running || busy || loadingFiles} onClick={() => fileInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 7-7a4 4 0 0 1 6 6L11 21a6 6 0 0 1-8-8L14 2m-6 10 7-7" /></svg></button><button type="button" className="modern-attachment" title="Attach folder contents" aria-label="Attach folder" disabled={!!running || busy || loadingFiles} onClick={() => folderInput.current?.click()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h7l2 3h9v12H3Z" /></svg></button>{controller?.settings?.models.length ? <><select className="modern-model-select" aria-label="Native model" value={options.model ?? ''} disabled={!!running || busy} onChange={e => { setOptions(e.target.value ? {model:e.target.value} : {}); setExclusive(false); setConfirmSend(false); }}><option value="">Native default</option>{controller.settings.models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}</select>{!!controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))?.efforts.length && <select className="modern-effort-select" aria-label="Reasoning effort" value={options.effort ?? ''} disabled={!!running || busy} onChange={e => { setOptions({...options,effort:e.target.value || undefined}); setExclusive(false); setConfirmSend(false); }}><option value="">Default effort</option>{controller.settings.models.find(model => model.id === (options.model ?? controller.settings?.model))!.efforts.map(effort => <option key={effort}>{effort}</option>)}</select>}</> : <span className="modern-native-model">{options.model ?? controller?.settings?.model ?? 'Native defaults'}</span>}</div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title="Send prompt" disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg>{modern && <span>Send</span>}</button>}</div>
+        <div className="composer-actions">{modern ? <div className="modern-composer-input-tools">
+          <ComposerMenu label="Attach" className="composer-attach" disabled={!!running || busy || loadingFiles} title="Attach images, files or a folder" trigger={<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>} items={[
+            { key: 'files', label: 'Images or files', hint: 'PNG, JPEG, WebP, GIF or text · paste or drop works too', select: () => fileInput.current?.click() },
+            { key: 'folder', label: 'Folder contents', hint: 'Up to 32 files in total', select: () => folderInput.current?.click() },
+          ]} />
+          {controller && <ComposerMenu label="Model" className="composer-model" disabled={!!running || busy} title="Model for the next prompt" trigger={<><span>{modelLabel}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
+            { key: 'default', label: 'Default', hint: settingsModels.find(model => model.id === controller.settings?.model)?.name, checked: !options.model, select: () => { setOptions({}); setConfirmSend(false); } },
+            ...settingsModels.map(model => ({ key: model.id, label: model.name, checked: options.model === model.id, select: () => { setOptions({ model: model.id }); setConfirmSend(false); } })),
+            ...(settingsModels.length ? [] : [{ key: 'load', label: 'Load model list', hint: workspace?.approved ? `Asks ${recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} which models it offers` : 'Enable this workspace first', disabled: !workspace?.approved || !inspect, select: () => inspect && void act(inspect) }]),
+          ]} />}
+          {!!modelEfforts.length && <ComposerMenu label="Reasoning effort" className="composer-effort" disabled={!!running || busy} title="Reasoning effort for the next prompt" trigger={<><span>{options.effort ?? 'Default effort'}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
+            { key: 'default', label: 'Default', checked: !options.effort, select: () => { setOptions({ ...options, effort: undefined }); setConfirmSend(false); } },
+            ...modelEfforts.map(effort => ({ key: effort, label: effort, checked: options.effort === effort, select: () => { setOptions({ ...options, effort }); setConfirmSend(false); } })),
+          ]} />}
+        </div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title={cannotSend ? sendWaits : 'Send prompt'} disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
         {!modern && <div className="composer-add-menu" hidden={!addOpen} data-pointer-menu={addPointer ? '' : undefined}><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
         {confirmSend && <div className="send-confirmation" role="group" aria-label="Confirm session access"><label><input type="checkbox" checked={exclusive} onChange={e => setExclusive(e.target.checked)} /> This session is idle in other clients</label><small>Finish any turn in another client before sending here.</small><button type="submit" disabled={!exclusive || cannotSend}>Confirm and send</button><button type="button" onClick={() => { setConfirmSend(false); setExclusive(false); }}>Cancel</button></div>}
       </form>

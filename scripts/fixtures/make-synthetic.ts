@@ -114,7 +114,7 @@ export async function charge(orderId: string, amount: number): Promise<Receipt> 
 `;
 
 const WORKSPACE: Record<string, string> = {
-  'package.json': JSON.stringify({ name: 'shop', private: true, type: 'module', scripts: { test: 'vitest run' }, devDependencies: { vitest: '^3.2.0' } }, null, 2) + '\n',
+  'package.json': JSON.stringify({ name: 'shop', private: true, type: 'module', scripts: { test: 'vitest run' }, devDependencies: { vitest: '^4.1.12' } }, null, 2) + '\n',
   'tsconfig.json': JSON.stringify({ compilerOptions: { target: 'ES2022', module: 'NodeNext', strict: true, allowImportingTsExtensions: true, noEmit: true } }, null, 2) + '\n',
   'README.md': '# shop\n\nA tiny storefront used as Drishya\'s synthetic demo repository. Every file is invented.\n',
   'src/cart/types.ts': `export interface LineItem {

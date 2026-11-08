@@ -99,10 +99,4 @@ test('a fold survives reopening the session, and a jump into a folded turn opens
   await expect(cardsIn(page, turn).first()).toBeVisible();
 });
 
-test('retained UIs never fold', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
-  await page.goto(`${server.url}/?experience=classic&motion=0#/r/${id}`);
-  await expect(page.locator('.history article.op').first()).toBeVisible();
-  await expect(page.locator('.history .turn-fold')).toHaveCount(0);
-});
+// SHIP-1 retires the non-Modern never-fold branch; the Modern folding cases above remain.

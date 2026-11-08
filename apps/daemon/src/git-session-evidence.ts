@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 import type {Hunk, Observation, Operation, Projection} from '@drishya/contracts';
 import type {GitSessionLink} from './git-types.ts';
 
@@ -63,7 +64,7 @@ export function gitSessionEvidence(projection:Projection,query:GitSessionQuery,a
   let index=cached.get(projection);
   if(!index){
     index={commands:[],edits:new Map(),turns:new Map()};
-    for(const item of projection.timeline)if(item.type==='turn'){
+    for(const item of projection.timeline)if(item.type==='turn'&&isPersonPrompt(item.prompt)){
       const turns=index.turns.get(item.agentId)??[];turns.push(item.sequence);index.turns.set(item.agentId,turns);
     }
     for(const op of projection.operations){
