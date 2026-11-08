@@ -76,7 +76,7 @@ for (const width of [600, 1440]) test(`plans ignore old collapsed choices across
   await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();
   await expect(page.locator('.usage-peek')).not.toHaveAttribute('open');
   await expect(page.locator('.session-identity')).not.toHaveAttribute('open');
-  await page.locator('.usage-peek summary').click();
+  await page.locator('.usage-peek > summary').click();
   await page.locator('.session-identity summary').click();
   await page.reload();
   await page.locator('.workspace-menu > summary[aria-label="More workspace options"]').click();

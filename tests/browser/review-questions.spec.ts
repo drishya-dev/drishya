@@ -17,7 +17,7 @@ const expandFirstEdit = async (page: import('@playwright/test').Page) => {
 };
 
 test('a note survives reload, returns to its step and resolves only explicitly', async ({ page }) => {
-  await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
+  await page.goto(new URL('/?demo&experience=modern', server.launchUrl).href);
   const step = await expandFirstEdit(page);
   const targetTitle = await page.locator('article.op.expanded .op-title').first().innerText();
   await step.getByText('Add a note', { exact: true }).click();
@@ -27,7 +27,9 @@ test('a note survives reload, returns to its step and resolves only explicitly',
   await step.getByRole('button', { name: 'Save note', exact: true }).focus(); await page.keyboard.press('Enter');
   await expect(step).toContainText('Saved locally');
   await page.reload();
-  await page.getByRole('button', { name: 'Notes · 1', exact: true }).click();
+  const menu=page.locator('details.workspace-menu').first();
+  if(!(await menu.evaluate(el=>(el as HTMLDetailsElement).open)))await menu.locator(':scope>summary').click();
+  await menu.getByRole('button', { name: 'Notes · 1', exact: true }).click();
   const notes = page.getByRole('dialog', { name: 'Notes', exact: true });
   await expect(notes.getByRole('region', { name: 'Needs follow-up' })).toContainText('Check the zero-total path');
   await notes.getByRole('button', { name: 'Preview notes to follow up' }).click();
@@ -35,7 +37,8 @@ test('a note survives reload, returns to its step and resolves only explicitly',
   await notes.locator('.question-target').click();
   await expect(page.locator('article.op.expanded .op-title').first()).toHaveText(targetTitle);
   await page.keyboard.press('Escape');
-  await page.getByRole('button', { name: 'Notes · 1', exact: true }).click();
+  if(!(await menu.evaluate(el=>(el as HTMLDetailsElement).open)))await menu.locator(':scope>summary').click();
+  await menu.getByRole('button', { name: 'Notes · 1', exact: true }).click();
   await notes.getByRole('button', { name: 'Resolve', exact: true }).click();
   await expect(notes.getByRole('region', { name: 'Needs follow-up' })).toHaveCount(0);
   await notes.getByText('Resolved · 1', { exact: true }).click();

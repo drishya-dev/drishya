@@ -13,7 +13,7 @@ test('agent and action focus survive each other and can be cleared independently
   await expect(page.locator('.workbench-station')).toBeVisible();
   const tool = page.locator('.instrument.k-read');
   await tool.click(); await expect(tool).toHaveAttribute('aria-pressed', 'true');
-  await page.locator('.station-agent-menu > summary').click();
+  await page.locator('.md-agents > summary').click();
   await page.locator('.station-subagents > summary').click();
   const agent = page.getByRole('switch', { name: 'Filter by Explore agent', exact: true });
   await agent.click(); await expect(agent).toHaveAttribute('aria-checked', 'true');
@@ -27,13 +27,5 @@ test('agent and action focus survive each other and can be cleared independently
   await page.getByRole('button', { name: 'Clear focus', exact: true }).click();
   await expect(agent).toHaveAttribute('aria-checked', 'false');
   await expect(tool).toHaveAttribute('aria-pressed', 'false');
-  const shortcut = page.getByRole('switch', { name: 'Focus Explore from agent bar', exact: true });
-  await tool.click();
-  await shortcut.click();
-  await expect(shortcut).toHaveAttribute('aria-checked', 'true');
-  await expect(agent).toHaveAttribute('aria-checked', 'true');
-  await expect(tool).toHaveAttribute('aria-pressed', 'true');
-  await shortcut.click();
-  await expect(shortcut).toHaveAttribute('aria-checked', 'false');
-  await expect(tool).toHaveAttribute('aria-pressed', 'true');
+  // The Legacy crown shortcut is not part of Modern; the dock focus checks above remain.
 });

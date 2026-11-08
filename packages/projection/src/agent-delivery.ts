@@ -8,7 +8,14 @@ import type {Observation} from '@drishya/contracts';
  */
 export function legacyAgentDelivery(o:Observation,text:string,address?:string) {
   if(o.source.adapterId!=='codex'||o.kind!=='message.assistant'||o.agentId==='agent:main'||(o.payload as Record<string,unknown>).delivery)return;
+  const envelope=legacyDeliveryEnvelope(text);
+  if(!envelope||o.agentId!==`agent:${envelope.sender.split('/').at(-1)}`||address&&address!==envelope.sender)return;
+  return envelope;
+}
+
+/** Shape only; callers must have adapter/provenance evidence before omitting the wrapper. */
+export function legacyDeliveryEnvelope(text:string) {
   const m=/^Message Type: (MESSAGE|FINAL_ANSWER|NEW_TASK)\r?\nTask name: (\/root(?:\/[^\s]+)?)\r?\nSender: (\/root\/[^\s]+)\r?\nPayload:(?:\r?\n| ?)([\s\S]*)$/.exec(text);
-  if(!m||o.agentId!==`agent:${m[3]!.split('/').at(-1)}`||address&&address!==m[3])return;
+  if(!m)return;
   return {type:m[1]!,recipient:m[2]!,sender:m[3]!,text:m[4]!};
 }

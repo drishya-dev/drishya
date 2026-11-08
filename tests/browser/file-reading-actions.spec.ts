@@ -78,6 +78,21 @@ test('an off-page version is selected exactly and cached later bytes do not leak
   await page.getByRole('slider',{name:'Timeline',exact:true}).press('ArrowLeft');await card.getByRole('button',{name:'Open work on file.ts',exact:true}).click();await expect(captured).toBeVisible();await expect(captured.locator('.file-evidence-material')).toBeVisible();await expect(captured).not.toContainText('VERSION_29');
 });
 for(const harness of ['claude-code','codex'])for(const width of [600,1440]){
+  test(`Workspace returns to the same captured read ${harness} ${width}`,async({page})=>{
+    await page.setViewportSize({width,height:950});const sample=samples.get(harness)!,op=sample.ops.find(op=>op.location==='inside'&&op.kind==='write')!;
+    await open(page,sample.id,[['location',{selectedOp:op.id,expandedOp:op.id,follow:false,held:true}]]);
+    const inspector=page.getByRole('region',{name:'Operation detail'});await expect(inspector).toBeVisible();
+    await inspector.getByRole('button',{name:'View what the agent saw',exact:true}).click();
+    const captured=page.locator('.file-workspace');await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
+    const selected=await captured.getByLabel('First step',{exact:true}).inputValue();
+    const before=await page.locator('.history').evaluate(el=>el.scrollTop);
+    await captured.getByRole('button',{name:'Open in Workspace',exact:true}).click();
+    await expect(page.getByRole('region',{name:'Developer workspace',exact:true})).toBeVisible();await expect(captured).toHaveCount(0);
+    await page.getByRole('button',{name:'Back to agent',exact:true}).click();
+    await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
+    await expect(captured.getByLabel('First step',{exact:true})).toHaveValue(selected);
+    await expect.poll(()=>page.locator('.history').evaluate(el=>el.scrollTop)).toBeCloseTo(before,0);
+  });
   test(`captured file actions keep full source and outside refusal ${harness} ${width}`,async({page})=>{
     await page.setViewportSize({width,height:950});const sample=samples.get(harness)!;
     for(const op of sample.ops){
