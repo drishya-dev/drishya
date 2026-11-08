@@ -404,7 +404,7 @@ test('Modern compact composer keeps connection consent accessible and has no nee
   await openComposer(page);
   const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
   await input.fill('A short prompt');
-  expect((await composer.boundingBox())!.height).toBeLessThan(170);
+  expect((await composer.boundingBox())!.height).toBeLessThan(230);
   expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});

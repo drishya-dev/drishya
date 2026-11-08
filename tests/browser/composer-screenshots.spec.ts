@@ -31,7 +31,7 @@ for(const width of [600,1440]) test(`screenshot paste and pick, honest failures,
   await expect(composer.locator('.composer-minimize')).toBeVisible();
   if(await composer.locator('.composer-minimize').getAttribute('aria-expanded')==='false')await composer.locator('.composer-minimize').click();
   const enable=composer.getByRole('button',{name:'Enable this workspace',exact:true});
-  if(await enable.isVisible()){await enable.click();await expect(composer.locator('.composer-setup')).toHaveCount(0);}
+  if(await enable.isVisible()){await enable.click();await expect(composer.locator('.composer-setup')).toHaveCount(0);await expect(composer.getByRole('button',{name:'Attach',exact:true})).toBeEnabled();}
   const input=composer.locator('input[aria-label="Choose prompt files"]');
   await input.setInputFiles({name:'unsupported.heic',mimeType:'image/heic',buffer:Buffer.from('not a supported image')});
   await expect(composer.getByRole('alert')).toContainText('not supported');

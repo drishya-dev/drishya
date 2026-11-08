@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-28 | @yash + Claude Sonnet 5.5 | `claude/ui-28-composer` | 2026-11-08 | Modern only. The composer sections of `components/SessionWorkspace.tsx` (`PromptComposer`), the composer's own CSS (`modern/*.css` composer rules) and the composer, connected and typography specs. Not the Queued inputs dialog, Files/Workspace, session menu/Usage, UI-version code or `clarity/`. |
 | LAND-2 | @yash + Codex | `codex/land-2-build` | 2026-11-08 | Implement PR360 proposal separately from Harsh LAND-1 docs. At most15paths: apps/landing package, vite.config, release manifest, src entry/site/style, demo index/main, test; scripts/build-landing.ts; pnpm-lock; tests/browser/landing.spec.ts; TASKS/STATUS/CONTINUITY. Own install and generated public assets only; no App.tsx, existing UI Vite config/tokens/Clarity or daemon changes. No publishing or native/private inputs. |
 | SEC-1 | @harsh + Codex | `codex/sec-1` | 2026-11-07 | Whole dependency remediation: root and UI manifests, pnpm lockfile and affected synthetic shop manifest; Vitest runner config only if migration requires it. Verification report and STATUS/TASKS. Harsh requested a regular implementation PR before testing, followed by the full gate and results. No product source or schema changes. |
 | LAND-1 | @harsh + Codex | `codex/land-1-design-plan` | 2026-11-07 | `docs/superpowers/plans/2026-11-07-drishya-landing-page.md`, this claim and TASKS completion. Design plan only, including public demo and local app handoff. |
@@ -51,6 +50,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Claude Sonnet 5.5 — 8 Nov: UI-28 composer to the premium bar, [PR #370](https://github.com/drishya-dev/drishya/pull/370)
+
+- Modern composer: model, effort and attach are product menus (keyboard, paired open/close motion); image strip above the text; the box grows to 40 % of the window then scrolls inside; one inline setup row replaces Connection & permissions; no resting status or reply-time line. Removed facts and reasons: [ui-28-composer.md](review/ui-28-composer.md).
+- Checked on real imported sessions (Claude Code `rec_630d16e2`, Codex `rec_44739d61`, scratch home) at 600 and 1440 px: empty, one line, long prompt, one image, seven images, setup row, model/effort/attach menus, keyboard and motion. The native connection was a stand-in transport (no real turn sent; `codex` is not installed here), so a real connected send is not claimed.
 
 ### Harsh with Codex — 7 November: SEC-1 dependency remediation verified
 
