@@ -1,6 +1,6 @@
 # SHIP-1 — Modern-only Release 1 entry
 
-Work in progress in PR #369, branch `codex/ship-1`. Yash approved up to32 paths and narrow overlap reservations on8 November. Original claim: b57bcd9f; footprint agreement: dc0ee80d; section reservation: ce546446. One whole item; no composer/Toolbox/design migration. FINISH is paused and UI-26 deferred by release-1-scope.md.
+Work in progress in PR #369, branch `codex/ship-1`. Yash approved up to 32 paths and narrow overlap reservations on 8 November. Original claim: b57bcd9f; footprint agreement: dc0ee80d; section reservation: ce546446. One whole item; no composer/Toolbox/design migration. FINISH is paused and UI-26 deferred by release-1-scope.md.
 
 ## Runtime acceptance already measured
 
@@ -17,4 +17,8 @@ Old version-only cases are retired where their surface no longer exists: retaine
 
 Yash reserved only the Legacy/Modern comparison in fresh-workspace and retired-version/Home/Files selectors in connected-workspace; UI-28 retains all composer behavior/assertions. That source file still contains Legacy composer expectations such as `.composer-target`, direct workspace-approval controls and the removed harness label. Those are **UI-28's external test migration dependency**, not permission to edit its composer behavior here. Do not claim an all-green full gate until the owner updates them.
 
-Own remaining checks: finish independent selector migrations, run the named/affected checks, package once more after source freeze, update this report with actual results, then tick/remove the SHIP-1 claim. No release-candidate packaging before13 November; current package builds are SHIP-1 verification only. Never edit workspace-shared-draft.spec.ts or PROJECT_MASTER_DESCRIPTION.md.
+Integrated main through d8e16d43, including UI-28 and TOOLS-3, without modifying their source. Independent Modern migrations now pass: 21 cases together (Git, recovery, folding, source controls, versions), 23 product-workspace cases in the initial run, then all seven previously failing cases pass after updating existing Modern menus, theme labels, settings tabs and the hover-only file-history action. The old Legacy-only missing-preview wording is replaced by Modern Home visibility while keeping the assertion that no synthetic history appears. The image/real-session comparison above predates those independent main merges; it measures this task's visual neutrality, not their visual changes.
+
+The private capture guard captures Modern and explicitly rejects a Clarity variant.
+
+Own remaining checks: packaged verification on integrated source and check:affected are running in .local/package-integrated.log and .local/affected-final.log. Update this report with actual results, then tick/remove the SHIP-1 claim. No release-candidate packaging before13 November; current package builds are SHIP-1 verification only. Never edit workspace-shared-draft.spec.ts or PROJECT_MASTER_DESCRIPTION.md.

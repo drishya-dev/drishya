@@ -531,14 +531,18 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await expect(dialog.getByLabel('Second step')).toBeVisible();
   await expect(dialog.locator('.file-evidence-columns')).toContainText('Patch');
   await expect(dialog.locator('.file-evidence-columns')).toContainText('cart.total == null');
+  await dialog.locator('.file-evidence-column').last().getByLabel('Stored source options',{exact:true}).click();
   await expect(dialog.getByRole('button', { name: 'Copy derived page', exact: true })).toBeVisible();
+  await dialog.locator('.file-evidence-column').last().getByLabel('Stored source options',{exact:true}).click();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/product-file-comparison.png') });
   await dialog.getByLabel('File actions',{exact:true}).click();
   await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   const first = dialog.locator('.file-trail-item').first();
-  const buttonBounds = (await first.locator('.file-op').boundingBox())!;
-  const linkBounds = (await first.locator('[data-file-op]').boundingBox())!;
-  expect(buttonBounds.y + buttonBounds.height).toBeLessThanOrEqual(linkBounds.y + 1);
+  // Modern exposes the history action over the row on hover, rather than below it.
+  const historyAction=first.locator('[data-file-op]');
+  await first.hover();
+  await expect(historyAction).toBeVisible();
+  expect(await historyAction.evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);
   await dialog.getByLabel('Filter actions on this file').fill('not-a-recorded-action');
   await expect(dialog).toContainText('No matching actions');
   await expect(dialog.getByLabel('First step')).toHaveCount(0);
@@ -661,6 +665,7 @@ test('view and appearance changes keep the same passage under the reader', async
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.getByRole('button', { name: 'Back to work', exact: true }).click();
+  for(const selector of ['.md-agents','.station-subagents']){const group=page.locator(selector).first();if(await group.getAttribute('open')===null)await group.locator(':scope > summary').click();}
   await page.getByRole('switch', { name: 'Filter by Explore agent', exact: true }).click();
   await expect.poll(displacement).toBeLessThan(3);
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
@@ -699,14 +704,14 @@ test('history activity timeline opens recorded failures and edits; named palette
   // Jet uses a static dot field, removed by the explicit low-resource preference.
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'jet');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(13, 13, 13)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(0, 0, 0)');
   expect(await page.locator('.viewer').evaluate(el => getComputedStyle(el).backgroundImage)).toContain('radial-gradient');
   expect(await page.evaluate(() => getComputedStyle(document.body, '::after').content)).toBe('none');
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(17, 20, 26)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(2, 7, 10)');
   await dialog.getByRole('button', { name: 'Daylight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
   await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();
@@ -929,6 +934,7 @@ test('spatial camera orbits both axes and resumes after manual navigation; reduc
   await page.goto(demoUrl());
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   const settings = page.getByRole('dialog', { name: 'Workspace settings' });
+  await settings.getByRole('tab',{name:'Reading',exact:true}).click();
   await settings.getByRole('checkbox', { name: /^3D repository map/ }).check();
   await settings.getByRole('checkbox', { name: /^Slow background orbit/ }).check();
   await settings.getByRole('combobox', { name: 'Exposed reasoning detail' }).selectOption('collapsed');
@@ -991,6 +997,6 @@ test('local preview reopens actual imported evidence and never falls back to the
   await page.evaluate(() => localStorage.setItem('drishya-local-preview-v1', 'missing-recording'));
   await page.reload();
   await expect(page.locator('.home')).toBeVisible();
-  await expect(page.getByText(/A missing or deleted recording/)).toBeVisible();
+  await expect(page.getByRole('heading',{name:'Your sessions.'})).toBeVisible();
   await expect(page.locator('.history')).toHaveCount(0);
 });
