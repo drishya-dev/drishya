@@ -23,8 +23,8 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
  const runtimeSummary=toolbox.locator('.md-server>summary').filter({hasText:'Run tools'}),mcpSummary=toolbox.locator('summary[data-mcp-server="synthetic"]');
  await expect(runtimeSummary).toContainText('Run tools');await expect(toolbox.locator('.tool-heading')).toContainText('recorded');
  for(const list of [mcp,runtime]){
-  const summary=list===mcp?mcpSummary:runtimeSummary,disclosure=summary.locator('..');await expect(disclosure).not.toHaveAttribute('open');await summary.click();await expect(summary).toHaveAttribute('aria-expanded','true');await expect(list).toBeVisible();
-  const reader=page.getByRole('dialog',{name:list===mcp?'MCP tools for synthetic':'Run tools',exact:true});await expect(reader).toBeVisible();
+  const summary=list===mcp?mcpSummary:runtimeSummary,disclosure=summary.locator('..');await expect(disclosure).not.toHaveAttribute('open');await summary.click();await expect(disclosure).toHaveAttribute('open','');await expect(list).toBeVisible();
+  await expect(disclosure.locator('.md-inventory-list')).toBeVisible();
   await expect(list).toHaveAttribute('data-size',count===3?'fit':'scroll');await expect(list.locator(':scope>button,:scope>span')).toHaveCount(count);
   expect(await list.evaluate(root=>[...root.children].filter(el=>parseFloat(getComputedStyle(el).fontSize)<12).length)).toBe(0);
   expect(await list.locator('small').evaluateAll(nodes=>nodes.filter(el=>parseFloat(getComputedStyle(el).fontSize)<11).length)).toBe(0);
@@ -36,7 +36,7 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
    await expect(list.locator(':scope>button,:scope>span').last()).toBeInViewport();
    await expect(summary).toBeInViewport();
   }
-  await reader.getByRole('button',{name:'Close toolbox',exact:true}).click();await expect(list).toBeHidden();await expect(summary).toBeFocused();
+  await summary.press('Escape');await expect(list).toBeHidden();await expect(summary).toBeFocused();
  }
  await expect(toolbox.locator('.md-agents')).not.toHaveAttribute('open');
  for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
@@ -45,12 +45,11 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
   expect(await toolbox.locator('.md-server>summary').evaluateAll(nodes=>nodes.filter(el=>parseFloat(getComputedStyle(el).fontSize)<12).length)).toBe(0);
  }
  const captured=mcpSummary;await captured.click();await mcp.locator('button').first().click();
- const mcpReader=page.getByRole('dialog',{name:'MCP tools for synthetic',exact:true});
- const clear=mcpReader.getByRole('button',{name:'Clear focus ×',exact:true});await expect(clear).toBeVisible();expect(await clear.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);await clear.click();await expect(clear).toHaveCount(0);await mcpReader.getByRole('button',{name:'Close toolbox',exact:true}).click();
+ const clear=toolbox.getByRole('button',{name:'Clear focus ×',exact:true});await expect(clear).toBeVisible();expect(await clear.evaluate(el=>parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(12);await clear.click();await expect(clear).toHaveCount(0);await mcpSummary.press('Escape');
  for(const width of [1440,900,600]){
   await page.setViewportSize({width,height:960});if(!await page.locator('.workbench-station').isVisible())await page.getByRole('button',{name:'Tools',exact:true}).click();const summary=runtimeSummary;await summary.click();
   await expect(runtime).toBeVisible();const bounds=await runtime.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(width);
-  await runtime.evaluate(e=>{e.scrollTop=e.scrollHeight;});await expect(runtime.locator('span').last()).toBeInViewport();
-  await page.screenshot({path:`.local/ui10-${count}-${width}.png`});await page.getByRole('dialog',{name:'Run tools',exact:true}).getByRole('button',{name:'Close toolbox',exact:true}).click();
+  await runtime.locator('span').last().scrollIntoViewIfNeeded();await expect(runtime.locator('span').last()).toBeInViewport();
+  await page.screenshot({path:`.local/ui10-${count}-${width}.png`});await summary.press('Escape');
  }
 });
