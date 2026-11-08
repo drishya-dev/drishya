@@ -319,7 +319,7 @@ test('source preview opens the exact stored range and keeps pending replay evide
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await pinned.getByRole('button', { name: 'Minimize reference' }).press('Escape');
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByLabel('More workspace options',{exact:true}).click();
+  await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options',{exact:true}).click();
   await page.getByRole('button',{name:'Replay this session',exact:true}).click();
   await expect(pinned).toHaveCount(0);
   // The result exists in the offline bundle, but has not landed at this replay boundary.
@@ -986,7 +986,7 @@ test('local preview reopens actual imported evidence and never falls back to the
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(new URL(`/?experience=modern#/r/${recording.id}`, server.launchUrl).href);
   await expect(page.locator('.history')).toBeVisible();
-  await page.getByLabel('More workspace options').click();
+  await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options').click();
   await page.getByRole('button', { name: 'Use this session as local preview' }).click();
   await expect(page.getByRole('button', { name: 'Local preview selected ✓' })).toBeVisible();
   await page.getByRole('link', { name: 'Open local preview' }).click();

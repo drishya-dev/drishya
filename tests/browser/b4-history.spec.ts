@@ -66,7 +66,7 @@ test('paged history loads earlier work, preserves an anchor during capture, and 
     await expect(page.locator('.search-results .search-hit small').first()).toContainText(/Reply|Call|Result|Prompt|Reasoning/, { timeout: 15000 });
     await page.locator('.search-results button').first().click();
     await expect(page.locator(`[data-op-id="${recordingId}.call-5999"]`)).toBeVisible();
-    await page.getByLabel('More workspace options',{exact:true}).click();
+    await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options',{exact:true}).click();
     await page.getByRole('button', { name: 'Replay this session' }).click();
     await page.getByRole('button', { name: 'Pause', exact: true }).click();
     await page.getByRole('button', { name: 'Step forward', exact: true }).click();
