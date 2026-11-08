@@ -95,8 +95,13 @@ async function expand(composer: Locator) {
 async function send(page: Page, composer: Locator, prompt: string) {
   const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' });
   await input.fill(prompt); await input.press('Enter');
-  await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
-  await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  // CONNECT-4a: the first native send asks; later sends in this connection proceed directly.
+  const confirmation=composer.getByRole('checkbox', { name: 'This session is idle in other clients' });
+  await expect.poll(async()=>await confirmation.isVisible()||await input.inputValue()==='').toBe(true);
+  if(await confirmation.isVisible()) {
+    await confirmation.check();
+    await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  }
 }
 
 for (const [width, height] of [[1440, 900], [390, 844]] as const) {
@@ -188,6 +193,7 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     await expect(composer.getByRole('button', { name: 'Expand prompt', exact: true })).toBeVisible();
     await everyPalette(page, `${width} unreachable (pill)`);
     await expand(composer);
+    await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toHaveAttribute('title', /Connection .* unavailable/);
     await everyPalette(page, `${width} unreachable (expanded)`);
   });
 }

@@ -193,7 +193,8 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const requestedStep = query.step !== undefined && query.observationId ? stepOfObservation(full, query.observationId) ?? query.step : query.step;
   const step = Math.max(0, Math.min(full.timeline.length, Math.floor(requestedStep ?? full.timeline.length)));
   const historical = asOfProjection(full, step);
-  const scene = compose(full, { step, filter: query.filter, selectedOperationId: query.selectedOperationId });
+  const since = query.since === step && query.previousSince !== undefined ? query.previousSince : query.since;
+  const scene = compose(full, { step, since, filter: query.filter, selectedOperationId: query.selectedOperationId });
   const count = Math.max(1, Math.min(64, Math.floor(query.count ?? 32)));
   const opMap = new Map(historical.operations.map((op) => [op.id, op]));
   const proseMap = new Map(historical.prose.map((pr) => [pr.id, pr]));
@@ -239,7 +240,7 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const allMarkers = markers(full);
   const stride = Math.max(1, Math.ceil(allMarkers.length / 500));
   const lastQueue = full.timeline.slice(0, step).findLast(item => item.type === 'queue');
-  return { ...(lastQueue?.type === 'queue' ? {queueBoundary: {ownerRecordingId: lastQueue.ownerRecordingId, observationId: lastQueue.sourceObservationId}} : {}), projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
+  return { ...(since !== undefined ? { since: Math.max(0, Math.min(step, since)) } : {}), ...(lastQueue?.type === 'queue' ? {queueBoundary: {ownerRecordingId: lastQueue.ownerRecordingId, observationId: lastQueue.sourceObservationId}} : {}), projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
     markers: allMarkers.filter((_, i) => i % stride === 0), dwell: dwellFor(full, step) };
 }
 

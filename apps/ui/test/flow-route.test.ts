@@ -23,3 +23,21 @@ it('routes around a taller neighboring card when rows have unequal heights', () 
   const d = { ...b, top: 180, bottom: 310 };
   expect(flowRoute(b, c, [tall, b, c, d])).toBe('M 240 38 L 252 38 L 252 172 L 70 172 L 70 180');
 });
+
+const viewport = { left: 0, right: 300, top: 0, bottom: 300 };
+it('omits a route whose real header endpoint is clipped even when the card body intersects the view', () => {
+  const clipped = { ...a, top: -100, bottom: 120 };
+  const target = { ...b, top: 40, bottom: 180 };
+  expect(flowRoute(clipped, target, [clipped, target], viewport)).toBeUndefined();
+});
+it('keeps a genuine visible bottom-to-top route from a partially clipped card', () => {
+  const clipped = { ...a, top: -100, bottom: 120 }, target = { ...a, top: 140, bottom: 250 };
+  expect(flowRoute(clipped, target, [clipped, target], viewport)).toBe('M 70 120 L 70 130 L 70 130 L 70 140');
+});
+it('preserves the existing route when both endpoints are inside the viewport', () => {
+  expect(flowRoute(a, b, [a, b], viewport)).toBe(flowRoute(a, b, [a, b]));
+});
+it('rejects empty or invalid card geometry rather than producing a default corner', () => {
+  expect(flowRoute({ ...a, right: a.left }, b, [a, b], viewport)).toBeUndefined();
+  expect(flowRoute({ ...a, top: Number.NaN }, b, [a, b], viewport)).toBeUndefined();
+});

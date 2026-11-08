@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 // P2-A "Since your last visit": what happened after a reading boundary, as deterministic facts.
 // No model call and no inference: each item is a captured operation or gap with its own link.
 // A boundary is an observation sequence (`receivedSequence`), stable across re-import.
@@ -69,7 +70,7 @@ export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[
   const wanted = new Set(paths), ops = new Map(p.operations.map((o) => [o.id, o])), stats: Record<string, SinceFileStat> = {};
   const { starts, ends } = operationObservations(p);
   const turnsByAgent = new Map<string, number[]>(), testsByAgent = new Map<string, { start: number; op: Operation }[]>();
-  for (const item of p.timeline) if (item.type === 'turn') (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
+  for (const item of p.timeline) if (item.type === 'turn' && isPersonPrompt(item.prompt)) (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
   for (const op of p.operations) {
     const start = starts.get(op.id);
     if (op.kind === 'test' && !op.declined && start !== undefined) (testsByAgent.get(op.agentId) ?? testsByAgent.set(op.agentId, []).get(op.agentId)!).push({ start, op });
@@ -122,7 +123,9 @@ function item(kind: SinceItem['kind'], o: Operation, sequence:number,sequenceBas
   let detail: string | undefined;
   if (o.detail.kind === 'test' && o.detail.summary && o.detail.summary.passed + o.detail.summary.failed > 0) detail = `${o.detail.summary.passed} passed, ${o.detail.summary.failed} failed`;
   else if (o.detail.kind === 'test' || o.detail.kind === 'shell') detail = o.detail.exitCode === undefined || o.detail.exitCode === null ? undefined : `exit ${o.detail.exitCode}`;
-  if (kind === 'failure' && o.failure) detail = detail ? `${detail} · ${o.failure}` : o.failure;
+  // A captured status line can carry terminal colour codes; they are formatting, not text (AUDIT-1, 5 Nov).
+  const failure = o.failure?.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
+  if (kind === 'failure' && failure) detail = detail ? `${detail} · ${failure}` : failure;
   return { kind, operationId: o.id, sequence, sequenceBasis, title: o.title, detail, paths: o.paths.map((p) => p.path), status: o.status };
 }
 

@@ -32,6 +32,15 @@ test('a background-task notice is Claude Code\'s, not a prompt from the person',
     await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
     await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
+    const rail = page.getByRole('navigation', { name: 'Prompt positions in history' });
+    await expect(rail.getByRole('button')).toHaveCount(2);
+    await expect(rail.getByRole('button', { name: /background task/ })).toHaveCount(0);
+    await rail.getByRole('button').last().hover();
+    await expect(page.locator('.prompt-rail-preview small').first()).toHaveText('Prompt 2 of 2');
+    const response = await page.request.get(`${server.url}/v1/recordings/${id}/review-insights`);
+    expect(response.ok()).toBe(true);
+    expect((await response.json()).promptCount).toBe(2);
+    await page.mouse.move(0, 0);
     const turns = page.locator('.history .turn');
     await expect(turns).toHaveCount(3);
     // The typed prompts stay "You"; a prompt that only mentions the tag is still a prompt.

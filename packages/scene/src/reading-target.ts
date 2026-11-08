@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 
@@ -22,7 +23,7 @@ export function readingTarget(p: Projection, q: ReadingQuery): ReadingTarget | n
   if (!index) {
     index = {
       operations: [...p.operations].sort((a, b) => a.startSequence - b.startSequence),
-      turns: p.timeline.flatMap((item, step) => item.type === 'turn' ? [{ type: 'turn' as const, step, turnKey: item.id }] : []),
+      turns: p.timeline.flatMap((item, step) => item.type === 'turn' && isPersonPrompt(item.prompt) ? [{ type: 'turn' as const, step, turnKey: item.id }] : []),
     };
     indexes.set(p, index);
   }
