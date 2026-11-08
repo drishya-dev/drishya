@@ -14,6 +14,23 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('continues full captured prose across UTF-8 byte boundaries, including a line over 2 MiB',async()=>{
+    dir=mkdtempSync(join(tmpdir(),'drishya-full-prose-'));app=new App(join(dir,'data'));
+    const text='दृश्य'.repeat(160_000)+'\nFINAL_PARAGRAPH',journal=join(dir,'synthetic.jsonl');
+    writeFileSync(journal,[{type:'session_meta',payload:{id:'full-prose',cwd:dir}},
+      {type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text}]}}
+    ].map(row=>JSON.stringify(row)).join('\n'));
+    const {recordingId}=await app.ingest.importSource('codex',journal);
+    const page=await app.history.page(recordingId,{count:1});
+    const prose=page.projection.prose[0]!;expect(prose.truncated).toBe(true);expect(prose.text.length).toBeLessThan(text.length);
+    const parts:string[]=[];let start=0;
+    for(;;){
+      const chunk=await app.history.artifactChunk(recordingId,`art_${prose.id}_prose`,start) as {available:boolean;text:string;start:number;next:number;hasMore:boolean};
+      expect(chunk.available).toBe(true);expect(chunk.start).toBe(start);expect(chunk.next).toBeGreaterThan(start);parts.push(chunk.text);
+      if(!chunk.hasMore)break;start=chunk.next;
+    }
+    expect(parts.join('')).toBe(text);expect(parts.length).toBeGreaterThan(1);
+  });
   it('releases bulk SQLite working pages without changing warm/restarted history or cache configuration', async () => {
     dir=mkdtempSync(join(tmpdir(),'drishya-sqlite-working-set-'));
     const journal=join(dir,'invented.jsonl');generateLargeJournal(journal,33);
