@@ -168,7 +168,7 @@ The launch date is decided at the 18 November review, from where the list stands
 
 ### P0 — Release 1: a finished, packaged product (ship by 18 November)
 
-**0 of 26 done**
+**0 of 27 done**
 
 Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it presents what the agent is doing, faithfully and beautifully, at runtime. Release 1 ships Modern only, and its polish lands in Modern. Feature freeze at the end of 13 November; after that, only fixes from SHIP-10 and the gate. Done items are no longer listed in these tables; their details stay below. Where a detail line names another priority, this table wins.
 
@@ -192,18 +192,19 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☐ | 16 | SHIP-7 | Trust bugs: search result that doesn't move the reading position, Screen black held frame, Workspace return collapses the open read | `bug` `read` |
 | ☐ | 17 | SHIP-8 | Map: a quiet zone under reading material and labels that do not collide | `map` `ui` |
 | ☐ | 18 | MOTION-4 | Smooth motion on every click that looks better with it, with both an opening and a closing animation | `motion` |
-| ☐ | 19 | SHIP-3 | Home hero above the session list, in LAND-1's visual language, saying what Drishya does | `ui` `home` |
-| ☐ | 20 | SHIP-6 | Reading and overlap defects from the COMP-1 presentation review | `ui` `bug` |
-| ☐ | 21 | SEC-1 | Clear the 19 Dependabot alerts in dev dependencies (Vite, Vitest, tinypool, launch-editor, source-map-js) | `rel` |
-| ☐ | 22 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
-| ☐ | 23 | SHIP-10 | Release-candidate review by a fresh agent, plus Yash's human ten-minute pass | `rel` |
-| ☐ | 24 | LAND-2 | Build Harsh's proposed static landing site and public synthetic replay, without publication | `rel` `ui` |
-| ☐ | 25 | VIDEO-1 | Product videos: real-session demos and a comparison, made with an open-source video skill | `rel` |
-| ☐ | 26 | SHIP-11 | Launch posts written and scheduled (builders, not agents) | `rel` |
+| ☐ | 19 | LAYOUT-1 | Large screens and browser zoom: space is used deliberately, not left as empty gaps | `ui` |
+| ☐ | 20 | SHIP-3 | Home hero above the session list, in LAND-1's visual language, saying what Drishya does | `ui` `home` |
+| ☐ | 21 | SHIP-6 | Reading and overlap defects from the COMP-1 presentation review | `ui` `bug` |
+| ☐ | 22 | SEC-1 | Clear the 19 Dependabot alerts in dev dependencies (Vite, Vitest, tinypool, launch-editor, source-map-js) | `rel` |
+| ☐ | 23 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
+| ☐ | 24 | SHIP-10 | Release-candidate review by a fresh agent, plus Yash's human ten-minute pass | `rel` |
+| ☐ | 25 | LAND-2 | Build Harsh's proposed static landing site and public synthetic replay, without publication | `rel` `ui` |
+| ☐ | 26 | VIDEO-1 | Product videos: real-session demos and a comparison, made with an open-source video skill | `rel` |
+| ☐ | 27 | SHIP-11 | Launch posts written and scheduled (builders, not agents) | `rel` |
 
 ### P1 — next, after Release 1
 
-**0 of 39 done**
+**0 of 38 done**
 
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
@@ -211,41 +212,40 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☐ | 2 | CONNECT-4b | The one-click setup sheet on first open and the remembered-checkouts list in Settings (Clarity) | `ui` `controller` |
 | ☐ | 3 | CONNECT-4 | A repository's permissions are set up once, before its session opens (split: 4a logic, 4b Clarity sheet; close when both merge) | `controller` `files` `ui` |
 | ☐ | 4 | MOTION-3 | Live/replay motion evaluation (ten-minute calm) | `motion` |
-| ☐ | 5 | LAYOUT-1 | Large screens and browser zoom: space is used deliberately, not left as empty gaps | `ui` |
-| ☐ | 6 | LIVE-4b | Context gauge leftovers (secondary rate-limit window; Claude context fill) | `live` `data` |
-| ☐ | 7 | FINISH-0a | Foundations: spacing, layer, elevation and motion tokens; one button system, switch and input (split from FINISH-0) | `ui` `motion` |
-| ☐ | 8 | FINISH-0b | Foundations: one popover, menu, select, tooltip and dialog system with paired open and close; no native select | `ui` `motion` |
-| ☐ | 9 | FINISH-0c | Foundations: loading, empty and error states (no black "Loading history…") | `ui` `motion` |
-| ☐ | 10 | FINISH-1 | Home: a first screen that says what Drishya does and shows the user's repositories, Running now and sessions | `ui` `home` `motion` |
-| ☐ | 11 | FINISH-2 | Header, session menu and Usage | `ui` `live` `motion` |
-| ☐ | 12 | FINISH-3 | Conversation: prompts in a capsule, agent prose, tables and file links, Codex app envelopes | `ui` `content` `motion` |
-| ☐ | 13 | FINISH-4 | Composer, attachments, model and effort menus, approvals and native questions | `ui` `controller` `motion` |
-| ☐ | 14 | FINISH-5 | Action cards: every action type's card, Expand and Inspector | `ui` `content` `motion` |
-| ☐ | 15 | FINISH-6 | History flow and live motion: passages, the five moves, connectors, Follow | `ui` `live` `motion` |
-| ☐ | 16 | FINISH-7 | Toolbox: dock, instruments, MCP drawers and the window (after TOOLS-2) | `ui` `motion` |
-| ☐ | 17 | FINISH-8 | Files rail, peek and Inspector | `ui` `files` `motion` |
-| ☐ | 18 | FINISH-9 | Workspace: file-work window, editor, drafts, compare and Original | `ui` `files` `motion` |
-| ☐ | 19 | FINISH-10 | Git review and Git history | `ui` `git` `motion` |
-| ☐ | 20 | FINISH-11 | Search, command palette and review tools | `ui` `review` `motion` |
-| ☐ | 21 | FINISH-12 | Replay transport, settings, themes, Screen view and the map's chrome | `ui` `motion` |
-| ☐ | 22 | FINISH-13 | The whole product together: every size and zoom, cross-surface motion, then MOTION-3 and AUDIT-1's close | `ui` `motion` |
-| ☐ | 23 | AUDIT-1 | Feature-by-feature product audit before the UI passes (UI, backend, content, navigation) | `ui` `data` `content` `read` `git` `files` `review` |
-| ☐ | 24 | UI-26 | One Modern stylesheet layer behind a pixel-diff guard (split from UI-8) | `ui` |
-| ☐ | 25 | REL-1 | Managed-runtime update versus the antivirus conflict | `rel` |
-| ☐ | 26 | REL-2 | Physical lower-resource and platform acceptance | `rel` `perf` |
-| ☐ | 27 | MAC-1 | macOS acceptance run (a separate task so it is not forgotten) | `rel` |
-| ☐ | 28 | REL-3 | Keyboard, zoom, assistive technology and human freeze/truth/ten-minute acceptance | `rel` |
-| ☐ | 29 | REL-4 | Publishing preparation (on request only) | `rel` |
-| ☐ | 30 | REVIEW-4 | Joined investigation route, end to end | `review` `native` |
-| ☐ | 31 | NATIVE-1 | Real signed-in Codex journey | `native` |
-| ☐ | 32 | NATIVE-2 | Real signed-in Claude Code journey | `native` |
-| ☐ | 33 | NATIVE-3 | Genuine multi-agent sessions | `native` |
-| ☐ | 34 | NATIVE-4 | Joined native edit/create conflict path | `native` |
-| ☐ | 35 | NATIVE-5 | Genuine desktop computer-use sessions (Codex and Claude Code) | `native` `content` |
-| ☐ | 36 | DATA-11 | "Waiting for you" hook signal (opt-in; after CONTENT-3) | `data` `content` |
-| ☐ | 37 | PERF-3 | Page-side latency on 166 MB+ journals: opt-in setting or bring it down (decision pending) | `perf` `ui` |
-| ☐ | 38 | COMP-1 | Whole-component usefulness pass (Git review/graph branches and ahead/behind, Workspace, Files, Search…) | `ui` `git` `read` `files` |
-| ☐ | 39 | FILES-5 | Opt-in draft recovery | `files` |
+| ☐ | 5 | LIVE-4b | Context gauge leftovers (secondary rate-limit window; Claude context fill) | `live` `data` |
+| ☐ | 6 | FINISH-0a | Foundations: spacing, layer, elevation and motion tokens; one button system, switch and input (split from FINISH-0) | `ui` `motion` |
+| ☐ | 7 | FINISH-0b | Foundations: one popover, menu, select, tooltip and dialog system with paired open and close; no native select | `ui` `motion` |
+| ☐ | 8 | FINISH-0c | Foundations: loading, empty and error states (no black "Loading history…") | `ui` `motion` |
+| ☐ | 9 | FINISH-1 | Home: a first screen that says what Drishya does and shows the user's repositories, Running now and sessions | `ui` `home` `motion` |
+| ☐ | 10 | FINISH-2 | Header, session menu and Usage | `ui` `live` `motion` |
+| ☐ | 11 | FINISH-3 | Conversation: prompts in a capsule, agent prose, tables and file links, Codex app envelopes | `ui` `content` `motion` |
+| ☐ | 12 | FINISH-4 | Composer, attachments, model and effort menus, approvals and native questions | `ui` `controller` `motion` |
+| ☐ | 13 | FINISH-5 | Action cards: every action type's card, Expand and Inspector | `ui` `content` `motion` |
+| ☐ | 14 | FINISH-6 | History flow and live motion: passages, the five moves, connectors, Follow | `ui` `live` `motion` |
+| ☐ | 15 | FINISH-7 | Toolbox: dock, instruments, MCP drawers and the window (after TOOLS-2) | `ui` `motion` |
+| ☐ | 16 | FINISH-8 | Files rail, peek and Inspector | `ui` `files` `motion` |
+| ☐ | 17 | FINISH-9 | Workspace: file-work window, editor, drafts, compare and Original | `ui` `files` `motion` |
+| ☐ | 18 | FINISH-10 | Git review and Git history | `ui` `git` `motion` |
+| ☐ | 19 | FINISH-11 | Search, command palette and review tools | `ui` `review` `motion` |
+| ☐ | 20 | FINISH-12 | Replay transport, settings, themes, Screen view and the map's chrome | `ui` `motion` |
+| ☐ | 21 | FINISH-13 | The whole product together: every size and zoom, cross-surface motion, then MOTION-3 and AUDIT-1's close | `ui` `motion` |
+| ☐ | 22 | AUDIT-1 | Feature-by-feature product audit before the UI passes (UI, backend, content, navigation) | `ui` `data` `content` `read` `git` `files` `review` |
+| ☐ | 23 | UI-26 | One Modern stylesheet layer behind a pixel-diff guard (split from UI-8) | `ui` |
+| ☐ | 24 | REL-1 | Managed-runtime update versus the antivirus conflict | `rel` |
+| ☐ | 25 | REL-2 | Physical lower-resource and platform acceptance | `rel` `perf` |
+| ☐ | 26 | MAC-1 | macOS acceptance run (a separate task so it is not forgotten) | `rel` |
+| ☐ | 27 | REL-3 | Keyboard, zoom, assistive technology and human freeze/truth/ten-minute acceptance | `rel` |
+| ☐ | 28 | REL-4 | Publishing preparation (on request only) | `rel` |
+| ☐ | 29 | REVIEW-4 | Joined investigation route, end to end | `review` `native` |
+| ☐ | 30 | NATIVE-1 | Real signed-in Codex journey | `native` |
+| ☐ | 31 | NATIVE-2 | Real signed-in Claude Code journey | `native` |
+| ☐ | 32 | NATIVE-3 | Genuine multi-agent sessions | `native` |
+| ☐ | 33 | NATIVE-4 | Joined native edit/create conflict path | `native` |
+| ☐ | 34 | NATIVE-5 | Genuine desktop computer-use sessions (Codex and Claude Code) | `native` `content` |
+| ☐ | 35 | DATA-11 | "Waiting for you" hook signal (opt-in; after CONTENT-3) | `data` `content` |
+| ☐ | 36 | PERF-3 | Page-side latency on 166 MB+ journals: opt-in setting or bring it down (decision pending) | `perf` `ui` |
+| ☐ | 37 | COMP-1 | Whole-component usefulness pass (Git review/graph branches and ahead/behind, Workspace, Files, Search…) | `ui` `git` `read` `files` |
+| ☐ | 38 | FILES-5 | Opt-in draft recovery | `files` |
 
 **Native (grouped, 28 Oct, Yash):** the six rows tagged `native` below (REVIEW-4, NATIVE-1…5) all need a person's real signed-in Codex or Claude Code session, not a fixture or a scan. They are one lane, done together when a native session is set up, and they stay here until then. Features that can be proven by deliberately recording a real harness session (a plan, a question, a literal commit, a browser call) are not native work and do not wait here: record that session and finish the feature.
 
