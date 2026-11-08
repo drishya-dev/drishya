@@ -11,8 +11,7 @@
 .plan-list li.plan-completed .plan-mark {color:var(--pass);}
 .plan-list li.plan-in_progress .plan-mark {color:var(--t1);}.plan-list li.plan-in_progress .plan-text {font-weight:var(--weight-strong);}
 .plan-list li.plan-pending {color:var(--t2);}
-.plan-change {position:absolute;right:0;top:3px;padding-left:8px;background:var(--bg-1,var(--bg));font:var(--text-2xs)/1.5 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);opacity:0;transition:opacity .12s ease;}
-.plan-list li:hover .plan-change,.plan-list li:focus-within .plan-change {opacity:1;}
+.plan-change {display:inline;margin-inline-start:8px;font:var(--text-2xs)/1.5 var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--t3);}
 .plan-more,.plan-basis,.plan-removed {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
 .plan-earlier {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;padding:2px 0;}
 .plan-delta {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
@@ -23,7 +22,7 @@
 .plan-pinned .plan-list li .plan-text {transition:text-decoration-color .15s ease;}
 .plan-pinned-more {justify-self:start;font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
 .history .plan-pinned {display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
-/* Current content is readable at its arrival; prior revisions stay quiet receipts. */
+/* Every captured revision is readable at its arrival, within the existing reading bounds. */
 .connected-workspace .history .op.op-plan:has(.plan-card:not(.plan-earlier)) {flex:0 1 min(620px,100%);max-width:100%;max-height:none;}
 .history .op-plan:has(.plan-card:not(.plan-earlier))>.op-body {max-height:none;mask-image:none;-webkit-mask-image:none;}
 :root[data-experience] .connected-workspace .history .op.op-plan:not(.expanded):not([data-hover-reading]):has(.plan-card:not(.plan-earlier)) {max-height:none;}
