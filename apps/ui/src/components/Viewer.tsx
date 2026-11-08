@@ -51,6 +51,7 @@ import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry 
 import { ago } from '../lib/git-commit-rows.ts';
 import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
+import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
 
 export function Viewer() {
@@ -205,7 +206,7 @@ function WorkspaceViewer() {
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
-        <FileHistory projection={historical} />
+        {!developerWorkspace && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
@@ -762,7 +763,6 @@ function Search({ projection }: { projection: Projection }) {
   const recordingId = useApp((s) => s.recordingId);
   const set = useApp((s) => s.set);
   const seek = useApp((s) => s.seek);
-  const select = useApp((s) => s.select);
   const [q, setQ] = useState('');
   const [scope, setScope] = useState<'captured' | 'files'>('captured');
   const [loading, setLoading] = useState(false);
@@ -787,21 +787,26 @@ function Search({ projection }: { projection: Projection }) {
     const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) { setHits(result); setLoading(false); } }).catch(() => { if (current) { setError('Search unavailable. Change the query or reopen search to retry.'); setLoading(false); } }), 160);
     return () => { current = false; clearTimeout(t); };
   }, [q, scope, open, source, recordingId]);
-  const visibleHits = mode === 'replay' ? hits.filter(hit => { const at = stepOfObservation(projection, hit.observationId); return at !== undefined && at <= step; }) : hits;
+  const visibleHits = mode === 'replay' ? hits.filter(hit => { const at = searchDestination(projection, hit.observationId)?.step; return at !== undefined && at <= step; }) : hits;
   const files = q.trim().length >= 2 ? graph?.nodes.filter(node => node.path.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 50) ?? [] : [];
-  const go = (obs: string) => {
-    if (useApp.getState().historyPage) {
-      set({ focusObservationId: obs, held: true, selectedOp: undefined, searchOpen: false });
-      void useApp.getState().loadHistoryWindow({ observationId: obs }).catch((error) => set({ error: error.message }));
-      return;
-    }
-    const s = stepOfObservation(projection, obs);
-    if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
-    else set({ focusObservationId: obs });
-    const op = projection.operations.find((o) => o.observationIds.includes(obs));
-    if (op) select(op.id);
-    else select(undefined);
-    set({ searchOpen: false });
+  const go = async (obs: string) => {
+    const initial=useApp.getState();
+    const current=()=>useApp.getState().source===source&&useApp.getState().recordingId===recordingId;
+    // Search is deliberate navigation. A result must not race the live-edge camera.
+    set({follow:false,held:true});setError(undefined);
+    try {
+      let target=searchDestination(initial.projection??projection,obs,initial.historyPage?.scene);
+      if(!target&&initial.historyPage){
+        await initial.loadHistoryWindow({observationId:obs});
+        if(!current())return;
+        const loaded=useApp.getState();
+        target=searchDestination(loaded.projection??projection,obs,loaded.historyPage?.scene);
+      }
+      if(!target){setError('No readable history location was recorded for this result.');return;}
+      if(initial.mode==='replay')seek(target.step,{hold:true});
+      set({selectedOp:target.kind==='operation'?target.id:undefined,expandedOp:undefined,promptStep:target.kind==='prompt'?target.step:undefined,focusObservationId:target.kind==='prose'?obs:undefined,searchOpen:false});
+      if(initial.historyPage)await initial.loadHistoryWindow(target.kind==='prompt'?{promptStep:target.step}:target.kind==='operation'?{selectedOperationId:target.id}:{observationId:obs});
+    }catch(error){if(current())set({error:(error as Error).message});}
   };
   return (
     <div ref={panel} id="recording-search" popover="auto" className="search" role="dialog" aria-label="Search this recording" onToggle={event => set({ searchOpen: event.newState === 'open' })}>
@@ -816,7 +821,7 @@ function Search({ projection }: { projection: Projection }) {
         {scope === 'captured' && visibleHits.map((h, i) => (
           <Fragment key={i}>
             {h.turn !== undefined && h.turn !== visibleHits[i - 1]?.turn && <div className="search-turn" role="presentation">Turn {h.turn}</div>}
-            <button className="search-hit" onClick={() => go(h.observationId)}>
+            <button className="search-hit" onClick={() => void go(h.observationId)}>
               <span>{h.snippet.split(/[«»]/).map((part, j) => (j % 2 ? <mark key={j}>{part}</mark> : part))}</span>
               <small>{[HIT_KIND[h.kind ?? ''] ?? h.kind, h.kind?.startsWith('tool.') ? h.tool : undefined, h.path ?? h.command, h.time ? ago(h.time) : undefined].filter(Boolean).join(' · ')}</small>
             </button>
