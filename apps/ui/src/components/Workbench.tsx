@@ -11,7 +11,7 @@ import { WorkspaceBar } from './Workspace.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { agentColor, agentName } from '../lib/identity.ts';
-import { localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
+import { developerToolsEnabled, localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
 import { HealthTag } from './Home.tsx';
 import { EvidenceNavigation } from './EvidenceNavigation.tsx';
 
@@ -20,7 +20,7 @@ export function LocalPreviewEntry() {
   const source = useApp(s => s.source);
   const [saved, setSaved] = useState(localPreviewId());
   const [error, setError] = useState(false);
-  if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (!developerToolsEnabled() || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const url = new URL(location.href); url.searchParams.set('demo', 'local'); url.searchParams.delete('at'); url.hash = '';
   return <><button className="btn ghost" onClick={() => { const ok = saveLocalPreview(id); setError(!ok); if (ok) setSaved(id); }}>{saved === id ? 'Local preview selected ✓' : 'Use this session as local preview'}</button>{saved && <a className="btn ghost" href={url.href}>Open local preview</a>}{error && <small role="alert">This browser could not save the preview reference.</small>}</>;
 }

@@ -19,7 +19,7 @@ test.beforeEach(async({page})=>{
 });
 const bar=(page:Page)=>page.getByRole('contentinfo',{name:'Replay controls'});
 const step=(page:Page)=>bar(page).getByRole('slider',{name:'Timeline'}).getAttribute('aria-valuenow').then(Number);
-async function start(page:Page){await page.getByLabel('More workspace options',{exact:true}).click();await page.getByRole('button',{name:'Replay this session',exact:true}).click();await expect(bar(page)).toBeVisible();await expect(bar(page).getByRole('button',{name:'Pause',exact:true})).toBeVisible();}
+async function start(page:Page){await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options',{exact:true}).click();await page.getByRole('button',{name:'Replay this session',exact:true}).click();await expect(bar(page)).toBeVisible();await expect(bar(page).getByRole('button',{name:'Pause',exact:true})).toBeVisible();}
 
 test('Modern replay is explicit and has working play, step, speed, outcome, timeline and exit controls',async({page})=>{
  await expect(bar(page)).toHaveCount(0);await start(page);await bar(page).getByRole('button',{name:'Pause',exact:true}).click();

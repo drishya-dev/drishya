@@ -291,7 +291,10 @@ function artifactChunk(id: string, artifactId: string, start: number, requestedF
   }
   const descriptor = artifact(id, artifactId, 0, 0);
   if (!descriptor.available || !descriptor.artifact.blob) return descriptor;
-  if (descriptor.artifact.kind !== 'output') throw Error('Only recorded output supports text continuation');
+  // Prose is bounded in history pages, but its recorded body must remain readable
+  // even when one line exceeds the line-slice response budget.
+  const prose = descriptor.artifact.kind === 'excerpt' && db.prepare("SELECT id FROM items WHERE view_id=? AND kind='prose' AND id=?").get(id, artifactId.replace(/^art_(.*)_prose$/, '$1'));
+  if (descriptor.artifact.kind !== 'output' && !prose) throw Error('Only recorded output or prose supports text continuation');
   const sha = descriptor.artifact.blob;
   const chunk = source.blobs.readTextChunk(sha, start) ?? blobs.readTextChunk(sha, start);
   return chunk ? { artifact: descriptor.artifact, available: true, ...chunk } : { artifact: descriptor.artifact, available: false, reason: 'no-longer-stored' };

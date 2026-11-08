@@ -17,7 +17,7 @@ test('wrapped test facts appear inside Shell, stay bounded and keep raw evidence
   op.detail = { kind: 'shell', command: 'captured mixed orchestration', outputPreview: raw, exitCode: 0 };
   op.artifactIds = [];
   await page.route('**/demo/bundle.json', route => route.fulfill({ json: sample }));
-  await page.goto(new URL('/?demo&experience=classic', server.launchUrl).href);
+  await page.goto(new URL('/?demo&experience=modern', server.launchUrl).href);
   const card = page.locator(`article[data-op-id="${op.id}"]`);
   await expect(card).toHaveClass(/op-shell/);
   await expect(card).toContainText(`${await page.evaluate(()=>(100000).toLocaleString())} passed`);
