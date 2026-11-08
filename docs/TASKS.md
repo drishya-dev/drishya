@@ -264,6 +264,10 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☐ | 4 | TESTS-1 | Tests view: every run, every failing case, tracked across runs (deferred) | `review` `read` |
 
 | Done | 5 | LAND-3 | Jet-black landing page and header background | `rel` `ui` |
+| Done | 6 | LAND-4 | Reference motion analysis and execution plan | `rel` `ui` |
+| Done | 7 | LAND-5 | Dimensional hero and scroll-linked Drishya identity | `rel` `ui` |
+| Done | 8 | LAND-6 | Scroll-driven evidence story and interaction polish | `rel` `ui` |
+
 
 ### P3 — deferred ideas
 
