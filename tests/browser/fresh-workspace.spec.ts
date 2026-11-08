@@ -273,7 +273,7 @@ test('Modern preserves action materials, layout and native graph controls on reo
     }));
   };
   const first=await inspect('modern'), modern=await inspect('modern');
-  // Palettes intentionally differ; shared captured content, allocation and type remain equal.
+  // Reopening preserves captured content, allocation and type.
   expect(modern.map(({background:_,...material})=>material)).toEqual(first.map(({background:_,...material})=>material));
   expect(modern.every(material=>material.background==='rgb(18, 18, 18)')).toBe(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();

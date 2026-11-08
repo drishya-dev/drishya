@@ -520,7 +520,7 @@ test('explicit themes persist independently of the OS, restore focus and work on
 
 test('file comparison reads real daemon artifacts and opens the same action in history', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await expect(page.getByRole('heading', { name: 'Sessions on this machine' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your sessions.' })).toBeVisible();
   await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   const file = page.locator('.spine-file[title="src/checkout/guard.ts"]');
@@ -533,6 +533,7 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await expect(dialog.locator('.file-evidence-columns')).toContainText('cart.total == null');
   await expect(dialog.getByRole('button', { name: 'Copy derived page', exact: true })).toBeVisible();
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/product-file-comparison.png') });
+  await dialog.getByLabel('File actions',{exact:true}).click();
   await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   const first = dialog.locator('.file-trail-item').first();
   const buttonBounds = (await first.locator('.file-op').boundingBox())!;
@@ -588,6 +589,7 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
   const first = dialog.getByLabel('First step');
   const selected = await first.inputValue();
+  await dialog.getByLabel('File actions',{exact:true}).click();
   await dialog.getByRole('button', { name: 'Show actions', exact: true }).click();
   await dialog.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
@@ -615,7 +617,7 @@ test('a sanitized export opens as read-only evidence and can return to the local
   await expect(dialog).toContainText('if (!cart.total)');
   await dialog.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
   await page.getByRole('button', { name: 'Drishya', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Sessions on this machine' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Your sessions.' })).toBeVisible();
 });
 
 test('view and appearance changes keep the same passage under the reader', async ({ page }) => {
