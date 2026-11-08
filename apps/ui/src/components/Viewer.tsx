@@ -205,7 +205,7 @@ function WorkspaceViewer() {
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
-        <FileHistory projection={historical} />
+        {!developerWorkspace && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
@@ -801,6 +801,13 @@ function Search({ projection }: { projection: Projection }) {
         target=searchDestination(loaded.projection??projection,obs,loaded.historyPage?.scene);
       }
       if(!target){setError('No readable history location was recorded for this result.');return;}
+      if(target.kind==='operation'&&initial.mode==='history'){
+        set({searchOpen:false});
+        // Use the same bounded, exact-card route as Commands/keyboard reading.
+        // Selecting a card is not sufficient to navigate the virtual history.
+        window.dispatchEvent(new CustomEvent('drishya-reading-navigate',{detail:{type:'operation',id:target.id,step:target.step-1}}));
+        return;
+      }
       if(initial.mode==='replay')seek(target.step,{hold:true});
       set({selectedOp:target.kind==='operation'?target.id:undefined,expandedOp:undefined,promptStep:target.kind==='prompt'?target.step:undefined,focusObservationId:target.kind==='prose'?obs:undefined,searchOpen:false});
       if(initial.historyPage)await initial.loadHistoryWindow(target.kind==='prompt'?{promptStep:target.step}:target.kind==='operation'?{selectedOperationId:target.id}:{observationId:obs});
