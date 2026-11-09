@@ -57,8 +57,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Harsh with Codex — 9 Nov: LAND-9 shared motion runtime and branded opening
 
-- Implemented the pure motion policy and intro projection, browser-only shared runtime, external fail-open boot guard, single-SVG 1800 ms opening, Skip/Escape/Replay and static/no-JS/direct-link/reduced/off fallbacks. LAND-10 was not started.
-- Verified `pnpm typecheck`, `node --test tests/landing-motion.test.ts` (5 passed), `pnpm exec playwright test tests/browser/landing-opening.spec.ts --project=parallel` (4 passed), existing `tests/browser/landing-motion.spec.ts --project=parallel` (11 passed), `node scripts/build-landing.ts`, boot size (567 bytes), and `git diff --check`. The full product gate remains for LAND-14.
+- Review fixes in PR #386 give startup and the active opening one header visibility gate. Enter and Skip remain reusable, and the underlying page is inert while the opening is active. A completed wheel fade stays closed, Skip and Escape override wheel reversal, and the resolved wordmark holds still. The startup fuse releases the header and hero if the site module fails.
+- Reproduced visible navigation and ignored Escape during wheel entry on parent `18e5ef17`. The fixes pass landing typecheck, boot syntax, 5 motion units and 31 landing browser checks in Edge with one worker. Existing navbar and walkthrough assertions still run after the opening is explicitly dismissed or bypassed by a deep link.
 
 ### Harsh with Codex — 9 Nov: LAND-8 complete landing specification
 - Queued LAND-9 through LAND-14 in TASKS, with six separate whole-item PRs, bounded file lists, named interfaces and acceptance. Existing #380/#381 are the integration baseline; no new product behavior is implemented by this specification. Review the document through its separate PR based on the LAND-7 audit branch; no automatic merge or publication.

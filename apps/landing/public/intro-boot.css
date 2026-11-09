@@ -1,4 +1,2 @@
-html[data-intro=eligible] body{visibility:hidden}
-html[data-intro=skip] body,html[data-intro-ready=true] body{visibility:visible}
-html[data-intro=eligible] .site-header{visibility:hidden!important}
-html[data-intro=eligible][data-intro-ready=true] .site-header{visibility:visible!important}
+html[data-intro=pending]{background:#000}
+html[data-intro=pending] body,html[data-intro=active] .site-header{visibility:hidden}
