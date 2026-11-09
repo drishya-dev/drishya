@@ -83,8 +83,8 @@ export function initOpening(runtime: MotionRuntime): () => void {
         letter.style.transform = `translateY(${(1 - progress) * 16}px) rotateX(${(1 - progress) * 18}deg)`;
       });
     }
-    overlay.style.opacity = String(frame.overlayOpacity);
-    if (frame.stage === 'ready') finish();
+    overlay.style.opacity = '1';
+    if (frame.stage === 'ready') replay?.removeAttribute('hidden');
     else timer = setTimeout(() => runtime.invalidate('opening', render), 16);
   };
   (window as Window & {__drishyaIntroBootCancel?: () => void}).__drishyaIntroBootCancel?.();
@@ -93,9 +93,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
   enter?.addEventListener('click', cancel);
   const onWheel = (event: WheelEvent) => { if (event.deltaY > 0) cancel(); };
   addEventListener('wheel', onWheel, {passive: true});
-  addEventListener('keydown', event => { if (event.key === 'Escape' || event.key === 'Tab') cancel(); }, {once: true});
-  addEventListener('pointerdown', cancel, {once: true});
-  addEventListener('focusin', cancel, {once: true});
+  addEventListener('keydown', event => { if (event.key === 'Escape') cancel(); });
   replay?.addEventListener('click', () => { stopped = false; started = performance.now(); overlay.dataset.active = 'true'; runtime.invalidate('opening', render); });
   if (runtime.policy().intro && !alreadyVisited) runtime.invalidate('opening', render);
   else finish();
