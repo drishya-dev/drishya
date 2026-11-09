@@ -6,7 +6,7 @@ import {ReadingDialog} from './ProductShell.tsx';
 import {OriginalToggle} from './OriginalToggle.tsx';
 import './queued-inputs.css';
 
-const labels = {recorded: 'Queue receipt recorded', unknown: 'Queue changed · item outcome unknown', removed: 'Removed from queue', delivered: 'Delivered · native identity confirmed'};
+const labels = {recorded: 'Queue receipt recorded', unknown: 'Queue changed · item outcome unknown', removed: 'Removed from queue', delivered: 'Delivered · matching prompt in History'};
 
 /** A harness notification is shown by its kind, not as markup; the full recorded text stays one click away. */
 function receiptName(item: QueueReceipt): string {
@@ -31,7 +31,7 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   const following = useApp(s => s.follow);
   const projection = useApp(s => s.projection), page = useApp(s => s.historyPage), step = useApp(s => s.step);
   const revision = useApp(s => s.recording?.revision);
-  const [loaded, setLoaded] = useState<{key: string; page: QueuePage}>(), [open, setOpen] = useState(false);
+  const [loaded, setLoaded] = useState<{key: string; page: QueuePage}>(), [open, setOpen] = useState(false), [history, setHistory] = useState(false);
   const [selected, select] = useState<QueueReceipt>(), [chunk, setChunk] = useState<QueueInputChunk>();
   const [error, setError] = useState(''), [busy, setBusy] = useState(false), [copied, setCopied] = useState(false), [original, setOriginal] = useState(false);
   const fields = chunk && !chunk.hasMore ? notificationFields(chunk.text) : undefined;
@@ -42,19 +42,23 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   const boundary = mode === 'replay' ? page ? page.queueBoundary : materialBoundary?.type === 'queue' ? {ownerRecordingId: materialBoundary.ownerRecordingId, observationId: materialBoundary.sourceObservationId} : undefined : undefined;
   const owner = mode === 'replay' ? boundary?.ownerRecordingId : id;
   const through = boundary?.observationId;
-  const key = `${owner ?? ''}/${mode}/${through ?? ''}`;
+  const baseKey = `${owner ?? ''}/${mode}/${through ?? ''}`;
+  const viewKey = `${baseKey}/${mode === 'replay' ? step : ''}`;
+  const key = `${viewKey}/${history ? 'history' : 'pending'}`;
+  const totals = loaded?.key.startsWith(`${viewKey}/`) ? loaded.page : undefined;
   const data = loaded?.key === key ? loaded.page : undefined;
   const load = async (before = cursor.current.key === key ? cursor.current.before : undefined) => {
     if (!owner || !source?.queue || owner.includes('+') || mode === 'replay' && !through) return;
     cursor.current = {key, before};
     const token = ++request.current;
     try {
-      const next = await source.queue(owner, {through, before});
-      if (active.current && token === request.current) {setLoaded({key, page: next}); setError('');}
+      const next = await source.queue(owner, {before, state:history ? 'history' : 'pending', ...(mode === 'replay' ? {step} : {})});
+      if (active.current && token === request.current) {setLoaded({key, page: next}); select(previous=>previous ? next.items.find(item=>item.id===previous.id) : undefined); setError('');}
     } catch {if (active.current && token === request.current) setError('Queue receipts could not be loaded.');}
   };
   useEffect(() => {void load(); return () => {request.current++;};}, [source, key, mode === 'history' ? revision : undefined]);
-  useEffect(() => {setOpen(false); select(undefined); setChunk(undefined); setError(''); reading.current++;}, [key]);
+  useEffect(() => {select(undefined); setChunk(undefined); setBusy(false); reading.current++;}, [key]);
+  useEffect(() => {setOpen(false); select(undefined); setChunk(undefined); setError(''); reading.current++; setHistory(false);}, [baseKey]);
   useEffect(() => {
     if (!selected || !source?.queueInput || !owner) return;
     // A receipt with no text has nothing to read; asking would only report a failure.
@@ -86,30 +90,33 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
     } catch {if (active.current && token === reading.current) setError('The complete input could not be read or copied. Retry the reading.');}
     finally {if (active.current && token === reading.current) setBusy(false);}
   };
-  if (!source?.queue || !owner || mode === 'replay' && !through || !data?.total && !error) return null;
-  const latest = data?.items[0], waiting = latest?.state === 'recorded';
+  if (!source?.queue || !owner || mode === 'replay' && !through || !totals?.total && !error && !open) return null;
+  const latest = data?.items[0], pending = totals?.pendingTotal ?? totals?.items.filter(item=>item.state==='recorded').length ?? 0, waiting = pending > 0;
   // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
   const floating = standalone || mode === 'replay';
   const view = <div className="queued-input-receipts" data-waiting={waiting || undefined} style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
     <button type="button" className="btn ghost small" aria-label="Read queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); const first = data?.items.find(item => !textless(item) && !/^\s*</.test(item.preview ?? '')) ?? data?.items.find(item => !textless(item)) ?? latest; if (first) select(first);}}>
-      <span aria-live="polite">{waiting ? 'Queued input recorded' : `Queued inputs${data?.total ? ` · ${data.total}` : ''}`}</span>
+      <span aria-live="polite">{`Queued inputs${pending ? ` · ${pending}` : ''}`}</span>
     </button>
     {open && <ReadingDialog title="Queued inputs" close={() => {setOpen(false); select(undefined); setError('');}} className="queue-input-reader" style={{width: 'min(880px, calc(100vw - 32px))'}}>
       <div className="queue-reader">
-        <p className="queue-caveat" title="Receipts show what the harness recorded in its queue. They do not establish delivery or inclusion in context. Delivered prompts appear separately in History.">What the harness queued. Delivered prompts appear in History.</p>
+        <p className="queue-caveat" title="Receipts show what the harness recorded in its queue. They do not establish delivery or inclusion in context. Delivered prompts appear separately in History.">{history ? 'Earlier queue receipts · history. Delivered prompts appear in History.' : 'Inputs still waiting in the recorded queue.'}</p>
+        {source.kind === 'bundle' && data?.completionEvidence === false && <p className="queue-caveat">This replay has no exact completed-turn boundaries. Unmatched receipts may still appear as waiting.</p>}
         <div className="queue-columns">
         <div className="queue-list-column">
+        {!data?.items.length && <p className="queue-empty">{!data ? 'Loading queue receipts…' : history ? 'No earlier receipts on this page.' : 'No inputs waiting.'}</p>}
         {!!data?.items.length && <div className="queue-list" aria-label="Queued input receipts">
-          {data.items.filter(item => !textless(item) || item.id === selected?.id).map(item => <button type="button" key={item.id} className="queue-row" aria-label={`${receiptName(item)} · ${labels[item.state]}`} aria-pressed={selected?.id === item.id} onClick={() => select(item)} title={item.preview}>
+          {data.items.map(item => <button type="button" key={item.id} className="queue-row" aria-label={`${receiptName(item)} · ${labels[item.state]}`} aria-pressed={selected?.id === item.id} onClick={() => select(item)} title={item.preview}>
             <span className="queue-row-text">{receiptName(item)}</span>
             <small>{item.time && <time dateTime={item.time}>{new Date(item.time).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</time>}{item.time && ' · '}{labels[item.state]}</small>
           </button>)}
-          {data.items.some(item => textless(item) && item.id !== selected?.id) && <small className="queue-textless">{data.items.filter(item => textless(item) && item.id !== selected?.id).length} receipts with no text</small>}
         </div>}
         <div className="queue-pages">
+          {!history && !!data && data.total > pending && <button type="button" className="btn ghost small" onClick={() => {select(undefined); setHistory(true);}}>Earlier receipts · history</button>}
+          {history && <button type="button" className="btn ghost small" onClick={() => {select(undefined); setHistory(false);}}>Back to queued inputs</button>}
           {data?.before !== undefined && <button type="button" className="btn ghost small" onClick={() => {select(undefined); void load(data.before);}}>Earlier receipts</button>}
           {!!data && cursor.current.before !== undefined && <button type="button" className="btn ghost small" onClick={() => {cursor.current = {key}; select(undefined); void load();}}>Newest receipts</button>}
-          <small className="muted">{data?.total ?? 0} recorded enqueue receipts{mode === 'replay' ? ' at this replay point' : ''}</small>
+          <small className="muted">{pending} waiting · {data?.total ?? 0} recorded enqueue receipts{mode === 'replay' ? ' at this replay point' : ''}</small>
         </div>
         </div>
         {selected && <section className="queue-detail" aria-label="Queued input">

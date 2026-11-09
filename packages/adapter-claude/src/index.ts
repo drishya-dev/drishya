@@ -391,7 +391,13 @@ export function createParser(ctx: ParseContext): RecordParser {
           // New identity, independent of the repeated transcript line's uuid and of existing block parts.
           out.push({ ...base, recordId: `usage:${messageId}`, part: 0, kind: 'usage', payload: { source: 'claude-message-usage', cumulative: false, tokens, ...(model ? { model } : {}) } });
         }
-        if (!Array.isArray(content)) return out;
+        const finish = () => {
+          // 0xffffffff is reserved for completion: it cannot be an ECMAScript array index.
+          // It enriches rescans without replacing content/usage or inventing a native turn id.
+          if (r.message?.stop_reason === 'end_turn') out.push({ ...base, part: 0xffffffff, kind: 'turn.end', payload: {} });
+          return out;
+        };
+        if (!Array.isArray(content)) return finish();
         content.forEach((c: Rec, i: number) => {
           if (c.type === 'text' && c.text) {
             out.push({ ...base, part: i, kind: 'message.assistant', payload: { text: c.text, model }, contentKeys: ['text'] });
@@ -408,7 +414,7 @@ export function createParser(ctx: ParseContext): RecordParser {
             out.push({ ...base, part: i, kind: 'tool.call', operationId: c.id, payload: { tool: c.name, input, intent } });
           }
         });
-        return out;
+        return finish();
       }
 
       if (type === 'user' || type === 'assistant') return out;
