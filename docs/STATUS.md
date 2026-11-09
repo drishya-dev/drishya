@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-9 | @harsh + Codex | `codex/land-9-opening` | 2026-11-09 | `apps/landing/`, `scripts/build-landing.ts`, landing unit/browser checks, TASKS/STATUS. Shared motion runtime and branded opening only; stacked on LAND-8, no LAND-10 work. |
 | LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. |
 | LAND-5 | @harsh + Codex | `codex/land-5-hero` | 2026-11-08 | Whole dimensional hero: new identity-geometry.ts/identity.ts/landing-motion.ts/landing-motion.css in apps/landing/src; site.ts and scripts/build-landing.ts integration; tests/landing-motion.test.ts and tests/browser/landing-motion.spec.ts; TASKS/STATUS. At most 10 paths, no existing app source or LAND-3 site.css edits. LAND-6 starts only after this acceptance. |
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
@@ -56,9 +55,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Harsh with Codex — 9 Nov: LAND-8 complete landing specification
+### Harsh with Codex — 9 Nov: LAND-9 shared motion runtime and branded opening
 
-- Expanded the [reference audit MD](review/land-7-reference-motion-inventory.md) into the selected build contract: all 30 reference effects have an original Drishya adaptation and an owner. Includes exact copy/routes, the 1800 ms logo/name/hero opening, cinematic explanation, shared sample playback, pointer depth, showcases, brand passage, controls, dialog, policy, fallback states, accessibility, privacy and performance budgets. The original browser/public-source evidence and its limitations remain alongside the design.
+- Implemented the pure motion policy and intro projection, browser-only shared runtime, external fail-open boot guard, single-SVG 1800 ms opening, Skip/Escape/Replay and static/no-JS/direct-link/reduced/off fallbacks. LAND-10 was not started.
+- Verified `pnpm typecheck`, `node --test tests/landing-motion.test.ts` (5 passed), `pnpm exec playwright test tests/browser/landing-opening.spec.ts --project=parallel` (4 passed), existing `tests/browser/landing-motion.spec.ts --project=parallel` (11 passed), `node scripts/build-landing.ts`, boot size (567 bytes), and `git diff --check`. The full product gate remains for LAND-14.
+
+### Harsh with Codex — 9 Nov: LAND-8 complete landing specification
 - Queued LAND-9 through LAND-14 in TASKS, with six separate whole-item PRs, bounded file lists, named interfaces and acceptance. Existing #380/#381 are the integration baseline; no new product behavior is implemented by this specification. Review the document through its separate PR based on the LAND-7 audit branch; no automatic merge or publication.
 - Documentation checks pass: all 30 matrix IDs in order, six future items present, internal/task anchors valid, code fences balanced, no unfinished markers, task synchronization and whitespace clean. Independent review caught simultaneous phrase blur in the explainer; corrected the exact formulas so the active phrase stays sharp throughout. PR #385 requests Yash's review. Product/browser tests were not run for this docs-only item. Original reference assets remain ignored under `.local/`; no reference artwork or user recording is committed.
 

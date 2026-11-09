@@ -1,5 +1,6 @@
 import {identityPolygons} from './identity.ts';
 import {trackProgress} from './identity-geometry.ts';
+import type {MotionRuntime} from './motion-runtime.ts';
 
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 const desktop=matchMedia('(min-width: 1000px) and (min-height: 700px)');
@@ -7,7 +8,7 @@ const connection=(navigator as Navigator & {connection?:{saveData?:boolean}}).co
 export const motionAllowed=()=>!reduced.matches&&new URLSearchParams(location.search).get('motion')!=='0'&&!connection?.saveData;
 export const scrollMotionAllowed=()=>motionAllowed()&&desktop.matches&&!document.hidden;
 
-export function initLandingMotion():void {
+export function initLandingMotion(runtime?:MotionRuntime):void {
   const track=document.querySelector<HTMLElement>('[data-identity-track]');
   const sculpture=track?.querySelector<SVGElement>('.identity-sculpture');
   if(!track||!sculpture)return;
@@ -26,8 +27,9 @@ export function initLandingMotion():void {
     document.querySelector<HTMLElement>('.site-header .wordmark')?.style.setProperty('--mark-turn',`${-progress*24}deg`);
   };
   // Events invalidate one frame. No animation clock or self-scheduling RAF runs at rest.
-  const request=()=>{if(!document.hidden&&!frame)frame=requestAnimationFrame(update);};
+  const request=()=>{if(runtime)runtime.invalidate('identity',update);else if(!document.hidden&&!frame)frame=requestAnimationFrame(update);};
   const settle=()=>{cancelAnimationFrame(frame);frame=0;update();};
+  const unsubscribe=runtime?.subscribe(()=>settle());
   addEventListener('scroll',request,{passive:true});
   addEventListener('resize',request,{passive:true});
   reduced.addEventListener('change',settle);desktop.addEventListener('change',settle);
@@ -72,7 +74,7 @@ export function initScrollStory(section:HTMLElement,select:(index:number)=>void,
   update();return {takeControl,restoreControl};
 }
 
-export function initSectionArrivals():void {
+export function initSectionArrivals(runtime?:MotionRuntime):void {
   const animations=new Set<Animation>();
   const settle=()=>{animations.forEach(a=>a.cancel());animations.clear();};
   const applyPreference=()=>{document.documentElement.dataset.landingMotion=motionAllowed()&&!document.hidden?'on':'off';if(!motionAllowed()||document.hidden){settle();document.getAnimations().forEach(a=>a.cancel());}};
@@ -82,7 +84,7 @@ export function initSectionArrivals():void {
       if(!entry.isIntersecting)continue;
       observer.unobserve(entry.target);
       if(!motionAllowed()||document.hidden||entry.target.contains(document.activeElement))continue;
-      const animation=entry.target.animate([{transform:'translateY(18px)'},{transform:'translateY(0)'}],{duration:420,easing:'cubic-bezier(.22,1,.36,1)'});
+      const animation=runtime?.animate(entry.target,[{transform:'translateY(18px)'},{transform:'translateY(0)'}],{duration:420,easing:'cubic-bezier(.22,1,.36,1)'})??entry.target.animate([{transform:'translateY(18px)'},{transform:'translateY(0)'}],{duration:420,easing:'cubic-bezier(.22,1,.36,1)'});
       animations.add(animation);animation.finished.then(()=>animations.delete(animation)).catch(()=>animations.delete(animation));
     }
   },{threshold:.12});
