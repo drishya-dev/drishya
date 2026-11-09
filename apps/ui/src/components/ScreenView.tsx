@@ -104,6 +104,7 @@ function useImageUrl() {
 export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => void }) {
   const { run, error } = useScreenRun(true);
   const imageUrl = useImageUrl();
+  const decodedFrame = useRef<{url:string;image:OperationImage}|undefined>(undefined);
   const dialog = useRef<HTMLDialogElement>(null);
   const live = useApp(s => s.recording?.live === true);
   const steps = run?.steps ?? [];
@@ -194,7 +195,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
     </div>
     <div className="screen-body">
     <div className="screen-stage">
-      {url && image ? <Frame key={shown.frame} url={url} image={image} ratio={ratio} step={shown} previous={shown.frame !== steps[shownIndex - 1]?.frame && sameShape(steps[steps[shownIndex - 1]?.frame ?? -1]?.image, image) ? imageUrl(steps[steps[shownIndex - 1]!.frame!]!.image) : undefined}/>
+      {url && image ? <Frame key={url} url={url} image={image} ratio={ratio} step={shown} previous={decodedFrame.current?.url!==url&&sameShape(decodedFrame.current?.image,image)?decodedFrame.current?.url:undefined} onReady={()=>{decodedFrame.current={url,image};}}/>
         : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame recorded yet'}</div>}
     </div>
     <section ref={trailEl} className="screen-trail" aria-label="How the agent reached this screen">
@@ -231,17 +232,21 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
 }
 
 /** One captured screenshot with the recorded action drawn on it at its recorded position; the previous frame fades out beneath. */
-function Frame({ url, image, step, previous, ratio }: { url: string; image: OperationImage; step: ScreenStep; previous?: string; ratio?: CSSProperties }) {
+function Frame({ url, image, step, previous, ratio, onReady }: { url: string; image: OperationImage; step: ScreenStep; previous?: string; ratio?: CSSProperties; onReady:()=>void }) {
   const [failed, setFailed] = useState(false);
+  const [ready, setReady] = useState(false);
   const [leaving, setLeaving] = useState(previous);
-  useEffect(() => { if (!leaving) return; const t = setTimeout(() => setLeaving(undefined), 220); return () => clearTimeout(t); }, [leaving]);
+  // A timer is not evidence that new pixels are available. Keep the old image
+  // until the requested bitmap decodes, then use the existing finite fade.
+  useEffect(() => { if (!leaving || !ready) return; if(!useApp.getState().motion||matchMedia('(prefers-reduced-motion: reduce)').matches){setLeaving(undefined);return;} const t = setTimeout(() => setLeaving(undefined), 220); return () => clearTimeout(t); }, [leaving,ready]);
   const m = step.marker;
   const origin = m ? { transformOrigin: `${m.x * 100}% ${m.y * 100}%` } : undefined;
   if (failed) return <div className="screen-missing" role="status" style={ratio}>The image could not be loaded.</div>;
   return <div className="screen-frame">
-    {leaving && <img className="screen-leaving" src={leaving} alt="" aria-hidden="true"/>}
-    <img className="screen-image" style={origin} src={url} alt={`Screen · ${image.width && image.height ? `${image.width}×${image.height}` : 'size not recorded'}`} width={image.width} height={image.height} decoding="async" onError={() => setFailed(true)}/>
-    {m && <Mark step={step} x={m.x} y={m.y} fromX={m.fromX} fromY={m.fromY}/>}
+    {leaving && <img className="screen-leaving" style={{animation:ready?undefined:'none'}} src={leaving} alt="" aria-hidden="true"/>}
+    <img className="screen-image" style={{...origin,visibility:ready?undefined:'hidden',animation:ready?undefined:'none'}} src={url} alt={`Screen · ${image.width && image.height ? `${image.width}×${image.height}` : 'size not recorded'}`} width={image.width} height={image.height} decoding="async" onLoad={event=>{const node=event.currentTarget;void node.decode().then(()=>{if(node.isConnected){setReady(true);onReady();}},()=>{if(node.isConnected)setFailed(true);});}} onError={() => setFailed(true)}/>
+    {!ready&&<div className="screen-missing" role="status" style={leaving||image.width&&image.height?{position:'absolute',inset:0}:ratio}>Loading recorded frame{leaving?' · previous frame retained':''}…</div>}
+    {ready&&m && <Mark step={step} x={m.x} y={m.y} fromX={m.fromX} fromY={m.fromY}/>}
   </div>;
 }
 

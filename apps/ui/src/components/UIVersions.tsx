@@ -1,12 +1,6 @@
 import { Children, useId, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { selectedUISkin, selectedUIVersion, switchUIVersion, versionChoiceEnabled, type UIVersion } from '../lib/ui-version';
 import './ui-versions.css';
 
-const versions: { id: UIVersion; name: string; note: string; available: boolean; tag?: string }[] = [
-  { id: 'classic', name: 'Legacy', note: 'The established continuous canvas, spatial map and full reading tools.', available: true },
-  { id: 'modern', name: 'Modern', note: 'Legacy’s full agent visualization, with a modern explorer, tools and prompt workspace.', available: true },
-  { id: 'clarity', name: 'Clarity', note: 'The same workspace, being rebuilt in one clean system. Modern stays here as the backup.', available: true, tag: 'In progress' },
-];
 const narrowSettings = '(max-width: 600px)';
 const subscribeLayout = (notify: () => void) => { const media = matchMedia(narrowSettings); media.addEventListener('change', notify); return () => media.removeEventListener('change', notify); };
 
@@ -16,44 +10,21 @@ function SectionGlyph({ index }: { index: number }) {
 }
 
 export function SettingsSections({ children, categories }: { children: ReactNode; categories?: string[] }) {
-  const [tab, setTab] = useState<'general' | 'versions'>('general');
-  const selected = selectedUIVersion();
-  const current = selected;
   const [category, setCategory] = useState(0);
   const panel = useRef<HTMLDivElement>(null);
   const narrow = useSyncExternalStore(subscribeLayout, () => matchMedia(narrowSettings).matches, () => false);
   useLayoutEffect(() => { if (panel.current) panel.current.scrollTop = 0; }, [category]);
   const id = useId();
-  const modern = selected === 'modern' && categories;
+  const modern = categories;
   const sections = Children.toArray(children);
-  // Clarity (CLARITY-1) is offered to everyone; Legacy still appears only behind the developer switch, or to someone already on it so they can get back.
-  const choose = true;
-  const versionPanel = <VersionPanel current={selected === 'modern' ? selectedUISkin() : current} />;
   if (modern) return <div className="modern-settings-layout">
     <div className="modern-settings-nav" role="tablist" aria-label="Settings sections" aria-orientation={narrow ? 'horizontal' : 'vertical'} onKeyDown={event => {
       const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role=tab]')];
       const index = buttons.indexOf(event.target as HTMLButtonElement);
       const next = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? (index + 1) % buttons.length : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? (index + buttons.length - 1) % buttons.length : event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : undefined;
       if (next !== undefined) { event.preventDefault(); buttons[next]?.click(); buttons[next]?.focus(); }
-    }}><span>Workspace</span>{[...categories, ...(choose ? ['UI versions'] : [])].map((label, index) => <button key={label} id={`${id}-tab-${index}`} role="tab" tabIndex={category === index ? 0 : -1} aria-selected={category === index} aria-controls={`${id}-panel`} onClick={() => setCategory(index)}><SectionGlyph index={index}/>{label}</button>)}<small>Local preferences<br />Saved on this browser</small></div>
-    <div ref={panel} id={`${id}-panel`} role="tabpanel" tabIndex={0} aria-labelledby={`${id}-tab-${category}`} className="modern-settings-content">{choose && category === categories.length ? versionPanel : sections[category]}</div>
+    }}><span>Workspace</span>{categories.map((label, index) => <button key={label} id={`${id}-tab-${index}`} role="tab" tabIndex={category === index ? 0 : -1} aria-selected={category === index} aria-controls={`${id}-panel`} onClick={() => setCategory(index)}><SectionGlyph index={index}/>{label}</button>)}<small>Local preferences<br />Saved on this browser</small></div>
+    <div ref={panel} id={`${id}-panel`} role="tabpanel" tabIndex={0} aria-labelledby={`${id}-tab-${category}`} className="modern-settings-content">{sections[category]}</div>
   </div>;
-  return <div className="dv-settings">
-    <div role="tablist" aria-label="Settings sections" className="dv-tabs">
-      <button role="tab" aria-selected={tab === 'general'} onClick={() => setTab('general')}>General</button>
-      <button role="tab" aria-selected={tab === 'versions'} onClick={() => setTab('versions')}>UI versions</button>
-    </div>
-    {tab === 'general' ? <div role="tabpanel" aria-label="General">{children}</div> : versionPanel}
-  </div>;
-}
-
-function VersionPanel({ current }: { current: string }) {
-  return <section role="tabpanel" aria-label="UI versions" className="dv-versions">
-      <h3>Choose your workspace</h3><p>Same recordings and native connections. A different way to see the work.</p>
-      <div>{versions.filter(v => v.id !== 'classic' || versionChoiceEnabled() || current === 'classic').map(v => <button key={v.id} className={`dv-version dv-${v.id}`} disabled={!v.available} aria-pressed={current === v.id} onClick={() => switchUIVersion(v.id)}>
-        <span className="dv-version-preview" aria-hidden="true"><i /><i /><i /><b /></span>
-        <span><strong>{v.name}{v.tag && <i className="dv-tag">{v.tag}</i>}</strong><small>{v.note}</small></span><em>{current === v.id ? 'Active' : v.available ? 'Switch →' : 'Coming next'}</em>
-      </button>)}</div>
-      <p className="dv-note">Switching reloads the interface, keeps the selected session and saves your choice on this browser. Submit or save unsent drafts first.</p>
-    </section>;
+  return <div className="dv-settings">{children}</div>;
 }

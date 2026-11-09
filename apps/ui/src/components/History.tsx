@@ -33,6 +33,7 @@ import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { fileFolder, fileName } from '../lib/file-identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
+import { FullProse } from './FullProse.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import './captured-file-path.css';
 import { useApp } from '../state.ts';
@@ -786,7 +787,6 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const detail = useApp(s => s.reasoningDetail);
   const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
   const [open, setOpen] = useDisclosureChoice(`prose/${pr.id}`, pr.role !== 'reasoning' || detail === 'expanded');
-  const [full, setFull] = useState(false);
   const prose = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = prose.current;
@@ -807,8 +807,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
-      {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />}
-      {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full text' : 'Preview · read full text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
+      {open && (pr.truncated ? <FullProse id={`art_${pr.id}_prose`} preview={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile}/> : <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />)}
     </div>
   );
 }

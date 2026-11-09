@@ -589,7 +589,11 @@ export function PromptComposer() {
     // composer's own size constraints or changing the user's follow preference.
     const observed = new Set<Element>();
     const measure = () => {
-      viewer.style.setProperty('--composer-gap', `${node.offsetHeight + 24}px`);
+      // UI-28b: the gap other surfaces reserve is the box at rest. A long prompt grows the box upward over the history instead of moving
+      // the history, the Follow switch, the rails and the Toolbox, so the textarea's growth past one line is not part of it.
+      const field = node.querySelector('textarea');
+      const grown = field ? Math.max(0, field.offsetHeight - (parseFloat(getComputedStyle(field).minHeight) || 0)) : 0;
+      viewer.style.setProperty('--composer-gap', `${node.offsetHeight - grown + 24}px`);
       // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
       // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
       const top = layoutTop(node);
