@@ -60,6 +60,9 @@ export function initOpening(runtime: MotionRuntime): () => void {
     overlay.dataset.active = 'false';
     mark.dataset.openingStage = 'ready';
     mark.removeAttribute('data-opening');
+    mark.removeAttribute('data-opening-exit');
+    mark.style.removeProperty('transform');
+    mark.style.removeProperty('opacity');
     skip?.remove();
     enter?.remove();
     if (runtime.policy().intro) replay?.removeAttribute('hidden');
@@ -73,9 +76,9 @@ export function initOpening(runtime: MotionRuntime): () => void {
     mark.dataset.opening = 'true';
     mark.dataset.openingStage = frame.stage;
     mark.style.opacity = String(Math.max(.2, frame.handoff ? 1 : frame.assembly));
-    mark.style.transform = `scale(${.75 + frame.assembly * .25})`;
+    mark.style.transform = `translate(-50%, -50%) scale(${.75 + frame.assembly * .25})`;
     if (name) {
-      name.style.opacity = String(frame.nameOpacity);
+      name.style.opacity = '1';
       name.style.transform = `translateY(${(1 - frame.descriptor) * 8}px)`;
       name.querySelectorAll<HTMLElement>('[data-opening-letter]').forEach((letter, index) => {
         const progress = frame.letters[index] ?? 1;
@@ -88,7 +91,19 @@ export function initOpening(runtime: MotionRuntime): () => void {
     else timer = setTimeout(() => runtime.invalidate('opening', render), 16);
   };
   (window as Window & {__drishyaIntroBootCancel?: () => void}).__drishyaIntroBootCancel?.();
-  const cancel = () => finish();
+  const cancel = () => {
+    if (stopped) return;
+    stopped = true;
+    if (timer) clearTimeout(timer);
+    overlay.dataset.exiting = 'true';
+    overlay.style.opacity = '0';
+    name?.style.setProperty('opacity', '0');
+    mark.dataset.openingStage = 'handoff';
+    mark.dataset.openingExit = 'true';
+    mark.style.transform = 'translate(-50%, -50%) scale(.34)';
+    stopped = false;
+    setTimeout(() => finish(), 420);
+  };
   skip?.addEventListener('click', cancel);
   enter?.addEventListener('click', cancel);
   const onWheel = (event: WheelEvent) => { if (event.deltaY > 0) cancel(); };
