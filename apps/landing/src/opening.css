@@ -1,10 +1,12 @@
-.opening-overlay{position:absolute;inset:0;z-index:3;display:grid;place-items:center;pointer-events:none;background:#000;opacity:0}
+.opening-overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;background:#000;opacity:0}
 .opening-overlay[data-active=true]{opacity:1}
-.opening-name{display:grid;gap:.45rem;justify-items:center;color:#f4f4ef;text-align:center}
+.opening-name{display:grid;gap:1rem;justify-items:center;color:#f4f4ef;text-align:center}
 .opening-name strong{display:flex;font:600 clamp(56px,8vw,104px)/.9 Inter,sans-serif;letter-spacing:-.08em}
 .opening-name strong span{display:inline-block}
 .opening-name p{margin:0;color:#9be7c4;font:500 clamp(11px,1.3vw,16px)/1.2 "JetBrains Mono",monospace;letter-spacing:.08em}
-.opening-skip{display:none;position:absolute;right:1.5rem;bottom:1.5rem;pointer-events:auto;color:#f4f4ef;background:#111;border:1px solid #444;padding:.45rem .7rem}
+.opening-enter{display:none;pointer-events:auto;color:#000;background:#9be7c4;border:1px solid #9be7c4;padding:.65rem 1rem;font:600 12px/1 "JetBrains Mono",monospace}
+.opening-enter[data-visible=true]{display:block}
+.opening-skip{position:absolute;right:1.5rem;bottom:1.5rem;pointer-events:auto;color:#f4f4ef;background:#111;border:1px solid #444;padding:.45rem .7rem}
 .opening-skip[data-visible=true]{display:block}
 .opening-overlay[data-active=false]{display:none}
 .hero-world{position:relative}

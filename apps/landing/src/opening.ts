@@ -29,6 +29,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
   const overlay = document.querySelector<HTMLElement>('[data-opening-overlay]');
   const mark = document.querySelector<SVGElement>('.identity-sculpture');
   const skip = document.querySelector<HTMLButtonElement>('[data-opening-skip]');
+  const enter = document.querySelector<HTMLButtonElement>('[data-opening-enter]');
   const replay = document.querySelector<HTMLButtonElement>('[data-replay-intro]');
   if (!overlay || !mark) return () => undefined;
   if (location.pathname !== '/' || location.hash || new URLSearchParams(location.search).has('moment')) {
@@ -60,6 +61,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
     mark.dataset.openingStage = 'ready';
     mark.removeAttribute('data-opening');
     skip?.remove();
+    enter?.remove();
     if (runtime.policy().intro) replay?.removeAttribute('hidden');
   };
   const render = () => {
@@ -67,6 +69,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
     const frame = introFrame(performance.now() - started);
     overlay.dataset.active = 'true';
     if (skip) skip.dataset.visible = 'true';
+    if (enter && frame.descriptor >= 1) enter.dataset.visible = 'true';
     mark.dataset.opening = 'true';
     mark.dataset.openingStage = frame.stage;
     mark.style.opacity = String(Math.max(.2, frame.handoff ? 1 : frame.assembly));
@@ -87,6 +90,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
   (window as Window & {__drishyaIntroBootCancel?: () => void}).__drishyaIntroBootCancel?.();
   const cancel = () => finish();
   skip?.addEventListener('click', cancel);
+  enter?.addEventListener('click', cancel);
   addEventListener('keydown', event => { if (event.key === 'Escape' || event.key === 'Tab') cancel(); }, {once: true});
   addEventListener('pointerdown', cancel, {once: true});
   addEventListener('focusin', cancel, {once: true});
@@ -95,6 +99,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
   else finish();
   return () => {
     skip?.removeEventListener('click', cancel);
+    enter?.removeEventListener('click', cancel);
     if (timer) clearTimeout(timer);
     finish();
   };
