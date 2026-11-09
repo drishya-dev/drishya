@@ -127,6 +127,42 @@ for(const width of [600,1440]){
     await expect(page.locator('[data-tree-path="new/nested/draft.ts"]')).toHaveAttribute('aria-description','Local draft; file not created on disk.');
   });
 
+  test(`Touched excludes active untouched files and unsent creation drafts at ${width}px`,async({page})=>{
+    await open(page,width);
+    await navigate(page,'README.md');await selectedVisible(page,'README.md');
+    const explorer=page.locator('.folder-explorer'),filter=explorer.locator('.tree-evidence-filter');
+    const touched=async()=>{
+      await showFiles(page);await explorer.getByLabel('File filters',{exact:true}).click();
+      await explorer.getByRole('button',{name:'Touched',exact:true}).click();
+      await expect(filter).toHaveAttribute('data-touched','true');
+    };
+    await touched();
+    await expect(explorer.locator('[data-tree-path="README.md"]')).toHaveCount(0);
+    // A different active tab deliberately returns to All files for its reveal.
+    await navigate(page,'src/deep/b.ts');await selectedVisible(page,'src/deep/b.ts');
+    await expect(filter).toHaveAttribute('data-touched','false');
+    const desk=page.getByRole('region',{name:'Developer workspace',exact:true});
+    if(width===600){
+      await page.getByRole('button',{name:'Choose workspace file',exact:true}).click();
+      await desk.getByLabel('Workspace layout actions',{exact:true}).click();
+    }
+    await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
+    await desk.getByRole('textbox',{name:'New workspace file path'}).fill('new/untouched-draft.ts');
+    await desk.getByRole('button',{name:'Create draft',exact:true}).click();
+    await selectedVisible(page,'new/untouched-draft.ts');
+    await touched();
+    await expect(explorer.locator('[data-tree-path="new/untouched-draft.ts"]')).toHaveCount(0);
+    await expect(explorer.locator('[data-tree-path="src/deep/b.ts"]')).toHaveCount(0);
+    await expect(explorer.locator(`[data-tree-path="${mainAlias}"]`)).toBeVisible();
+    await navigate(page,'src/deep/b.ts');
+    await selectedVisible(page,'src/deep/b.ts');await expect(filter).toHaveAttribute('data-touched','false');
+    await touched();
+    await expect(explorer.locator('[data-tree-path="src/deep/b.ts"]')).toHaveCount(0);
+    await expect(explorer.locator('[data-tree-path="new/untouched-draft.ts"]')).toHaveCount(0);
+    await navigate(page,'new/untouched-draft.ts');await selectedVisible(page,'new/untouched-draft.ts');
+    await expect(filter).toHaveAttribute('data-touched','false');
+  });
+
   for(const collapse of [false,true])test(`late roots ${collapse?'respect collapse':'finish pending reveal'} at ${width}px`,async({page})=>{
     let release!:()=>void;const ready=new Promise<void>(resolve=>{release=resolve;});
     await page.route('**/file-roots',async route=>{await ready;await route.continue();});

@@ -225,12 +225,15 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     void source.graph(id).then(g => { if (active && useApp.getState().recordingId === id) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
   }, [source, id, graph, graphRetry]);
-  const paths = useMemo(() => {
-    const paths=[...(graph?.nodes.map(n=>n.path)??[]),...(files?.map(f=>f.path)??[])].filter(p=>!(graph?.temporal==='current'&&p.startsWith('.local/'))&&!p.startsWith('/')&&!/^[A-Za-z]:/.test(p)&&(!touchedOnly||touched.paths.has(p)));
+  const candidatePaths = useMemo(() => {
+    const paths=[...(graph?.nodes.map(n=>n.path)??[]),...(files?.map(f=>f.path)??[])].filter(p=>!(graph?.temporal==='current'&&p.startsWith('.local/'))&&!p.startsWith('/')&&!/^[A-Za-z]:/.test(p));
     if(developerWorkspace)paths.push(...draftFiles);
     if(workspaceFile&&!paths.some(path=>path===workspaceFile||currentWorkspacePath(path,fileRoots,capturedRoot??projection.workspaceRoot)===workspaceFile))paths.push(workspaceFile);
     return [...new Set(paths)].sort();
-  }, [graph, files, touchedOnly, touched, developerWorkspace, draftFiles, workspaceFile,fileRoots,capturedRoot,projection.workspaceRoot]);
+  }, [graph, files, developerWorkspace, draftFiles, workspaceFile,fileRoots,capturedRoot,projection.workspaceRoot]);
+  // Navigation resolves against all candidates, while an explicit Touched choice
+  // filters every visible leaf, including the active file and local drafts.
+  const paths=useMemo(()=>candidatePaths.filter(path=>!touchedOnly||touched.paths.has(path)),[candidatePaths,touchedOnly,touched]);
   const placement = useMemo(() => ({
     indexed: new Set([...(graph?.temporal === 'current' ? graph.nodes.map(node => node.path) : []),...draftFiles]),
     // Search output alone does not say which directory a bare result came from.
@@ -239,7 +242,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const tree = useMemo(() => worktreeFileRows(paths,fileRoots,capturedRoot ?? projection.workspaceRoot,opened,query,placement), [paths,fileRoots,capturedRoot,projection.workspaceRoot,query,opened,placement]);
   const [revealedFolder,setRevealedFolder]=useWorkspaceState<string|undefined>('folders/revealed',undefined);
   const pendingFolder=useRef<string|undefined>(undefined);
-  const activeReveal=useMemo(()=>workspaceFileReveal(workspaceFile,paths,fileRoots,capturedRoot??projection.workspaceRoot,placement,activeOrigin),[workspaceFile,paths,fileRoots,capturedRoot,projection.workspaceRoot,placement,activeOrigin]);
+  const activeReveal=useMemo(()=>workspaceFileReveal(workspaceFile,candidatePaths,fileRoots,capturedRoot??projection.workspaceRoot,placement,activeOrigin),[workspaceFile,candidatePaths,fileRoots,capturedRoot,projection.workspaceRoot,placement,activeOrigin]);
   const revealSignature=JSON.stringify([workspaceFile,activeOrigin,activeReveal]);
   const lastReveal=useRef(''),lastActive=useRef(''),manuallyCollapsed=useRef(false);
   const pendingFile=useRef<string|undefined>(undefined);
