@@ -7,7 +7,7 @@ import {afterEach, beforeEach, describe, expect, it} from 'vitest';
 import {Store} from '@drishya/store';
 import {seal} from '@drishya/capture-core';
 import {defaultAdapters} from '@drishya/ingest';
-import {queuedInputChunk} from '../src/queued-inputs.ts';
+import {createQueueEvidenceCache, queueResolutionEvidence, queuedInputChunk} from '../src/queued-inputs.ts';
 import {midTurnInput} from '../../../scripts/real-cases/mid-turn-input.ts';
 
 let store: Store, dir: string, index: number;
@@ -26,7 +26,7 @@ function append(operation: string, extra: Record<string, unknown> = {}, owner = 
 function recordedQueue(store: Store, id: string, query: import('@drishya/contracts').QueueQuery = {}) {
   if (id.includes('+')) throw Error('Physical owner required.');
   const projection = reduce(id, store.observations(id, -1, 1000), store.blobs, {adapters: Object.fromEntries(defaultAdapters().map(adapter => [adapter.descriptor.id, adapter.descriptor]))});
-  return queuePage(projection.timeline, id, query);
+  return queuePage(projection.timeline, id, query, queueResolutionEvidence(store,projection,id));
 }
 describe('sealed, bounded queue receipts', () => {
   it('checks the scanned physical source independently of agent names and continuation sources', () => {
@@ -79,4 +79,115 @@ describe('sealed, bounded queue receipts', () => {
     expect(queuedInputChunk(store, recording, redacted)?.text).not.toContain(secret);
     expect(recordedQueue(store, recording).items[0]?.preview).not.toContain(secret);
   });
+});
+
+
+it('uses ordered completion evidence after final material, independently of late physical arrival',()=>{
+  const write=(kind:string,time:string,payload:Record<string,unknown>,agent='agent:main',sourceId=source,generation=0)=>{
+    const raw={part:0,recordId:`evidence-${index++}`,kind,agentId:agent,sourceTime:time,payload,contentKeys:['text']};
+    const observation=seal({raw,recordingId:recording,adapter:defaultAdapters()[0]!.descriptor,sourceId,generation,byteOffset:index,observedAt:'2026-11-01T00:00:00Z'});
+    store.appendObservations(recording,source,cursor,[observation]);return observation.id;
+  };
+  const future=write('queue.operation','2026-11-01T00:00:05Z',{operation:'enqueue',text:'future'});
+  const queued=write('queue.operation','2026-11-01T00:00:01Z',{operation:'enqueue',text:'waiting'});
+  write('message.assistant','2026-11-01T00:00:02Z',{text:'whole final material'});
+  const end=write('turn.end','2026-11-01T00:00:03Z',{});
+  const projection=reduce(recording,store.observations(recording),store.blobs,{adapters:Object.fromEntries(defaultAdapters().map(adapter=>[adapter.descriptor.id,adapter.descriptor]))});
+  const evidence=queueResolutionEvidence(store,projection,recording);
+  expect(evidence.completions).toMatchObject([{afterStep:2,observationId:end}]);
+  expect(queuePage(projection.timeline,recording,{step:1},evidence)).toMatchObject({pendingTotal:1,items:[{id:queued,state:'recorded'}]});
+  expect(queuePage(projection.timeline,recording,{step:2},evidence)).toMatchObject({pendingTotal:0,items:[{id:queued,state:'unknown'}]});
+  expect(queuePage(projection.timeline,recording,{step:3},evidence)).toMatchObject({pendingTotal:1,items:[{id:queued,state:'unknown'},{id:future,state:'recorded'}]});
+  expect(queuePage(projection.timeline,recording,{through:queued},evidence).pendingTotal).toBe(1);
+});
+it('matches complete sealed text and separates completion agents, sources and generations',()=>{
+  const id=append('enqueue',{text:'same full text'});
+  const add=(kind:string,payload:Record<string,unknown>,agent='agent:main',sourceId=source,generation=0)=>{
+    const observation=seal({raw:{part:0,recordId:`proof-${index++}`,kind,agentId:agent,payload,contentKeys:['text']},recordingId:recording,adapter:defaultAdapters()[0]!.descriptor,sourceId,generation,byteOffset:index,observedAt:'2026-11-01T00:00:00Z'});
+    store.appendObservations(recording,sourceId,cursor,[observation]);
+  };
+  add('turn.end',{},'agent:child');add('turn.end',{},'agent:main','other-source');add('turn.end',{},'agent:main',source,1);
+  expect(recordedQueue(store,recording).pendingTotal).toBe(1);
+  add('message.user',{text:'same full text'});
+  expect(recordedQueue(store,recording)).toMatchObject({pendingTotal:0,items:[{id,state:'delivered'}]});
+  expect(recordedQueue(store,recording,{step:1}).pendingTotal).toBe(1);
+});
+
+
+it('compares full blob-backed prompt evidence beyond the common clipped preview',()=>{
+  const text='x'.repeat(80000)+'A';append('enqueue',{text});
+  const user=(text:string)=>{
+    const observation=seal({raw:{part:0,recordId:`long-${index++}`,kind:'message.user',agentId:'agent:main',payload:{text},contentKeys:['text']},recordingId:recording,adapter:defaultAdapters()[0]!.descriptor,sourceId:source,generation:0,byteOffset:index,observedAt:'2026-11-01T00:00:00Z'});
+    store.appendObservations(recording,source,cursor,[observation]);
+  };
+  user('x'.repeat(80000)+'B');expect(recordedQueue(store,recording).pendingTotal).toBe(1);
+  user(text);expect(recordedQueue(store,recording)).toMatchObject({pendingTotal:0,items:[{state:'delivered'}]});
+});
+
+it('does not establish anonymous delivery from partial sealed text',()=>{
+  append('enqueue',{text:'same'});
+  const observation=seal({raw:{part:0,recordId:'partial-prompt',kind:'message.user',agentId:'agent:main',payload:{text:'same'},availability:'partial',contentKeys:['text']},recordingId:recording,adapter:defaultAdapters()[0]!.descriptor,sourceId:source,generation:0,byteOffset:index++,observedAt:'2026-11-01T00:00:00Z'});
+  store.appendObservations(recording,source,cursor,[observation]);
+  expect(recordedQueue(store,recording)).toMatchObject({pendingTotal:1,items:[{state:'recorded'}]});
+});
+it('maps continuation completion using retained physical stream order instead of interleaved clocks',()=>{
+  const prior='rec_prior',priorSource='src_prior';
+  store.upsertRecording({id:prior,adapterId:'claude-code',harness:'claude-code',sourcePath:join(dir,'prior.jsonl')});
+  const add=(owner:string,sourceId:string,recordId:string,time:string,kind:string,payload:Record<string,unknown>)=>{
+    const observation=seal({raw:{part:0,recordId,kind,agentId:'agent:main',sourceTime:time,payload,contentKeys:['text']},recordingId:owner,adapter:defaultAdapters()[0]!.descriptor,sourceId,generation:0,byteOffset:index++,observedAt:'2026-11-01T00:00:00Z'});
+    store.appendObservations(owner,sourceId,cursor,[observation]);
+  };
+  add(prior,priorSource,'prior-material','2026-11-01T00:00:05Z','message.assistant',{text:'Prior retained material'});
+  add(recording,source,'current-queue','2026-11-01T00:00:01Z','queue.operation',{operation:'enqueue',text:'waiting'});
+  add(recording,source,'current-end','2026-11-01T00:00:02Z','turn.end',{});
+  add(recording,source,'current-after','2026-11-01T00:00:03Z','message.assistant',{text:'After completion'});
+  const lineage:import('@drishya/contracts').SessionLineageView={kind:'derived',rule:'claude-native-parent-lineage-v1',currentRecordingId:recording,recordingIds:[prior,recording],links:[],duplicatePartsOmitted:0,differingReceiptPartsRetained:0};
+  const projection=reduce(recording,store.lineageObservations(lineage),store.blobs,{adapters:Object.fromEntries(defaultAdapters().map(adapter=>[adapter.descriptor.id,adapter.descriptor])),ordered:true,lineage});
+  const evidence=queueResolutionEvidence(store,projection,recording);
+  expect(evidence.completions).toMatchObject([{afterStep:2}]);
+  expect(queuePage(projection.timeline,recording,{through:projection.timeline.find(item=>item.type==='queue')!.id.replace('queue_','')},evidence).pendingTotal).toBe(1);
+  expect(queuePage(projection.timeline,recording,{step:2},evidence).pendingTotal).toBe(0);
+});
+
+it('round-trips the reserved completion part without colliding with ordinary content or usage identities',()=>{
+  const adapter=defaultAdapters().find(item=>item.descriptor.id==='claude-code')!;
+  const parser=adapter.createParser({recordingId:recording,sourceId:source,sourcePath:'synthetic.jsonl'});
+  const row={type:'assistant',uuid:'reserved-completion',message:{id:'reserved-message',stop_reason:'end_turn',usage:{input_tokens:1,output_tokens:2},content:[{type:'text',text:'first'},{type:'thinking',thinking:'recorded exposed rationale'},{type:'text',text:'last'}]}};
+  const sealed=parser.parse(row).map(raw=>seal({raw,recordingId:recording,adapter:adapter.descriptor,sourceId:source,generation:0,byteOffset:index++,observedAt:'2026-11-01T00:00:00Z'}));
+  store.appendObservations(recording,source,cursor,sealed);
+  const retained=store.observations(recording);
+  expect(retained.map(item=>item.source.part)).toEqual([0,0,1,2,0xffffffff]);
+  expect(new Set(retained.map(item=>item.id)).size).toBe(5);
+  expect(retained.at(-1)?.source.part).toBeGreaterThan(0x7fffffff);
+  const original=adapter.createParser({recordingId:recording,sourceId:source,sourcePath:'synthetic.jsonl'}).parse({...row,message:{...row.message,stop_reason:'tool_use'}}).map(raw=>seal({raw,recordingId:recording,adapter:adapter.descriptor,sourceId:source,generation:0,byteOffset:index++,observedAt:'2026-11-01T00:00:00Z'}));
+  expect(sealed.slice(0,-1).map(item=>item.id)).toEqual(original.map(item=>item.id));
+  store.appendObservations(recording,source,cursor,sealed);
+  expect(store.countObservations(recording)).toBe(5);
+});
+
+it('reuses one compact queue evidence cache and evicts it for owner, view or revision changes',()=>{
+  append('enqueue',{text:'x'.repeat(80000)});
+  const projection=reduce(recording,store.orderedObservations(recording),store.blobs,{adapters:Object.fromEntries(defaultAdapters().map(adapter=>[adapter.descriptor.id,adapter.descriptor])),ordered:true});
+  const read=createQueueEvidenceCache(store),first=read(projection,recording,'revision-1');
+  expect(read(projection,recording,'revision-1')).toBe(first);
+  const input=first.input!(projection.timeline.find(item=>item.type==='queue') as import('@drishya/contracts').QueueTimelineItem);
+  expect(input).toMatchObject({hasText:true,sourceId:source,generation:0});
+  expect(input?.text).toBeUndefined();expect(input?.textFingerprint).toHaveLength(70);
+  expect(read(projection,recording,'revision-2')).not.toBe(first);
+  const changed=read(projection,recording,'revision-2');
+  expect(read(projection,'other-owner','revision-2')).not.toBe(changed);
+  expect(read(projection,recording,'revision-2')).not.toBe(changed);
+  const restored=read(projection,recording,'revision-2');
+  expect(read(projection,recording,'revision-2','different-view')).not.toBe(restored);
+});
+
+it('reads late-arriving receipts by ordered replay identity rather than append sequence',()=>{
+  const add=(time:string,text:string)=>{
+    const observation=seal({raw:{part:0,recordId: 'read-order-'+index++,kind:'queue.operation',agentId:'agent:main',sourceTime:time,payload:{operation:'enqueue',text},contentKeys:['text']},recordingId:recording,adapter:defaultAdapters()[0]!.descriptor,sourceId:source,generation:0,byteOffset:index,observedAt:'2026-11-01T00:00:00Z'});
+    store.appendObservations(recording,source,cursor,[observation]);return observation.id;
+  };
+  const future=add('2026-11-01T00:00:05Z','future');
+  const earlier=add('2026-11-01T00:00:01Z','earlier');
+  expect(queuedInputChunk(store,recording,earlier,future)?.text).toBe('earlier');
+  expect(queuedInputChunk(store,recording,future,earlier)).toBeUndefined();
 });
