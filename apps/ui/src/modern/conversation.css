@@ -1,0 +1,36 @@
+/* UI-27 (Yash, 5 and 8 Nov): the conversation reads like a chat. The agent's prose fills the reading column on the
+   world, unboxed; only the person's own prompt sits on the right, in a capsule tinted from the active palette's accent.
+   Action passages, the map and the Toolbox are untouched. No motion here: the existing arrival and disclosure motion is reused. */
+
+/* Prose: the block spans the whole reading column; the paragraph measure (about 100 characters) keeps lines readable
+   while code, tables and quotes may use the full column. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose { max-width: none; width: 100%; }
+:root[data-ui-version=modern] .history .prose :is(p, li) { max-width: 100ch; }
+
+/* The person's prompt: right-aligned capsule. The label stays for assistive technology and the turn's tests; a capsule on
+   the right says "you" without a word. Notices Claude Code wrote in the user role (turn-source) are not the person's. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn {
+  width: 100%; max-width: none; margin: 0 0 26px; padding: 0; border: 0; background: none;
+  justify-content: flex-end; align-items: flex-start; row-gap: 4px; position: relative;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-who {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-capsule {
+  flex: 0 1 auto; width: fit-content; max-width: min(100%, 78ch); box-sizing: border-box; padding: 10px 16px;
+  border: 1px solid color-mix(in srgb, var(--palette-active, var(--focus)) 34%, var(--line-2)); border-radius: 20px 20px 6px 20px;
+  background: color-mix(in srgb, var(--palette-active, var(--focus)) 15%, var(--s1)); color: var(--t1); text-align: left;
+}
+/* The clamp lives on the text inside the capsule so a fourth line never shows through the capsule's padding. */
+:root[data-ui-version=modern] .history .turn-capsule .turn-text { max-width: none; }
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) :is(.op-images, .prompt-attachments) { justify-content: flex-end; }
+
+/* Notices written into the journal in the user role read as quiet lines on the agent's side. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) { justify-content: flex-start; padding-inline: 6px; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-more,
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-ledger { text-align: left; }
+
+/* Narrow windows (600 px and up): the history's own padding is 16 px, less than the prompt rail needs; keep the reading material clear of it. */
+@media (max-width: 880px) {
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn) { margin-right: 26px; width: auto; }
+}
