@@ -645,12 +645,23 @@ export function PromptComposer() {
     // Reserve their actual raised extent too, without feeding it back into the
     // composer's own size constraints or changing the user's follow preference.
     const observed = new Set<Element>();
+    // The one-line box measured last time it was open; 132 px until it has been (the same height on a first open).
+    let restHeight = 132;
     const measure = () => {
-      // UI-28b: the gap other surfaces reserve is the box at rest. A long prompt grows the box upward over the history instead of moving
-      // the history, the Follow switch, the rails and the Toolbox, so the textarea's growth past one line is not part of it.
-      const field = node.querySelector('textarea');
-      const grown = field ? Math.max(0, field.offsetHeight - (parseFloat(getComputedStyle(field).minHeight) || 0)) : 0;
-      viewer.style.setProperty('--composer-gap', `${node.offsetHeight - grown + 24}px`);
+      // UI-28b/28c: the gap other surfaces reserve is the box at rest, one line and nothing extra, and it does not depend on whether the box is
+      // open. A long prompt, the setup row, an attachment strip or a confirmation grow the box over the history instead of moving the history,
+      // the Follow switch, the rails and the Toolbox; collapsing to the pill or opening again moves none of them. Only the composer animates.
+      if (!node.classList.contains('composer-minimized')) {
+        const field = node.querySelector('textarea');
+        let extra = field ? Math.max(0, field.offsetHeight - (parseFloat(getComputedStyle(field).minHeight) || 0)) : 0;
+        for (const part of node.querySelectorAll<HTMLElement>('.composer-setup, .prompt-attachments, .send-confirmation')) {
+          if (!part.getClientRects().length) continue;
+          const style = getComputedStyle(part);
+          extra += part.offsetHeight + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
+        }
+        restHeight = node.offsetHeight - extra;
+      }
+      viewer.style.setProperty('--composer-gap', `${restHeight + 24}px`);
       // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
       // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
       const top = layoutTop(node);
