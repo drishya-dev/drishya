@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-7 | @harsh + Codex | `codex/land-7-motion-audit` | 2026-11-09 | `docs/review/land-7-reference-motion-inventory.md`, TASKS/STATUS. Full browser/source reference audit only, including opening, plain-language explainer and live elements. No product source changes. |
 | LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. |
 | LAND-5 | @harsh + Codex | `codex/land-5-hero` | 2026-11-08 | Whole dimensional hero: new identity-geometry.ts/identity.ts/landing-motion.ts/landing-motion.css in apps/landing/src; site.ts and scripts/build-landing.ts integration; tests/landing-motion.test.ts and tests/browser/landing-motion.spec.ts; TASKS/STATUS. At most 10 paths, no existing app source or LAND-3 site.css edits. LAND-6 starts only after this acceptance. |
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
@@ -55,6 +54,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex - 9 Nov: LAND-7 full reference motion audit
+
+- Fresh load-to-footer browser pass, modal open/close, original opening animation frames, public scripts/CSS/Lottie and parsed Webflow interaction configuration. [Complete inventory](review/land-7-reference-motion-inventory.md) records 30 grouped motion patterns with browser/asset/source evidence, responsive-only branches and current Drishya gaps. The public assets remain under ignored `.local/`; no product code or borrowed artwork is added.
+- Key correction: logo/name opening is a dedicated roughly 4.43-second image-sequence Lottie plus overlay fade; the plain-language explanation has its own pinned phrase and paragraph scenes; small live illustrations are independent loops. Source has 19 Lottie placements / 15 unique assets / 15 looping placements, two responsive hero videos plus one name-background video, pointer-parallax canvas particles and rotating card gradients. Desktop wordmark marquee and animated footer glow are not claimed: the former is tiny-only, the latter a static background treatment.
+- REA instructions applied with supported browser/public-source fallback; no connected REA engine claimed. Documentation checks only. Harsh requested the inventory first; opening/explainer/living-sample implementation is the next scope, not completed in this audit.
 
 ### Yash with Codex — 8 Nov: UI-29 Release 1 menu contents, PR #376
 
@@ -1528,6 +1533,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **9 Nov, Harsh: landing opening and simple explanation.** Add a brief original logo → product name → landing handoff and a cinematic plain-language explanation, with meaningful interactive sample elements. This supersedes LAND-4’s choice to omit an opening; first deliver a complete reference-motion inventory (LAND-7). Detailed timing remains proposed in the audit, not an implemented or separately approved specification.
 
 - **8 Nov, Claude Sonnet 5.5: wide screens use one centred 1920 px stage (LAYOUT-1).** Docks, header groups and readers align to a stage that stops at 1920 CSS px; the map alone runs edge to edge. Reason: the reading column already capped at 1280 px while docks stayed on the screen edges, so extra width (large monitors and browser zoom-out alike) became gaps between a dock and its content. Alternatives rejected: growing the column (breaks the prose measure, UI-27's job) and CSS `zoom` on the page (breaks script-measured popovers and the map canvas).
 
