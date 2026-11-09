@@ -1,4 +1,7 @@
 import './site.css';
+import './landing-motion.css';
+import {initLandingMotion} from './landing-motion.ts';
+initLandingMotion();
 interface Chapter {key:string;title:string;step:number;kind:string;path?:string;command?:string;status:string;provenance:string;text:string}
 
 // All material is public synthetic text; render it as text, never as captured HTML.
