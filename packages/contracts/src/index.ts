@@ -645,13 +645,13 @@ export interface QueueTimelineItem {
   operation: 'enqueue' | 'dequeue' | 'remove' | 'delivered';
   nativeQueueId?: string; inputArtifactId?: string; preview?: string; images?: OperationImage[]; sourceId: string; generation: number;
 }
-export interface QueueQuery { through?: string; before?: number; count?: number; receiptId?: string }
+export interface QueueQuery { through?: string; before?: number; count?: number; receiptId?: string; /** Complete timeline cursor, not an ingest sequence. */ step?: number; state?: 'pending' | 'history' }
 export interface QueueReceipt {
   id: string; ownerRecordingId: string; sequence: number; agentId: string; time?: string;
   state: 'recorded' | 'unknown' | 'removed' | 'delivered'; preview: string;
   nativeQueueId?: string; changeObservationId?: string; images?: OperationImage[]; inputArtifactId?: string;
 }
-export interface QueuePage { items: QueueReceipt[]; total: number; before?: number }
+export interface QueuePage { items: QueueReceipt[]; total: number; before?: number; /** Whole bounded queue, independent of page/filter. */ pendingTotal?: number; /** False for bundles that have no exact captured completion boundaries. */ completionEvidence?: boolean }
 export interface QueueInputChunk { text: string; start: number; next: number; totalBytes: number; hasMore: boolean }
 
 /** One unit of playback. The timeline is what the transport steps through. */
