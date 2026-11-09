@@ -332,7 +332,7 @@ Desktop scene: 220 svh, one sticky reading viewport below the header. It contain
 | Progress | State |
 |---|---|
 | 0–0.18 | Phrase A is sharp; the aperture/constellation relationship settles beside it. |
-| 0.18–0.42 | Phrase A moves up/left ≤32/48 px, opacity 1→0.35 and blur 0→4 px. Phrase B moves from y 24 px to 0, opacity 0.55→1 and blur 4→0. |
+| 0.18–0.42 | Phrase A moves up/left ≤32/48 px, opacity 1→0.35. Phrase B moves from y 24 px to 0, opacity 0.55→1. A stays sharp through the midpoint; B becomes sharp by the midpoint. Only the inactive phrase receives depth blur ≤4 px. |
 | 0.42–0.62 | Phrase B holds sharp. Read/run/edit emblems enter at 80 ms offsets on first crossing, scale 0.8→1 over 320 ms. |
 | 0.62–0.88 | Paragraph receives whole-line emphasis in reading order; all words were already mounted/selectable. Unemphasized lines remain at least 0.65 opacity, blur ≤2 px. |
 | 0.88–1 | Full explanation is sharp; all icons are settled; the next section enters naturally. |
@@ -341,7 +341,7 @@ Inline slots are fixed at 44 px on compact windows and 64 px on wide desktop. An
 
 At 600–999, short windows or reduced/off, show both phrases and the whole sharp paragraph in normal flow. If reading focus/selection occurs mid-scene, finish text transforms immediately, retain the user's selection and keep the scene fully sharp for the rest of that visit. Preserve its current track height instead of collapsing it under the reader. Screen readers encounter one sensible static explanation; scroll changes do not fire repeated live announcements. Native scroll is never intercepted. Reversal recomputes absolute state when there is no reading override.
 
-Projection rules: let `S(a,b,p)` be smoothstep of the clamped interval fraction, `u*u*(3-2*u)`. Phrase A uses x=−48S(.18,.42,p), y=−32S, opacity=1−0.65S, blur=4S. Phrase B uses y=24(1−S), opacity=0.55+0.45S, blur=4(1−S) over the same interval. Paragraph line i of N uses emphasis `clamp(clamp((p-.62)/.26)*N-i)`; opacity=0.65+0.35×emphasis and blur=2(1−emphasis). Group marketing words into visual lines only after fonts/layout and on resize, never during every frame; every word remains in its original single DOM home. This grouping is not applied to captured material.
+Projection rules: let `S(a,b,p)` be smoothstep of the clamped interval fraction, `u*u*(3-2*u)`, and `v=S(.18,.42,p)`. Phrase A uses x=−48v, y=−32v, opacity=1−0.65v, blur=4S(.5,1,v). Phrase B uses y=24(1−v), opacity=0.55+0.45v, blur=4(1−S(0,.5,v)). A is active for v≤.5; B is active for v≥.5. Thus the active phrase always has zero blur, and both are sharp at the midpoint p=.30; their lower-opacity inactive state never obscures the active phrase. Paragraph line i of N uses emphasis `clamp(clamp((p-.62)/.26)*N-i)`; opacity=0.65+0.35×emphasis and blur=2(1−emphasis). Group marketing words into visual lines only after fonts/layout and on resize, never during every frame; every word remains in its original single DOM home. This grouping is not applied to captured material.
 
 `explanationFrame(progress)` returns `{ phraseA: {x,y,opacity,blur}, phraseB: {x,y,opacity,blur}, paragraphProgress: number, emblemProgress: number }`; the controller derives per-line emphasis from its current line count. The explainer uses a simplified aperture outline instead of a second faceted mesh: outline opacity 1→0 and constellation opacity 0.22→1 across p=0–0.18. The single 192-face sculpture remains in the hero. Each emblem's 320 ms entrance includes its relationship stroke; it does not append another hidden animation cycle.
 
