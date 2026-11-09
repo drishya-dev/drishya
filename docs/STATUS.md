@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Compact plain-language product explanation: apps/landing/src/explainer-markup.ts, explainer.ts, explainer.css; site.ts; scripts/build-landing.ts; tests/browser/landing-explainer.spec.ts; TASKS/STATUS (8 paths). After LAND-9 stack; own PR. |
 | LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. |
 | LAND-5 | @harsh + Codex | `codex/land-5-hero` | 2026-11-08 | Whole dimensional hero: new identity-geometry.ts/identity.ts/landing-motion.ts/landing-motion.css in apps/landing/src; site.ts and scripts/build-landing.ts integration; tests/landing-motion.test.ts and tests/browser/landing-motion.spec.ts; TASKS/STATUS. At most 10 paths, no existing app source or LAND-3 site.css edits. LAND-6 starts only after this acceptance. |
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
@@ -55,6 +54,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 9 Nov: LAND-10 compact product explanation
+
+- Implemented the compact editorial product explanation immediately above the checkout walkthrough: `apps/landing/src/explainer-markup.ts`, `explainer.css`, `explainer.ts`, `site.ts` integration and `scripts/build-landing.ts`.
+- Structured as one editorial transition into evidence: semantic H2 with two blocks ("Your agent writes code." / "Drishya shows the work."), support line, reading paragraph, and three original inline SVG evidence emblems (file, command, edit) with quiet aperture backdrop.
+- Bound finite 320 ms inner SVG arrivals with 0/80/160 ms offsets to the shared motion runtime; instant settle on focus, selection, visibility change or reduced/off policy; normal flow at 600-999 px and two-column layout at >=1024 px without horizontal overflow.
+- Verified TypeScript typecheck (`tsc`), artifact build (`build-landing.ts`), and 11 passed browser tests in `landing-explainer.spec.ts` across 600, 1024, 1440, 1920, and 1440x600. Isolated inherited LAND-9 `landing.spec.ts:56` timeout failure against parent `18e5ef17` (due to opening overlay intercepting un-skipped clicks at 600x1000) and preserved the test assertion.
 
 ### Harsh with Codex — 9 Nov: LAND-9 shared motion runtime and branded opening
 
