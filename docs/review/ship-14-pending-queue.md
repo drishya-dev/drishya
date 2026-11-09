@@ -1,6 +1,6 @@
 # SHIP-14: pending queue and receipt history
 
-Implementation and scoped verification are recorded below. Some genuine acceptance cases remain unverified; this report does not close SHIP-14.
+Task acceptance is complete for other-builder review. The final genuine journeys below supersede the initial candidate gaps; the full gate is honestly red on four failures reproduced on clean main.
 
 The reader previously counted all enqueue receipts and resolved them only against later queue-operation rows. Replay stopped resolution at the last queue row even when later prompt or completion evidence was already visible. The default dialog now requests only pending inputs. Earlier receipts remain readable under **Earlier receipts · history**, with their original full content, images and captured evidence labels. The trigger counts the entire bounded pending queue, independent of the current receipt page; zero pending inputs has no count.
 
@@ -25,7 +25,7 @@ Implementation includes focused scene, adapter, daemon and browser regressions f
 
 The phase-one next-check list was: scoped typechecks/units; rebuild UI; live-captured-text.spec.ts and approval-clearance.spec.ts; real Claude busy-enqueue/delivery, Claude removal and Codex mid-turn sessions through normal redacted scratch imports at 600/1440. Existing check:real mid-turn-input can locate genuine captures. Native account-dependent capture remains coordinated with Yash. Record only session prefixes, bytes and numeric counts, with private screenshots in .local. Package verification is required because retained ingest observations changed. Full gate awaits the coordinator's separate assignment.
 
-## 9 November measured verification
+## Initial 9 November measured verification
 
 Final product source `5c389b14`: 31 scene/adapter/daemon units and typechecks pass. An independent review found that continuation agent-stop identities referenced parent operations rather than observation ids. The new regression failed first, then passed after using those operations' observation ownership; its red evidence remains private. Earlier source `a80a849` passed UI build and 21 queue/approval browsers. The final integrated source `dba7530a` passes 46 Workspace/queue compatibility browsers / one existing skip / zero failures or retries at three workers, including the same queue/approval cases. The initial typecheck failure for the stale cache initializer is preserved, then corrected and rechecked.
 
@@ -34,3 +34,34 @@ Normal redacted scratch imports measured Claude `2226bdea` (687,248 bytes, one r
 The three imports retain 1/4/43 completion boundaries. Removing completion evidence in a diagnostic calculation does not change their final pending totals: their genuine queue mutations already retire the receipts. Therefore these sources do not prove completion-only retirement or matching-prompt delivery. The native Codex worktree capture `01a1be5d` (182,354 bytes) has zero queue receipts; it is not a mid-turn enqueue/delivery acceptance case. Genuine matching-prompt delivery, completion-only retirement and the Codex mid-turn case remain unverified. Native Claude account-dependent capture remains delegated to Yash; the passing synthetic regressions are not relabelled as genuine acceptance.
 
 The integrated full gate (including packaging) is running at source `b843726`, three parallel workers plus one serial worker, zero retries. Its result is pending. Retain the task's open checkbox and claim until the genuine cases and full-gate disposition are recorded. No native event schema, configuration, credential or permission bypass was introduced.
+
+
+## Final integrated gate disposition (9 November)
+
+Product source `35e4393`: both typechecks and UI build pass; all 215 unit files pass, **1,315 tests / one existing skip**. Browser run used **three parallel workers plus one serial worker, zero retries**: **696 parallel passes / 27 skips; 28 serial passes / one skip / four failures**. This is not a clean full browser gate.
+
+All four failures reproduce with the same assertions on separately rebuilt, clean main `f93d880b`, one serial worker and zero retries: B2 live :63 opens an unexpected operation detail (expected zero, got one); material-motion :132 loses its hover-reading surface; p1-pacing :40 sees three active animations instead of zero; p1-pacing :266 has no repository tether. These remain TEST-2/MOTION-3 baseline failures, not fixes claimed by this task. The baseline control lives in the coordinator checkout's `.local/release1-baseline-20261109/`.
+
+The first gate `b843726` stopped at three golden mismatches after 1,312 unit passes / one skip. Only the reviewed raw sequence expectations changed (18 to 19, 20 to 21, 22 to 23), reflecting retained Claude completion observations; all other golden fields remain unchanged. Golden/queue checks then passed 46/46. The first independent packaging run also failed its old exact observation count of 34: the fixture now retains three completed-turn rows. The corrected exact assertion is 37, with zero capture gaps. **package:verify passes at integration `70825e6`**, including isolated offline installation, both imports, checksums, demo, authenticated API and persisted restart. Its apps/packages tree is byte-identical to the full-gate product source; the additional change is the verification script, plus docs. No browser assertion, retry or timeout was relaxed.
+
+Private complete gate evidence: `.local/release-gate-20261109-141147/` and `release-gate-20261109-142009/` in the isolated integration checkout. No further full-suite command was run to erase these failures. Other-builder review remains required; no merge or release certification is implied.
+
+## Final genuine queue journeys
+
+A broader counts-only audit of the 45 local Claude journals found the required captured cases. It separates person-authored inputs from internal notifications; exact complete sealed text plus physical source/generation/agent ownership is checked after normal scratch redaction. No account-dependent Claude capture was needed for these acceptance journeys.
+
+| Genuine source | Bytes | Verified at 600 and 1440 |
+| --- | ---: | --- |
+| Claude `43745e02` | 5,007,911 | A matching person input is enqueued while an operation is running: replay shows one pending among 12 receipts, then zero when the prompt appears. That point has seven proven deliveries. The full session has 33 receipts: 13 delivered, 20 unknown, zero pending. Native removal boundaries also retire waiting inputs. |
+| Claude `1b9299bd` | 1,296,549 | Separate native removal journey: two receipts at the sampled removal boundary, zero pending; all four final receipts stay in history with unknown outcome. Anonymous native removal is never falsely assigned to a specific receipt. |
+| Codex `01a1bf92` | 160,060 | Genuine app-server turn/steer accepted with the exact active turn id after its bounded command started. Native readOnly and on-request policy confirmed, turn completed. Two recorded prompts, zero queue receipts: History and replay show the recorded input; no invented queue entry or count. |
+
+All **16 native queue frames/checks** pass, including every 20-receipt history page with no duplicate API identities, exact pending/delivery counts and zero horizontal overflow. Source/RPC evidence and frames remain under `.local/release-real/` and `.local/ship14-native-codex/` in the integration checkout. The Codex capture uses the normal signed-in native protocol; it reads/writes no project file, changes no policy/configuration/credential and persists its own journal normally.
+
+The earlier Codex zero-receipt worktree capture was not used to prove steering. Earlier probes had an incorrect 33-row unpaged expectation, a replay readiness guard on a keyboard notice, and a history assertion before its actual projection response finished. The corrected probe waits for that response, then uses the same UI assertions/timeouts and walks real pages. Failed logs are retained. An unconstrained candidate probe also selected a still-pending case; it was not relabelled as an ended session.
+
+The audit additionally exposed a separate renderer failure on Claude `f49a9e6d` (3,370,797 bytes): two of 1,766 hunk lines are sealed blob references, and DiffView calls slice on them. The crash reproduces on clean main at 600 px. It is recorded as unclaimed P0 **CONTENT-19** in TASKS, not silently fixed, bypassed or counted as accepted queue-screen coverage. The genuinely checked queue cases above have their own recorded evidence.
+
+Completed-turn retention and resolution are verified by the native stored boundary counts and the passing scene/adapter/daemon regressions. An isolated genuine completion-only-retirement journey is not claimed: the sampled ended Claude sessions also contain native queue mutations. The explicit SHIP-14 Accept journeys (busy enqueue/delivery, removal, native Codex mid-turn input, resolution units) are covered. No broader native-case or release readiness claim is made.
+
+SHIP-14 completion docs are included in this PR. The whole scope is 19 paths, explicitly approved by Harsh; other-builder review and the recorded baseline release defects remain outstanding.
