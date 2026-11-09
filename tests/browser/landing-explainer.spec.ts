@@ -120,9 +120,10 @@ test('5. first eligible visibility animates only inner graphics and does not rep
   await expect(slots).toHaveCount(3);
   const initialSlotWidths=await slots.evaluateAll(els=>els.map(e=>e.getBoundingClientRect().width));
 
-  await page.locator('#how-it-works').scrollIntoViewIfNeeded();
+  const art=page.locator('#how-it-works .explainer-art');
+  await art.scrollIntoViewIfNeeded();
 
-  const animatedConfig=await page.evaluate(()=>{
+  await expect.poll(()=>page.evaluate(()=>{
     const inners=Array.from(document.querySelectorAll('#how-it-works [data-emblem-inner]'));
     return inners.map(inner=>{
       const anims=inner.getAnimations();
@@ -130,27 +131,24 @@ test('5. first eligible visibility animates only inner graphics and does not rep
       const opt=anims[0]!.effect?.getTiming();
       return {duration:opt?.duration,delay:opt?.delay};
     });
-  });
+  }),{intervals:[20,50,100]}).toEqual([
+    {duration:320,delay:0},{duration:320,delay:80},{duration:320,delay:160},
+  ]);
 
   const slotsAfter=await slots.evaluateAll(els=>els.map(e=>e.getBoundingClientRect().width));
   expect(slotsAfter).toEqual(initialSlotWidths);
 
-  if(animatedConfig.some(Boolean)){
-    const nonNull=animatedConfig.filter(Boolean) as {duration:number;delay:number}[];
-    expect(nonNull[0]?.duration).toBe(320);
-  }
-
-  // Wait for the initial 480ms finite entrance to finish.
+  // Observe completion of the initial reveal before testing re-entry.
   await page.evaluate(()=>Promise.all(
     Array.from(document.querySelectorAll('#how-it-works [data-emblem-inner]')).flatMap(i=>i.getAnimations().map(a=>a.finished))
   ));
 
-  // Scroll out of view to the top.
-  await page.evaluate(()=>scrollTo(0,0));
-  await page.waitForTimeout(100);
+  await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+  await expect(art).not.toBeInViewport();
 
   // Scroll back into view. The arrival must not replay.
-  await page.locator('#how-it-works').scrollIntoViewIfNeeded();
+  await art.scrollIntoViewIfNeeded();
+  await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
   const replayAnimations=await page.evaluate(()=>{
     const inners=Array.from(document.querySelectorAll('#how-it-works [data-emblem-inner]'));
     return inners.flatMap(i=>i.getAnimations().filter(a=>a.playState==='running')).length;
