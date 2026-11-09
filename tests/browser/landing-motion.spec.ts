@@ -52,3 +52,71 @@ test('no JavaScript retains original identity, source and navigation',async({bro
   await page.locator('.hero-copy .primary').click();await expect(page).toHaveURL(/#session$/);
   await context.close();
 });
+
+test('scroll story follows recorded stops and explicit reading keeps ownership',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});await page.goto(site.url);
+  await page.locator('.desktop-nav').getByRole('link',{name:'Demo',exact:true}).click();
+  const section=page.locator('#session'),follow=page.getByRole('button',{name:'Follow scroll',exact:true});
+  await expect(section).toHaveAttribute('data-story','scroll');
+  await expect(section).toHaveAttribute('data-story-owner','scroll');
+  const stop=page.locator('[data-story-stop]').nth(2);
+  await stop.evaluate(el=>scrollTo(0,el.getBoundingClientRect().top+scrollY-200));
+  await expect(page.locator('#chapter-counter')).toHaveText('3 of 4');
+  await expect(page.locator('#full-replay')).toHaveAttribute('href','/demo/?demo&at=26');
+  expect(new URL(page.url()).searchParams.has('moment')).toBe(false);
+  await page.getByRole('link',{name:/02 Inspect the failing test/}).click();
+  await expect(section).toHaveAttribute('data-story-owner','manual');
+  await page.locator('[data-story-stop]').nth(3).evaluate(el=>scrollTo(0,el.getBoundingClientRect().top+scrollY-200));
+  await expect(page.locator('#chapter-counter')).toHaveText('2 of 4');
+  await follow.click();await expect(page.locator('#chapter-counter')).toHaveText('4 of 4');
+  await page.locator('[data-story-stop]').first().evaluate(el=>scrollTo(0,el.getBoundingClientRect().top+scrollY-200));
+  await expect(page.locator('#chapter-counter')).toHaveText('1 of 4');
+  await page.getByRole('slider',{name:'Moment'}).press('End');
+  await expect(section).toHaveAttribute('data-story-owner','manual');
+  await expect(page.locator('#chapter-counter')).toHaveText('4 of 4');
+});
+
+test('scroll story degrades to manual reading for motion preferences and missing metadata',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});await page.goto(site.url+'/?moment=edit#session');
+  await expect(page.locator('#session')).toHaveAttribute('data-story-owner','manual');
+  await expect(page.locator('#chapter-counter')).toHaveText('3 of 4');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect(page.locator('#session')).toHaveAttribute('data-story','manual');
+  await expect(page.locator('#follow-scroll')).toBeHidden();
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.setViewportSize({width:600,height:900});await expect(page.locator('#session')).toHaveAttribute('data-story','manual');
+  await page.route('**/chapters.json',route=>route.abort());await page.goto(site.url);
+  await expect(page.locator('#sample-error')).toBeVisible();await expect(page.locator('#follow-scroll')).toBeHidden();
+  await page.locator('.static-walkthrough summary').click();await expect(page.locator('#moment-retest')).toContainText('6 passed');
+});
+
+test('motion off disables hover choreography and hiding the page preserves story layout',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});await page.goto(site.url+'/?motion=0');
+  const cta=page.locator('.hero-copy .primary');await cta.hover();
+  expect(await cta.locator('svg').evaluate(el=>getComputedStyle(el).transform)).toBe('none');
+  await page.goto(site.url+'/#session');await expect(page.locator('#session')).toHaveAttribute('data-story','scroll');
+  const before=await page.locator('#session').evaluate(el=>el.getBoundingClientRect().height);
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:true});document.dispatchEvent(new Event('visibilitychange'));});
+  expect(await page.locator('#session').evaluate(el=>el.getBoundingClientRect().height)).toBe(before);
+  expect(await page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,value:false});document.dispatchEvent(new Event('visibilitychange'));});
+  await expect(page.locator('#session')).toHaveAttribute('data-story','scroll');
+  await page.getByRole('link',{name:/02 Inspect the failing test/}).evaluate(el=>{
+    el.dispatchEvent(new MouseEvent('click',{bubbles:true,detail:1}));
+    dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));
+  });
+  expect(await page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  await page.evaluate(()=>dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true})));
+  await expect(page.locator('html')).toHaveAttribute('data-landing-motion','on');
+});
+
+test('save-data uses the same static policy for the hero, chapters and menu',async({page})=>{
+  await page.addInitScript(()=>Object.defineProperty(navigator,'connection',{configurable:true,value:{saveData:true}}));
+  await page.setViewportSize({width:600,height:900});await page.goto(site.url+'/#session');
+  await expect(page.locator('html')).toHaveAttribute('data-landing-motion','off');
+  await expect(page.locator('[data-identity-track]')).toHaveAttribute('data-motion','static');
+  await page.getByRole('link',{name:/02 Inspect the failing test/}).click();
+  expect(await page.locator('#chapter-material').evaluate(el=>el.getAnimations().length)).toBe(0);
+  await page.locator('.compact-nav summary').click();
+  expect(await page.locator('.compact-nav nav').evaluate(el=>el.getAnimations().length)).toBe(0);
+});

@@ -35,3 +35,34 @@
 @media(max-width:999px){.hero-track .hero{display:flex;flex-direction:column;align-items:stretch;height:auto;min-height:0;padding-block:64px 50px}.hero-track .hero-copy{align-self:auto}.hero-track h1{font-size:64px;max-width:650px}.hero-track .hero-copy>p{max-width:560px}.hero-track .hero-support{margin-top:28px}.hero-world{height:560px;margin-top:20px}.identity-world{inset:-12px 0 120px}.identity-sculpture{right:10%;width:380px;height:380px;top:0}.identity-coordinate{top:80px;left:10%;font-size:17px}.hero-world .product-scene{left:0;right:0;bottom:0;height:300px}.hero-world .hero-evidence .material{font-size:13px}.header-inner{width:calc(100% - 40px);padding-inline:12px}}
 @media(max-width:767px){.hero-track .hero{padding-top:48px}.hero-track h1{font-size:52px}.hero-track .hero-copy>p{font-size:16px}.hero-world{height:520px}.identity-sculpture{width:320px;height:320px;right:0}.identity-map{width:100%;height:330px}.identity-coordinate{left:0;top:65px;font-size:17px}.identity-coordinate>span{display:block;font-size:9px}.hero-world .product-scene{height:285px}.hero-world .hero-evidence{top:82px}.hero-world .hero-evidence .material{font-size:12px}.hero-track .hero-support{gap:16px}.hero-track .hero-support span+span{padding-left:16px}.site-header .wordmark{font-size:19px}.header-actions{gap:8px}.compact-nav summary{padding:10px}.header-inner{gap:12px}.small{gap:12px;padding-inline:12px}}
 @media(prefers-reduced-motion:reduce){.identity-sculpture,.identity-map,.hero-copy,.site-header .wordmark img{transform:none!important}}
+
+/* The single evidence surface stays still; recorded chapter stops pass beside it. */
+.walkthrough[data-story=scroll] .walkthrough-grid{align-items:start;grid-template-columns:36% 64%}
+.story-stage{min-width:0}
+.walkthrough[data-story=scroll] .story-stage{position:sticky;top:110px;align-self:start}
+.walkthrough[data-story=scroll] .stage{box-shadow:none}
+.walkthrough[data-story=scroll] [data-story-stop]{min-height:54svh;position:relative}
+.walkthrough[data-story=scroll] [data-story-stop]:last-child{min-height:58svh}
+.walkthrough[data-story=scroll] .chapter-rail{padding-right:52px}
+.walkthrough[data-story=scroll] .chapter-rail ol:before{top:30px;bottom:calc(58svh - 32px);background:#35423b}
+.walkthrough[data-story=scroll] .chapter-rail ol:after{content:'';position:absolute;left:13px;top:30px;bottom:calc(58svh - 32px);width:1px;background:var(--mint);transform:scaleY(var(--story-progress,0));transform-origin:top;pointer-events:none}
+.walkthrough[data-story=scroll] .chapter{z-index:1;gap:22px}
+.walkthrough[data-story=scroll] .chapter strong{font-size:20px;font-weight:500;max-width:230px;line-height:1.3}
+.walkthrough[data-story=scroll] .chapter small{font-size:13px;max-width:245px}
+.walkthrough[data-story=scroll] .chapter-number{border-radius:2px;background:#000}
+.walkthrough[data-story=scroll] .chapter[aria-current] .chapter-number{background:var(--mint)}
+.walkthrough[data-story=scroll] .chapter-material{height:420px}
+.stage-toolbar #follow-scroll{min-width:90px;padding-left:4px;margin-left:auto;font-size:11px;white-space:nowrap}
+.stage-toolbar #follow-scroll[aria-pressed=true]{color:var(--mint)}
+.stage-toolbar #play-sample{margin-left:0}
+.stage-toolbar #follow-scroll[hidden]+#play-sample{margin-left:auto}
+@media(min-width:1000px) and (max-width:1150px){.walkthrough[data-story=scroll] .stage-toolbar>span:nth-child(2){display:none}.walkthrough[data-story=scroll] .chapter-rail{padding-right:30px}}
+.button svg,.text-link svg{transition:transform 160ms cubic-bezier(.22,1,.36,1)}
+@media(hover:hover) and (pointer:fine){.button:hover svg,.text-link:hover svg{transform:translateX(3px)}.site-footer .wordmark:hover img{transform:rotate(-12deg)}}
+.button:active{transform:scale(.98)}
+.site-footer .wordmark img{transition:transform 220ms cubic-bezier(.22,1,.36,1)}
+.closing-word{transition:color 240ms cubic-bezier(.22,1,.36,1)}
+.closing:focus-within .closing-word,.closing:hover .closing-word{color:#648476}
+@media(prefers-reduced-motion:reduce){.button svg,.text-link svg,.site-footer .wordmark img{transform:none!important}.button:active{transform:none}}
+[data-landing-motion=off] *,[data-landing-motion=off] *:before,[data-landing-motion=off] *:after{transition:none!important;animation:none!important}
+[data-landing-motion=off] .button svg,[data-landing-motion=off] .text-link svg,[data-landing-motion=off] .site-footer .wordmark img,[data-landing-motion=off] .button:active{transform:none!important}

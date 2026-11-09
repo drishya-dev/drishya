@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. Post-intro test setup for this same stack belongs to LAND-9. |
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
 | LAND-9 | @harsh + Codex | `codex/land-9-opening-stack` | 2026-11-09 | Review corrections in intro-boot.js/css, opening.ts/css and the opening browser spec. Verify first paint, reversible entry, durable completion and Replay. Existing PR #386 also updates post-intro setup in landing.spec.ts and landing-motion.spec.ts while preserving their assertions. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -65,6 +64,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex - 9 Nov: LAND-6 scroll story and interaction finishing
+
+- The existing four synthetic moments now form a bounded scroll story on larger desktop windows. One real evidence surface stays pinned; chapter clicks, reading focus, keyboard, range and finite playback take explicit ownership until Follow scroll. Plain anchor navigation restores scroll ownership; explicit moment bookmarks restore manual reading. No fabricated causal links, replacement transcript or new data source.
+- Whole editorial sections arrive once; arrows, footer mark and closing wordmark have finite feedback. Shared motion policy covers reduced motion, motion=0, Save Data, hidden tabs and page lifecycle. Hidden/pagehide cancels finite WAAPI and CSS effects without collapsing story layout. Narrow/short windows and missing metadata retain the manual/static paths.
+- Final gate: 24 browser checks passed in installed Edge, 1 worker, 43.3 s, no retries; 2 geometry units and targeted landing TypeScript passed. Both browser specs rebuilt the static artifact successfully. Visually checked the pinned result at 1440, manual walkthrough/menu at 600, and closing composition. Screenshot `.local/landing-motion-hero-1440.png` is synthetic and remains local. No app/full-product gate or genuine-session acceptance is claimed.
+- Fresh-context review completed after an initial usage-limit interruption. Findings: hidden finite effects and inconsistent Save Data policy; both reproduced, fixed and regression tested. Decorative/sticky clipping was separated into an outer sticky wrapper, with painted evidence verified in the browser. All three task PRs remain separate/unmerged for Yash.
 
 ### Harsh with Codex - 8 Nov: LAND-5 dimensional landing hero
 
