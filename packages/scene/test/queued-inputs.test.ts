@@ -58,3 +58,9 @@ describe('pending queue and historical receipts',()=>{
   for(const step of [-1,1.5,NaN])expect(()=>queuePage(timeline,'r',{step})).toThrow();
  });
 });
+
+it('does not let an earlier completed-turn receipt steal a later identical queued prompt',()=>{
+ const timeline=[queued(0),queued(1),prompt(2)];
+ const completed={...evidence,completions:[{afterStep:1,agentId:'r.agent:main',sourceId:'s',generation:0,observationId:'end-old'}]};
+ expect(queuePage(timeline,'r',{},completed)).toMatchObject({pendingTotal:0,items:[{id:'obs_1',state:'delivered'},{id:'obs_0',state:'unknown'}]});
+});

@@ -15,10 +15,12 @@ export function queuePage(timeline: TimelineItem[], owner: string, query: QueueQ
   const boundary = query.through ? timeline.findIndex(item => item.type === 'queue' && item.ownerRecordingId === owner && item.sourceObservationId === query.through) : undefined;
   if (boundary !== undefined && boundary < 0) throw Error('Invalid recorded queue boundary.');
   const step = Math.min(timeline.length, query.step ?? timeline.length, boundary === undefined ? Infinity : boundary + 1);
-  const receipts: {item: QueueTimelineItem; receipt: QueueReceipt}[] = [];
+  const receipts: {item: QueueTimelineItem; receipt: QueueReceipt; completed?: boolean}[] = [];
   const complete = (change: NonNullable<QueueEvidence['completions']>[number]) => {
-    for (const row of receipts) if (row.receipt.state === 'recorded' && row.item.agentId === change.agentId && row.item.sourceId === change.sourceId && row.item.generation === change.generation) {
-      row.receipt.state = 'unknown'; row.receipt.changeObservationId = change.observationId;
+    for (const row of receipts) if (['recorded','unknown'].includes(row.receipt.state) && row.item.agentId === change.agentId && row.item.sourceId === change.sourceId && row.item.generation === change.generation) {
+      if (row.receipt.state === 'recorded') {row.receipt.state = 'unknown'; row.receipt.changeObservationId = change.observationId;}
+      // A later unrelated prompt cannot consume an older idle-era receipt ahead of a new input.
+      row.completed = true;
     }
   };
   const completions = (evidence.completions ?? []).filter(change => change.afterStep <= step && (boundary === undefined || change.afterStep < step)).sort((a,b)=>a.afterStep-b.afterStep);
@@ -46,7 +48,7 @@ export function queuePage(timeline: TimelineItem[], owner: string, query: QueueQ
       if (identified) {identified.receipt.state='delivered';identified.receipt.changeObservationId=delivery!.sourceObservationId;continue;}
       const input = evidence.input?.(item);
       if (!input || input.text === undefined && !input.textFingerprint) continue;
-      const row = receipts.find(row => row.item.agentId === item.agentId && !['removed','delivered'].includes(row.receipt.state) && row.item.sourceId === input.sourceId && row.item.generation === input.generation && (()=>{
+      const row = receipts.find(row => !row.completed && row.item.agentId === item.agentId && !['removed','delivered'].includes(row.receipt.state) && row.item.sourceId === input.sourceId && row.item.generation === input.generation && (()=>{
         const queued = evidence.input?.(row.item);
         return !!queued && sameText(queued,input) && (!!input.text || input.hasText === true || !!item.images?.length) && sameImages(row.item.images,item.images);
       })());
