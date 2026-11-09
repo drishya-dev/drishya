@@ -1,6 +1,7 @@
 import { NotesEntry } from './StepNotes.tsx';
 import { ProductMenu } from './ProductMenu.tsx';
-import {Disclosure} from './Disclosure.tsx';
+import {Disclosure,useDisclosureChoice} from './Disclosure.tsx';
+import {developerToolsEnabled} from '../lib/local-preview.ts';
 import {CapturedPath,openCapturedPath} from './CapturedPath.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import {ReplayEntry,ModernReplayTransport} from './ModernReplay.tsx';
@@ -50,6 +51,7 @@ import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry 
 import { ago } from '../lib/git-commit-rows.ts';
 import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
+import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
 
 export function Viewer() {
@@ -204,7 +206,7 @@ function WorkspaceViewer() {
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
         <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
-        <FileHistory projection={historical} />
+        {!developerWorkspace && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
@@ -299,7 +301,7 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
       : <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}
     {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline session' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
     {modern&&connection==='reconnecting'&&<span role="status" className="session-connection">Reconnecting…</span>}
-    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} label="Changes" />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu" onToggle={event => { if (event.target === event.currentTarget) setMenuOpen(event.currentTarget.open); }}><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">This session</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><NotesEntry key={`questions/${id}`}  /><SessionIdentity/></div>}<UsagePeek />{modern ? <><span className="utility-heading">Move around</span><ReplayEntry/><ScreenEntry menuOpen={menuOpen} /><SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><span className="utility-heading">Share</span><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<RescanEntry menuOpen={menuOpen} /></> : <><ScreenEntry menuOpen={menuOpen} /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><RescanEntry menuOpen={menuOpen} /></>}</div></details></div>
+    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} label="Changes" />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu" onToggle={event => { if (event.target === event.currentTarget) setMenuOpen(event.currentTarget.open); }}><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">This session</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><NotesEntry key={`questions/${id}`}  /><SessionIdentity/></div>}<UsagePeek />{modern ? <><span className="utility-heading">Move around</span>{developerToolsEnabled()&&<ReplayEntry/>}<ScreenEntry menuOpen={menuOpen} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><span className="utility-heading">Share</span><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}</> : <><ScreenEntry menuOpen={menuOpen} /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></>}</div></details></div>
     {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
       const parent = projection.agents.find(a => a.id === state.parentId);
@@ -399,8 +401,9 @@ function NativeReturnEntry({deferMoments=false}:{deferMoments?:boolean}={}) {
 function SessionIdentity() {
   const recording=useApp(s=>s.recording),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
   const [status,setStatus]=useState('');
+  const [open]=useDisclosureChoice('session/details',false);
   if(!recording||!id)return null;
-  return <Disclosure surface="session/details" initiallyOpen={false} className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span></Disclosure>;
+  return <Disclosure surface="session/details" initiallyOpen={false} className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span><RescanEntry menuOpen={open}/></Disclosure>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────
@@ -760,7 +763,6 @@ function Search({ projection }: { projection: Projection }) {
   const recordingId = useApp((s) => s.recordingId);
   const set = useApp((s) => s.set);
   const seek = useApp((s) => s.seek);
-  const select = useApp((s) => s.select);
   const [q, setQ] = useState('');
   const [scope, setScope] = useState<'captured' | 'files'>('captured');
   const [loading, setLoading] = useState(false);
@@ -785,21 +787,26 @@ function Search({ projection }: { projection: Projection }) {
     const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) { setHits(result); setLoading(false); } }).catch(() => { if (current) { setError('Search unavailable. Change the query or reopen search to retry.'); setLoading(false); } }), 160);
     return () => { current = false; clearTimeout(t); };
   }, [q, scope, open, source, recordingId]);
-  const visibleHits = mode === 'replay' ? hits.filter(hit => { const at = stepOfObservation(projection, hit.observationId); return at !== undefined && at <= step; }) : hits;
+  const visibleHits = mode === 'replay' ? hits.filter(hit => { const at = searchDestination(projection, hit.observationId)?.step; return at !== undefined && at <= step; }) : hits;
   const files = q.trim().length >= 2 ? graph?.nodes.filter(node => node.path.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 50) ?? [] : [];
-  const go = (obs: string) => {
-    if (useApp.getState().historyPage) {
-      set({ focusObservationId: obs, held: true, selectedOp: undefined, searchOpen: false });
-      void useApp.getState().loadHistoryWindow({ observationId: obs }).catch((error) => set({ error: error.message }));
-      return;
-    }
-    const s = stepOfObservation(projection, obs);
-    if (useApp.getState().mode === 'replay' && s !== undefined) seek(s, { hold: true });
-    else set({ focusObservationId: obs });
-    const op = projection.operations.find((o) => o.observationIds.includes(obs));
-    if (op) select(op.id);
-    else select(undefined);
-    set({ searchOpen: false });
+  const go = async (obs: string) => {
+    const initial=useApp.getState();
+    const current=()=>useApp.getState().source===source&&useApp.getState().recordingId===recordingId;
+    // Search is deliberate navigation. A result must not race the live-edge camera.
+    set({follow:false,held:true});setError(undefined);
+    try {
+      let target=searchDestination(initial.projection??projection,obs,initial.historyPage?.scene);
+      if(!target&&initial.historyPage){
+        await initial.loadHistoryWindow({observationId:obs});
+        if(!current())return;
+        const loaded=useApp.getState();
+        target=searchDestination(loaded.projection??projection,obs,loaded.historyPage?.scene);
+      }
+      if(!target){setError('No readable history location was recorded for this result.');return;}
+      if(initial.mode==='replay')seek(target.step,{hold:true});
+      set({selectedOp:target.kind==='operation'?target.id:undefined,expandedOp:undefined,promptStep:target.kind==='prompt'?target.step:undefined,focusObservationId:target.kind==='prose'?obs:undefined,searchOpen:false});
+      if(initial.historyPage)await initial.loadHistoryWindow(target.kind==='prompt'?{promptStep:target.step}:target.kind==='operation'?{selectedOperationId:target.id}:{observationId:obs});
+    }catch(error){if(current())set({error:(error as Error).message});}
   };
   return (
     <div ref={panel} id="recording-search" popover="auto" className="search" role="dialog" aria-label="Search this recording" onToggle={event => set({ searchOpen: event.newState === 'open' })}>
@@ -814,7 +821,7 @@ function Search({ projection }: { projection: Projection }) {
         {scope === 'captured' && visibleHits.map((h, i) => (
           <Fragment key={i}>
             {h.turn !== undefined && h.turn !== visibleHits[i - 1]?.turn && <div className="search-turn" role="presentation">Turn {h.turn}</div>}
-            <button className="search-hit" onClick={() => go(h.observationId)}>
+            <button className="search-hit" onClick={() => void go(h.observationId)}>
               <span>{h.snippet.split(/[«»]/).map((part, j) => (j % 2 ? <mark key={j}>{part}</mark> : part))}</span>
               <small>{[HIT_KIND[h.kind ?? ''] ?? h.kind, h.kind?.startsWith('tool.') ? h.tool : undefined, h.path ?? h.command, h.time ? ago(h.time) : undefined].filter(Boolean).join(' · ')}</small>
             </button>

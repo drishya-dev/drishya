@@ -77,6 +77,8 @@ export interface ScenePassage {
   turnTime?: string;
   /** Timeline step of that turn's prompt, to find its ledger (see turns.ts). */
   turnStep?: number;
+  /** Exact projected turn identity, retained in unloaded page headers for navigation. */
+  turnId?: string;
   /** Claude Code permission mode recorded with this prompt, only when it differs from the previous prompt's. */
   turnPermissionMode?: string;
   /** CONTENT-1: images the person attached to this prompt. */
@@ -259,7 +261,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       turnPrompt: opensTurn ? turn!.prompt : undefined,
       ...(opensTurn && turn && !isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
-      ...(opensTurn&&turn?{turnStep:turn.step}:{}),
+      ...(opensTurn&&turn?{turnStep:turn.step,turnId:turn.id}:{}),
       ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
       ...(opensTurn&&turn?.images?{turnImages:turn.images}:{}),
       ...(opensTurn&&turn&&pins.has(turnAt.indexOf(turn)+1)?{turnPlan:pins.get(turnAt.indexOf(turn)+1)!}:{}),
@@ -277,7 +279,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     settled: turn.step !== turnAt.at(-1)?.step,
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
     ...(!isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
-    turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, inTurn: turn.step,
+    turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, turnId: turn.id, inTurn: turn.step,
     ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
     ...(turn.images ? { turnImages: turn.images } : {}),
   });
