@@ -62,7 +62,7 @@ export function queueResolutionEvidence(store: Store, projection: Projection, ow
   const notices=new Map(projection.notices?.map(item=>[item.id,item.observationIds]));
   const material=projection.timeline.map((item,index)=>{
     const candidates=bySequence.get(item.sequence) ?? [];
-    const references=item.type==='queue' ? [item.sourceObservationId] : item.type==='turn' ? [item.id.slice(5)] : item.type==='prose' ? prose.get(item.proseId) : item.type==='op-start' || item.type==='op-end' ? operations.get(item.operationId) : item.type==='notice' ? notices.get(item.noticeId) : undefined;
+    const references=item.type==='queue' ? [item.sourceObservationId] : item.type==='turn' ? [item.id.slice(5)] : item.type==='prose' ? prose.get(item.proseId) : item.type==='op-start' || item.type==='op-end' ? operations.get(item.operationId) : item.type==='notice' ? notices.get(item.noticeId) : item.type==='agent-stop' ? operations.get(item.id.slice(2)) : undefined;
     const id=candidates.find(id=>references?.includes(id) || item.id.includes(id)) ?? (candidates.length===1 ? candidates[0] : undefined);
     return {position:id ? positions.get(id) : undefined,step:index+1};
   });

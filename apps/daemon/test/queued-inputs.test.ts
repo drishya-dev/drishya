@@ -191,3 +191,27 @@ it('reads late-arriving receipts by ordered replay identity rather than append s
   expect(queuedInputChunk(store,recording,earlier,future)?.text).toBe('earlier');
   expect(queuedInputChunk(store,recording,future,earlier)).toBeUndefined();
 });
+
+it('keeps completion evidence exact across lineage agent-stop markers with overlapping ingest sequences',()=>{
+ const prior='rec_spawn_prior';
+ store.upsertRecording({id:prior,adapterId:'claude-code',harness:'claude-code',sourcePath:join(dir,'spawn-prior.jsonl')});
+ const add=(owner:string,sourceId:string,kind:string,payload:Record<string,unknown>,operationId?:string)=>{
+  const observation=seal({raw:{part:0,recordId:'spawn-evidence-'+index++,kind,agentId:'agent:main',operationId,payload,contentKeys:['text']},recordingId:owner,adapter:defaultAdapters()[0]!.descriptor,sourceId,generation:0,byteOffset:index,observedAt:'2026-11-01T00:00:00Z'});
+  store.appendObservations(owner,sourceId,cursor,[observation]);
+ };
+ add(prior,'src_spawn_prior','message.assistant',{text:'Earlier retained material one'});
+ add(prior,'src_spawn_prior','message.assistant',{text:'Earlier retained material two'});
+ add(recording,source,'tool.call',{tool:'Task',intent:{kind:'spawn',description:'Synthetic delegation'}},'native-spawn');
+ add(recording,source,'tool.result',{tool:'Task',outcome:{kind:'spawn',childAgentId:'agent:child'},text:'Synthetic child returned'},'native-spawn');
+ add(recording,source,'queue.operation',{operation:'enqueue',text:'Still waiting'});
+ add(recording,source,'message.assistant',{text:'Synthetic final material'});
+ add(recording,source,'turn.end',{});
+ const lineage:import('@drishya/contracts').SessionLineageView={kind:'derived',rule:'claude-native-parent-lineage-v1',currentRecordingId:recording,recordingIds:[prior,recording],links:[],duplicatePartsOmitted:0,differingReceiptPartsRetained:0};
+ const projection=reduce(recording,store.lineageObservations(lineage),store.blobs,{adapters:Object.fromEntries(defaultAdapters().map(adapter=>[adapter.descriptor.id,adapter.descriptor])),ordered:true,lineage});
+ expect(projection.timeline.filter(item=>item.type==='agent-stop')).toHaveLength(1);
+ const evidence=queueResolutionEvidence(store,projection,recording);
+ expect(evidence.completions).toHaveLength(1);
+ const queued=projection.timeline.find(item=>item.type==='queue')!;
+ expect(queuePage(projection.timeline,recording,{through:queued.id.replace('queue_','')},evidence).pendingTotal).toBe(1);
+ expect(queuePage(projection.timeline,recording,{},evidence).pendingTotal).toBe(0);
+});
