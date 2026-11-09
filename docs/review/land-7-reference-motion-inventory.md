@@ -1,6 +1,6 @@
 # Drishya landing page — complete motion specification and execution plan
 
-Harsh requested a fresh audit on 9 November 2026, followed by a complete selection and build specification in this same MD. LAND-7 supplies the reference evidence below; LAND-8 supplies the selected design, exact behavior and execution contract. This document supersedes LAND-4's abbreviated motion inventory and its decision to omit an opening. It specifies future work; it does not claim that LAND-9 through LAND-14 are implemented.
+LAND-7 supplies the reference evidence below. LAND-8 supplies the selected design and execution contract. On 9 November 2026 Harsh requested a shorter page with a product recording in the hero and a selectable stack in place of the three terminal and code examples. LAND-15 owns the recording. LAND-12 owns the selectable stack. TASKS and STATUS track implementation and review.
 
 > **For implementers:** use `executing-plans` or the builder's explicitly chosen execution method. Claim one TASKS item before work, open its draft PR after its first implementation commit, complete that whole item's acceptance, then request Yash's review. Do not merge or publish automatically.
 
@@ -97,7 +97,7 @@ All thirty patterns receive a concrete retain/adapt decision. Continuous decorat
 | 02 | Logo assembly | Original 192-facet aperture resolves over 440 ms; no borrowed rings. | LAND-9 |
 | 03 | Name wave | Seven real DOM brand letters arrive with 24 ms offsets, 500 ms each. Captured text is never split. | LAND-9 |
 | 04 | Name → page handoff | The same real mark travels to its hero allocation; overlay fades and is removed. | LAND-9 |
-| 05 | Dimensional hero | Retain procedural projected geometry; add bounded pointer tilt instead of a looping phone video. | LAND-11 |
+| 05 | Dimensional hero | Retain the projected SVG and bounded pointer tilt. Place a user-played recording of the Drishya demo beneath it. | LAND-11 / LAND-15 |
 | 06 | Layered ambient field | Two SVG repository-node depth layers; at most 24 decorative nodes, seeded deterministically. | LAND-11 |
 | 07 | Pointer parallax | Front layer ±6/4 px, back ±3/2 px; mark yaw ±4°, pitch ±2.5°. | LAND-11 |
 | 08 | Character reveal | Brand letters only; marketing headings use whole-line arrivals. Code/prose recorded from an agent stays whole. | LAND-9 / LAND-10 |
@@ -111,10 +111,10 @@ All thirty patterns receive a concrete retain/adapt decision. Continuous decorat
 | 16 | Paragraph emphasis | Whole paragraph is mounted; line emphasis advances with scroll, without typing or hiding unvisited words. | LAND-10 |
 | 17 | Background heading parallax | One “See the work.” line moves at 0.15 of scene travel, ≤48 px. | LAND-11 |
 | 18 | Layered process elements | File/terminal/diff/result illustrations share sample state; decorations move ≤24 px in depth. | LAND-11 |
-| 19 | Staggered arrivals | Whole illustration surfaces arrive at 80 ms offsets, 360 ms each; one entrance per page load. | LAND-11 / LAND-12 |
+| 19 | Staggered arrivals | Sample illustrations arrive at 80 ms offsets, 360 ms each. Showcase selection has one finite 200 ms card arrival. | LAND-11 / LAND-12 |
 | 20 | Living widgets | Exact synthetic read/failure/edit/retest material; shared finite playback, explicit optional repeat, no invented gauges. | LAND-11 |
 | 21 | Edge illumination | A 1 px mint edge trace travels once in 720 ms on pointer hover; keyboard focus gets the immediate final contour. | LAND-12 |
-| 22 | Product stack | Captured source → recorded edit showcase: rear scale 0.94→1, opacity 0.55→1, foreground moves up ≤64 px. | LAND-12 |
+| 22 | Product stack | Watch live, Inspect a file and Review changes share one panel. Explicit selection brings the chosen material forward. | LAND-12 |
 | 23 | Brand backdrop | Original aperture-derived ribbon field, scrubbed through ≤24° turn and ≤40 px travel. | LAND-12 |
 | 24 | Moving wordmark | One user-paced desktop wordmark passage, x=+6%→−6%; no phone-only or endless ticker. | LAND-12 |
 | 25 | Rolling hover labels | Whole labels move ≤4 px; one text copy, optional arrow motion. No duplicated captured characters or letter clones. | LAND-13 |
@@ -131,11 +131,11 @@ LAND-14 verifies the combined experience. None of these items changes the local 
 ### Home order and jobs
 
 1. **Branded opening**, first eligible visit only: establish identity without requiring a wait.
-2. **Hero**, `#main`: explain the category and offer the real demo/setup paths.
+2. **Hero**, `#main`: explain the category, show a playable product recording under the SVG, and offer the interactive demo and setup paths.
 3. **Simple explanation**, `#how-it-works`: communicate the job in two short statements, then one paragraph.
 4. **Living sample**, `#live-sample`: show reads, commands, edits and outcomes as inspectable material.
 5. **Four-moment walkthrough**, `#session`: preserve the existing detailed reader and transport.
-6. **Capabilities/showcase**, `#workspace`: source reading and recorded-change review, with honest current-workspace distinctions.
+6. **Capabilities/showcase**, `#workspace`: one compact selection surface for Watch live, Inspect a file and Review changes.
 7. **Local/privacy section**, `#local`: explain where the user's own sessions stay.
 8. **Brand passage and closing actions**: a final identity beat and clear next step.
 9. **Footer**: real route links, motion settings and Replay intro.
@@ -151,6 +151,7 @@ Each section has a real heading and a useful static state. Opening, animation an
 | Hero primary | `Try the demo` → `/#session` |
 | Hero secondary | `Get Drishya` → `/get-started/` |
 | Hero facts | `Claude Code + Codex` · `Local by design` |
+| Hero preview | `Watch 12-second demo` · `Recorded in Drishya · Synthetic sample` |
 | Explanation phrase A | `Your agent writes code.` |
 | Explanation phrase B | `Drishya shows the work.` |
 | Explanation support | `Watch the files it reads, commands it runs, and changes it makes.` |
@@ -158,8 +159,8 @@ Each section has a real heading and a useful static state. Opening, animation an
 | Living sample heading | `From a read to a recorded change.` |
 | Living sample label | `Interactive sample · synthetic recording` |
 | Walkthrough heading | Keep `Follow one checkout fix.` and its existing four chapter titles. |
-| Source showcase | `See the source it saw.` |
-| Change showcase | `Review the recorded change.` |
+| Showcase heading | `Read the work where it happened.` |
+| Showcase choices | `Watch live` · `Inspect a file` · `Review changes` |
 | Local heading | Keep `Your sessions stay on your machine.` |
 | Closing heading | Keep `Try it with your own sessions.` |
 | Preview availability | Keep the manifest-driven statement that Drishya is in development and local checkout access is limited. |
@@ -317,13 +318,28 @@ The decorative overlay has `aria-hidden=true` and `pointer-events:none`; its sib
 
 Its complete output contract is `IntroFrame { stage: 'seed'|'assemble'|'name'|'handoff'|'ready'; seedOpacity: number; assembly: number; letters: readonly number[]; descriptor: number; nameOpacity: number; handoff: number; overlayOpacity: number }`. `letters` has exactly seven clamped values; assembly is `clamp((t-120)/440)`, letter i is `clamp((t-400-i*24)/500)`, descriptor is `clamp((t-680)/360)`, handoff is `clamp((t-1200)/600)`, name opacity is `1-clamp((t-1320)/240)`, overlay opacity is `1-clamp((t-1320)/360)`. At ready, the overlay/name are absent and the real mark has its final allocation. The Home template gets a dedicated bootstrap placeholder; other routes emit no intro bootstrap request.
 
-### 2. Hero and repository depth
+### 2. Hero, repository depth and product recording
 
-Retain #380's original aperture and recorded edit material. The hero track is 170 svh when eligible; sticky top is the shared 72 px header allocation. Normal-flow fallback shows the same finished content. Headline, description and both actions remain readable at every scroll position.
+Retain #380's original aperture. LAND-15 replaces the static hero terminal beneath it with the product preview. The hero track is 170 svh when eligible, with a shared 72 px sticky inset. Normal-flow fallback shows the same finished content. Headline, description and both actions remain readable at every scroll position.
 
 Track progress is `clamp((scrollY - trackTop)/(trackHeight - viewportHeight),0,1)`, adjusted once for the header inset. Across progress 0→1: aperture turn ≤55°, scale 1→0.78, vertical shift 0→−40 px, copy shift 0→−20 px, repository relationship layer opacity 0.22→1. Use existing deterministic face projection and true fixture mappings. Clip decorative artwork only; never clip the sticky ancestor or hide evidence during compositor scrolling.
 
 Pointer depth runs only while the hero is visible and the pointer is inside the artwork region. Normalized x/y clamp to [−1,1]; front nodes shift ±6/4 px, rear ±3/2 px; mark yaw/pitch add ±4°/±2.5°. Ignore movement below a 2 px dead zone. Exit returns to neutral over 180 ms. Pointer movement never changes sample chapter, detaches a reader, or moves text/hit areas. At most 24 decorative nodes; actual named file nodes come only from fixture graph evidence.
+
+**Product preview.** Show a 16:9 poster from the actual Drishya replay under the SVG, in the former terminal slot. Keep the same allocation for the poster, video and error state. At 600–999 px the preview follows the hero copy in normal flow. Keep the two hero CTAs above the preview in reading order. Use `Recorded in Drishya · Synthetic sample` beside the `Watch 12-second demo` button.
+
+Capture the real public replay interface using the committed synthetic checkout bundle. Frame the map and active material closely enough to read the action at the intended hero size. The poster shows the repository and an open captured file. Record in a clean demo browser context and inspect all four cuts for personal identifiers and local URLs before committing media.
+
+| Clip time | Evidence on screen |
+|---|---|
+| 0–3 s | Step 4. Show the file opening from its recorded repository node and the captured source. |
+| 3–6 s | Step 24. Show the command result with 5 passed and 1 failed. |
+| 6–9 s | Step 26. Open the recorded edit and hold the changed lines. |
+| 9–12 s | Step 28. Hold the later test result with 6 passed and 0 failed. Use the caption `Later recorded run`. |
+
+Use one same-origin silent MP4 and an optimized WebP poster. Provide the four beats as a concise text description under `About the recording`, accessible with native disclosure. The end frame holds and `Replay preview` starts again on explicit activation. Playback starts only after Play attaches the media source. Keep native pause and playback controls available and a visible `Open interactive demo` link to `/#session` next to the player. A failed request, decode failure or rejected Play restores the poster, shows `The preview couldn’t play. Open the interactive demo instead.`, and offers `Retry preview`. Without script, the poster, description and demo link are usable.
+
+Pause playback when the tab is hidden, on pagehide or when less than 20% of the preview is visible. Returning leaves it paused. Reduced motion, Off and Save Data retain the poster and link with explicit playback available. Landing scroll and sample playback do not drive this media. No new pin or scroll track is allocated to it.
 
 ### 3. Simple explanation
 
@@ -378,13 +394,21 @@ Metadata failure: show existing static material, complete walkthrough and replay
 
 Public validation bounds are 512 KiB for the metadata response and 65,536 UTF-16 code units per chapter text. The current fixed fixture fits well below them. Reject reordered/missing/duplicate keys, non-integer steps, invalid material/provenance types and unsafe paths; retain the SSR fallback. This is a public-sample validator, not a new real-journal import limit. Keep existing `Chapter` fields, including `operationId`, `short`, `description`, `mapped` and the exact source strings, in the shared model.
 
-### 5. Layered showcase, edge trace and brand passage
+### 5. Selectable showcase, edge trace and brand passage
 
-Use two supported capabilities: captured source reading and recorded-change review. Keep an explicit caption that current Git/workspace views are separate, opt-in local capabilities. Do not build a generic IDE mockup or add fabricated settings/screens.
+Replace the three `.editorial-row` examples within `#workspace` with one showcase in normal document flow. Keep `Read the work where it happened.` and `Go from watching the agent to understanding the code.` Group three exposed card edges above a single reading stage. Each edge stays visible and names the capability. Watch live is selected on a fresh visit. Native scrolling moves past the section and leaves the selection in place.
 
-Showcase track: 160 svh when pin-eligible. p=0–0.25 holds source; p=0.25–0.7 moves foreground up ≤64 px/opacity 1→0.55, while the rear edit surface scales 0.94→1, y 24→0 px and opacity 0.55→1; p=0.7–1 holds the edit. Captured characters stay sharp. Preserve true DOM reading order and exact links to source step 4/edit step 26. Focus/selection ends transforms, promotes the selected surface and provides reading space; it never leaves a keyboard control behind another card. Normal flow displays both complete articles.
+| Choice | Panel content | Action |
+|---|---|---|
+| Watch live | Existing short synthetic timeline of read, failed test and edit. Label it `Synthetic sample` and keep the illustrative-arrangement caption. | `Open your first session` → `/get-started/#first-session` |
+| Inspect a file | Captured source, lines 1–14, with the original file path and provenance. Keep the distinction between captured source and the current file. | `Inspect captured source` → `/demo/?demo&at=4` |
+| Review changes | Recorded edit with reconstructed hunk and the later test result. Keep the separate opt-in current Git explanation and the later-run scope caption. | `Review the recorded edit` → `/demo/?demo&at=26` |
 
-`showcaseFrame(progress)` returns `{ source: {y,scale,opacity}, edit: {y,scale,opacity} }`. With v=S(.25,.7,p): source={y:−64v,scale:1,opacity:1−0.45v}; edit={y:24(1−v),scale:0.94+0.06v,opacity:0.55+0.45v}. Reading override switches both articles to normal flow, preserving at least the previous track height and the active reading anchor. Reading override lasts for that visit; no automatic return to a stack underneath the reader.
+Use one server-rendered article per choice and reuse the existing evidence renderer. Use a labelled native radio group (`Explore product examples`) styled as the three card edges. Radio state selects the visible article with CSS, so selection works if JavaScript fails. The checked edge has a visible foreground border and the focused edge has an independent focus ring. Native arrows select, Tab reaches the visible reader and link, and hidden articles do not receive focus. Keep the `#workspace` anchor and the shared static-motion link policy for replay destinations.
+
+At ≥1000 px put the selected explanation beside its evidence, with the controls across the top. At 600–999 px put explanation and action above the evidence and allow the three labels to wrap. The stage has the same height across choices at each supported viewport. Use a bounded material scroller, at least 14 px type, and internal horizontal scroll for long lines. Keep the card labels and action outside the material scroller. At 1440×900 target a `#workspace` section at most 900 CSS px tall, including heading and padding. Record before/after section heights on the same browser, baseline and viewport. There is no pinned showcase track.
+
+Switch the selection immediately. For pointer activation in full motion mode, give the selected outer card shell one 200 ms rise from 8 px below its rest position with `ease-standard`. Keep the selected content sharp at its final size. Keyboard and static policy switch immediately. A new selection, focus entering the reader, text selection, hidden tab or policy change cancels the current motion. Style the exposed edges as the rear layers and keep their hit areas fixed. Keep the panel links separate from the radio controls. Hover and scroll never change the selected card or the walkthrough's chapter.
 
 A decorative 1 px edge overlay uses `pointer-events:none`. On pointer hover, one trace completes in 720 ms at ≤0.18 mint alpha, then holds/fades over 120 ms. Leaving early reverses/cancels within 120 ms. Keyboard focus gets the final border immediately. Never animate a gradient around every card at rest. Error contours remain semantically distinct.
 
@@ -429,8 +453,10 @@ Footer Motion settings use the same popover/dismissal rules, real radio controls
 | Invalid intro geometry | Finish to the hero without flight. |
 | Intro controller failure | Boot fuse releases at 2400 ms maximum from boot; Skip/Escape remains independently effective. |
 | Chapter fetch blocked/malformed | Existing static material/error explanation and real replay links; no playback controls claiming readiness. |
-| Missing decorative asset | Keep the text/actions and original static mark; no broken-image spinner. All new geometry should be code-native. |
-| Reduced motion, Save Data, low resources | Shared policy, full manual reading, no new heavy media download or hidden animation. |
+| Missing decorative asset | Keep the text/actions and original static mark. Original geometry is code-native. |
+| Missing poster or preview playback failure | Preserve the player allocation and demo link. Show the static sample label if the poster fails and the explicit retry state if playback fails. |
+| Showcase script unavailable | The radio group still selects each article. The chosen evidence and its native action remain readable. |
+| Reduced motion, Save Data, low resources | Shared policy and full manual reading. Preview media stays unloaded until explicit Play. |
 | Hidden tab / pagehide | Cancel owned animation/timers; preserve layout heights, selection and sample state. |
 | BFCache/pageshow | Recompute policy/absolute geometry; restore explicit bookmark; no intro or automatic sample restart. |
 | Resize/zoom/reversal | Cancel finite position transitions; remeasure next frame; no accumulating offsets, stale targets or offscreen controls. |
@@ -444,14 +470,15 @@ One page H1; proper section H2s; native links/buttons; 2 px visible focus outlin
 
 ## Asset, privacy and performance budgets
 
-New assets are original procedural SVG/DOM. Do not ship the reference's PNG-sequence preloader, videos, Lottie JSON, images, Webflow runtime or purple star design. Reuse the existing licensed fonts/brand and committed synthetic fixture; keep their notices. No new runtime dependency is selected. If a measured implementation needs one, record the concrete reason and scope before changing the manifest; it is not implied by this spec.
+Ship original SVG/DOM and the two LAND-15 media assets captured from Drishya’s committed synthetic fixture. Reuse the licensed fonts and brand with their notices. Original runtime dependencies and same-origin boundaries apply to the preview.
 
-All readable content stays in the DOM. The illustrative repository uses SVG/DOM; no canvas text, rasterized code screenshot or new WebGL context on Home. Runtime work is bounded: ≤192 aperture faces, ≤24 decorative nodes, one shared frame queue, one sample timer, no independent per-widget loops. Source changes render only at chapter boundaries; pointer/scroll frames update transforms/geometry, not syntax/tokenization or captured text.
+Landing copy and selectable evidence stay in the DOM. The preview poster and clip are illustrations of the product, with an equivalent text description and the interactive replay link. The illustrative repository uses SVG/DOM. Runtime work is bounded to ≤192 aperture faces, ≤24 decorative nodes, one shared frame queue and one sample timer. Source changes render at chapter boundaries. Pointer and scroll frames update transforms and geometry.
 
 Release-candidate landing targets, measured on the recorded review machine rather than claimed for every computer:
 
 - Boot script ≤2 KiB uncompressed; total Home JavaScript ≤35 KiB gzip; Home CSS ≤20 KiB gzip; Home HTML ≤180 KiB uncompressed.
-- New original decorative files ≤60 KiB gzip combined. Initial Home non-font transfer ≤250 KiB gzip; existing font bytes are reported separately and no new font family/weight is loaded.
+- New procedural decorative files ≤60 KiB gzip combined. Initial Home non-font transfer ≤250 KiB gzip; existing font bytes are reported separately and no new font family/weight is loaded.
+- LAND-15 poster ≤60 KiB on disk and counted in initial Home transfer. Clip ≤1.5 MiB on disk and fetched only after explicit Play or Retry. Record both sizes and verify zero video requests on initial Home load.
 - No `/demo/assets/` JavaScript/CSS before a real full-replay navigation, no daemon/API probe, and no third-party runtime request.
 - Event-driven render callback p95 ≤8 ms, typical ≤4 ms over 100 scripted scroll/pointer invalidations at 1440×900. No landing-owned task >50 ms during a ten-second normal scroll/reversal probe. Record the browser, CPU/core/memory summary and actual result; a miss is a performance issue to fix, not a reason to relax the budget silently.
 - After finite arrivals/transport are stopped, wait two frame opportunities: zero running landing animations, zero pending landing RAF and zero sample timers. Idle CPU work is not hidden behind opacity.
@@ -464,6 +491,8 @@ Source-checked font baseline on 9 November: InterVariable 352,240 bytes and JetB
 ## Execution plan and PR boundaries
 
 TASKS is the active queue; the steps here are the execution contract for those IDs. Before LAND-9, integrate the reviewed #378/#380/#381 source baseline and #384/this specification through the normal builder-reviewed workflow. If waiting on parent review, draft a clearly stacked branch from the correct source parent; do not recreate earlier work or mix unrelated app changes into a landing PR. Each item is one whole PR; build/test evidence and completion docs travel with it. The other builder reviews before squash merge; this document does not authorize merging or publication.
+
+Use this order for the shared landing files: LAND-9 → LAND-10 → LAND-11 → LAND-12 → LAND-13 → LAND-15 → LAND-14. LAND-15 can prepare capture locally once the replay is available. Its integration PR follows LAND-13 to avoid competing edits to the site entry and generator. LAND-14 verifies the combined site after the preview and stack are both in its source baseline.
 
 ### LAND-9 — shared runtime and branded opening (maximum 14 paths)
 
@@ -502,17 +531,17 @@ Interfaces: shared `Chapter` data replaces duplicate local type declarations. `S
 - [ ] Browser-check every chapter's exact source/status/link, visible Pause, explicit repeat, focus/selection ownership, offscreen/hidden/policy/resize interruption, return without catch-up, malformed metadata, no-JS and all supported layouts.
 - [ ] Run the new unit/specs and all existing landing specs; inspect true/unresolved origins and material readability. Finish one whole PR; do not touch private journals or local API code.
 
-### LAND-12 — showcase, edge trace and brand passage (maximum 9 paths)
+### LAND-12 — selectable showcase, edge trace and brand passage (maximum 9 paths)
 
 Files: create `apps/landing/src/showcase.ts`, `showcase.css`, `tests/landing-showcase.test.ts`, `tests/browser/landing-showcase.spec.ts`; modify `site.ts`, `motion-runtime.ts`, `scripts/build-landing.ts`, TASKS and STATUS.
 
-Interfaces: pure `showcaseFrame(progress)` and `brandFrame(progress)` enforce the specified bounds; `showcaseHTML(chapters): string` uses existing source/edit evidence; `initShowcase(runtime): () => void` owns both bounded passages and their edge traces.
+Interfaces: `showcaseHTML(chapters: readonly Chapter[], renderEvidence: (chapter: Chapter) => string): string` consumes LAND-11's shared `Chapter` and the generator's evidence renderer. `initShowcase(runtime: MotionRuntime): () => void` owns optional selection motion, edge feedback and the brand passage. `brandFrame(progress: number)` keeps the existing four-field projection contract. Native radio state owns selection, independently of the walkthrough controller.
 
-- [ ] Write failing endpoint/reversal/bounds tests; run `node --test tests/landing-showcase.test.ts`.
-- [ ] Build the two complete static articles and brand passage, then add the 160/110 svh behavior and original decorative ribbon.
-- [ ] Implement one-shot edge feedback, stable hit areas and immediate focus/selection promotion. Do not clone captured material to transition between cards.
-- [ ] Browser-check links, sharp selected text, paused overlaps, rapid reversal, focused rear-card controls, all widths, reduced/short/static modes and zero idle animations.
-- [ ] Build/run showcase plus the base landing regressions, inspect both layer allocations and publish the separate review PR.
+- [ ] Add `landing-showcase.spec.ts` cases for three choices, one visible article, exact destination per choice, native arrow/Tab navigation and no-script selection. Assert the document height stays constant across choices at 600, 1024, 1440 and 1920 px and `#workspace` is ≤900 CSS px at 1440×900. Add `landing-showcase.test.ts` coverage for brand endpoints and non-finite progress.
+- [ ] Run the new unit file and targeted showcase spec and observe failure on missing behavior. Record the old `#workspace` height at 1440×900.
+- [ ] Replace the three editorial rows in the generator with the radio group and server-rendered articles. Build the bounded stage, native links, focus outlines and active/decorative card edges. Verify CSS-only selection before adding animation.
+- [ ] Add the finite 200 ms selection motion, one-shot edge feedback and existing brand projection. Cover rapid switching, reader focus/selection, static preference, no horizontal page overflow and scroll passing through without changing the active card.
+- [ ] Build and run `node --test tests/landing-showcase.test.ts` and the showcase/base landing browser specs. Record the new section height and desktop visual checks. Complete the whole item in its own PR.
 
 ### LAND-13 — navigation, hover, settings and sample details (maximum 10 paths)
 
@@ -528,6 +557,17 @@ LAND-13 removes the old hero-local header-mark writer from `landing-motion.ts`; 
 - [ ] Run `landing-interactions`, opening and existing landing specs, including clipboard refusal, Save Data and static modes. Inspect every open/closed/focus/failure state at 600 and 1440.
 - [ ] Complete the whole interaction task and request review in its own PR.
 
+### LAND-15 — hero product recording (maximum 9 paths)
+
+Files: create `apps/landing/src/hero-preview.ts`, `hero-preview.css`, `apps/landing/public/hero-preview.webp`, `apps/landing/public/hero-preview.mp4` and `tests/browser/landing-hero-preview.spec.ts`. Modify `site.ts`, `scripts/build-landing.ts`, TASKS and STATUS.
+
+Interfaces: `heroPreviewHTML(): string` emits the fixed poster allocation, initially hidden enhancement button, native description and demo link. `initHeroPreview(): () => void` binds the actual video, playback/error states and visibility cleanup. Both live in `hero-preview.ts` and the markup export is safe to import during build. The generator copies the two known files, enforces their byte budgets and serves MP4/WebP MIME types. The preview owns its playback separately from LAND-11's sample controller.
+
+- [ ] Add a browser case that records network requests from initial navigation through Play. Assert a visible poster/link, zero MP4 requests before Play and actual playback after it. Add cases for failed media, Retry, video end/Replay, paused when hidden/offscreen, no automatic restart, no-script link, and fixed dimensions at 600 and 1440 px.
+- [ ] Run the targeted preview spec and observe the missing preview failure. Capture the four-beat synthetic sequence from the built demo and export the poster/clip within the byte budgets. Record source revision, capture dimensions, duration and sizes in the PR. Review every cut for readable material and synthetic-only content.
+- [ ] Render the preview where the hero's static terminal is built. Add the native description and working demo link, then connect Play, pause, ended, replay and retry with the shared allocation. Build and verify there is no media request on Home before activation and no preview media loaded on other routes.
+- [ ] Run `node scripts/build-landing.ts` and the preview plus base landing browser specs. Watch the actual clip in the built site, check controls and static/failure states, and complete the whole item in its own PR.
+
 ### LAND-14 — integrated acceptance (maximum 7 planned paths)
 
 Files: create `tests/browser/landing-acceptance.spec.ts`, `scripts/check-landing-performance.ts`, `docs/review/landing-motion-acceptance.md`; modify `tests/browser/landing.spec.ts`, `tests/browser/landing-motion.spec.ts`, TASKS and STATUS. If measured defects require source changes outside this bounded task, give them a whole TASKS item or update the claim before implementation; do not hide unfinished work in the acceptance report.
@@ -535,7 +575,7 @@ Files: create `tests/browser/landing-acceptance.spec.ts`, `scripts/check-landing
 Interfaces: performance helper reads the built manifest/artifacts and emits numeric sizes plus a pass/fail result; it does not instrument agent sessions or send data. The browser acceptance spec measures runtime/DOM behavior on the static artifact.
 
 - [ ] Run every scenario in the matrix below on the integrated branch, from an independent frozen install when a new checkout is used. Never share node_modules between worktrees.
-- [ ] Measure Home-only assets, frame/idle work and layout shift; record actual browser, dimensions, hardware summary, source revision and budgets in the acceptance report.
+- [ ] Measure Home-only assets, preview bytes and request timing, frame/idle work and layout shift. Record the before/after `#workspace` height and confirm each card is reachable from the section entrance without document scrolling at 1440×900. Record actual browser, dimensions, hardware summary, source revision and budgets in the acceptance report.
 - [ ] Inspect 600/1024/1440/1920, 1440×600 and a supported desktop zoom configuration; record real screenshots locally, not real user content. Perform freeze/truth/calm-reading checks; distinguish an agent pass from Yash's human visual approval.
 - [ ] Run one complete landing suite and artifact build after all feature tasks finish. Preserve unrelated clean-main failures as evidence rather than weakening assertions. Full product/package/genuine-session gates are not claimed for this marketing-only batch.
 - [ ] Request a fresh review of the integrated landing range, fix actionable findings, repeat only affected checks, record remaining external review requirements, and present the final unmerged review stack to Yash.
@@ -544,7 +584,7 @@ Interfaces: performance helper reads the built manifest/artifacts and emits nume
 
 ### Review focus
 
-The highest-risk cases are: opening failure trapping content; hidden-tab changes collapsing pin heights; scroll taking a deliberately selected chapter; focused controls hidden behind stacked cards; and public navigation loading private/native capabilities. Each has an explicit owning task and tests above; no implicit “happy path only” completion.
+Test opening failure recovery, hidden-tab layout stability, explicit chapter ownership, keyboard access to the active showcase reader, preview playback failure and public replay isolation. The owning tasks define each case above.
 
 | Test dimension | Required cases | Owner |
 |---|---|---|
@@ -553,7 +593,8 @@ The highest-risk cases are: opening failure trapping content; hidden-tab changes
 | Evidence | Four exact steps/provenance/materials; mapped/unresolved origins; escaping; later-test qualification; exact links. | LAND-11 |
 | Ownership | Click, keyboard, range, selection, playing/repeat, Follow scroll, anchor navigation, explicit bookmark and browser return. | LAND-11 |
 | Live transport | Exact cycle times, final hold, explicit repeat, one timer, visible pause, all offscreen, hidden, policy change, no catch-up. | LAND-11 |
-| Showcase | Focused rear card, reading space, sharp text, bounds/reversal, single DOM material per transition, native links. | LAND-12 |
+| Showcase | Three native selections, one active reader, stable stage/document height, measured section reduction, rapid switching, keyboard/static/no-script, sharp evidence and native links. | LAND-12 |
+| Hero preview | Real synthetic clip and poster, zero eager video requests, explicit Play/Pause/Replay/Retry, visibility pause, fixed allocation, media failure and demo fallback. | LAND-15 |
 | Controls | Hover entry/leave, press, rapid reversal, native links, compact Menu, Motion options, dialog focus/escape/outside, closed states. | LAND-13 |
 | Availability | Current preview manifest, source/release absence, Copy commands denial, no fabricated downloads or dead control. | LAND-13 / LAND-14 |
 | Responsive | 600×900, 1024×900, 1440×900, 1920×1080, 1440×600; supported equivalent zoom width and explicitly reported physical zoom. | All / LAND-14 |
@@ -588,4 +629,4 @@ Every PR records its source revision, actual passing commands/counts, visual sta
 - Each implementation item has a bounded file list, a failing-test-first step, meaningful acceptance and an independent PR boundary.
 - TASKS remains the only active product queue. This MD is the selected design/execution contract; STATUS records claims, decisions and measured results.
 
-LAND-8 completes this specification only. LAND-9 through LAND-14 are queued implementation work; none is completed by writing this document.
+LAND-8 owns this specification. TASKS records completion for LAND-9 through LAND-15.

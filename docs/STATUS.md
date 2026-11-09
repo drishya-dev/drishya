@@ -58,7 +58,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Harsh with Codex — 9 Nov: LAND-8 complete landing specification
 
 - Expanded the [reference audit MD](review/land-7-reference-motion-inventory.md) into the selected build contract: all 30 reference effects have an original Drishya adaptation and an owner. Includes exact copy/routes, the 1800 ms logo/name/hero opening, cinematic explanation, shared sample playback, pointer depth, showcases, brand passage, controls, dialog, policy, fallback states, accessibility, privacy and performance budgets. The original browser/public-source evidence and its limitations remain alongside the design.
-- Queued LAND-9 through LAND-14 in TASKS, with six separate whole-item PRs, bounded file lists, named interfaces and acceptance. Existing #380/#381 are the integration baseline; no new product behavior is implemented by this specification. Review the document through its separate PR based on the LAND-7 audit branch; no automatic merge or publication.
+- Revised the plan in PR #385 after Harsh requested a fuller hero and less scrolling. LAND-12 replaces the three tall examples with one selectable showcase. LAND-15 owns a poster and an on-demand 12-second recording of the synthetic demo. LAND-14 checks media requests and the measured height reduction. TASKS holds the seven implementation items and their order.
 - Documentation checks pass: all 30 matrix IDs in order, six future items present, internal/task anchors valid, code fences balanced, no unfinished markers, task synchronization and whitespace clean. Independent review caught simultaneous phrase blur in the explainer; corrected the exact formulas so the active phrase stays sharp throughout. PR #385 requests Yash's review. Product/browser tests were not run for this docs-only item. Original reference assets remain ignored under `.local/`; no reference artwork or user recording is committed.
 
 ### Yash with Codex — 8 Nov: UI-29 Release 1 menu contents, PR #376
@@ -1533,6 +1533,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **9 Nov, Harsh: product proof in less space.** Use a short on-demand Drishya recording beneath the hero SVG and a selectable evidence stack inside `#workspace`. Visitors can see the actual interface immediately through its poster and choose the evidence they want to read in one section. [LAND-8 revision](review/land-7-reference-motion-inventory.md).
 
 - **9 Nov, Harsh: complete landing motion selection.** The [LAND-8 specification](review/land-7-reference-motion-inventory.md) supersedes LAND-4's omitted opening and abbreviated motion selection. Use the original 1800 ms logo → name → hero handoff, cinematic product explanation and meaningful synthetic sample; map all 30 reference patterns through LAND-9–14. Adapt endless decoration to finite or user-paced motion to preserve calm reading. The user requested the full selected MD now; implementation, builder review, merge and publication remain separate.
 
