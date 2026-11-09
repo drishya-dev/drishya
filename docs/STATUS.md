@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-11 | @harsh + Codex | `codex/land-11-compact-walkthrough` | 2026-11-09 | Compact walkthrough and hero motion: apps/landing/src/sample-model.ts, sample-controller.ts, living-sample.ts, living-sample.css; identity-geometry.ts, identity.ts, site.ts, landing-motion.ts, landing-motion.css, scripts/build-landing.ts; tests/landing-sample.test.ts, tests/browser/landing-living-sample.spec.ts, tests/browser/landing-motion.spec.ts; TASKS/STATUS (15 paths). After LAND-10 stack; own PR. |
 | LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. |
 | LAND-5 | @harsh + Codex | `codex/land-5-hero` | 2026-11-08 | Whole dimensional hero: new identity-geometry.ts/identity.ts/landing-motion.ts/landing-motion.css in apps/landing/src; site.ts and scripts/build-landing.ts integration; tests/landing-motion.test.ts and tests/browser/landing-motion.spec.ts; TASKS/STATUS. At most 10 paths, no existing app source or LAND-3 site.css edits. LAND-6 starts only after this acceptance. |
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
@@ -55,6 +54,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 9 Nov: LAND-11 living synthetic sample and pointer depth
+
+- Completed compact walkthrough and hero motion: `sample-model.ts`, `sample-controller.ts`, `living-sample.ts`, `living-sample.css`, `site.ts`, `landing-motion.ts`, `landing-motion.css`, `identity-geometry.ts`, `identity.ts`, `scripts/build-landing.ts`.
+- Walkthrough presents four clear moment selectors beside one reading panel (two-column >= 1000px, stacked 600-999px) with exact step evidence (steps 4, 24, 26, 28) and native bookmarks. Retired 170 svh pinned scroll tracks and `#follow-scroll`; normal document scroll past the walkthrough preserves chapter state.
+- Pure sample controller implements exact dwell schedule (1600/3800/6400/8200 ms) and optional repeat (1200 ms hold before looping), visible Play/Pause/Replay states, and pause on visibility (<20% reader / <50% transport) or hidden tab.
+- Hero motion settles aperture once over 420 ms with a 280 ms relationship cue to preview edge; subtle pointer parallax responds to fine pointer (front nodes ±6/4px, rear ±3/2px, yaw ±4°, pitch ±2.5°) with 180 ms neutral return.
+- Verified with 14 pure unit tests in `landing-sample.test.ts` and `landing-motion.test.ts`, and 41 Playwright browser tests across `landing-living-sample.spec.ts` (11 passed), `landing-motion.spec.ts` (11 passed), and regression suites `landing-explainer.spec.ts` (12 passed) and `landing-opening.spec.ts` (7 passed).
 
 ### Harsh with Codex — 9 Nov: LAND-10 compact product explanation
 

@@ -22,6 +22,11 @@ test('original faceted identity stays finite, shaded and depth sorted at every p
   }
   assert.deepEqual(identityFaces(.4),identityFaces(.4));
   assert.notDeepEqual(identityFaces(0),identityFaces(1));
+  assert.deepEqual(identityFaces(.2),identityFaces(.2,{x:0,y:0}));
+  const tilted=identityFaces(0,{x:.5,y:-.5});
+  assert.equal(tilted.length,192);
+  assert.notDeepEqual(identityFaces(0),tilted);
+  assert.deepEqual(identityFaces(0,{x:2,y:3}),identityFaces(0,{x:1,y:1}));
 });
 
 const inputs={width:1440,height:900,finePointer:true,reducedMotion:false,saveData:false,lowResource:false,hidden:false,queryOff:false,userMode:'auto' as const};

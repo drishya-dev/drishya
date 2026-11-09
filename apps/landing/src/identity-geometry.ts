@@ -8,9 +8,13 @@ export function trackProgress(top:number,height:number,viewport:number):number {
 
 // Original aperture geometry: a six-sided major ring with an eight-facet tube.
 // The same projection renders the static artifact and every reversible scroll pose.
-export function identityFaces(turn:number):Face[] {
+export function identityFaces(turn:number,pointer?:{x:number;y:number}):Face[] {
   const progress=Number.isFinite(turn)?Math.max(0,Math.min(1,turn)):0;
-  const yaw=-.32+progress*.96,pitch=.34-progress*.16,roll=-.14-progress*.24;
+  const px=pointer&&Number.isFinite(pointer.x)?Math.max(-1,Math.min(1,pointer.x)):0;
+  const py=pointer&&Number.isFinite(pointer.y)?Math.max(-1,Math.min(1,pointer.y)):0;
+  const pointerYaw=px*(4*Math.PI/180);
+  const pointerPitch=py*(2.5*Math.PI/180);
+  const yaw=-.32+progress*.96+pointerYaw,pitch=.34-progress*.16+pointerPitch,roll=-.14-progress*.24;
   const rotate=([x,y,z]:Point3):Point3=>{
     const a=x*Math.cos(yaw)+z*Math.sin(yaw),b=-x*Math.sin(yaw)+z*Math.cos(yaw);
     const c=y*Math.cos(pitch)-b*Math.sin(pitch),d=y*Math.sin(pitch)+b*Math.cos(pitch);
