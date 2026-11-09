@@ -11,11 +11,8 @@
 .opening-skip{position:absolute;right:1.5rem;bottom:1.5rem;pointer-events:auto;color:#f4f4ef;background:#111;border:1px solid #444;padding:.45rem .7rem}
 .opening-skip[data-visible=true]{display:block}
 .opening-overlay[data-active=false]{display:none}
-.opening-overlay[data-exiting=true]{transition:opacity 420ms cubic-bezier(.22,1,.36,1)}
+.opening-overlay[data-exiting=true]{transition:opacity 900ms cubic-bezier(.22,1,.36,1)}
 .hero-world{position:relative}
-.identity-sculpture[data-opening=true]{transform-origin:center}
-.identity-sculpture[data-opening=true]{position:fixed;left:50%;top:50%;z-index:21;pointer-events:none;transform:translate(-50%,-50%) scale(1);transition:transform 420ms cubic-bezier(.76,0,.24,1)}
-.identity-sculpture[data-opening-stage=seed]{transform:scale(.75);opacity:1}
-.identity-sculpture[data-opening-stage=assembly]{transform:scale(1);opacity:1}
+
 @keyframes opening-float{0%,100%{transform:translateY(0) rotateX(0) rotateY(-2deg)}50%{transform:translateY(-10px) rotateX(2deg) rotateY(2deg)}}
 @media (prefers-reduced-motion:reduce){.opening-name strong{animation:none}}

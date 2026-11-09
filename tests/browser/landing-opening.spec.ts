@@ -16,8 +16,6 @@ test('fresh home visit resolves the branded opening into the same hero mark',asy
   await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
   await expect(page.locator('.opening-name strong')).toHaveText('Drishya');
   await expect(page.getByRole('button',{name:'Enter Drishya'})).toBeVisible();
-  const mark=page.locator('.identity-sculpture');
-  await expect.poll(()=>mark.getAttribute('data-opening-stage'),{timeout:2200}).toBe('ready');
   await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
   await expect(page.getByRole('button',{name:'Replay intro'})).toBeVisible();
   await page.getByRole('button',{name:'Replay intro'}).click();

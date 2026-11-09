@@ -27,11 +27,10 @@ import type {MotionRuntime} from './motion-runtime.ts';
 
 export function initOpening(runtime: MotionRuntime): () => void {
   const overlay = document.querySelector<HTMLElement>('[data-opening-overlay]');
-  const mark = document.querySelector<SVGElement>('.identity-sculpture');
   const skip = document.querySelector<HTMLButtonElement>('[data-opening-skip]');
   const enter = document.querySelector<HTMLButtonElement>('[data-opening-enter]');
   const replay = document.querySelector<HTMLButtonElement>('[data-replay-intro]');
-  if (!overlay || !mark) return () => undefined;
+  if (!overlay) return () => undefined;
   if (location.pathname !== '/' || location.hash || new URLSearchParams(location.search).has('moment')) {
     overlay.remove();
     skip?.remove();
@@ -44,6 +43,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
   }
   const name = overlay.querySelector<HTMLElement>('.opening-name');
   let stopped = false;
+  let exiting = false;
   let started = performance.now();
   let alreadyVisited = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -58,11 +58,6 @@ export function initOpening(runtime: MotionRuntime): () => void {
     stopped = true;
     if (timer) clearTimeout(timer);
     overlay.dataset.active = 'false';
-    mark.dataset.openingStage = 'ready';
-    mark.removeAttribute('data-opening');
-    mark.removeAttribute('data-opening-exit');
-    mark.style.removeProperty('transform');
-    mark.style.removeProperty('opacity');
     skip?.remove();
     enter?.remove();
     if (runtime.policy().intro) replay?.removeAttribute('hidden');
@@ -73,10 +68,6 @@ export function initOpening(runtime: MotionRuntime): () => void {
     overlay.dataset.active = 'true';
     if (skip) skip.dataset.visible = 'true';
     if (enter && frame.descriptor >= 1) enter.dataset.visible = 'true';
-    mark.dataset.opening = 'true';
-    mark.dataset.openingStage = frame.stage;
-    mark.style.opacity = String(Math.max(.2, frame.handoff ? 1 : frame.assembly));
-    mark.style.transform = `translate(-50%, -50%) scale(${.75 + frame.assembly * .25})`;
     if (name) {
       name.style.opacity = '1';
       name.style.transform = `translateY(${(1 - frame.descriptor) * 8}px)`;
@@ -92,17 +83,18 @@ export function initOpening(runtime: MotionRuntime): () => void {
   };
   (window as Window & {__drishyaIntroBootCancel?: () => void}).__drishyaIntroBootCancel?.();
   const cancel = () => {
-    if (stopped) return;
+    if (stopped || exiting) return;
     stopped = true;
+    exiting = true;
     if (timer) clearTimeout(timer);
     overlay.dataset.exiting = 'true';
     overlay.style.opacity = '0';
     name?.style.setProperty('opacity', '0');
-    mark.dataset.openingStage = 'handoff';
-    mark.dataset.openingExit = 'true';
-    mark.style.transform = 'translate(-50%, -50%) scale(.34)';
-    stopped = false;
-    setTimeout(() => finish(), 420);
+    setTimeout(() => {
+      exiting = false;
+      stopped = false;
+      finish();
+    }, 900);
   };
   skip?.addEventListener('click', cancel);
   enter?.addEventListener('click', cancel);
