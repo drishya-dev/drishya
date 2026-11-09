@@ -1,3 +1,4 @@
+import {createQueueEvidenceCache} from './queued-inputs.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
@@ -72,6 +73,7 @@ const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.i
 const HISTORY_VERSION = 'h3-lineage-4096';
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 let cached: { id: string; revision: string; projection: Projection; revisions: Record<string, number> } | undefined;
+const queueEvidenceFor = createQueueEvidenceCache(source);
 let incremental: { id: string; reducer: ReturnType<typeof createReducer>; sequence: number; clock: string; roots: Set<string> } | undefined;
 
 function build(id: string, ids: string[], live: boolean): { projection: Projection; appended: boolean } {
@@ -330,7 +332,10 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
     else if (message.method === 'tools') value=toolInventory(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step));
     else if (message.method === 'tool-trail') value=toolTrail(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step),a.filter,a.from);
-    else if (message.method === 'queue') value=queuePage(current(a.id).projection.timeline, a.owner, a.query);
+    else if (message.method === 'queue') {
+      const view=current(a.id), revision=JSON.stringify(view.revisions);
+      value=queuePage(view.projection.timeline,a.owner,a.query,queueEvidenceFor(view.projection,a.owner,revision,a.id));
+    }
     else if (message.method === 'screen') value=screenRun((a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step)).operations);
     else if(message.method==='git-session-evidence'){
       const projection=current(a.id).projection;
