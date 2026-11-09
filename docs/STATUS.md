@@ -31,6 +31,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| LAND-9 | @harsh + Codex | `codex/land-9-opening-stack` | 2026-11-09 | Review corrections in intro-boot.js/css, opening.ts/css and the opening browser spec. Verify first paint, reversible entry, durable completion and Replay. Existing PR #386. |
+| LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | CONTENT-19 | @harsh + Codex | `codex/content-19` | 2026-11-09 | First implementation priority. Diagnose blob-backed hunk lines at projection/reader boundaries and verify the evidenced fix across affected diff consumers, with a sealed regression fixture and genuine History/replay checks. Confirm exact paths against current owners before editing. |
 | SHIP-16 | @harsh + Codex | `codex/ship-16` | 2026-11-09 | Parallel release preparation. Own `.github/workflows/ci.yml` for the three-OS checks and package verification. Candidate CI runs against the frozen candidate. Genuine Linux acceptance waits for Yash's WSL2 run; physical macOS acceptance is MAC-1. |
 | SHIP-2a | @harsh + Codex | `codex/ship-2a` | 2026-11-09 | Queued. Coordinate the required Opus brief and sign-off and Sonnet implementation with Yash. Confirm token and stylesheet boundaries with FINISH-0a, UI-26 and AUDIT-1 before reserving paths. Finish the shared Modern palette tokens before SHIP-2b, SHIP-2c and SHIP-2d. |
