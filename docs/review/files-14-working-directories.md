@@ -1,6 +1,6 @@
 # FILES-14 — recorded working-directory boundaries
 
-Implementation prepared on `codex/files-14`, from `9cb060e3`. Scoped verification and genuine acceptance are recorded below; the integrated full gate is running. This report does not certify a clean full gate.
+Implementation prepared on `codex/files-14`, from `9cb060e3`. Task acceptance is complete for other-builder review. The full gate has four failures reproduced on clean main; its exact disposition is recorded below.
 
 ## Cause and contract
 
@@ -43,3 +43,22 @@ Codex was captured through the normal native CLI on synthetic main, nested and s
 Recorded cwd boundaries are shown truthfully as **Other working directories**. A captured directory alone does not prove Git-worktree membership; no branch/folder-name inference was added. The original machine-specific screenshot is unavailable, so the native local equivalent above is the checked case.
 
 Integrated full gate: frozen source candidate `b843726`, three parallel browser workers and one serial worker, zero retries; result pending. Do not report packaging/full-suite success until that command finishes. Normal other-builder review and merge remain outstanding.
+
+
+## Final integrated gate disposition (9 November)
+
+Product source `35e4393`: both typechecks and UI build pass; all 215 unit files pass, **1,315 tests / one existing skip**. Browser run used **three parallel workers plus one serial worker, zero retries**: **696 parallel passes / 27 skips; 28 serial passes / one skip / four failures**. This is not a clean full browser gate.
+
+All four failures reproduce with the same assertions on separately rebuilt, clean main `f93d880b`, one serial worker and zero retries: B2 live :63 opens an unexpected operation detail (expected zero, got one); material-motion :132 loses its hover-reading surface; p1-pacing :40 sees three active animations instead of zero; p1-pacing :266 has no repository tether. These remain TEST-2/MOTION-3 baseline failures, not fixes claimed by this task. The baseline control lives in the coordinator checkout's `.local/release1-baseline-20261109/`.
+
+The first gate `b843726` stopped at three golden mismatches after 1,312 unit passes / one skip. Only the reviewed raw sequence expectations changed (18 to 19, 20 to 21, 22 to 23), reflecting retained Claude completion observations; all other golden fields remain unchanged. Golden/queue checks then passed 46/46. The first independent packaging run also failed its old exact observation count of 34: the fixture now retains three completed-turn rows. The corrected exact assertion is 37, with zero capture gaps. **package:verify passes at integration `70825e6`**, including isolated offline installation, both imports, checksums, demo, authenticated API and persisted restart. Its apps/packages tree is byte-identical to the full-gate product source; the additional change is the verification script, plus docs. No browser assertion, retry or timeout was relaxed.
+
+Private complete gate evidence: `.local/release-gate-20261109-141147/` and `release-gate-20261109-142009/` in the isolated integration checkout. No further full-suite command was run to erase these failures. Other-builder review remains required; no merge or release certification is implied.
+
+## Final representative coverage
+
+Claude `5e486837` (1,031,859 bytes) supplies both nested and sibling edited-directory cases: two exact-once located edited leaves across four captured roots; its Files groups pass at 600/1440. The native Codex source `01a1be5d` was normally resumed, adding two synthetic main-repository files; at 206,161 bytes it has five exact-once edited leaves across three roots. Together with the two earlier Claude sources, the expanded display models contain 13 unique located edited leaves exactly once. Native main, nested and sibling identities stay separate; primary inventory aliases inside a separately captured descendant remain excluded. These are captured directory boundaries, with no claim that a cwd string alone proves Git membership.
+
+The standard bounded worktree-roots scanner exits zero but selects a Codex candidate with zero projected files and finds no Claude match under its narrow native-directory naming prefilter. That result is **not** used as worktree acceptance; the explicit positive imports, placement assertions and real frames above supply it. Standard workspace-files and mid-turn-input scans also exit zero; their counts do not replace the direct case checks. The unavailable original builder screenshot remains unavailable.
+
+FILES-14's explicit Accept list is met on the local genuine equivalents above. Completion docs are included in this PR; main remains claimed until review/merge. The separate baseline blob-backed diff crash discovered during queue acceptance is CONTENT-19, not a hidden Files fix.
