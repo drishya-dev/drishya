@@ -40,6 +40,7 @@ describe('exact recorded working-directory boundaries (FILES-14)',()=>{
  });
  it('keeps unrelated absolute paths unresolved instead of assigning a nearby directory',()=>{
   const p=project([meta(0,'C:/repo'),meta(1,'C:/repo/nested'),read(2,'C:/unrecorded/same.ts')]);
-  expect(p.files.map(file=>file.path)).toEqual(['C:/unrecorded/same.ts']);
+  expect(p.operations.map(op=>op.paths.map(ref=>ref.path))).toEqual([['C:/unrecorded/same.ts']]);
+  expect(p.files).toEqual([]);
  });
 });
