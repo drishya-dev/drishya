@@ -37,6 +37,23 @@ test('opening interruption, direct links and repeat visits remain static and usa
   await context.close();
 });
 
+test('scroll entry fades slowly and reverses before completion',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const page=await context.newPage();
+  await page.goto(site.url);
+  await page.mouse.wheel(0,500);
+  await page.waitForTimeout(700);
+  await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-exiting','true');
+  await page.mouse.wheel(0,-500);
+  await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-exiting','false');
+  await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
+  await page.mouse.wheel(0,500);
+  await expect(page.locator('[data-opening-overlay]')).toHaveCount(1);
+  await page.waitForTimeout(1700);
+  await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','false');
+  await context.close();
+});
+
 test('short window, reduced motion and motion off skip the intro without hiding content',async({page})=>{
   await page.setViewportSize({width:1440,height:600});
   await page.goto(site.url);

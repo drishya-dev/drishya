@@ -42,11 +42,13 @@ export function initOpening(runtime: MotionRuntime): () => void {
     return () => undefined;
   }
   const name = overlay.querySelector<HTMLElement>('.opening-name');
-  let stopped = false;
-  let exiting = false;
+  type OpeningPhase = 'waiting' | 'delaying' | 'exiting' | 'finished';
+  let phase: OpeningPhase = 'waiting';
   let started = performance.now();
   let alreadyVisited = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let entryTimer: ReturnType<typeof setTimeout> | undefined;
+  let exitTimer: ReturnType<typeof setTimeout> | undefined;
   try {
     alreadyVisited = sessionStorage.getItem('drishya.landing.intro.v1') !== null;
     if (!alreadyVisited) sessionStorage.setItem('drishya.landing.intro.v1', '1');
@@ -54,16 +56,17 @@ export function initOpening(runtime: MotionRuntime): () => void {
     alreadyVisited = true;
   }
   const finish = () => {
-    if (stopped) return;
-    stopped = true;
-    if (timer) clearTimeout(timer);
+    if (phase === 'finished') return;
+    phase = 'finished';
+    [timer, entryTimer, exitTimer].forEach(value => { if (value) clearTimeout(value); });
     overlay.dataset.active = 'false';
+    overlay.dataset.exiting = 'false';
     skip?.remove();
     enter?.remove();
     if (runtime.policy().intro) replay?.removeAttribute('hidden');
   };
   const render = () => {
-    if (stopped) return;
+    if (phase === 'finished') return;
     const frame = introFrame(performance.now() - started);
     overlay.dataset.active = 'true';
     if (skip) skip.dataset.visible = 'true';
@@ -77,37 +80,52 @@ export function initOpening(runtime: MotionRuntime): () => void {
         letter.style.transform = `translateY(${(1 - progress) * 16}px) rotateX(${(1 - progress) * 18}deg)`;
       });
     }
-    overlay.style.opacity = '1';
+    if (phase === 'waiting') overlay.style.opacity = '1';
     if (frame.stage === 'ready') replay?.removeAttribute('hidden');
     else timer = setTimeout(() => runtime.invalidate('opening', render), 16);
   };
   (window as Window & {__drishyaIntroBootCancel?: () => void}).__drishyaIntroBootCancel?.();
-  const cancel = () => {
-    if (stopped || exiting) return;
-    stopped = true;
-    exiting = true;
+  const startExit = (reversible: boolean) => {
+    if (phase !== 'waiting') return;
+    phase = 'delaying';
     if (timer) clearTimeout(timer);
     overlay.dataset.exiting = 'true';
-    overlay.style.opacity = '0';
-    name?.style.setProperty('opacity', '0');
-    setTimeout(() => {
-      exiting = false;
-      stopped = false;
-      finish();
-    }, 900);
+    entryTimer = setTimeout(() => {
+      if (phase !== 'delaying') return;
+      phase = 'exiting';
+      overlay.style.opacity = '0';
+      name?.style.setProperty('opacity', '0');
+      exitTimer = setTimeout(finish, 1500);
+    }, reversible ? 500 : 0);
   };
-  skip?.addEventListener('click', cancel);
-  enter?.addEventListener('click', cancel);
-  const onWheel = (event: WheelEvent) => { if (event.deltaY > 0) cancel(); };
+  const restore = () => {
+    if (phase !== 'delaying' && phase !== 'exiting') return;
+    if (entryTimer) clearTimeout(entryTimer);
+    if (exitTimer) clearTimeout(exitTimer);
+    phase = 'waiting';
+    overlay.dataset.exiting = 'false';
+    overlay.style.opacity = '1';
+    name?.style.setProperty('opacity', '1');
+  };
+  const onSkip = () => startExit(false);
+  const onEnter = () => startExit(false);
+  skip?.addEventListener('click', onSkip);
+  enter?.addEventListener('click', onEnter);
+  const onWheel = (event: WheelEvent) => {
+    if (event.deltaY > 0) startExit(true);
+    else if (event.deltaY < 0) restore();
+  };
   addEventListener('wheel', onWheel, {passive: true});
-  addEventListener('keydown', event => { if (event.key === 'Escape') cancel(); });
-  replay?.addEventListener('click', () => { stopped = false; started = performance.now(); overlay.dataset.active = 'true'; runtime.invalidate('opening', render); });
+  const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') startExit(false); };
+  addEventListener('keydown', onEscape);
+  replay?.addEventListener('click', () => { phase = 'waiting'; started = performance.now(); overlay.dataset.active = 'true'; runtime.invalidate('opening', render); });
   if (runtime.policy().intro && !alreadyVisited) runtime.invalidate('opening', render);
   else finish();
   return () => {
-    skip?.removeEventListener('click', cancel);
-    enter?.removeEventListener('click', cancel);
+    skip?.removeEventListener('click', onSkip);
+    enter?.removeEventListener('click', onEnter);
     removeEventListener('wheel', onWheel);
+    removeEventListener('keydown', onEscape);
     if (timer) clearTimeout(timer);
     finish();
   };
