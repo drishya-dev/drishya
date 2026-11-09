@@ -29,7 +29,16 @@ export function canonicalFileFolders(opened:Set<string>, roots:RecordedFileRoot[
 /** Display structure only: every leaf keeps the projection's exact path identity. */
 export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], workspaceRoot: string | undefined, opened: Set<string>, query = '', placement?: FilePlacement): FileTreeRow[] {
   const byPrefix = new Map(roots.map(root => [root.prefix, root]));
-  const located = paths.map(path => {
+  // A separately captured descendant is not ordinary primary inventory. Keep only
+  // its projection leaf identity; never rebase an indexed alias into captured evidence.
+  const nestedRoots = workspaceRoot ? roots.filter(root => normalize(root.root).startsWith(normalize(workspaceRoot) + '/')) : [];
+  const located = paths.filter(path => {
+    const root = byPrefix.get(path.split('/')[0]!);
+    if (root && (!workspaceRoot || normalize(root.root) !== normalize(workspaceRoot))) return true;
+    const relative = root ? path.slice(root.prefix.length + 1) : path;
+    const absolute = workspaceRoot ? normalize(workspaceRoot + '/' + relative) : undefined;
+    return !absolute || !nestedRoots.some(root => absolute === normalize(root.root) || absolute.startsWith(normalize(root.root) + '/'));
+  }).map(path => {
     const root = byPrefix.get(path.split('/')[0]!);
     const relative = root ? path.slice(root.prefix.length + 1) : path;
     const main = !!root && !!workspaceRoot && normalize(root.root) === normalize(workspaceRoot);

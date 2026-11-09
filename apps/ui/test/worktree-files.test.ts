@@ -106,3 +106,22 @@ it('migrates retained old main folder keys once and leaves other worktrees open'
  expect(canonicalFileFolders(after,roots,'C:/repo')).toBe(after);
  expect(canonicalFileFolders(before,roots,undefined)).toBe(before);
 });
+
+it('hides primary inventory descendants of an exact captured nested root while retaining its exact leaves',()=>{
+ const nested={root:'C:/repo/.local/wt-docs',prefix:'worktree-nested'};
+ const allRoots=[...roots,nested],leaf='worktree-nested/docs/TASKS.md';
+ const inventory='.local/wt-docs/docs/TASKS.md';
+ const rows=worktreeFileRows([inventory,'worktree-main/'+inventory,leaf,'docs/TASKS.md'],allRoots,'C:/repo',new Set(['','docs','.local','.local/wt-docs','.local/wt-docs/docs',WORKTREE_GROUP,nested.prefix,nested.prefix+'/docs']),'',{indexed:new Set([inventory,'docs/TASKS.md']),direct:new Set([leaf])});
+ expect(rows.some(row=>row.path===inventory||row.path==='worktree-main/'+inventory||row.name==='.local')).toBe(false);
+ expect(rows.filter(row=>!row.folder).map(row=>row.path)).toEqual(['docs/TASKS.md',leaf]);
+ expect(rows.find(row=>row.path===leaf)).toMatchObject({parent:nested.prefix+'/docs',location:nested.root+'/docs/TASKS.md'});
+ expect(worktreeFileRows([inventory,leaf],allRoots,'C:/repo',new Set(['']),'TASKS').map(row=>row.path)).toEqual([leaf]);
+});
+
+it('keeps sibling collisions, nested root names and primary URL aliases separate',()=>{
+ const allRoots=[...roots,{root:'C:/repo/.local/wt-docs',prefix:'nested'},{root:'C:/sibling/wt-docs',prefix:'sibling'},{root:'C:/repo',recordedRoot:'file:///C:/repo',prefix:'alias'}];
+ const paths=['nested/docs/TASKS.md','sibling/docs/TASKS.md','alias/docs/TASKS.md'];
+ const rows=worktreeFileRows(paths,allRoots,'C:/repo',new Set(['',WORKTREE_GROUP,'alias/docs','nested','nested/docs','sibling','sibling/docs']));
+ expect(rows.filter(row=>!row.folder).map(row=>row.path)).toEqual(['alias/docs/TASKS.md','nested/docs/TASKS.md','sibling/docs/TASKS.md']);
+ expect(new Set(rows.filter(row=>row.parent===WORKTREE_GROUP).map(row=>row.name)).size).toBe(2);
+});
