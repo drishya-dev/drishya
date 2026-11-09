@@ -1,3 +1,4 @@
+import { resolveHunkLines } from '../../../packages/projection/src/patch.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import type {QueueQuery, QueuePage, QueueInputChunk, QueueTimelineItem} from '@drishya/contracts';
 import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
@@ -371,6 +372,17 @@ export const daemon: DataSource = {
 
 /** A static replay bundle: read-only, no model calls, no capture. */
 export function bundleSource(bundle: ReplayBundle): DataSource {
+  // Older exports can contain sealed references without the referenced diff text.
+  const operations = bundle.projection.operations.map(operation => {
+    const detail = operation.detail;
+    if (detail.kind !== 'edit') return operation;
+    const hunks = resolveHunkLines(detail.hunks);
+    return hunks === detail.hunks ? operation : { ...operation, detail: { ...detail, hunks } };
+  });
+  const projection = operations.some((operation, index) => operation !== bundle.projection.operations[index])
+    ? { ...bundle.projection, operations }
+    : bundle.projection;
+
   const unsupported = () => Promise.reject(new Error('Not available in a replay bundle — run Drishya locally.'));
   return {
     kind: 'bundle',
@@ -393,9 +405,9 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     recordings: async () => [bundle.recording],
     sources: async () => ({ sources: [], errors: [] }),
     // A bundle carries the whole projection, so freshness is computed here exactly as the worker would.
-    verification: async (_id, operationId) => verificationFor(bundle.projection, operationId) ?? null,
-    fixChain: async (_id, operationId) => fixChainFor(bundle.projection, operationId) ?? null,
-    readBefore: async (_id, operationId) => readBeforeWriteFor(bundle.projection, operationId) ?? null,
+    verification: async (_id, operationId) => verificationFor(projection, operationId) ?? null,
+    fixChain: async (_id, operationId) => fixChainFor(projection, operationId) ?? null,
+    readBefore: async (_id, operationId) => readBeforeWriteFor(projection, operationId) ?? null,
     importSource: unsupported,
     artifactFind: async (_id, art, query, start, continuation) => {
       const text = bundle.artifactText[art];
@@ -410,7 +422,7 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       }
       return { available: true, matches, totalLines: lines.length, scannedThrough: cursor, skippedLines, continuation: cursor < lines.length ? String(cursor) : undefined };
     },
-    projection: async () => bundle.projection,
+    projection: async () => projection,
     graph: async () => bundle.graph,
     approveGraph: unsupported,
     artifactChunk: async (_id, art, start) => {
@@ -437,7 +449,7 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       const t = q.toLowerCase();
       const hits: SessionSearchHit[] = [];
       for (const p of bundle.projection.prose) if (p.text.toLowerCase().includes(t)) hits.push({ observationId: p.observationIds[0]!, snippet: snippet(p.text, t), kind: p.role === 'user' ? 'message.user' : p.role === 'reasoning' ? 'reasoning' : 'message.assistant' });
-      for (const o of bundle.projection.operations) if (o.title.toLowerCase().includes(t)) hits.push({ observationId: o.observationIds[0]!, snippet: o.title, kind: 'tool.call', tool: o.tool, ...(o.paths[0] ? { path: o.paths[0].path } : {}) });
+      for (const o of projection.operations) if (o.title.toLowerCase().includes(t)) hits.push({ observationId: o.observationIds[0]!, snippet: o.title, kind: 'tool.call', tool: o.tool, ...(o.paths[0] ? { path: o.paths[0].path } : {}) });
       return hits.slice(0, 50);
     },
     setLive: unsupported,
