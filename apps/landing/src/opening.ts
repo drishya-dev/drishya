@@ -14,7 +14,7 @@ export function introFrame(elapsedMs: number): IntroFrame {
   if (!Number.isFinite(elapsedMs)) return {stage: 'ready', assembly: 1, letters: [1, 1, 1, 1, 1, 1, 1], descriptor: 1, handoff: 1, nameOpacity: 0, overlayOpacity: 0};
   const t = Math.max(0, elapsedMs);
   const assembly = clamp((t - 180) / 540);
-  const letters = Array.from({length: 7}, (_, index) => clamp((t - 560 - index * 42) / 720));
+  const letters = Array.from({length: 7}, (_, index) => clamp((t - 560 - index * 72) / 1160));
   const descriptor = clamp((t - 1000) / 520);
   const handoff = clamp((t - 2100) / 900);
   const nameOpacity = 1 - clamp((t - 2280) / 360);
@@ -34,11 +34,15 @@ export function initOpening(runtime: MotionRuntime): () => void {
   if (location.pathname !== '/' || location.hash || new URLSearchParams(location.search).has('moment')) {
     overlay.remove();
     skip?.remove();
+    document.documentElement.dataset.openingActive = 'false';
+    document.documentElement.dataset.introReady = 'true';
     return () => undefined;
   }
   if (document.documentElement.dataset.intro === 'skip') {
     overlay.remove();
     skip?.remove();
+    document.documentElement.dataset.openingActive = 'false';
+    document.documentElement.dataset.introReady = 'true';
     return () => undefined;
   }
   const name = overlay.querySelector<HTMLElement>('.opening-name');
@@ -61,6 +65,8 @@ export function initOpening(runtime: MotionRuntime): () => void {
     [timer, entryTimer, exitTimer].forEach(value => { if (value) clearTimeout(value); });
     overlay.dataset.active = 'false';
     overlay.dataset.exiting = 'false';
+    document.documentElement.dataset.openingActive = 'false';
+    document.documentElement.dataset.introReady = 'true';
     skip?.remove();
     enter?.remove();
     if (runtime.policy().intro) replay?.removeAttribute('hidden');
@@ -69,6 +75,8 @@ export function initOpening(runtime: MotionRuntime): () => void {
     if (phase === 'finished') return;
     const frame = introFrame(performance.now() - started);
     overlay.dataset.active = 'true';
+    document.documentElement.dataset.openingActive = 'true';
+    document.documentElement.dataset.introReady = 'true';
     if (skip) skip.dataset.visible = 'true';
     if (enter && frame.descriptor >= 1) enter.dataset.visible = 'true';
     if (name) {
@@ -76,8 +84,8 @@ export function initOpening(runtime: MotionRuntime): () => void {
       name.style.transform = `translateY(${(1 - frame.descriptor) * 8}px)`;
       name.querySelectorAll<HTMLElement>('[data-opening-letter]').forEach((letter, index) => {
         const progress = frame.letters[index] ?? 1;
-        letter.style.opacity = String(progress);
-        letter.style.transform = `translateY(${(1 - progress) * 16}px) rotateX(${(1 - progress) * 18}deg)`;
+        const eased = 1 - Math.pow(1 - progress, 3);
+        letter.style.setProperty('--opening-progress', String(eased));
       });
     }
     if (phase === 'waiting') overlay.style.opacity = '1';
@@ -106,6 +114,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
     overlay.dataset.exiting = 'false';
     overlay.style.opacity = '1';
     name?.style.setProperty('opacity', '1');
+    runtime.invalidate('opening', render);
   };
   const onSkip = () => startExit(false);
   const onEnter = () => startExit(false);
@@ -119,7 +128,10 @@ export function initOpening(runtime: MotionRuntime): () => void {
   const onEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') startExit(false); };
   addEventListener('keydown', onEscape);
   replay?.addEventListener('click', () => { phase = 'waiting'; started = performance.now(); overlay.dataset.active = 'true'; runtime.invalidate('opening', render); });
-  if (runtime.policy().intro && !alreadyVisited) runtime.invalidate('opening', render);
+  if (runtime.policy().intro && !alreadyVisited) {
+    document.documentElement.dataset.openingActive = 'true';
+    runtime.invalidate('opening', render);
+  }
   else finish();
   return () => {
     skip?.removeEventListener('click', onSkip);

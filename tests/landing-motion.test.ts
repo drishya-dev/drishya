@@ -49,7 +49,7 @@ test('intro projection clamps exact opening boundaries and fails open for invali
   assert.equal(introFrame(180).assembly,0);
   assert.equal(introFrame(720).assembly,1);
   assert.equal(introFrame(560).letters[0],0);
-  assert.equal(introFrame(1280).letters[0],1);
+  assert.equal(introFrame(1720).letters[0],1);
   assert.equal(introFrame(1520).descriptor,1);
   assert.equal(introFrame(2100).handoff,0);
   assert.equal(introFrame(3000).stage,'ready');

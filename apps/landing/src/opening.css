@@ -1,8 +1,8 @@
 .opening-overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;background:#000;opacity:0}
 .opening-overlay[data-active=true]{opacity:1}
-.opening-name{display:grid;gap:1rem;justify-items:center;color:#f4f4ef;text-align:center;perspective:900px}
-.opening-name strong{display:flex;font:800 clamp(64px,11vw,156px)/.82 Inter,sans-serif;letter-spacing:-.1em;text-shadow:0 1px 0 #d9fff0,0 3px 0 #72b99c,0 6px 0 #477a67,0 16px 28px rgba(0,0,0,.7);transform-style:preserve-3d;animation:opening-float 3.2s ease-in-out infinite}
-.opening-name strong span{display:inline-block}
+.opening-name{display:grid;gap:clamp(1.25rem,3vw,2.5rem);justify-items:center;width:min(94vw,1500px);color:#f4f4ef;text-align:center;perspective:900px}
+.opening-name strong{display:flex;width:auto;max-width:100%;justify-content:center;gap:clamp(.015em,.35vw,.08em);font:800 clamp(72px,14vw,220px)/.82 Inter,sans-serif;letter-spacing:-.045em;text-shadow:0 1px 0 #d9fff0,0 3px 0 #72b99c,0 6px 0 #477a67,0 16px 28px rgba(0,0,0,.7);transform-style:preserve-3d;animation:opening-float 6s ease-in-out infinite}
+.opening-name strong span{display:inline-block;opacity:var(--opening-progress,1);filter:blur(calc((1 - var(--opening-progress,1)) * 18px));transform:translate3d(0,calc((1 - var(--opening-progress,1)) * 38px),0) rotateX(calc((1 - var(--opening-progress,1)) * 14deg)) scaleY(calc(.94 + var(--opening-progress,1) * .06));will-change:opacity,filter,transform}
 .opening-name p{margin:0;color:#9be7c4;font:500 clamp(11px,1.3vw,16px)/1.2 "JetBrains Mono",monospace;letter-spacing:.08em}
 .opening-enter{display:none;pointer-events:auto;color:#9be7c4;background:transparent;border:0;padding:.6rem;font:600 12px/1 "JetBrains Mono",monospace}
 .opening-enter[data-visible=true]{display:block}
@@ -14,6 +14,8 @@
 .opening-overlay[data-exiting=true]{transition:opacity 1500ms cubic-bezier(.22,1,.36,1)}
 .opening-name{transition:opacity 1500ms cubic-bezier(.22,1,.36,1)}
 .hero-world{position:relative}
+html[data-opening-active=true] .site-header{opacity:0;pointer-events:none;transform:translateY(-14px)}
+.site-header{transition:opacity 600ms ease,transform 600ms ease}
 
 @keyframes opening-float{0%,100%{transform:translateY(0) rotateX(0) rotateY(-2deg)}50%{transform:translateY(-10px) rotateX(2deg) rotateY(2deg)}}
 @media (prefers-reduced-motion:reduce){.opening-name strong{animation:none}}

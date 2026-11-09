@@ -16,11 +16,13 @@ test('fresh home visit resolves the branded opening into the same hero mark',asy
   await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
   await expect(page.locator('.opening-name strong')).toHaveText('Drishya');
   await expect(page.getByRole('button',{name:'Enter Drishya'})).toBeVisible();
+  await expect(page.locator('.site-header')).toHaveCSS('opacity','0');
   await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
   await expect(page.getByRole('button',{name:'Replay intro'})).toBeVisible();
   await page.getByRole('button',{name:'Replay intro'}).click();
   await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
   await page.keyboard.press('Escape');
+  await expect(page.locator('.site-header')).toHaveCSS('opacity','1');
   expect(await page.evaluate(()=>sessionStorage.getItem('drishya.landing.intro.v1'))).toBe('1');
 });
 
@@ -72,5 +74,16 @@ test('no JavaScript retains the complete static hero and native navigation',asyn
   await page.goto(site.url);
   await expect(page.locator('.hero-copy h1')).toBeVisible();
   await expect(page.locator('.identity-sculpture polygon')).toHaveCount(192);
+  await context.close();
+});
+
+test('intro bootstrap is Home-only',async({browser})=>{
+  const context=await browser.newContext({viewport:{width:1440,height:900}});
+  const page=await context.newPage();
+  const requests:string[]=[];
+  page.on('request',request=>requests.push(new URL(request.url()).pathname));
+  await page.goto(`${site.url}/privacy/`);
+  await expect(page.locator('.document-page h1')).toBeVisible();
+  expect(requests.some(path=>path==='/intro-boot.js'||path==='/intro-boot.css')).toBe(false);
   await context.close();
 });
