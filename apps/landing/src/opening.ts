@@ -13,13 +13,13 @@ const clamp = (value: number) => Math.max(0, Math.min(1, value));
 export function introFrame(elapsedMs: number): IntroFrame {
   if (!Number.isFinite(elapsedMs)) return {stage: 'ready', assembly: 1, letters: [1, 1, 1, 1, 1, 1, 1], descriptor: 1, handoff: 1, nameOpacity: 0, overlayOpacity: 0};
   const t = Math.max(0, elapsedMs);
-  const assembly = clamp((t - 120) / 440);
-  const letters = Array.from({length: 7}, (_, index) => clamp((t - 400 - index * 24) / 500));
-  const descriptor = clamp((t - 680) / 360);
-  const handoff = clamp((t - 1200) / 600);
-  const nameOpacity = 1 - clamp((t - 1320) / 240);
-  const overlayOpacity = 1 - clamp((t - 1320) / 360);
-  const stage = t < 120 ? 'seed' : t < 1060 ? 'assembly' : t < 1200 ? 'identity' : t < 1800 ? 'handoff' : 'ready';
+  const assembly = clamp((t - 180) / 540);
+  const letters = Array.from({length: 7}, (_, index) => clamp((t - 560 - index * 42) / 720));
+  const descriptor = clamp((t - 1000) / 520);
+  const handoff = clamp((t - 2100) / 900);
+  const nameOpacity = 1 - clamp((t - 2280) / 360);
+  const overlayOpacity = 1 - clamp((t - 2280) / 720);
+  const stage = t < 180 ? 'seed' : t < 1800 ? 'assembly' : t < 2100 ? 'identity' : t < 3000 ? 'handoff' : 'ready';
   return {stage, assembly, letters, descriptor, handoff, nameOpacity, overlayOpacity};
 }
 
@@ -91,6 +91,8 @@ export function initOpening(runtime: MotionRuntime): () => void {
   const cancel = () => finish();
   skip?.addEventListener('click', cancel);
   enter?.addEventListener('click', cancel);
+  const onWheel = (event: WheelEvent) => { if (event.deltaY > 0) cancel(); };
+  addEventListener('wheel', onWheel, {passive: true});
   addEventListener('keydown', event => { if (event.key === 'Escape' || event.key === 'Tab') cancel(); }, {once: true});
   addEventListener('pointerdown', cancel, {once: true});
   addEventListener('focusin', cancel, {once: true});
@@ -100,6 +102,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
   return () => {
     skip?.removeEventListener('click', cancel);
     enter?.removeEventListener('click', cancel);
+    removeEventListener('wheel', onWheel);
     if (timer) clearTimeout(timer);
     finish();
   };

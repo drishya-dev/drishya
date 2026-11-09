@@ -46,12 +46,12 @@ test('motion policy blocks the intro for explicit and constrained modes',()=>{
 
 test('intro projection clamps exact opening boundaries and fails open for invalid time',()=>{
   assert.equal(introFrame(0).stage,'seed');
-  assert.equal(introFrame(120).assembly,0);
-  assert.equal(introFrame(560).assembly,1);
-  assert.equal(introFrame(400).letters[0],0);
-  assert.equal(introFrame(900).letters[0],1);
-  assert.equal(introFrame(1040).descriptor,1);
-  assert.equal(introFrame(1200).handoff,0);
-  assert.equal(introFrame(1800).stage,'ready');
+  assert.equal(introFrame(180).assembly,0);
+  assert.equal(introFrame(720).assembly,1);
+  assert.equal(introFrame(560).letters[0],0);
+  assert.equal(introFrame(1280).letters[0],1);
+  assert.equal(introFrame(1520).descriptor,1);
+  assert.equal(introFrame(2100).handoff,0);
+  assert.equal(introFrame(3000).stage,'ready');
   assert.deepEqual(introFrame(Number.NaN),{stage:'ready',assembly:1,letters:[1,1,1,1,1,1,1],descriptor:1,handoff:1,nameOpacity:0,overlayOpacity:0});
 });
