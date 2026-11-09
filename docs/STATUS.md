@@ -57,9 +57,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ### Harsh with Codex — 9 Nov: LAND-8 complete landing specification
 
-- Expanded the [reference audit MD](review/land-7-reference-motion-inventory.md) into the selected build contract: all 30 reference effects have an original Drishya adaptation and an owner. Includes exact copy/routes, the 1800 ms logo/name/hero opening, cinematic explanation, shared sample playback, pointer depth, showcases, brand passage, controls, dialog, policy, fallback states, accessibility, privacy and performance budgets. The original browser/public-source evidence and its limitations remain alongside the design.
-- Revised the plan in PR #385 after Harsh requested a fuller hero and less scrolling. LAND-12 replaces the three tall examples with one selectable showcase. LAND-15 owns a poster and an on-demand 12-second recording of the synthetic demo. LAND-14 checks media requests and the measured height reduction. TASKS holds the seven implementation items and their order.
-- Documentation checks pass: all 30 matrix IDs in order, six future items present, internal/task anchors valid, code fences balanced, no unfinished markers, task synchronization and whitespace clean. Independent review caught simultaneous phrase blur in the explainer; corrected the exact formulas so the active phrase stays sharp throughout. PR #385 requests Yash's review. Product/browser tests were not run for this docs-only item. Original reference assets remain ignored under `.local/`; no reference artwork or user recording is committed.
+- The [selected plan](review/land-7-reference-motion-inventory.md) preserves the original 30-effect audit and gives each effect an implementation owner. Harsh’s latest feedback selects lighter opening typography, synchronized finite motion, a hidden navbar during entry and a stronger tagline. Manual entry comes from the existing opening stack.
+- The left hero copy describes the evidence shown in the right preview. The walkthrough has one reader in normal flow. LAND-12 owns the floating cards and fixture-backed peeks, LAND-15 owns the 12-second synthetic recording, and LAND-16 owns the ASCII closing and footer. LAND-14 measures total page and showcase height. TASKS tracks the eight implementation items.
+- PR #385 contains the documentation revision for Yash’s review. Checked the 30 mappings, eight task contracts, links, task synchronization and diff whitespace. The fixture supplies all four planned evidence beats and the hover excerpt sources. Browser acceptance belongs to the implementation items.
 
 ### Yash with Codex — 8 Nov: UI-29 Release 1 menu contents, PR #376
 
@@ -1533,6 +1533,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **9 Nov, Harsh: calm entry and a shorter evidence path.** Use a spaced, light Inter wordmark and a finite reveal that holds for manual entry. Match the hero copy to the right-side product proof, combine the explanation and walkthrough, reveal evidence on the showcase cards, and use one ASCII closing area. Ordinary scrolling keeps selections stable. [LAND-8 revision](review/land-7-reference-motion-inventory.md).
 
 - **9 Nov, Harsh: product proof in less space.** Use a short on-demand Drishya recording beneath the hero SVG and a selectable evidence stack inside `#workspace`. Visitors can see the actual interface immediately through its poster and choose the evidence they want to read in one section. [LAND-8 revision](review/land-7-reference-motion-inventory.md).
 
