@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| LAND-8 | @harsh + Codex | `codex/land-8-motion-spec` | 2026-11-09 | Expand `docs/review/land-7-reference-motion-inventory.md` into the complete selected build spec; TASKS/STATUS only (3 paths). All 30 effect decisions, exact motion/state/page contracts, file/API boundaries and separate future implementation PRs. Documentation only. |
 | LAND-7 | @harsh + Codex | `codex/land-7-motion-audit` | 2026-11-09 | `docs/review/land-7-reference-motion-inventory.md`, TASKS/STATUS. Full browser/source reference audit only, including opening, plain-language explainer and live elements. No product source changes. |
 | LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. |
 | LAND-5 | @harsh + Codex | `codex/land-5-hero` | 2026-11-08 | Whole dimensional hero: new identity-geometry.ts/identity.ts/landing-motion.ts/landing-motion.css in apps/landing/src; site.ts and scripts/build-landing.ts integration; tests/landing-motion.test.ts and tests/browser/landing-motion.spec.ts; TASKS/STATUS. At most 10 paths, no existing app source or LAND-3 site.css edits. LAND-6 starts only after this acceptance. |
