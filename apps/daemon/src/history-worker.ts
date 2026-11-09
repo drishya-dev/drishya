@@ -332,8 +332,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'tool-trail') value=toolTrail(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step),a.filter,a.from);
     else if (message.method === 'queue') {
       const view=current(a.id), revision=JSON.stringify(view.revisions);
-      if (!queueEvidenceCache || queueEvidenceCache.owner !== a.owner || queueEvidenceCache.viewId !== a.id || queueEvidenceCache.revision !== revision) queueEvidenceCache={owner:a.owner,viewId:a.id,revision,evidence:queueResolutionEvidence(source,view.projection,a.owner)};
-      value=queuePage(view.projection.timeline,a.owner,a.query,queueEvidenceCache.evidence);
+      value=queuePage(view.projection.timeline,a.owner,a.query,queueEvidenceFor(view.projection,a.owner,revision,a.id));
     }
     else if (message.method === 'screen') value=screenRun((a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step)).operations);
     else if(message.method==='git-session-evidence'){
