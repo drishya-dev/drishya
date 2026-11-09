@@ -227,3 +227,30 @@ for(const {width,height} of [
     await context.close();
   });
 }
+
+test('hero aperture stays proportional when resized and only moves for a fine pointer',async({page})=>{
+  const mark=page.locator('.identity-sculpture');
+  await page.setViewportSize({width:600,height:900});
+  await page.goto(site.url+'/#main');
+  const compact=await mark.boundingBox();
+  expect(compact).not.toBeNull();
+
+  await page.setViewportSize({width:1024,height:600});
+  const short=await mark.boundingBox();
+  expect(short).not.toBeNull();
+  expect(short!.width/short!.height).toBeCloseTo(460/430,2);
+  expect(short!.width).toBeGreaterThan(compact!.width);
+
+  await page.setViewportSize({width:1920,height:1080});
+  const wide=await mark.boundingBox();
+  expect(wide).not.toBeNull();
+  expect(wide!.width).toBeGreaterThan(short!.width);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await mark.hover({position:{x:180,y:100}});
+  await expect(mark).toHaveCSS('rotate','4deg');
+  await page.mouse.move(8,80);
+  await expect(mark).toHaveCSS('rotate','none');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.mouse.move(wide!.x+180,wide!.y+100);
+  await expect(mark).toHaveCSS('rotate','none');
+});
