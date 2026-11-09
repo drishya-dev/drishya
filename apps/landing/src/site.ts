@@ -1,13 +1,16 @@
 import './site.css';
 import './landing-motion.css';
 import './opening.css';
+import './explainer.css';
 import {initLandingMotion,initScrollStory,initSectionArrivals,motionAllowed} from './landing-motion.ts';
 import {createMotionRuntime} from './motion-runtime.ts';
 import {initOpening} from './opening.ts';
+import {initExplainer} from './explainer.ts';
 const motionRuntime=createMotionRuntime();
 initLandingMotion(motionRuntime);
 initSectionArrivals(motionRuntime);
 initOpening(motionRuntime);
+initExplainer(motionRuntime);
 interface Chapter {key:string;title:string;step:number;kind:string;path?:string;command?:string;status:string;provenance:string;text:string}
 
 // All material is public synthetic text; render it as text, never as captured HTML.
