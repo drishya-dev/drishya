@@ -16,7 +16,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); } });
 
 // UI-15: the session menu is three groups that say what they are for, repeats nothing the header offers, fits the window at rest,
-// and keeps every action it had.
+// and exposes only Release 1 product actions; diagnostics live inside Session details.
 for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const harness of ['claude-code', 'codex'] as const)
   test(`the session menu is grouped, has no repeats and fits at ${width}x${height} (${harness})`, async ({ page }) => {
     await page.setViewportSize({ width, height });
@@ -29,12 +29,14 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     // Nothing the header already offers: Changes lives in the header only.
     await expect(list.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(0);
     await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeVisible();
-    // Every former action is still here.
-    for (const name of ['Notes', 'Replay this session']) await expect(list.getByRole('button', { name, exact: true })).toBeVisible();
+    await expect(list.getByRole('button', { name:'Notes', exact:true })).toBeVisible();
+    await expect(list.getByRole('button', { name:'Replay this session', exact:true })).toHaveCount(0);
     await expect(list.getByText('Session details', { exact: true })).toBeVisible();
     await expect(list.getByText('Navigate history', { exact: true })).toBeVisible();
     await expect(list.getByText('Usage', { exact: true })).toBeVisible();
-    await expect(list.getByText(/local preview/)).toBeVisible();
+    await expect(list.getByText(/local preview/)).toHaveCount(0);
+    await expect(list.locator('.screen-entry')).toHaveCount(0);
+    await expect(list.getByRole('button',{name:'Rescan original journal',exact:true})).toHaveCount(0);
     await expect(list.getByRole('link', { name: 'Export recording', exact: true })).toBeVisible();
     // At rest it fits the window without an inner scroll.
     const fit = await list.evaluate((el) => ({ scroll: el.scrollHeight - el.clientHeight, bottom: el.getBoundingClientRect().bottom, height: innerHeight }));
@@ -45,6 +47,21 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     await menu.locator('.usage-peek>summary').click();
     await expect(menu.locator('.usage-peek')).toHaveAttribute('open', '');
     const usage = menu.locator('.usage-peek');
+    await expect(usage.getByRole('heading',{name:'Limits',exact:true})).toBeVisible();
+    await expect(usage.getByRole('heading',{name:'Context',exact:true})).toBeVisible();
+    await expect(usage.locator('details').filter({has:page.locator('summary',{hasText:'Token details'})})).not.toHaveAttribute('open');
+    await expect(usage.getByRole('region',{name:'Native runtime usage'})).toHaveCount(0);
     await expect(usage).not.toContainText(/Unix seconds|\(minutes\)|\bms\b\)/);
     await expect(usage.locator('dd').filter({ hasText: /^\d{7,}$/ })).toHaveCount(0);
   });
+
+test('replay and local preview remain explicit developer tools, with rescan inside Session details',async({page})=>{
+ await page.goto(server.launchUrl);await page.locator('.home').waitFor();
+ await page.goto(`${server.url}/?devtools=1&motion=0#/r/${ids.codex}`);
+ await page.getByLabel('More workspace options',{exact:true}).click();
+ const menu=page.locator('.workspace-menu[open]');
+ await expect(menu.getByRole('button',{name:'Replay this session',exact:true})).toBeVisible();
+ await expect(menu.getByRole('button',{name:'Use this session as local preview',exact:true})).toBeVisible();
+ await menu.locator('.session-identity > summary').click();
+ await expect(menu.locator('.session-identity').getByRole('button',{name:'Rescan original journal',exact:true})).toBeVisible();
+});

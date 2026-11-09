@@ -117,6 +117,7 @@
       "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it.",
       "turnTime": "2026-09-21T10:00:00.000Z",
       "turnStep": 0,
+      "turnId": "turn_obs#4",
       "inTurn": 0
     },
     {
@@ -179,7 +180,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#4",
+          "id": "prose_obs#5",
           "role": "assistant",
           "exposure": "full",
           "arriving": false
@@ -232,7 +233,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#5",
+          "id": "prose_obs#6",
           "role": "reasoning",
           "exposure": "full",
           "arriving": false
@@ -303,7 +304,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#6",
+          "id": "prose_obs#7",
           "role": "assistant",
           "exposure": "full",
           "arriving": false

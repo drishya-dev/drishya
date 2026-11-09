@@ -1,49 +1,21 @@
-import { describe, expect, it } from 'vitest';
-import { resolveUISkin, resolveUIVersion, versionChoiceEnabled, versionURL } from '../src/lib/ui-version';
-
-describe('UI version navigation', () => {
-  it('lets explicit links override the saved version and rejects unknown saved choices', () => {
-    expect(resolveUIVersion('?experience=classic', 'fresh')).toBe('classic');
-    expect(resolveUIVersion('', 'fresh')).toBe('modern');
-    expect(resolveUIVersion('?experience=fresh')).toBe('modern');
-    expect(resolveUIVersion('')).toBe('modern');
-    expect(resolveUIVersion('', 'modern')).toBe('modern');
-    // Canvas was retired (UI-4 slice 2): saved choices and old links open Legacy, or Modern when the developer switch is off.
-    expect(resolveUIVersion('', 'canvas', true)).toBe('classic');
-    expect(resolveUIVersion('?experience=canvas', 'modern')).toBe('classic');
-    expect(resolveUIVersion('?experience=modern', 'canvas')).toBe('modern');
-    expect(resolveUIVersion('', 'classic', true)).toBe('classic');
-    expect(resolveUIVersion('', 'unknown')).toBe('modern');
-    expect(resolveUIVersion('?experience=studio', 'fresh')).toBe('studio');
+import {describe,expect,it} from 'vitest';
+import {resolveUISkin,resolveUIVersion,selectedUIVersion,selectedUISkin,versionChoiceEnabled,versionURL} from '../src/lib/ui-version.ts';
+describe('Release 1 Modern-only presentation',()=>{
+  it('ignores every previous URL, preference and developer switch',()=>{
+    for(const name of ['classic','legacy','canvas','clarity','fresh','studio','modern','unknown',''])for(const saved of [name,null,undefined]){
+      const query=`?experience=${name}&versions=all`;
+      expect(resolveUIVersion(query,saved,true)).toBe('modern');
+      expect(resolveUISkin(query,saved)).toBe('modern');
+      expect(versionChoiceEnabled(query)).toBe(false);
+    }
+    expect(selectedUIVersion()).toBe('modern');expect(selectedUISkin()).toBe('modern');
   });
-  it('makes Modern the only product choice: a saved Legacy or Canvas choice is ignored unless the developer switch is on', () => {
-    expect(resolveUIVersion('', 'classic')).toBe('modern');
-    expect(resolveUIVersion('', 'canvas')).toBe('modern');
-    expect(resolveUIVersion('', 'classic', false)).toBe('modern');
-    expect(resolveUIVersion('', 'classic', true)).toBe('classic');
-    expect(resolveUIVersion('?experience=classic', 'modern')).toBe('classic');
-    expect(versionChoiceEnabled('?versions')).toBe(true);
-    expect(versionChoiceEnabled('?experience=classic&versions=all')).toBe(true);
-    expect(versionChoiceEnabled('?experience=classic')).toBe(false);
-  });
-  it('treats Clarity as a skin of Modern: the shell stays Modern and the skin follows the link, then the saved choice', () => {
-    expect(resolveUIVersion('?experience=clarity')).toBe('modern');
-    expect(resolveUIVersion('', 'clarity')).toBe('modern');
-    expect(resolveUISkin('?experience=clarity')).toBe('clarity');
-    expect(resolveUISkin('', 'clarity')).toBe('clarity');
-    expect(resolveUISkin('?experience=modern', 'clarity')).toBe('modern');
-    expect(resolveUISkin('?experience=classic', 'clarity')).toBe('modern');
-    expect(resolveUISkin('', 'modern')).toBe('modern');
-    expect(resolveUISkin('')).toBe('modern');
-    expect(new URL(versionURL('http://localhost/?demo#/r/x', 'clarity')).searchParams.get('experience')).toBe('clarity');
-  });
-  it('drops presentation-specific subviews when changing shells', () => {
-    expect(new URL(versionURL('http://localhost/?experience=modern#/r/recording/settings', 'classic')).hash).toBe('#/r/recording');
-    expect(new URL(versionURL('http://localhost/?experience=modern#/settings', 'canvas')).hash).toBe('#/');
-  });
-  it('preserves the session, port and other query parameters when switching', () => {
-    const url = new URL(versionURL('http://127.0.0.1:8894/?demo&experience=fresh#/r/recording', 'classic'));
-    expect(url.port).toBe('8894'); expect(url.hash).toBe('#/r/recording');
-    expect(url.searchParams.has('demo')).toBe(true); expect(url.searchParams.get('experience')).toBe('classic');
+  it('retains the session, token and query while retiring presentation-specific subviews',()=>{
+    const url=new URL(versionURL('http://127.0.0.1:8894/?demo&motion=0&versions=1&experience=clarity#/r/recording/settings','classic'));
+    expect(url.port).toBe('8894');expect(url.hash).toBe('#/r/recording');
+    expect(new URL(versionURL('http://localhost/#token=synthetic-auth','clarity')).hash).toBe('#token=synthetic-auth');
+    expect(new URL(versionURL('http://localhost/#/settings','classic')).hash).toBe('#/');
+    expect(url.searchParams.has('demo')).toBe(true);expect(url.searchParams.get('motion')).toBe('0');
+    expect(url.searchParams.has('experience')).toBe(false);expect(url.searchParams.has('versions')).toBe(false);
   });
 });
