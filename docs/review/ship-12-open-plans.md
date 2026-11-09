@@ -48,3 +48,14 @@ Two earlier local real-screen probe failures are preserved. One addressed a prop
 - The existing `check:real -- plan-material` selected recording `rec_a7e9af7d`, 28.3 MB, with 87 projected list revisions from 168 calls and zero documents; it found no Codex plan-tool case. That scanner counts tool calls, so the separately generated genuine Codex proposal acceptance above is recorded independently.
 - No genuine native Codex `update_plan` capture was available. The installed native CLI reported that tool unavailable. Proposal documents do not prove its checklist/update path. Synthetic native `update_plan`, TodoWrite and plan-mode regressions pass, but remain regression guards.
 - A full batch gate and the human freeze/truth/ten-minute acceptance are not certified here. Do not tick SHIP-12 complete from this report alone.
+
+
+## Final integrated gate disposition (9 November)
+
+Product source `35e4393`: both typechecks and UI build pass; all 215 unit files pass, **1,315 tests / one existing skip**. Browser run used **three parallel workers plus one serial worker, zero retries**: **696 parallel passes / 27 skips; 28 serial passes / one skip / four failures**. This is not a clean full browser gate.
+
+All four failures reproduce with the same assertions on separately rebuilt, clean main `f93d880b`, one serial worker and zero retries: B2 live :63 opens an unexpected operation detail (expected zero, got one); material-motion :132 loses its hover-reading surface; p1-pacing :40 sees three active animations instead of zero; p1-pacing :266 has no repository tether. These remain TEST-2/MOTION-3 baseline failures, not fixes claimed by this task. The baseline control lives in the coordinator checkout's `.local/release1-baseline-20261109/`.
+
+The first gate `b843726` stopped at three golden mismatches after 1,312 unit passes / one skip. Only the reviewed raw sequence expectations changed (18 to 19, 20 to 21, 22 to 23), reflecting retained Claude completion observations; all other golden fields remain unchanged. Golden/queue checks then passed 46/46. The first independent packaging run also failed its old exact observation count of 34: the fixture now retains three completed-turn rows. The corrected exact assertion is 37, with zero capture gaps. **package:verify passes at integration `70825e6`**, including isolated offline installation, both imports, checksums, demo, authenticated API and persisted restart. Its apps/packages tree is byte-identical to the full-gate product source; the additional change is the verification script, plus docs. No browser assertion, retry or timeout was relaxed.
+
+Private complete gate evidence: `.local/release-gate-20261109-141147/` and `release-gate-20261109-142009/` in the isolated integration checkout. No further full-suite command was run to erase these failures. Other-builder review remains required; no merge or release certification is implied.
