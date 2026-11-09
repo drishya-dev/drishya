@@ -36,6 +36,11 @@ export function initOpening(runtime: MotionRuntime): () => void {
     skip?.remove();
     return () => undefined;
   }
+  if (document.documentElement.dataset.intro === 'skip') {
+    overlay.remove();
+    skip?.remove();
+    return () => undefined;
+  }
   const name = overlay.querySelector<HTMLElement>('.opening-name');
   let stopped = false;
   let started = performance.now();
@@ -79,6 +84,7 @@ export function initOpening(runtime: MotionRuntime): () => void {
     if (frame.stage === 'ready') finish();
     else timer = setTimeout(() => runtime.invalidate('opening', render), 16);
   };
+  (window as Window & {__drishyaIntroBootCancel?: () => void}).__drishyaIntroBootCancel?.();
   const cancel = () => finish();
   skip?.addEventListener('click', cancel);
   addEventListener('keydown', event => { if (event.key === 'Escape' || event.key === 'Tab') cancel(); }, {once: true});
