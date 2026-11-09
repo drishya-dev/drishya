@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| LAND-6 | @harsh + Codex | `codex/land-6-scroll-story` | 2026-11-08 | Whole landing scroll-story and interaction pass: apps/landing/src/site.ts, landing-motion.ts and landing-motion.css; scripts/build-landing.ts; tests/browser/landing-motion.spec.ts; TASKS/STATUS (7 paths). After verified LAND-5 PR #380, no product source, site.css or captured data changes. |
 | FILES-14 | @harsh + Codex | `codex/files-14` | 2026-11-08 | Release queue 1, requested by Harsh on 8 Nov. Diagnose genuine nested and sibling worktree placement first. Own packages/projection/src/reduce.ts file-location/root assignment, apps/daemon/src/file-roots.ts and apps/ui/src/lib/worktree-files.ts only where the reproduced cause requires it; focused units/browser checks, real-session evidence and completion docs. At most 15 paths. Finish the whole item before SHIP-13 begins. Preserve captured path identities; any schema change requires both builders agreement. |
 | SHIP-14 | @harsh + Codex | `codex/ship-14` | 2026-11-08 | Release queue 2, requested by Harsh on 8 Nov. Own packages/scene/src/queued-inputs.ts pending/history resolution, apps/ui/src/components/QueuedInputs.tsx, daemon queued-inputs.ts and history-worker.ts queue-only path if required, focused units/browser/genuine queue evidence and completion docs. At most 15 paths. Preserve replay boundaries and evidence labels. Coordinator reserved QueueQuery/QueuePage optional API fields in contracts/index.ts and server.ts queue-route parsing on 8 Nov for complete as-of pending counts. Also reserved adapter-claude/src/index.ts assistant stop_reason=end_turn retention and its focused test on 8 Nov, using the existing turn.end event with stable identities. Preserve existing callers; no recorded-event definitions or UsagePayload changes. No native controller, composer styling or History motion edits. |
 | SHIP-13 | @harsh + Codex | `codex/ship-13` | 2026-11-08 | Release queue 3, requested by Harsh on 8 Nov; starts after FILES-14. Own SessionWorkspace.tsx FolderExplorer active-tab reveal/selection, DeveloperWorkspace.tsx active file identity, lib/worktree-files.ts only for this reveal, focused units/browser checks, genuine five-tab acceptance and completion docs. At most 15 paths. Preserve manual collapse until active file changes. No LAYOUT-1 stylesheet, SHIP-1 routing, History/Origins or Usage edits. |
@@ -53,6 +52,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex - 9 Nov: LAND-6 scroll story and interaction finishing
+
+- The existing four synthetic moments now form a bounded scroll story on larger desktop windows. One real evidence surface stays pinned; chapter clicks, reading focus, keyboard, range and finite playback take explicit ownership until Follow scroll. Plain anchor navigation restores scroll ownership; explicit moment bookmarks restore manual reading. No fabricated causal links, replacement transcript or new data source.
+- Whole editorial sections arrive once; arrows, footer mark and closing wordmark have finite feedback. Shared motion policy covers reduced motion, motion=0, Save Data, hidden tabs and page lifecycle. Hidden/pagehide cancels finite WAAPI and CSS effects without collapsing story layout. Narrow/short windows and missing metadata retain the manual/static paths.
+- Final gate: 24 browser checks passed in installed Edge, 1 worker, 43.3 s, no retries; 2 geometry units and targeted landing TypeScript passed. Both browser specs rebuilt the static artifact successfully. Visually checked the pinned result at 1440, manual walkthrough/menu at 600, and closing composition. Screenshot `.local/landing-motion-hero-1440.png` is synthetic and remains local. No app/full-product gate or genuine-session acceptance is claimed.
+- Fresh-context review completed after an initial usage-limit interruption. Findings: hidden finite effects and inconsistent Save Data policy; both reproduced, fixed and regression tested. Decorative/sticky clipping was separated into an outer sticky wrapper, with painted evidence verified in the browser. All three task PRs remain separate/unmerged for Yash.
 
 ### Harsh with Codex - 8 Nov: LAND-5 dimensional landing hero
 
