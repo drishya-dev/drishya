@@ -61,13 +61,16 @@ for (const width of [600, 1440]) {
     await page.screenshot({path: resolve(`.local/live5-queue-${width}.png`)});
     expect(app.projection(id).timeline.filter(t => t.type === 'turn')).toHaveLength(1);
     await append([queue('dequeue')]);
-    await expect(dialog.getByText('Queue changed · item outcome unknown', {exact: true})).toBeVisible();
+    await expect(dialog.getByText('No inputs waiting.', {exact: true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs');
+    await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
+    await expect(dialog.getByRole('button',{name:/Synthetic pending input/})).toBeVisible();
     const pageData = await apiQueue(page);
     expect(pageData.items).toHaveLength(1); expect(pageData.items[0].state).toBe('unknown');
     expect(app.projection(id).timeline.filter(t => t.type === 'turn')).toHaveLength(1);
     await append([row('attachment', {attachment: {type: 'queued_command', prompt: 'Synthetic pending input\nsecond line\t@literal', timestamp: new Date().toISOString()}})]);
     await expect.poll(() => app.projection(id).timeline.filter(t => t.type === 'turn').length).toBe(2);
-    expect((await apiQueue(page)).items[0].state).toBe('unknown');
+    expect((await apiQueue(page)).items[0].state).toBe('delivered');
     await dialog.getByRole('button', {name: 'Close Queued inputs', exact: true}).click();
     expect(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)).toBeLessThanOrEqual(1);
   });
@@ -124,10 +127,16 @@ for (const width of [600, 1440]) {
     await expect(dialog.locator('[data-queued-input-text]')).toHaveText('No text recorded.');
     expect(app.projection(id).timeline.filter(t => t.type === 'turn')).toHaveLength(1);
     expect(await dialog.evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
+    await append([row('attachment',{attachment:{type:'queued_command',prompt:[{type:'image',source:{type:'base64',media_type:'image/png',data:bytes}}]}})]);
+    await expect(dialog.getByText('No inputs waiting.',{exact:true})).toBeVisible();
+    expect(await apiQueue(page)).toMatchObject({pendingTotal:0,items:[{state:'delivered'}]});
+    await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
+    await dialog.getByRole('button',{name:/Image input/}).click();
+    await expect(dialog.getByRole('img',{name:'Queued input image 1',exact:true})).toBeVisible();
   });
 }
 
-test('only exact native identities establish delivery or removal, including replay boundaries', async ({page}) => {
+test('native removal and prompt-confirmed delivery preserve replay boundaries', async ({page}) => {
   await append([queue('enqueue', 'Synthetic removed input', 'remove-me'), queue('enqueue', 'Synthetic delivered input', 'deliver-me'), queue('enqueue', 'Synthetic still pending input', 'pending')]);
   const captured = app.projection(id), queues = captured.timeline.filter(t => t.type === 'queue');
   const firstBoundary = queues[0]!;
@@ -140,7 +149,7 @@ test('only exact native identities establish delivery or removal, including repl
   expect((await page.request.get(`${server.url}/v1/recordings/${id}/queue/${data.items[0].id}?through=${firstBoundary.sourceObservationId}`)).status()).toBe(404);
   await open(page, captured.timeline.indexOf(firstBoundary) + 1);
   const dialog = await openReceipts(page);
-  await expect(dialog.getByText('1 recorded enqueue receipts at this replay point', {exact: true})).toBeVisible();
+  await expect(dialog.getByText('1 waiting · 1 recorded enqueue receipts at this replay point', {exact: true})).toBeVisible();
   await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic removed input');
   await expect(dialog.getByText('Queue receipt recorded', {exact: true})).toBeVisible();
   await expect(dialog.getByRole('button', {name: /Synthetic delivered input/})).toHaveCount(0);
@@ -161,7 +170,7 @@ test('replay uses timeline order rather than physical append order and preserves
   expect(all.items.find((r: {preview: string}) => r.preview === 'Synthetic earlier main queue').state).toBe('recorded');
   expect(all.items.find((r: {preview: string}) => r.preview === 'Synthetic child queue').state).toBe('removed');
   const dialog = await openReceipts(page);
-  await expect(dialog.getByText('1 recorded enqueue receipts at this replay point', {exact: true})).toBeVisible();
+  await expect(dialog.getByText('1 waiting · 1 recorded enqueue receipts at this replay point', {exact: true})).toBeVisible();
   await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic earlier main queue');
   await expect(dialog.getByRole('button', {name: /Synthetic future by clock|Synthetic child queue/})).toHaveCount(0);
 });
@@ -175,7 +184,7 @@ test('paged replay retains its physical queue boundary when every queue event is
   expect(history.projection.timeline.some(t => t.type === 'queue')).toBe(false);
   expect(history.queueBoundary).toBeDefined(); expect(history.queueBoundary!.ownerRecordingId).toBe(id);
   await open(page, replayStep); const dialog = await openReceipts(page);
-  await expect(dialog.getByText('10005 recorded enqueue receipts at this replay point', {exact: true})).toBeVisible();
+  await expect(dialog.getByText('10005 waiting · 10005 recorded enqueue receipts at this replay point', {exact: true})).toBeVisible();
   await expect(dialog.getByRole('button', {name: /Synthetic future receipt/})).toHaveCount(0);
   await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic old receipt 10004');
 });
@@ -186,6 +195,10 @@ test('an exported bundle retains queue text and ambiguous outcomes without contr
   await page.route('**/synthetic-queue-bundle.json', route => route.fulfill({status: 200, contentType: 'application/json', body: readFileSync(bundlePath, 'utf8')}));
   await page.goto(`${server.url}/?bundle=/synthetic-queue-bundle.json&motion=0`);
   await expect(page.locator('.history')).toBeVisible(); const dialog = await openReceipts(page);
+  await expect(dialog.getByText('No inputs waiting.',{exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs');
+  await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
+  await dialog.getByRole('button',{name:/Synthetic exported queue/}).click();
   await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic exported queue\n@literal');
   await expect(dialog.getByText('Queue changed · item outcome unknown', {exact: true})).toBeVisible();
   await expect(page.getByRole('textbox', {name: /Prompt/})).toHaveCount(0);
@@ -205,4 +218,42 @@ test('text appended alone to a live recording shows without any later record', a
   // A tool call that is still running does not hold back the text written before it.
   await append([prose('Synthetic text before a running call'), row('assistant', {message: {role: 'assistant', content: [{type: 'tool_use', id: 'toolu_run', name: 'Bash', input: {command: 'sleep 30', description: 'Synthetic slow command'}}]}})]);
   await expect(page.getByText('Synthetic text before a running call', {exact: false}).first()).toBeVisible({timeout: 3000});
+});
+
+
+for(const width of [600,1440])test(`completed turns clear pending without inventing delivery at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ await append([queue('enqueue','Synthetic not observed as a prompt')]);
+ await open(page);const dialog=await openReceipts(page);
+ await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs · 1');
+ const queuedStep=app.projection(id).timeline.length;
+ await append([row('assistant',{message:{id:'synthetic-completion',role:'assistant',content:[{type:'text',text:'Synthetic whole final answer'}],stop_reason:'end_turn'}})]);
+ await expect(dialog.getByText('No inputs waiting.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs');
+ expect(await apiQueue(page)).toMatchObject({total:1,pendingTotal:0,items:[{state:'unknown'}]});
+ const count=app.store.countObservations(id);await app.ingest.rescan(id);expect(app.store.countObservations(id)).toBe(count);
+ await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
+ await dialog.getByRole('button',{name:/Synthetic not observed as a prompt/}).click();
+ await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic not observed as a prompt');
+ await page.reload();await openReceipts(page);
+ await expect(receipts(page).getByText('No inputs waiting.',{exact:true})).toBeVisible();
+ await open(page,queuedStep);await openReceipts(page);
+ await expect(receipts(page).getByRole('button',{name:/Synthetic not observed as a prompt/})).toBeVisible();
+ expect((await apiQueue(page,`?step=${queuedStep}`)).pendingTotal).toBe(1);
+});
+
+for(const width of [600,1440])test(`matching prompt clears only the oldest duplicate without a queue mutation at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});
+ await append([queue('enqueue','Synthetic identical prompt'),queue('enqueue','Synthetic identical prompt')]);
+ await open(page);const dialog=await openReceipts(page);
+ await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs · 2');
+ await append([row('attachment',{attachment:{type:'queued_command',prompt:'Synthetic identical prompt'}})]);
+ await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs · 1');
+ await expect(dialog.getByRole('button',{name:/Synthetic identical prompt/})).toHaveCount(1);
+ expect(await apiQueue(page)).toMatchObject({pendingTotal:1,items:[{state:'recorded'},{state:'delivered'}]});
+ await append([row('attachment',{attachment:{type:'queued_command',prompt:'Synthetic identical prompt'}})]);
+ await expect(dialog.getByText('No inputs waiting.',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs');
+ await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
+ await expect(dialog.getByRole('button',{name:/Synthetic identical prompt/})).toHaveCount(2);
 });
