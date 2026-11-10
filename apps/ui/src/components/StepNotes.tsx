@@ -37,15 +37,37 @@ export function StepNoteEditor({op}:{op:Operation}) {
 
 export function NotesEntry() {
   const {items,write,error}=useStepNotes(),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode);
+  const selectedOp=useApp(s=>s.selectedOp);
   const [open,setOpen]=useState(false),[shown,setShown]=useState(20),[opening,setOpening]=useState<string>(),[targetError,setTargetError]=useState(''),[preview,setPreview]=useState<string>(),[copyStatus,setCopyStatus]=useState('');
   useEffect(()=>{setOpen(false);setTargetError('');},[source,id,mode]);
   useEffect(()=>{const reveal=()=>setOpen(true);window.addEventListener('drishya-notes-open',reveal);return()=>window.removeEventListener('drishya-notes-open',reveal);},[]);
   useEffect(()=>{setPreview(undefined);setCopyStatus('');},[items]);
   const follow=items.filter(item=>item.status==='open'),saved=items.filter(item=>item.status==='saved'),resolved=items.filter(item=>item.status==='resolved');
   const update=(item:StepNote,status:StepNote['status'])=>write(items=>saveNote(items,{...item,status,updatedAt:new Date().toISOString()}));
-  const navigate=async(item:StepNote)=>{setOpening(item.operationId);setTargetError('');try{const state=useApp.getState();if(state.historyPage)await state.loadHistoryWindow({selectedOperationId:item.operationId});const now=useApp.getState();if(now.source!==source||now.recordingId!==id)return;if(!now.projection?.operations.some(op=>op.id===item.operationId))throw new Error('This step is unavailable. Your note remains saved.');now.set({developerWorkspace:false,filePanel:undefined,currentFile:undefined,explore:false});now.select(item.operationId);setOpen(false);}catch(e){setTargetError((e as Error).message);}finally{setOpening(undefined);}};
+  const navigate=async(operationId:string,returning=false)=>{
+    setOpening(operationId);
+    setTargetError('');
+    try {
+      const state=useApp.getState();
+      if(state.historyPage&&(!returning||!state.projection?.operations.some(op=>op.id===operationId))) {
+        await state.loadHistoryWindow({selectedOperationId:operationId});
+      }
+      const now=useApp.getState();
+      if(now.source!==source||now.recordingId!==id||now.mode!==mode)return;
+      if(!now.projection?.operations.some(op=>op.id===operationId))throw new Error(returning?'The selected step is unavailable.':'This step is unavailable. Your note remains saved.');
+      now.set({developerWorkspace:false,filePanel:undefined,currentFile:undefined,explore:false,...(returning?{follow:false}:{})});
+      if(!returning||now.selectedOp!==operationId)now.select(operationId);
+      setOpen(false);
+      // The card can remain selected after scrolling away. Focus it once the modal closes.
+      if(returning)requestAnimationFrame(()=>{
+        const current=useApp.getState();
+        if(current.source!==source||current.recordingId!==id||current.selectedOp!==operationId)return;
+        document.querySelector<HTMLElement>(`.history article[data-op-id="${CSS.escape(operationId)}"]`)?.focus();
+      });
+    }catch(e){setTargetError((e as Error).message);}finally{setOpening(undefined);}
+  };
   const rows=(notes:StepNote[])=>notes.slice(0,shown).map(item=><article key={item.operationId} className="review-question-row">
-    <button className="question-target" disabled={!!opening} onClick={()=>void navigate(item)}>{opening===item.operationId?'Opening step…':`${item.title} ↗`}</button>
+    <button className="question-target" disabled={!!opening} onClick={()=>void navigate(item.operationId)}>{opening===item.operationId?'Opening step…':`${item.title} ↗`}</button>
     {item.note&&<p>{item.note}</p>}
     <small>Step {item.sequence}{item.owner?` · Owner: ${item.owner}`:''}</small>
     <div className="step-note-actions">
@@ -60,7 +82,10 @@ export function NotesEntry() {
       {(error||targetError)&&<p role="alert">{error||targetError}</p>}
       {!!follow.length&&<section aria-label="Needs follow-up"><h3>Needs follow-up</h3>{rows(follow)}</section>}
       {!!saved.length&&<section aria-label="Saved notes"><h3>Saved</h3>{rows(saved)}</section>}
-      {!items.length&&<p>No notes yet. Open a step and add one.</p>}
+      {!items.length&&<>
+        <p>{selectedOp?'No notes yet. Add one on the selected step.':'No notes yet. Open a step and add one.'}</p>
+        {selectedOp&&<button type="button" className="btn ghost" disabled={!!opening} onClick={()=>void navigate(selectedOp,true)}>Return to selected step</button>}
+      </>}
       {!!resolved.length&&<details className="resolved-questions"><summary>Resolved · {resolved.length}</summary>{rows(resolved)}</details>}
       {Math.max(follow.length,saved.length,resolved.length)>shown&&<button className="btn" onClick={()=>setShown(n=>n+20)}>Show more notes</button>}
       {!!follow.length&&<button className="btn" onClick={()=>setPreview(follow.map(item=>`## ${item.title}\n\n${item.note}\n\nOwner: ${item.owner||'Unassigned'}\nStep reference: ${item.operationId}\nLocal reviewer note, not agent output or proof of coverage.`).join('\n\n'))}>Preview notes to follow up</button>}

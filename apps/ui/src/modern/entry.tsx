@@ -17,6 +17,9 @@ import './interaction-polish.css';
 import './reading-windows.css';
 import './finishing.css';
 import './composer.css';
+import './conversation.css';
+// SHIP-18: History hierarchy by ink and weight, after the sheets it refines.
+import './history-ink.css';
 // LAYOUT-1: after the sheets whose edge offsets it extends.
 import './large-screens.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.

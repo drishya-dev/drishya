@@ -548,7 +548,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
       navigationBoundary.current = { step: scene.step, projection };
       readingAtStart.current = false;
       setScrollTop(layout.prefix[targetIndex]!);
-      return;
+      // An already mounted passage may need no scroll change, so no render follows.
+      // Position its selected action now; an unmounted virtual passage waits below.
     }
     if (pendingNavigation.current !== targetId) return;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((n) => n.dataset.passageId === targetId);
@@ -1156,7 +1157,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   return (
     <div className="turn">
       {who}
-      {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
+      {shown && <div className="turn-capsule"><div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div></div>}
       {attachments}
       {captured}
       {report && <CapturedContextReport report={report} time={time} />}

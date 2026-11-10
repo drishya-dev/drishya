@@ -28,10 +28,7 @@
 .draft-recovery-dialog :is(section,li) {overflow-wrap:anywhere;}
 .review-packet fieldset {min-width:0;margin:0;padding:10px 12px;border:1px solid var(--line);border-radius:var(--round-sm);}
 .review-packet legend {font-weight:var(--weight-medium);color:var(--t1);padding-inline:4px;}
-.review-packet .packet-choice {display:flex;align-items:flex-start;gap:9px;padding:7px 0;color:var(--t2);overflow-wrap:anywhere;}
+.review-packet .packet-choice {display:flex;flex-direction:row;align-items:flex-start;gap:9px;padding:7px 0;color:var(--t2);overflow-wrap:anywhere;}
 .packet-choice input {flex:none;margin:4px 0 0;accent-color:var(--focus);}
 .packet-choice small {display:block;color:var(--t3);font:var(--text-2xs)/1.6 var(--sans);}
 .review-packet details>summary {cursor:pointer;padding-block:8px;}
-
-.review-packet fieldset>label { display:flex;align-items:center;gap:9px;padding:6px 0; }
-.review-packet fieldset>label>input { flex:none;margin:0; }

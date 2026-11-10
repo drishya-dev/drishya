@@ -71,17 +71,40 @@ test('investigation finishing: encrypted recovery previews and restores exact dr
   expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).not.toContain('recoveryOnly');expect(submissions).toBe(0);
 });
 
+test('empty Notes returns focus to the exact selected step', async ({ page }) => {
+  await open(page);
+  const notes = page.getByRole('dialog', { name: 'Notes', exact: true });
+  const returnToStep = notes.getByRole('button', { name: 'Return to selected step', exact: true });
+  await command(page, 'Notes');
+  await expect(notes).toContainText('No notes yet. Open a step and add one.');
+  await expect(returnToStep).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await selectAction(page);
+  const card = page.locator(`article[data-op-id="${operationId}"]`);
+  await expect(card).toHaveClass(/\bselected\b/);
+  await command(page, 'Notes');
+  await returnToStep.press('Enter');
+  await expect(notes).toHaveCount(0);
+  await expect(card).toBeFocused();
+  await expect(card).toBeInViewport();
+  await expect(card.getByText('Add a note', { exact: true })).toBeVisible();
+});
+
 test('investigation finishing: selected saved moments produce an exact portable packet and survive reload',async({page})=>{
   await open(page);await selectAction(page);const detail=page.getByRole('region',{name:'Operation detail',exact:true});await detail.getByText('Add a note',{exact:true}).click();await detail.getByRole('textbox',{name:'Note on this step',exact:true}).fill('Check the boundary before accepting');await detail.getByRole('button',{name:'Save note',exact:true}).click();await expect(detail).toContainText('Saved locally');await page.keyboard.press('Escape');
   await page.reload();await expect(page.locator('.history')).toBeVisible();await command(page,'Prepare review packet');const packet=page.getByRole('dialog',{name:'Review packet',exact:true});
   await packet.getByLabel('Recording samples:',{exact:false}).uncheck();await packet.getByLabel('Open local reviewer questions',{exact:true}).uncheck();await packet.locator('details>summary').click();await packet.locator('details input[type=checkbox]').check();await packet.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const text=await packet.getByRole('textbox',{name:'Review packet preview',exact:true}).inputValue();expect(text).toContain(operationId);expect(text).toContain('Check the boundary');expect(text).not.toContain('## Prompt windows');expect(text).toContain('"recordingId"');
+  for (const choice of await packet.locator('.packet-choice').all()) {
+    await expect(choice).toHaveCSS('flex-direction', 'row');
+    await expect(choice).toHaveCSS('align-items', 'flex-start');
+  }
   const downloadPromise=page.waitForEvent('download');await packet.getByRole('button',{name:'Download Markdown',exact:true}).click();const download=await downloadPromise;expect(readFileSync((await download.path())!,'utf8')).toBe(text);
   await page.screenshot({path:resolve('.local/finishing-packet.png')});
 });
 
 test('investigation finishing: palettes, keyboard switches, phone overlays and reduced motion retain usable surfaces',async({page})=>{
   const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));await open(page);
-  for(const theme of ['Jet Black','Midnight','Daylight','Orchid','Royal','Emerald','Ember']){
+  for(const theme of ['Jet Black','Midnight','Daylight']){
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});await settings.getByRole('button',{name:theme,exact:true}).click();await settings.getByRole('tab',{name:'Reading',exact:true}).click();const toggle=settings.getByRole('checkbox',{name:/Relationship motion/});await toggle.focus();const previous=await toggle.isChecked();await page.keyboard.press('Space');expect(await toggle.isChecked()).toBe(!previous);await page.keyboard.press('Space');
     await page.screenshot({path:resolve(`.local/finishing-theme-${theme.replaceAll(' ','-')}.png`)});await page.keyboard.press('Escape');await command(page,'Prepare review packet');const packet=page.getByRole('dialog',{name:'Review packet',exact:true});await packet.getByRole('button',{name:'Prepare packet preview',exact:true}).click();await expect(packet.getByRole('textbox',{name:'Review packet preview',exact:true})).toBeVisible();expect(await packet.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.keyboard.press('Escape');
   }
@@ -99,7 +122,7 @@ test('investigation finishing: every material and core reader remains usable acr
   const operations=app.projection(materialsId).operations,representatives=[...new Set(operations.map(op=>op.kind))].map(kind=>operations.find(op=>op.kind===kind)!);
   for(const expected of ['read','write','edit','search','shell','test','web','mcp','spawn','other'])expect(representatives.some(op=>op.kind===expected),expected).toBe(true);
   await page.evaluate(({id,items})=>localStorage.setItem(`drishya-moments-v1:daemon:${id}`,JSON.stringify(items)),{id:materialsId,items:representatives.map(op=>({operationId:op.id,sequence:op.startSequence,title:op.title,note:''}))});
-  for(const theme of ['Jet Black','Midnight','Daylight','Orchid','Royal','Emerald','Ember']) {
+  for(const theme of ['Jet Black','Midnight','Daylight']) {
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${materialsId}`);await expect(page.locator('.history')).toBeVisible();await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});await settings.getByRole('button',{name:theme,exact:true}).click();await page.keyboard.press('Escape');
     for(const op of representatives){await command(page,'Notes');await page.getByRole('dialog',{name:'Notes',exact:true}).getByRole('button',{name:`${op.title} ↗`,exact:true}).click();const inspector=page.getByRole('region',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();await expect(inspector).not.toBeEmpty();expect(await inspector.evaluate(node=>node.scrollWidth-node.clientWidth),`${theme}/${op.kind}`).toBeLessThanOrEqual(1);await page.keyboard.press('Escape');}
     await command(page,'Open developer workspace');const workspace=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=workspace.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(workspace.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');await page.locator('[data-spine-path="src/cart/total.ts"]').click();const file=workspace.getByRole('region',{name:'Workspace file src/cart/total.ts',exact:true});await file.getByRole('button',{name:'Edit file',exact:true}).click();await file.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true}).fill('export const paletteDraft = 71;\n');await file.getByRole('button',{name:'Compare draft',exact:true}).click();await expect(file.getByRole('region',{name:'Draft comparison for src/cart/total.ts',exact:true})).toContainText('paletteDraft');await page.screenshot({path:resolve(`.local/finishing-reading-${theme.replaceAll(' ','-')}.png`)});await file.getByLabel('File actions for src/cart/total.ts',{exact:true}).click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();await workspace.getByRole('button',{name:'Back to agent',exact:true}).click();

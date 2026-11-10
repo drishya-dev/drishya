@@ -37,7 +37,7 @@ import type {
 import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
 import { literalPatch, literalPlan, literalPlanConfirmed, parseMcpName, touchesProtectedFile } from '@drishya/capture-core';
-import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks } from './patch.ts';
+import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks, resolveHunkLines } from './patch.ts';
 import { inWorkspace, relativize, toPosix } from './paths.ts';
 import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r37';
+export const REDUCER_VERSION = 'r39';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -137,6 +137,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const turnByRecording = new Map<string, string>();
   // CONTENT-1: a prompt's turn by "<recording>|<record id>", and images seen before its text part.
   const turnByRecord = new Map<string, TimelineItem & { type: 'turn' }>();
+  // CONTENT-20: the journal line that first carried each part of a prompt record. Claude Code re-emits earlier rows (same uuid, same time) after a resume or
+  // compaction; a copy from another line is the same message, not a second prompt, so it is skipped by its native record id.
+  const promptRecordLine = new Map<string, string>();
   // `first` is the record's first image part: an image-only prompt keeps that position and id.
   const pendingTurnImages = new Map<string, { images: OperationImage[]; first: Observation }>();
   const unrecorded = new Map<string, Prose>();
@@ -202,10 +205,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const rootKey = (root: string) => createHash('sha256').update(normalizedRoot(root)).digest('hex').slice(0, 10);
   let currentRecording = '';
 
-  const text = (v: TextValue | undefined | null): string | undefined => {
+  const text = (v: TextValue | undefined | null, allowPreview = true): string | undefined => {
     if (v === undefined || v === null) return undefined;
     if (typeof v === 'string') return v;
-    if (isBlobText(v)) return io.get(v.$blob) ?? v.preview;
+    if (isBlobText(v)) return io.get(v.$blob) ?? (allowPreview ? v.preview : undefined);
     return undefined;
   };
   const rel = (p: string | undefined, cwd?: string): string => {
@@ -526,6 +529,11 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           break;
         }
         case 'message.user': {
+          if (o.source.recordId) {
+            const line = `${o.source.sourceId}|${o.source.generation}|${o.source.byteOffset}`, key = `${o.recordingId}|${o.source.recordId}|${o.source.part}`;
+            if ((promptRecordLine.get(key) ?? line) !== line) break;
+            promptRecordLine.set(key, line);
+          }
           // Only an explicit queue identity can link a native delivery. A source
           // UUID, delivery UUID, equal text or nearby time cannot establish it.
           if (typeof p.nativeQueueId === 'string') timeline.push({type: 'queue', id: `delivery_${o.id}`, sequence: o.receivedSequence,
@@ -1086,7 +1094,7 @@ function describeCall(st: OpState, p: Rec, rel: (p: string | undefined, cwd?: st
 }
 
 interface Ctx {
-  text: (v: TextValue | undefined | null) => string | undefined;
+  text: (v: TextValue | undefined | null, allowPreview?: boolean) => string | undefined;
   rel: (p: string | undefined, cwd?: string) => string;
   addArtifact: (a: Omit<Artifact, 'id' | 'bytes' | 'lineCount' | 'blob'> & { id: string; content?: string; blobRef?: TextValue }) => string;
   knownFull: { get(key: string): string | undefined; set(key: string, value: string): void; delete(key: string): boolean };
@@ -1183,7 +1191,9 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       if (outcome.kind !== 'edit') break;
       const original = outcome.originalFile === null ? null : c.text(outcome.originalFile as TextValue);
       const base = typeof original === 'string' ? original : c.knownFull.get(c.fileKey(o.recordingId, d.path));
-      const hunks = Array.isArray(outcome.hunks) && outcome.hunks.length ? (outcome.hunks as Hunk[]) : undefined;
+      const hunks = Array.isArray(outcome.hunks) && outcome.hunks.length
+        ? resolveHunkLines(outcome.hunks as Hunk[], line => c.text(line, false))
+        : undefined;
       if (typeof original === 'string' && !omitted(original)) {
         op.artifactIds.push(c.addArtifact({ id: `art_${op.id}_before`, kind: 'snapshot', path: d.path, observedAtSequence: op.startSequence, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, blobRef: outcome.originalFile as TextValue, note: 'file content before this edit, as the harness recorded it' }));
       }
