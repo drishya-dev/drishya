@@ -38,7 +38,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | SHIP-2c | @harsh + Codex | `codex/ship-2c` | 2026-11-09 | Queued after SHIP-2a. Inventory click-opened surfaces and coordinate their presentation boundaries with FINISH-0b, USAGE-1, SHIP-14 and AUDIT-1 before reserving paths. |
 | SHIP-2d | @harsh + Codex | `codex/ship-2d` | 2026-11-09 | Queued after SHIP-2a and the file-reader fixes. Inventory the named reader and tool surfaces. Confirm boundaries with FILES-14, SHIP-13, CONTENT-19 and AUDIT-1 before reserving paths. |
 | SHIP-6 | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-6a/b/c preserve all eleven COMP-1 rows. Harsh authorized only the scoped shared sections on separate branches for Yash’s review. |
-| SHIP-8 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `claude/ship-8-map-2bba31` | 2026-11-10 | In progress. Coordinate the required Opus spec and map/style ownership with MOTION-3, SHIP-2 and AUDIT-1 before reserving paths. Verify dense-session reading, labels and the map frame budget. |
 | LAYOUT-1b | @harsh + Codex | `codex/layout-1b` | 2026-11-09 | Queued. Inventory stage scaling and zoom surfaces. Confirm root sizing and stylesheet boundaries with UI-28c, UI-26 and the release polish owners before reserving paths. |
 | SHIP-3 | @harsh + Codex | `codex/ship-3` | 2026-11-09 | Queued. Use the agreed LAND-1 direction. Confirm the Home file reservation with Yash's FINISH-1 claim before starting. Verify zero, one and many sessions at both supported widths. |
 | MOTION-4 | @harsh + Codex | `codex/motion-4` | 2026-11-09 | Queued after release presentation scopes are agreed. Inventory paired open and close actions and coordinate shared tokens, overlay owners and MOTION-3 before reserving paths. Keep MOTION-3's final evaluation after this item. |
@@ -59,6 +58,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-8 the map under reading (taken over from Codex)
+
+- Whole item. At rest the map recedes beneath the reading column (dots 30 %, import lines 8 %, 72 px soft edge; hovered and passage-file dots stay sharp); labels are placed from measured boxes, with the selected file's working set first, so no two visible labels or controls overlap; hovering or focusing a spatial group lists its files. Rotation, camera and evidence untouched. Details and limits: [ship-8-map-quiet.md](review/ship-8-map-quiet.md).
+- Checked on real Claude Code sessions `rec_452bae4c` (307 recorded files) and `rec_5128e5bd` (108) at 600 and 1440 px in Jet Black and Daylight: 16 zoom steps, 0 overlapping labels. Codex: no real session here yields a map above two files (`rec_fa9e37da`, 2), so only rendering was checked; no imported session has a current graph with import edges, so lines are verified on a synthetic dense repository (new `map-quiet` spec, 4 tests). Units, typecheck, the map specs and `check:affected` pass; four load-only failures pass 9/9 alone.
+- Found and recorded, not fixed (present on unchanged code): MAP-2, a squeezed first Explore that Fit does not recover.
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-19 Home, shell and overlay colour adoption (taken over from Codex)
 
