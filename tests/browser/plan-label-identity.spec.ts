@@ -23,7 +23,7 @@ for(const width of [1440,600])test(`duplicate plan labels keep literal states an
  await page.request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});
  await page.setViewportSize({width,height:900});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const cards=page.locator('article.op-plan');await expect(cards).toHaveCount(2);
- const pinned=cards.last().getByRole('group',{name:'Plan checklist'});await expect(pinned).toContainText('2 of 3 done');await pinned.getByRole('button',{name:'Show plan',exact:true}).click();await expect(pinned.locator('li').filter({hasText:'Run tests'})).toHaveCount(2);
+ const pinned=cards.last().getByRole('group',{name:'Plan checklist'});await expect(pinned).toContainText('2 of 3 done');await expect(pinned.locator('li').filter({hasText:'Run tests'})).toHaveCount(2);
  const delta=cards.nth(0).locator('.plan-delta');await expect(delta).toHaveCount(0);await expect(cards.nth(1).locator('.plan-change')).toHaveText(['completed']);
  const expand=cards.nth(1).locator('button.op-expand');await expand.focus();await expand.press('Enter');await expect(expand).toHaveAttribute('aria-expanded','true');
  const full=cards.nth(1).locator('.plan-material');await expect(full).toBeVisible();await expect(full.locator('li').filter({hasText:'Run tests'})).toHaveCount(2);
