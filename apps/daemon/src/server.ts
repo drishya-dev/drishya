@@ -425,6 +425,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         for(const key of id.split('+'))app.recording(key);
         return json(res,await app.history.screen(app.readingId(id),url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
       }
+      if (sub === 'context-report' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        return json(res, { candidates: await app.history.contextReport(app.readingId(id)) });
+      }
       if (sub === 'turns' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, { turns: await app.history.turns(app.readingId(id)) });

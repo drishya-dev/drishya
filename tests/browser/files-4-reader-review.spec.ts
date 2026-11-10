@@ -40,7 +40,7 @@ test('whole source, repeated line navigation, syntax, wrap and exact copy',async
 test('split panes keep toolbars within their own narrow allocation',async({page})=>{
  await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('one/reading.ts');await page.locator('[data-spine-path="one/reading.ts"]').click();
  const desk=page.getByRole('region',{name:'Developer workspace',exact:true});await desk.getByLabel('Workspace layout actions',{exact:true}).press('Enter');await desk.getByRole('button',{name:'Split view',exact:true}).click();
- await desk.locator('.desk-pane').nth(1).getByRole('button',{name:'Show files',exact:true}).click();await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('two/reading.ts');await page.locator('[data-spine-path="two/reading.ts"]').click();
+ const second=desk.locator('.desk-pane').nth(1);await second.focus();const showFiles=second.getByRole('button',{name:'Show files',exact:true});if(await showFiles.isVisible())await showFiles.click();await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('two/reading.ts');await page.locator('[data-spine-path="two/reading.ts"]').click();
  for(const width of [1440,900,600]){
   await page.setViewportSize({width,height:960});if(await page.getByRole('button',{name:'Minimize files',exact:true}).isVisible())await page.getByRole('button',{name:'Minimize files',exact:true}).click();
   const divider=desk.getByRole('separator',{name:'Resize workspace panes'});if(await divider.isVisible()){await divider.focus();await divider.press('Home');}
