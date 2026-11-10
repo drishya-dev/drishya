@@ -203,6 +203,29 @@ export class Ingestor extends EventEmitter {
     return { recordingId, ...r };
   }
 
+  /**
+   * One background startup pass (CONTENT-21): a Claude recording imported before shared-uuid continuations were recognised has no link.
+   * Each recording is checked once (marker per recording); a link, if found, imports the earlier journal like any other ancestor.
+   */
+  refreshClaudeLineages(): Promise<number> {
+    return this.claudeLineagePass ??= (async () => {
+      await new Promise<void>(resolve => setImmediate(resolve));
+      let checked = 0;
+      for (const recording of this.store.listRecordings().filter(r => r.harness === 'claude-code')) {
+        if (this.closed) break;
+        const key = 'claude-shared-lineage-v1:' + recording.id;
+        if (this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key)) continue;
+        try {
+          await this.locked(recording.id, () => this.refreshLineage(recording.id, new Set()));
+          this.store.db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)').run(key, '1');
+          checked++;
+        } catch { /* a missing journal is retried on a later start */ }
+      }
+      return checked;
+    })();
+  }
+  private claudeLineagePass?: Promise<number>;
+
   /** Derived links are read from discovered native files; importing an ancestor never grants current-workspace access. */
   private async refreshLineage(id: string, seen: Set<string>, paths?: string[]): Promise<void> {
     if (seen.has(id) || seen.size >= 16) return;
@@ -214,7 +237,7 @@ export class Ingestor extends EventEmitter {
     if (!link) return;
     const candidates = link.candidatePaths.map(path => recordingIdFor('claude-code', path));
     const parent = link.parentPath ? recordingIdFor('claude-code', link.parentPath) : undefined;
-    this.store.putLineage({ childRecordingId: id, parentRecordingId: parent, status: link.status, basis: 'native-logical-parent', childSourceId: sourceIdFor(rec.sourcePath), boundaryRecordId: link.boundaryRecordId, logicalParentRecordId: link.logicalParentRecordId, candidateRecordingIds: candidates, sharedMessageRecords: link.sharedMessageRecords });
+    this.store.putLineage({ childRecordingId: id, parentRecordingId: parent, status: link.status, basis: link.basis, childSourceId: sourceIdFor(rec.sourcePath), boundaryRecordId: link.boundaryRecordId, logicalParentRecordId: link.logicalParentRecordId, candidateRecordingIds: candidates, sharedMessageRecords: link.sharedMessageRecords });
     if (parent && link.parentPath && !seen.has(parent)) {
       if (!this.store.getRecording(parent)) await this.importSource('claude-code', link.parentPath, { lineageSeen: seen, lineageSources: paths });
       else await this.refreshLineage(parent, seen, paths);
@@ -643,7 +666,7 @@ export class Ingestor extends EventEmitter {
     this.closed = true;
     const running = [...this.live.values()].map((r) => r.current);
     this.stopAll();
-    await Promise.allSettled([...running, ...this.locks.values(), this.legacyCodexRescan]);
+    await Promise.allSettled([...running, ...this.locks.values(), this.legacyCodexRescan, this.claudeLineagePass]);
   }
 
   /**
