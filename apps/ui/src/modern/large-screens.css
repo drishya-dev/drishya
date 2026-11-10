@@ -11,16 +11,20 @@
    Composer visibility must not reserve space in either independent side rail. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {
   top:0;
-  scroll-padding-top:0;
+  scroll-padding-top:calc(var(--workspace-tools-bottom,134px) + 8px);
 }
+/* Only the document's initial content clears controls; later scrolled material
+   remains visible all the way to y=0 rather than clipping at this inset. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner {
-  padding-top:16px;
+  padding-top:calc(var(--workspace-tools-bottom,134px) + 16px);
 }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {
   max-height:calc(100dvh - var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px)) - 16px);
+  z-index:35;
 }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .toolbox-rail {
   bottom:24px;
+  z-index:35;
 }
 
 /* Conversation is reading text; retain Modern's previous face for it. Plans,

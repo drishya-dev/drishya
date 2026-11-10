@@ -39,6 +39,7 @@ test.afterAll(async () => {
 
 // Every test starts without workspace consent (the first read of working locations clears what an earlier test granted).
 test.beforeEach(async ({ page }) => {
+  await page.route('**/controller',route=>route.fulfill({json:{harness:'claude-code',available:false,state:'idle',output:'',tools:[],approvals:[]}}));
   let first = true;
   await page.route('**/v1/working-locations', async (route) => {
     if (first && route.request().method() === 'GET') { first = false; await page.request.delete(route.request().url(), { headers: { 'content-type': 'application/json' } }); }
@@ -57,6 +58,10 @@ async function open(page: Page, width: number, height=900) {
   await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();
   if (await grant.isVisible()) await grant.click();
   await expect(explorer).toHaveAttribute('data-reading-access', 'current');
+  // Compare composer toggles after asynchronous Files/tool inventories have arrived.
+  await expect(page.locator('[data-spine-path="main.ts"]')).toHaveAttribute('aria-setsize','41');
+  await expect(page.locator('.modern-toolbox .tool-list')).toHaveCount(1);
+  await page.evaluate(()=>document.fonts.ready);
 }
 /** Left and right edge of the first match, or null when it is not on screen. */
 const span = (page: Page, selector: string) => page.evaluate((s) => {
