@@ -1,0 +1,2 @@
+html[data-intro=pending]{background:#000}
+html[data-intro=pending] body,html[data-intro=active] .site-header{visibility:hidden}
