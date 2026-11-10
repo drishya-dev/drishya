@@ -1,4 +1,4 @@
-import{mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync}from'node:fs';import{join,resolve,sep}from'node:path';import{tmpdir}from'node:os';
+import{mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync}from'node:fs';import{join,resolve,sep}from'node:path';import{tmpdir}from'node:os';
 import{test,expect,type Locator}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer,type RunningServer}from'../../apps/daemon/src/server.ts';
 let dir:string,app:App,server:RunningServer,id:string;
 async function approveSessionReading(files: Locator) {
@@ -8,7 +8,10 @@ async function approveSessionReading(files: Locator) {
   await expect(files).toHaveAttribute('data-reading-access', 'current');
 }
 test.beforeEach(async()=>{
- dir=mkdtempSync(join(tmpdir(),'drishya-prose-reference-'));const root=join(dir,'repo'),outside=join(dir,'external');mkdirSync(root);mkdirSync(join(root,'docs'));mkdirSync(outside);writeFileSync(join(root,'docs','guide.md'),'CURRENT FILE CONTENT\n');writeFileSync(join(root,'docs','current-only.md'),'CURRENT_ONLY_VALUE\n');writeFileSync(join(root,'docs','preview.png'),readFileSync(resolve('apps/ui/public/brand/drishya-192.png')));
+ dir=mkdtempSync(join(tmpdir(),'drishya-prose-reference-'));
+ // Record the actual path so Windows short-name aliases do not trip the image path guard.
+ const canonicalDir=realpathSync.native(dir);
+ const root=join(canonicalDir,'repo'),outside=join(canonicalDir,'external');mkdirSync(root);mkdirSync(join(root,'docs'));mkdirSync(outside);writeFileSync(join(root,'docs','guide.md'),'CURRENT FILE CONTENT\n');writeFileSync(join(root,'docs','current-only.md'),'CURRENT_ONLY_VALUE\n');writeFileSync(join(root,'docs','preview.png'),readFileSync(resolve('apps/ui/public/brand/drishya-192.png')));
  const base={sessionId:'28d20aa0-7ba2-45fc-a6d4-f5d99d9557f9',cwd:root,timestamp:'2026-11-07T12:00:00Z'},rows:any[]=[{...base,type:'user',uuid:'u',message:{role:'user',content:'Reference these files'}}];
  for(const [i,path]of[join(root,'docs','guide.md'),join(outside,'report.txt'),join(root,'one','same.ts'),join(root,'two','same.ts'),join(root,'docs','preview.png')].entries()){
   rows.push({...base,type:'assistant',uuid:`a${i}`,message:{role:'assistant',content:[{type:'tool_use',id:`read${i}`,name:'Read',input:{file_path:path}}]}});
