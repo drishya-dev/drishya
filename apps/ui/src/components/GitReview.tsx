@@ -48,6 +48,9 @@ export const openGitReview = () => window.dispatchEvent(new Event('drishya-git-r
 export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: Element | null }) {
   const [open, setOpen] = useWorkspaceState('git/open', false);
   const [choices, setChoices] = useState(false);
+  const [returnFile, setReturnFile] = useState<string>();
+  const currentFile = useApp(s => s.currentFile), inWorkspace = useApp(s => s.developerWorkspace);
+  const suspended = modernReaderSuspended(open, currentFile, inWorkspace);
   const trigger = useRef<HTMLButtonElement>(null), popover = useRef<HTMLDivElement>(null);
   const popoverId = useId();
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -56,7 +59,7 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
   const eligible = source?.kind === 'daemon' && !!id && !id.includes('+') && (!modern || mode === 'history');
   const reason = 'Git needs a single local session in history';
   const dismiss = () => popover.current?.hidePopover();
-  const chooseReview = () => { dismiss(); trigger.current?.focus({ preventScroll: true }); setOpen(true); };
+  const chooseReview = () => { const state = useApp.getState(); if (state.currentFile && !state.developerWorkspace) setReturnFile(state.currentFile); state.set({currentFile: undefined, developerWorkspace: false, explore: false}); dismiss(); trigger.current?.focus({ preventScroll: true }); setOpen(true); };
   useEffect(() => {
     const close = () => setOpen(false);
     const review = () => { const state = useApp.getState(); if (state.source?.kind === 'daemon' && state.recordingId && !state.recordingId.includes('+') && state.mode === 'history') chooseReview(); };
@@ -64,7 +67,7 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
     window.addEventListener('drishya-git-review', review);
     return () => { window.removeEventListener('drishya-git-history', close); window.removeEventListener('drishya-git-review', review); };
   }, [setOpen]);
-  useEffect(() => { dismiss(); if (modern && !eligible) setOpen(false); }, [id, source, mode]);
+  useEffect(() => { dismiss(); setReturnFile(undefined); if (modern && !eligible) setOpen(false); }, [id, source, mode]);
   useEffect(() => {
     if (!choices) return;
     const place = () => { const box = (trigger.current?.closest('.studio-actions') ?? trigger.current)?.getBoundingClientRect(); if (box) setPosition({ top: box.bottom + 6, left: Math.max(8, Math.min(innerWidth - 232, box.right - 224)) }); };
@@ -77,7 +80,8 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
     if (keyboard) requestAnimationFrame(() => popover.current?.querySelector<HTMLButtonElement>('button')?.focus());
   }}>{icon && <GitBranchGlyph />}Git</button> : <button className="btn ghost git-open" aria-label="Git review" aria-expanded={open} onClick={() => setOpen(value => !value)}>{icon && <GitBranchGlyph />}Git review</button>;
   if (!modern && !eligible) return null;
-  return <>{slot ? createPortal(button, slot) : button}{modern && createPortal(<>
+  const returnToGit = modern && suspended && inWorkspace ? <button className="btn ghost" onClick={chooseReview}>Return to Git review</button> : null;
+  return <>{slot ? createPortal(<>{button}{returnToGit}</>, slot) : <>{button}{returnToGit}</>}{modern && createPortal(<>
     {!eligible && <span className="sr-only" id={popoverId + '-reason'}>{reason}</span>}
     <div ref={popover} id={popoverId} popover="auto" className="git-entry-choices" aria-label="Git destinations" style={position} onToggle={event => setChoices(event.newState === 'open')} onKeyDown={event => {
       if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); dismiss(); trigger.current?.focus(); }
@@ -86,10 +90,14 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
         buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowUp' ? -1 : 1) + buttons.length) % buttons.length]?.focus();
       }
     }}><button aria-label="Git review" onClick={chooseReview}><strong>Git review</strong><small>Current changes</small></button><button aria-label="Git graph" onClick={() => { dismiss(); trigger.current?.focus({ preventScroll: true }); openGitHistory(); }}><strong>Git graph</strong><small>Branches and commits</small></button></div>
-  </>, document.body)}{eligible && open && <GitReader key={id} close={() => { setOpen(false); requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true })); }} />}</>;
+  </>, document.body)}{eligible && open && <GitReader key={id} suspended={suspended} returnFile={returnFile} close={() => { setOpen(false); requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true })); }} />}</>;
 }
 
-function GitReader({ close }: { close: () => void }) {
+function modernReaderSuspended(open: boolean, currentFile: string | undefined, inWorkspace: boolean) {
+  return open && document.documentElement.dataset.uiVersion === 'modern' && (!!currentFile || inWorkspace);
+}
+
+function GitReader({ close, suspended, returnFile }: { close: () => void; suspended: boolean; returnFile?: string }) {
   const id = useApp(s => s.recordingId)!;
   const source = useApp(s => s.source);
   const alive = useRef(true);
@@ -165,7 +173,8 @@ function GitReader({ close }: { close: () => void }) {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const workspaceName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace';
   const canHandoff = !busy && !checking && !!snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint);
-  return <ReadingDialog title="Git review" windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
+  if (suspended) return null;
+  return <ReadingDialog title="Git review" headerActions={returnFile && <button className="btn ghost" onClick={() => useApp.getState().set({currentFile: returnFile, explore: false})}>Return to file</button>} windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
     {!modern && <div className="git-history-entry"><button className="btn ghost" disabled={busy||checking} onClick={()=>{close();requestAnimationFrame(openGitHistory);}}>Branches &amp; commits ↗</button></div>}
     {modern && (!workspace?.approved || !consent) && <div className="modern-git-context"><strong>{workspaceName}</strong><small>Read-only · current changes</small></div>}
     {consent === undefined && !error ? <section aria-busy="true"><p>Checking Git access…</p></section> : !workspace?.approved || !consent ? <GitAccess workspaceApproved={!!workspace?.approved} busy={busy} disabled={busy || checking} grant={() => { setBusy(true); void grantGit(id, !!workspace?.approved, approve).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }} /> : <>
