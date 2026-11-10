@@ -1,7 +1,5 @@
-// LAYOUT-1: past --stage-max (1920 px) the working composition is one centred stage, so extra width becomes map, never a wider
-// gap between a dock and the thing it belongs to. Browser zoom changes the CSS viewport width in the same way (67 % of a
-// 1440 px window is 2149 CSS px), so widths here stand for both large monitors and zoom-out. The stage never moves at or
-// below 1920 px, and 600 px must not overflow sideways.
+// LAYOUT-1b: one root scale grows design lengths in both dimensions. The map
+// stays in viewport/device pixels, and the 600–1440 reference stays unchanged.
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -9,7 +7,6 @@ import { test, expect, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
-const STAGE_MAX = 1920;
 let dir: string, app: App, server: RunningServer, recording: string;
 
 test.beforeAll(async () => {
@@ -48,12 +45,12 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-async function open(page: Page, width: number) {
-  await page.setViewportSize({ width, height: 900 });
+async function open(page: Page, width: number, height=900) {
+  await page.setViewportSize({ width, height });
   await page.goto(server.launchUrl);
   await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recording}`);
-  if (width <= 820) return; // the Files panel is a drawer at phone widths; only overflow is checked there
+  if (width <= 820) return; // narrow desktop windows use the Files drawer
   const grant = page.getByRole('button', { name: /^Enable workspace reading/ });
   const explorer = page.locator('.folder-explorer');
   await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();
@@ -66,33 +63,44 @@ const span = (page: Page, selector: string) => page.evaluate((s) => {
   return r && r.width > 0 ? { left: r.left, right: r.right } : null;
 }, selector);
 
-for (const width of [1440, 1920, 2149, 2560, 3840]) {
-  test(`${width}px: every dock, the column, the Workspace and the peek stay inside the stage`, async ({ page }) => {
-    await open(page, width);
-    const edge = Math.max(0, (width - STAGE_MAX) / 2), inside = (box: { left: number; right: number } | null, name: string) => {
-      expect(box, name).not.toBeNull();
-      expect(box!.left, `${name} left`).toBeGreaterThanOrEqual(edge - 0.5);
-      expect(box!.right, `${name} right`).toBeLessThanOrEqual(width - edge + 0.5);
+for (const theme of ['dark','light','midnight']) for (const [width,height,scale] of [[1024,900,1],[1440,900,1],[1920,1080,1.2],[2560,1440,1.6],[3840,2160,2.25]]) {
+  test(`${theme} ${width}×${height}: root sizing fills the viewport with readable panels`, async ({ page }) => {
+    await page.addInitScript(theme=>localStorage.setItem('drishya.theme',theme),theme);
+    await open(page,width!,height);
+    await expect.poll(()=>page.evaluate(()=>Number(document.documentElement.style.getPropertyValue('--ui-scale')))).toBe(scale);
+    expect(await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize))).toBeCloseTo(16*scale!,1);
+    const inside=(box:{left:number;right:number}|null,name:string)=>{
+      expect(box,name).not.toBeNull();expect(box!.left,name+' left').toBeGreaterThanOrEqual(-.5);expect(box!.right,name+' right').toBeLessThanOrEqual(width!+.5);
     };
-    for (const selector of ['.modern-identity', '.workspace-utilities', '.folder-explorer', '.history-inner', '.toolbox-rail']) inside(await span(page, selector), selector);
-    const column = (await span(page, '.history-inner'))!;
-    expect(column.right - column.left, 'history column keeps its reading maximum').toBeLessThanOrEqual(1280.5);
-
-    const file = page.locator('[data-spine-path]').filter({ has: page.getByText('main.ts', { exact: true }) });
-    await file.click();
-    await expect(page.locator('.file-peek-reader[open]')).toBeVisible();
-    inside(await span(page, '.file-peek-reader'), 'file peek');
-
-    await open(page, width); // the peek and the Workspace are two modes: start again for the second
-    await page.getByRole('button', { name: 'Open developer workspace', exact: true }).click();
-    await expect(page.locator('.developer-workspace')).toBeVisible();
-    const desk = (await span(page, '.developer-workspace'))!;
-    inside(desk, 'Workspace');
-    expect(desk.right - desk.left, 'Workspace stays inside the stage width').toBeLessThanOrEqual(STAGE_MAX);
+    for(const selector of ['.modern-identity','.workspace-utilities','.folder-explorer','.history-inner','.toolbox-rail'])inside(await span(page,selector),selector);
+    const column=(await span(page,'.history-inner'))!;
+    expect(column.right-column.left).toBeLessThanOrEqual(1280*scale!+.5);
+    if(width!>=1440)expect((column.right-column.left)/width!).toBeGreaterThan(.60);
+    const files=(await span(page,'.folder-explorer'))!;expect(files.right-files.left).toBeCloseTo(260*scale!,0);expect(files.left).toBeCloseTo(18*scale!,0);
+    const map=await page.locator('.map').boundingBox();expect(map!.width).toBeCloseTo(width!,0);expect(map!.height).toBeCloseTo(height!,0);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
+    const file=page.locator('[data-spine-path]').filter({has:page.getByText('main.ts',{exact:true})});
+    expect((await file.boundingBox())!.height).toBeCloseTo(32*scale!,0);
+    await file.click();await expect(page.locator('.file-peek-reader[open]')).toBeVisible();inside(await span(page,'.file-peek-reader'),'file peek');
+    await open(page,width!,height);await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();await expect(page.locator('.developer-workspace')).toBeVisible();
+    const desk=(await span(page,'.developer-workspace'))!;inside(desk,'Workspace');expect(desk.right-desk.left).toBeGreaterThan(width!*.55);
   });
 }
+for(const theme of ['dark','light','midnight'])test(`${theme} 600px keeps its baseline and does not overflow`,async({page})=>{
+  await page.addInitScript(theme=>localStorage.setItem('drishya.theme',theme),theme);await open(page,600);
+  expect(await page.evaluate(()=>({scale:Number(document.documentElement.style.getPropertyValue('--ui-scale')),root:parseFloat(getComputedStyle(document.documentElement).fontSize),overflow:document.documentElement.scrollWidth-innerWidth}))).toEqual({scale:1,root:16,overflow:0});
+});
 
-test('600px does not overflow sideways', async ({ page }) => {
-  await open(page, 600);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+test('a resized Files rail keeps its logical width when the viewport scale changes',async({page})=>{
+  await open(page,2560,1440);
+  const resize=page.getByRole('separator',{name:'Resize Files reading space',exact:true});
+  await resize.focus();await page.keyboard.press('ArrowRight');
+  await expect(resize).toHaveAttribute('aria-valuenow','448'); // 416 physical CSS pixels + one keyboard step
+  await page.setViewportSize({width:1440,height:900});
+  await expect(resize).toHaveAttribute('aria-valuenow','280');
+  expect((await page.locator('.folder-explorer').boundingBox())!.width).toBeCloseTo(280,0);
+  await page.setViewportSize({width:2560,height:1440});
+  await expect(resize).toHaveAttribute('aria-valuenow','448');
+  await resize.focus();await page.keyboard.press('Enter');
+  await expect(resize).toHaveAttribute('aria-valuenow','416');
 });
