@@ -29,10 +29,10 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
         const r=control.getBoundingClientRect();
         if(!r.width||!r.height||r.right<=bounds.left||r.left>=bounds.right) continue;
         if(control.matches('.prompt-composer')) {
-          // UI-28b: the rail clears the composer at rest; a long prompt grows the box over it instead of moving the rail.
-          const field=control.querySelector('textarea');
-          const grown=field?Math.max(0,field.offsetHeight-(parseFloat(getComputedStyle(field).minHeight)||0)):0;
-          if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-(r.top+grown)+12);
+          // UI-28b/28c: the rail clears the composer at rest (its fixed --composer-rest above its bottom edge), whether the box is open,
+          // collapsed to the pill or grown by a long prompt, so the rail never moves with it.
+          const rest=(parseFloat(getComputedStyle(viewer??document.documentElement).getPropertyValue('--composer-gap'))||158)-24;
+          if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-r.bottom+rest+12);
         }
         else if(control.matches('.catalog-toggle,.workspace-follow,.follow-pill')) bottom=Math.max(bottom,innerHeight-r.top+12);
         else top=Math.max(top,r.bottom+14);

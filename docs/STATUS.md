@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-17 through SHIP-21 own bounded changes. Harsh authorized a Codex brief and scoped shared colour edits on separate branches for Yash’s review. Keep the Opus sign-off before acceptance and defer SHIP-2b/c/d until the palette system lands. |
 | SHIP-19 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `claude/ship-19-shell-colour` | 2026-11-10 | Colour and weight only in product/reliability, composer, HUD, recovered surfaces, Home, Settings, surroundings, workspace chrome, menu and Settings styles (10 Nov palette floors, hierarchy by ink and weight). No layout, controls, motion or overlay behaviour; stay out of MOTION, LAYOUT-1b, FINISH-0b and SHIP-6 files. |
@@ -60,6 +59,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Claude Sonnet 5.5 — 10 Nov: UI-28c opening and closing the composer moves nothing else
+
+- `--composer-gap` is the fixed `--composer-rest` token (+24), not the box's measured height; the prompt rail clears the same rest height. Toggling the composer (and growing it) now moves no Files panel, Toolbox, rail or history position at 600, 1440 and 2560 px. Spec `composer-grows.spec.ts`. Real sessions: Claude Code `rec_b45458d5`, Codex `rec_44739d61` (stand-in transport).
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: CONTENT-20 mid-turn messages are prompts, PR #396
 

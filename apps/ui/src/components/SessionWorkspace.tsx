@@ -647,23 +647,19 @@ export function PromptComposer() {
     // Reserve their actual raised extent too, without feeding it back into the
     // composer's own size constraints or changing the user's follow preference.
     const observed = new Set<Element>();
-    // The one-line box measured last time it was open; 132 px until it has been (the same height on a first open).
-    let restHeight = 132;
     const measure = () => {
-      // UI-28b/28c: the gap other surfaces reserve is the box at rest, one line and nothing extra, and it does not depend on whether the box is
-      // open. A long prompt, the setup row, an attachment strip or a confirmation grow the box over the history instead of moving the history,
-      // the Follow switch, the rails and the Toolbox; collapsing to the pill or opening again moves none of them. Only the composer animates.
-      if (!node.classList.contains('composer-minimized')) {
-        const field = node.querySelector('textarea');
-        let extra = field ? Math.max(0, field.offsetHeight - (parseFloat(getComputedStyle(field).minHeight) || 0)) : 0;
-        for (const part of node.querySelectorAll<HTMLElement>('.composer-setup, .prompt-attachments, .send-confirmation')) {
-          if (!part.getClientRects().length) continue;
-          const style = getComputedStyle(part);
-          extra += part.offsetHeight + (parseFloat(style.marginTop) || 0) + (parseFloat(style.marginBottom) || 0);
-        }
-        restHeight = node.offsetHeight - extra;
-      }
-      viewer.style.setProperty('--composer-gap', `${restHeight + 24}px`);
+      // UI-28b/28c: the gap other surfaces reserve is a fixed token, the box at rest (composer.css gives the open box that minimum height).
+      // It does not depend on whether the box is open, how long the prompt is, or what else sits in the box: a long prompt, the setup row,
+      // an attachment strip or a confirmation grow the box over the history, and collapsing to the pill or opening again moves nothing
+      // else. Only the composer animates.
+      const tokens = getComputedStyle(viewer);
+      const rest = parseFloat(tokens.getPropertyValue('--composer-rest')) || 134;
+      // The setup content (enable, connect the CLI) has a fixed height (composer.css; it scrolls inside) and is part of the box's resting
+      // height while it is there, open or collapsed, so collapsing and opening never changes the reserved space. The extras that come and
+      // go with typing (growth, attachments, confirmation) are not.
+      const part = node.querySelector<HTMLElement>('.composer-setup');
+      const setupHeight = part ? (parseFloat(getComputedStyle(part).height) || 0) + 8 : 0;
+      viewer.style.setProperty('--composer-gap', `${rest + setupHeight + 24}px`);
       // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
       // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
       const top = layoutTop(node);
