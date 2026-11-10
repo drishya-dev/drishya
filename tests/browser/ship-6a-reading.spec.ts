@@ -56,8 +56,20 @@ for (const width of [600, 1440]) test(`reader ownership and history clearance at
   await openGitDestination(page, 'Git review');
   const git = page.getByRole('dialog', { name: 'Git review', exact: true });
   await expect(git).toBeVisible(); await expect(latest).toBeHidden();
-  const files = page.getByRole('button', { name: 'Show files', exact: true });
-  if (await files.getAttribute('aria-pressed') !== 'true') await files.click();
+  if (width === 600) {
+    const browse = git.getByRole('button', { name: 'Browse files', exact: true });
+    const search = page.getByRole('textbox', { name: 'Find repository files', exact: true });
+    await browse.click();
+    await expect(git).toHaveCount(0);
+    await expect(search).toBeFocused();
+    await page.getByRole('button', { name: 'Return to Git review', exact: true }).click();
+    await expect(git).toBeVisible();
+    await expect(search).toHaveCount(0);
+    await browse.click();
+  } else {
+    const files = page.getByRole('button', { name: 'Show files', exact: true });
+    if (await files.getAttribute('aria-pressed') !== 'true') await files.click();
+  }
   await page.locator('[data-spine-path="README.md"]').click();
   const peek = page.locator('.file-peek-reader');
   await expect(peek).toBeVisible(); await expect(git).toHaveCount(0);
