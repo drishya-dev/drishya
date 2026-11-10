@@ -15,6 +15,7 @@ test.beforeAll(async () => {
   const root = join(dir, 'repo');
   mkdirSync(root);
   writeFileSync(join(root, 'main.ts'), 'export const stage = 1;\n');
+  for(let i=0;i<40;i++)writeFileSync(join(root,`z-${i}.ts`),'export {};\n');
   const common = { cwd: root, sessionId: 'large-screens', timestamp: '2026-11-08T10:00:00Z' };
   const rows = [
     { type: 'user', uuid: 'u0', message: { role: 'user', content: 'Show me the stage at every width' } },
@@ -67,8 +68,11 @@ for (const theme of ['dark','light','midnight']) for (const [width,height,scale]
   test(`${theme} ${width}×${height}: root sizing fills the viewport with readable panels`, async ({ page }) => {
     await page.addInitScript(theme=>localStorage.setItem('drishya.theme',theme),theme);
     await open(page,width!,height);
+    expect((await page.locator('.history').boundingBox())!.y).toBe(0);
     await expect.poll(()=>page.evaluate(()=>Number(document.documentElement.style.getPropertyValue('--ui-scale')))).toBe(scale);
     expect(await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize))).toBeCloseTo(16*scale!,1);
+    const readingType=await page.evaluate(()=>['.history .prose','.history .turn-text','.modern-native-composer textarea'].map(selector=>{const style=getComputedStyle(document.querySelector(selector)!);return {selector,size:parseFloat(style.fontSize),family:style.fontFamily};}));
+    for(const type of readingType){expect(type.size,type.selector).toBeCloseTo(15*scale!,1);expect(type.family,type.selector).toContain('Segoe UI');}
     const inside=(box:{left:number;right:number}|null,name:string)=>{
       expect(box,name).not.toBeNull();expect(box!.left,name+' left').toBeGreaterThanOrEqual(-.5);expect(box!.right,name+' right').toBeLessThanOrEqual(width!+.5);
     };
@@ -81,6 +85,14 @@ for (const theme of ['dark','light','midnight']) for (const [width,height,scale]
     expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);
     const file=page.locator('[data-spine-path]').filter({has:page.getByText('main.ts',{exact:true})});
     expect((await file.boundingBox())!.height).toBeCloseTo(32*scale!,0);
+    const panels=async()=>Promise.all(['.folder-explorer','.toolbox-rail','.modern-tool-station'].map(selector=>page.locator(selector).boundingBox()));
+    const initial=await panels();
+    for(let toggle=0;toggle<2;toggle++){
+      await page.locator('.composer-minimize').click();
+      await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+      const current=await panels();
+      for(let i=0;i<initial.length;i++)for(const key of ['x','y','width','height'] as const)expect(Math.abs(current[i]![key]-initial[i]![key]),`panel ${i} ${key} after composer toggle`).toBeLessThan(1);
+    }
     await file.click();await expect(page.locator('.file-peek-reader[open]')).toBeVisible();inside(await span(page,'.file-peek-reader'),'file peek');
     await open(page,width!,height);await page.getByRole('button',{name:'Open developer workspace',exact:true}).click();await expect(page.locator('.developer-workspace')).toBeVisible();
     const desk=(await span(page,'.developer-workspace'))!;inside(desk,'Workspace');expect(desk.right-desk.left).toBeGreaterThan(width!*.55);
@@ -88,6 +100,7 @@ for (const theme of ['dark','light','midnight']) for (const [width,height,scale]
 }
 for(const theme of ['dark','light','midnight'])test(`${theme} 600px keeps its baseline and does not overflow`,async({page})=>{
   await page.addInitScript(theme=>localStorage.setItem('drishya.theme',theme),theme);await open(page,600);
+  expect((await page.locator('.history').boundingBox())!.y).toBe(0);
   expect(await page.evaluate(()=>({scale:Number(document.documentElement.style.getPropertyValue('--ui-scale')),root:parseFloat(getComputedStyle(document.documentElement).fontSize),overflow:document.documentElement.scrollWidth-innerWidth}))).toEqual({scale:1,root:16,overflow:0});
 });
 

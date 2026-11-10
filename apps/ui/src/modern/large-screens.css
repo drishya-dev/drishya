@@ -6,3 +6,31 @@
   --stage-max:100vw;
   --stage-edge:0px;
 }
+
+/* Yash, 10 Nov: the world scrolls from the screen's top under floating controls.
+   Composer visibility must not reserve space in either independent side rail. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {
+  top:0;
+  scroll-padding-top:0;
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner {
+  padding-top:16px;
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {
+  max-height:calc(100dvh - var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px)) - 16px);
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .toolbox-rail {
+  bottom:24px;
+}
+
+/* Conversation is reading text; retain Modern's previous face for it. Plans,
+   tables and tool material keep their existing UI/mono typography. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose,
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .turn:not(:has(.turn-source)) .turn-text,
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer textarea {
+  font-family:'Segoe UI Variable Text','Segoe UI',ui-sans-serif,system-ui,sans-serif;
+  font-size:var(--text-md);
+}
+:root[data-ui-version=modern][data-experience=classic] .history .prose table {
+  font-family:var(--sans);
+}
