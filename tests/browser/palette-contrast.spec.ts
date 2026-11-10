@@ -54,13 +54,18 @@ test('visible text keeps 4.5:1 on every palette on the expanded demo session', a
 // SHIP-17: the four retired palettes are gone from Settings, and a saved retired preference resolves to Jet Black (Royal, a light one, to Daylight).
 test('retired saved palettes fall back to a shipped palette and Settings lists three', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
-  for (const [stored, palette, scheme] of [['mocha', 'jet', 'dark'], ['nord', 'jet', 'dark'], ['gruvbox', 'jet', 'dark'], ['tokyo', 'paper', 'light'], ['midnight', 'midnight', 'dark']] as const) {
-    await page.addInitScript(v => { try { localStorage.setItem('drishya.theme', v); } catch { /* optional */ } }, stored);
-    await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
-    await expect(page.locator('.viewer')).toBeVisible();
-    await expect(page.locator('html'), stored).toHaveAttribute('data-palette', palette);
-    await expect(page.locator('html'), stored).toHaveAttribute('data-theme', scheme);
+  // A fresh page per saved value: a repeated navigation to the same URL would not reload, and init scripts would pile up.
+  for (const [stored, palette, scheme] of [['mocha', 'jet', 'dark'], ['nord', 'jet', 'dark'], ['gruvbox', 'jet', 'dark'], ['tokyo', 'paper', 'light'], ['light', 'paper', 'light'], ['midnight', 'midnight', 'dark']] as const) {
+    const fresh = await page.context().newPage();
+    await fresh.addInitScript(v => { try { localStorage.setItem('drishya.theme', v); } catch { /* optional */ } }, stored);
+    await fresh.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
+    await expect(fresh.locator('.viewer')).toBeVisible();
+    await expect(fresh.locator('html'), stored).toHaveAttribute('data-palette', palette);
+    await expect(fresh.locator('html'), stored).toHaveAttribute('data-theme', scheme);
+    await fresh.close();
   }
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
+  await expect(page.locator('.viewer')).toBeVisible();
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
   await expect(page.locator('.theme-options .theme-option')).toHaveText([/Jet Black/, /Midnight/, /Daylight/]);
   expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^Inter,/);
