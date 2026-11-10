@@ -386,7 +386,11 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
   const unsupported = () => Promise.reject(new Error('Not available in a replay bundle — run Drishya locally.'));
   return {
     kind: 'bundle',
-    queue: async (id, query = {}) => queuePage(bundle.projection.timeline, id, query),
+    queue: async (id, query = {}) => queuePage(bundle.projection.timeline, id, query, {
+      // A bundle has whole queue artifacts, but no physical source identity/full-text
+      // guarantee for anonymous prompt previews. Keep those receipts conservative.
+      input:item=>item.type==='queue' ? {text:item.inputArtifactId ? bundle.artifactText[item.inputArtifactId] : undefined,sourceId:item.sourceId,generation:item.generation} : undefined,
+    }),
     queueInput: async (id, receiptId, through, start = 0) => {
       const all = bundle.projection.timeline.filter((item): item is QueueTimelineItem => item.type === 'queue' && item.ownerRecordingId === id);
       const visible = queuePage(bundle.projection.timeline, id, {through, receiptId, count: 1});
