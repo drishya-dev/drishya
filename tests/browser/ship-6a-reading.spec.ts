@@ -59,8 +59,10 @@ for (const width of [600, 1440]) test(`reader ownership and history clearance at
   await page.locator('[data-spine-path="README.md"]').click();
   const peek = page.locator('.file-peek-reader');
   await expect(peek).toBeVisible(); await expect(git).toHaveCount(0);
-  await expect(peek.getByRole('button', { name: 'Return to Git review' })).toBeVisible();
-  await peek.getByRole('button', { name: 'Return to Git review' }).click();
+  const returnToGit = peek.getByRole('button', { name: 'Return to Git review' });
+  await expect(returnToGit).toBeVisible();
+  expect(await returnToGit.evaluate(button => { const r = button.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button') === button; })).toBe(true);
+  await returnToGit.click();
   await expect(git).toBeVisible(); await expect(peek).toHaveCount(0);
   await git.getByRole('button', { name: 'Return to file' }).click();
   await expect(peek).toBeVisible(); await expect(git).toHaveCount(0);
