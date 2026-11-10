@@ -3,5 +3,9 @@
 .search-results .search-turn+.search-hit {border-top:0;}
 .search-results .search-hit {display:grid;gap:2px;}
 .search-hit>small {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.search-results > .search-empty {padding-block:12px;}
+.search-empty strong {color:var(--t1);font-weight:var(--weight-medium);}
+.search-empty p {margin:4px 0 0;color:var(--t2);line-height:1.5;}
+.search-results .search-empty .btn {width:auto;margin-top:8px;padding:5px 9px;border:1px solid var(--line);}
 .history article.op[data-search-hit] {box-shadow:0 0 0 1px var(--source);}
 @media(forced-colors:active){.history article.op[data-search-hit] {outline:2px solid Highlight;}}

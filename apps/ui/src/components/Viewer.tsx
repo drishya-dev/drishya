@@ -760,6 +760,7 @@ function summarize(p: Projection, from: number) {
 const HIT_KIND: Record<string, string> = { 'message.user': 'Prompt', 'message.assistant': 'Reply', reasoning: 'Reasoning', 'tool.call': 'Call', 'tool.result': 'Result' };
 function Search({ projection }: { projection: Projection }) {
   const panel = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
   const open = useApp((s) => s.searchOpen);
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId);
@@ -772,25 +773,36 @@ function Search({ projection }: { projection: Projection }) {
   const graph = useApp(s => s.graph);
   const mode = useApp(s => s.mode);
   const step = useApp(s => s.step);
-  const [hits, setHits] = useState<SessionSearchHit[]>([]);
+  const [result, setResult] = useState<{ query: string; hits: SessionSearchHit[] }>();
   useEffect(() => {
     const element = panel.current;
     if (!element) return;
     // Native light dismissal preserves the outside click and restores the opening control.
     if (open && !element.matches(':popover-open')) element.showPopover();
     else if (!open && element.matches(':popover-open')) element.hidePopover();
-    if (open) element.querySelector('input')?.focus({ preventScroll: true });
+    if (open) input.current?.focus({ preventScroll: true });
   }, [open]);
   useEffect(() => {
-    setHits([]); setError(undefined); setLoading(false);
+    setResult(undefined); setError(undefined); setLoading(false);
     if (!open || scope !== 'captured' || !source || !recordingId || q.trim().length < 2) return;
     let current = true;
     setLoading(true);
-    const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) { setHits(result); setLoading(false); } }).catch(() => { if (current) { setError('Search unavailable. Change the query or reopen search to retry.'); setLoading(false); } }), 160);
+    const t = setTimeout(() => source.search(recordingId, q).then(result => { if (current) { setResult({ query: q, hits: result }); setLoading(false); } }).catch(() => { if (current) { setError('Search unavailable. Change the query or reopen search to retry.'); setLoading(false); } }), 160);
     return () => { current = false; clearTimeout(t); };
   }, [q, scope, open, source, recordingId]);
+  const hits = result?.query === q ? result.hits : [];
   const visibleHits = mode === 'replay' ? hits.filter(hit => { const at = searchDestination(projection, hit.observationId)?.step; return at !== undefined && at <= step; }) : hits;
   const files = q.trim().length >= 2 ? graph?.nodes.filter(node => node.path.toLowerCase().includes(q.trim().toLowerCase())).slice(0, 50) ?? [] : [];
+  const noMatches = scope === 'captured'
+    ? result?.query === q && visibleHits.length === 0
+    : q.trim().length >= 2 && files.length === 0;
+  const emptyTitle = scope === 'captured'
+    ? mode === 'replay' ? 'No matches at this replay step' : 'No matches in the whole session'
+    : !graph ? 'File references unavailable in this view'
+    : graph.temporal === 'current' ? 'No matches in the current index' : 'No matches in file references';
+  const refine = scope === 'captured'
+    ? mode === 'replay' ? 'Try a shorter term or move to a later step.' : 'Try a shorter phrase, command or path.'
+    : graph ? 'Try part of a file name or folder path.' : 'Choose Session work to search the recording.';
   const go = async (obs: string) => {
     const initial=useApp.getState();
     const current=()=>useApp.getState().source===source&&useApp.getState().recordingId===recordingId;
@@ -814,7 +826,7 @@ function Search({ projection }: { projection: Projection }) {
     <div ref={panel} id="recording-search" popover="auto" className="search" role="dialog" aria-label="Search this recording" onToggle={event => set({ searchOpen: event.newState === 'open' })}>
       <div className="search-field">
         <svg className="search-symbol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg>
-        <input autoFocus aria-label="Search prose, commands, paths" placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <input ref={input} autoFocus aria-label="Search prose, commands, paths" placeholder="Search prose, commands, paths…" value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="search-close" aria-label="Close search" popoverTarget="recording-search" popoverTargetAction="hide">×</button>
       </div>
       <div className="search-scopes" role="group" aria-label="Search scope"><button aria-pressed={scope === 'captured'} onClick={() => setScope('captured')}>Session work</button><button aria-pressed={scope === 'files'} onClick={() => setScope('files')}>Indexed files</button></div>
@@ -833,7 +845,13 @@ function Search({ projection }: { projection: Projection }) {
         {scope === 'files' && files.map(file => <button key={file.id} onClick={() => {const ref=prosePath(file.path,useApp.getState().recording?.workspaceRoot,true);if(ref)openCapturedPath(ref);}}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
         {loading && <div role="status">Searching session…</div>}
         {error && <div role="alert">{error}</div>}
-        {q.trim().length >= 2 && !loading && !error && (scope === 'captured' ? visibleHits.length === 0 : files.length === 0) && <div className="muted">No matches{scope === 'captured' && mode === 'replay' ? ' at this replay step' : ''}</div>}
+        {noMatches && !loading && !error && <div className="search-empty">
+          <div role="status"><strong>{emptyTitle}</strong><p>{refine}</p></div>
+          <button type="button" className="btn ghost small" onClick={() => {
+            setQ('');
+            input.current?.focus({ preventScroll: true });
+          }}>Clear search</button>
+        </div>}
       </div>
     </div>
   );
