@@ -1157,7 +1157,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   return (
     <div className="turn">
       {who}
-      {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
+      {shown && <div className="turn-capsule"><div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div></div>}
       {attachments}
       {captured}
       {report && <CapturedContextReport report={report} time={time} />}
