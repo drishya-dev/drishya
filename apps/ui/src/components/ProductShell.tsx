@@ -84,11 +84,9 @@ export function ProductShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
-      // Royal keeps its saved id (tokyo) but is a light palette since UI-8.
-      const lightPalette = theme === 'tokyo';
-      const scheme = theme === 'light' || lightPalette || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      const scheme = theme === 'light' || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = lightPalette ? 'tokyo' : scheme === 'light' ? 'paper' : theme === 'dark' || theme === 'system' ? 'jet' : theme;
+      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
     };
     apply();
     const preference = matchMedia('(prefers-color-scheme: light)');
@@ -109,10 +107,6 @@ const MODERN_THEMES = [
   ['dark', 'Jet Black', 'Neutral graphite · indigo'],
   ['midnight', 'Midnight', 'Midnight black · electric blue'],
   ['light', 'Daylight', 'White · sky blue'],
-  ['mocha', 'Orchid', 'Violet black · hot pink'],
-  ['tokyo', 'Royal', 'Pure white · deep blue'],
-  ['nord', 'Emerald', 'Green black · emerald'],
-  ['gruvbox', 'Ember', 'Warm black · cantaloupe orange'],
 ] as const;
 
 function Settings() {

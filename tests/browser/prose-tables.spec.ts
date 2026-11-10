@@ -10,7 +10,7 @@ for(const width of[600,1440])test(`prose tables, links and original copy at ${wi
  const tables=page.locator('.prose .md-prose-table');await expect(tables).toHaveCount(2);
  await expect(tables.first().locator('td code').first()).toHaveText('node -v');await expect(tables.first().getByRole('button',{name:'Open work on sample.ts'})).toBeVisible();
  await expect(tables.first().getByRole('link',{name:'site'})).toHaveAttribute('href','https://example.com');await expect(tables.first().locator('td').last()).toHaveText('a|b');
- for(const palette of['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
+ for(const palette of['jet','paper','midnight']){
   await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);
   const scroller=tables.last().locator('.md-table-scroll');expect(await scroller.evaluate(el=>el.scrollWidth>el.clientWidth)).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth-innerWidth)).toBeLessThanOrEqual(1);

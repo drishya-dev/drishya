@@ -22,7 +22,7 @@ test('the Modern session surface keeps metadata at 11 px, controls at 12 px and 
   // Keyboard, not a pointer: a resting pointer can start hover reading and move the card.
   for (const expand of await page.locator('button.op-expand').all()) await expand.press('Enter', { timeout: 1000 }).catch(() => {});
   await page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button').first().hover();
-  for (const palette of ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox']) {
+  for (const palette of ['jet', 'paper', 'midnight']) {
     await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);
     await page.evaluate(() => Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined))));
     const failures = await page.evaluate(({ exempt, raised }) => {

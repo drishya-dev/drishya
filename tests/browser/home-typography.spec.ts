@@ -20,7 +20,7 @@ test('Home metadata and controls meet the type floor across seven palette contra
  await page.goto(`${server.url}/?experience=modern#token=${server.token}`);await expect(page.locator('.mh-session').first()).toBeVisible();
  expect(await readableText(page)).toEqual([]);
  for(const selector of ['.mh-about span','.mh-refresh','.mh-filters select','.home-github-star'])for(const el of await page.locator(selector).all())expect(await el.evaluate(e=>parseFloat(getComputedStyle(e).fontSize))).toBeGreaterThanOrEqual(12);
- for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
+ for(const palette of ['jet','paper','midnight']){
   await page.evaluate(p=>document.documentElement.setAttribute('data-palette',p),palette);
   const ratio=await page.locator('.mh-harness-icon.claude-code').first().evaluate(el=>{
     const color=(text:string)=>{const context=document.createElement('canvas').getContext('2d')!;context.fillStyle=text;context.fillRect(0,0,1,1);return [...context.getImageData(0,0,1,1).data].slice(0,3);};
