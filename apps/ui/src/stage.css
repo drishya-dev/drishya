@@ -664,3 +664,9 @@
 .fix-chain-edits > summary { display: list-item; list-style-position: inside; cursor: pointer; color: var(--t2); }
 .fix-chain-edits ul { margin: 2px 0 2px 14px; padding: 0; list-style: none; }
 .fix-chain-edits li { max-width: 100%; }
+
+/* The same measured fixed-chrome boundary clips history and its navigation viewport. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history { top: var(--workspace-tools-bottom, 134px); }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner { padding-top: 16px; }
+:root[data-ui-version=modern] .connected-workspace.developer-workspace-open .follow-pill,
+:root[data-ui-version=modern] body:has(.modern-git-drawer[open]) .connected-workspace .follow-pill { display: none; }
