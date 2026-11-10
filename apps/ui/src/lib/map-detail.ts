@@ -41,6 +41,16 @@ function mapLevel(graph: RepoGraph, depth: number): { nodes: MapGroup[]; edges: 
   return { nodes, edges: [...edges.values()], depth };
 }
 
+/**
+ * What a spatial group holds, for the hover that tells two "Mixed files" apart: members this run touched first,
+ * then the rest in path order. Captured paths only; a group is navigation, never a claim about the code.
+ */
+export function groupMemberPaths(members: readonly string[], pathOf: (id: string) => string | undefined, touched: (id: string) => boolean, take = 4): { paths: string[]; more: number } {
+  const entries = members.flatMap(id => { const path = pathOf(id); return path === undefined ? [] : [{ path, touched: touched(id) }]; });
+  entries.sort((a, b) => Number(b.touched) - Number(a.touched) || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { paths: entries.slice(0, take).map(entry => entry.path), more: Math.max(0, entries.length - take) };
+}
+
 const levels = new WeakMap<RepoGraph, Map<number, ReturnType<typeof mapLevel>>>();
 const sourceCounts = new WeakMap<RepoGraph, number>();
 function level(graph: RepoGraph, depth: number) {
