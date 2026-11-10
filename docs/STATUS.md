@@ -39,7 +39,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | SHIP-2c | @harsh + Codex | `codex/ship-2c` | 2026-11-09 | Queued after SHIP-2a. Inventory click-opened surfaces and coordinate their presentation boundaries with FINISH-0b, USAGE-1, SHIP-14 and AUDIT-1 before reserving paths. |
 | SHIP-2d | @harsh + Codex | `codex/ship-2d` | 2026-11-09 | Queued after SHIP-2a and the file-reader fixes. Inventory the named reader and tool surfaces. Confirm boundaries with FILES-14, SHIP-13, CONTENT-19 and AUDIT-1 before reserving paths. |
 | SHIP-6 | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-6a/b/c preserve all eleven COMP-1 rows. Harsh authorized only the scoped shared sections on separate branches for Yash’s review. |
-| SHIP-6a | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `codex/ship-6a-reader-navigation` | 2026-11-10 | P03/P04/P05 only. Reserve History navigation clearance and follow pill, stage.css clearance, Viewer reader-layer routing, GitReview foreground/return and SessionWorkspace peek routing. Preserve SHIP-12 navigation-effect staging, UI-27 Prose/Turn, UI-28c composer and MOTION-3 motion. Focused regressions. |
 | SHIP-6c | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `codex/ship-6c-reading-guidance` | 2026-11-10 | P09/P11/P13/P17/P18/P23 only. Review checkbox rules, Viewer unmatched search UI, BrowserEvidence missing URL copy, Notes selected-step action, prose file-link wrapping and ProductShell Playback section. Preserve SHIP-6a Viewer reader routing, FINISH Settings controls and shared palette work. Focused regressions. |
 | SHIP-8 | @harsh + Codex | `codex/ship-8` | 2026-11-09 | Queued. Coordinate the required Opus spec and map/style ownership with MOTION-3, SHIP-2 and AUDIT-1 before reserving paths. Verify dense-session reading, labels and the map frame budget. |
 | LAYOUT-1b | @harsh + Codex | `codex/layout-1b` | 2026-11-09 | Queued. Inventory stage scaling and zoom surfaces. Confirm root sizing and stylesheet boundaries with UI-28c, UI-26 and the release polish owners before reserving paths. |
@@ -62,6 +61,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-6a reader navigation and fixed chrome (taken over from Codex), PR #393
+
+- Whole item as Codex wrote it, no source added: History is clipped below the measured fixed chrome (P03); a file peek opened over Git review replaces it, with a visible "← Git" return and a "Return to file" in Git, and narrow Git review offers Files (P04); Back to latest hides while Git review or Workspace owns the surface (P05). Branch merged with current main.
+- Checked at 600 and 1440 px on genuine sessions: Claude Code rec_b3363845 (0.6 MB) and Codex rec_0c5ab619 (0.2 MB), both with repositories on disk, for Git to peek to Git and Back to latest; Claude rec_64d5c199 (13.2 MB, 520 operations) and Codex rec_7cb1cda1 (15 MB, 1,115 operations) for History clearance. Before (main's UI): History top 0 under controls reaching 177 px at 600 and 122 px at 1440; Back to latest over Git review; no return route (at 600 the peek never opens, Git stays stacked). After: History top 189 and 134 px, clear on all four sessions; Back to latest hidden over Git; the peek's controls are hit-testable, "Return to Git review" restores Git. Zero page errors. `check:real` full-prose, workspace-files and local-branches pick sessions on both harnesses as before (rec_c8e5c9c8, rec_7cb1cda1, rec_60715088).
+- Gates: typecheck, ui build, the SHIP-6a spec (2 passed) and `check:affected` at three workers (154 passed, 18 skips) pass except `conversation-chat.spec.ts` (UI-27, prose capsule), which times out identically on main's sources. No full gate.
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-6b Workspace patch search and receiving pane (taken over from Codex), PR #392
 
