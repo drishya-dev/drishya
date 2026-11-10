@@ -68,7 +68,8 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     expect(await first.locator('.turn-who').evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(1);
 
     // A long prompt clamps inside the capsule (no fourth line leaking into its padding) and opens in place.
-    const long = turns.nth(1);
+    // Turns are picked by content: the virtualized history mounts only those near the viewport, so an index is not a position in the session.
+    const long = turns.filter({ hasText: 'Line 1 of a long prompt' });
     await long.scrollIntoViewIfNeeded();
     const text = long.locator('.turn-text');
     await expect(text).toHaveClass(/clamped/);
@@ -81,8 +82,9 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     await expect(text).toHaveClass(/clamped/);
 
     // A notice written in the user role is not the person's: no capsule styling, on the agent's side.
-    const notice = turns.nth(2);
-    await notice.scrollIntoViewIfNeeded();
+    const notice = turns.filter({ has: page.locator('.turn-source') });
+    await page.locator('.history').evaluate((el) => { el.scrollTop = el.scrollHeight; }); // prose is shown whole (SHIP-15), so the notice is far below
+    await expect(notice).toBeVisible();
     await expect(notice.locator('.turn-who')).toContainText('Claude Code');
     expect(await notice.locator('.turn-capsule').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
     const nBox = (await notice.locator('.turn-capsule').boundingBox())!;
