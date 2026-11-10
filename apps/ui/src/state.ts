@@ -338,12 +338,15 @@ export function setMapVisible(on: boolean) {
 }
 
 /** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
-export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system' | 'mocha' | 'tokyo' | 'nord' | 'gruvbox';
+export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system';
+
+/** Release 1 ships Jet Black ('dark'), Daylight ('light') and Midnight. Retired presets fall back to Jet Black, or Daylight for the light one (Royal). */
+const RETIRED_THEMES: Record<string, ThemePreference> = { mocha: 'dark', nord: 'dark', gruvbox: 'dark', tokyo: 'light' };
 
 function storedTheme(): ThemePreference {
   try {
     const value = localStorage.getItem('drishya.theme');
-    return ['midnight','light','system','mocha','tokyo','nord','gruvbox'].includes(value ?? '') ? value as ThemePreference : 'dark';
+    return ['midnight','light','system'].includes(value ?? '') ? value as ThemePreference : RETIRED_THEMES[value ?? ''] ?? 'dark';
   } catch {
     return 'dark';
   }

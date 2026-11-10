@@ -39,12 +39,12 @@ small { font-size: var(--text-2xs); }
   --diff-added-wash: color-mix(in srgb, var(--diff-added) 10%, transparent);
   --diff-removed-wash: color-mix(in srgb, var(--diff-removed) 10%, transparent);
 
-  --agent-claude-ink: #e0896a;
-  --agent-codex-ink: #6fc3b3;
-  --agent-violet-ink: #c7a0e8;
-  --agent-gold-ink: #e6c86e;
-  --agent-blue-ink: #7fb2f0;
-  --agent-rose-ink: #e88fb4;
+  --agent-claude-ink: #fe9c6f;
+  --agent-codex-ink: #39c9ba;
+  --agent-violet-ink: #cda2ff;
+  --agent-gold-ink: #d0b337;
+  --agent-blue-ink: #75baff;
+  --agent-rose-ink: #ff94bf;
 }
 
 :root[data-ui-version=modern][data-experience=classic][data-theme=light][data-palette] {

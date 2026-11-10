@@ -1,13 +1,14 @@
-/* Modern materials. IDs preserve saved preferences; Legacy keeps its own palettes.
-   UI-8 (Yash, 3 Nov): one confident accent per palette on a neutral base, a second colour for emphasis; every text and meaning colour clears 4.5:1 on the canvas and both panel surfaces. */
+/* Modern materials. Release 1 ships three palettes (SHIP-17, Opus decision 10 Nov): Jet Black (jet, default), Daylight (paper) and Midnight.
+   Ink floors on every surface (--bg, --s1..--s3): primary 13:1, secondary 7:1, metadata 4.5:1; dark syntax, path, number, diff and outcome inks 7:1 at OKLCH chroma 0.09 or more.
+   apps/ui/test/palette-contrast.test.ts asserts them. Legacy keeps its own palettes. */
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
   --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
-  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#ededed;
-  --t2:#b5b7c1; --t3:#9b9da8; --t4:#8b8d98; --focus:#8b92ec;
-  --palette-active:#5e6ad2; --syntax-keyword:#ff9f9a; --syntax-string:#a8d7ab; --syntax-function:#c5b1ff;
-  --syntax-number:#f0bc82; --syntax-type:#9fcbff; --syntax-property:#80d3da;
-  --source:#9fc8f3; --external:#c8b0ec; --edited:#eac18a;
-  --pass:#80d7aa; --fail:#ff939b; --graph-node:#e8edf5; --graph-edge:#b4bfce;
+  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
+  --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#8b92ec;
+  --palette-active:#5e6ad2; --syntax-keyword:#fe9996; --syntax-string:#6dc972; --syntax-function:#cda2ff;
+  --syntax-number:#fd9f48; --syntax-type:#4ac1f7; --syntax-property:#32c8c4;
+  --source:#80b8ff; --external:#f197de; --edited:#d5b238;
+  --pass:#84f8d2; --fail:#ff998c; --graph-node:#e8edf5; --graph-edge:#b4bfce;
   color-scheme:dark;
 }
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper] {
@@ -22,52 +23,12 @@
 }
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight] {
   --bg:#02070a; --s1:#0a1116; --s2:#111a21; --s3:#18232c;
-  --line:#1d2a33; --line-2:#2a3a45; --line-3:#4a5d6a; --t1:#eef4f8;
-  --t2:#b9c7d0; --t3:#93a4b0; --t4:#8396a3; --focus:#29a9f0;
-  --palette-active:#0297de; --syntax-keyword:#7cc4ff; --syntax-string:#9ad8b0; --syntax-function:#c6b4ff;
-  --syntax-number:#fd9a7a; --syntax-type:#e6c180; --syntax-property:#87d3d3;
-  --source:#5cbdf5; --external:#c4a7f5; --edited:#fc8a66;
-  --pass:#5fd49a; --fail:#ff7a85; --graph-node:#e6f2fa; --graph-edge:#8fb3c9;
-  color-scheme:dark;
-}
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=mocha] {
-  --bg:#0b090d; --s1:#141118; --s2:#1c1821; --s3:#25202c;
-  --line:#2c2633; --line-2:#3d3547; --line-3:#655a73; --t1:#f5eff7;
-  --t2:#d3c8d9; --t3:#ad9fb5; --t4:#a092a9; --focus:#ec5fae;
-  --palette-active:#d83995; --syntax-keyword:#f28ac4; --syntax-string:#9fd6b7; --syntax-function:#6ec4ea;
-  --syntax-number:#f5b98a; --syntax-type:#d4b1ff; --syntax-property:#88cbbf;
-  --source:#5cbde6; --external:#f28ac4; --edited:#f5b07a;
-  --pass:#79d3a1; --fail:#ff7f8e; --graph-node:#f6eaf3; --graph-edge:#b9a0bd;
-  color-scheme:dark;
-}
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=tokyo] {
-  --bg:#f7f8fc; --s1:#ffffff; --s2:#eff1f8; --s3:#e5e8f3;
-  --line:#dadeec; --line-2:#c4cade; --line-3:#8389a3; --t1:#111633;
-  --t2:#373d5c; --t3:#50567a; --t4:#5a6083; --focus:#09318d;
-  --palette-active:#09318d; --syntax-keyword:#a32a63; --syntax-string:#2a6b3e; --syntax-function:#1747b0;
-  --syntax-number:#9a4d0b; --syntax-type:#5d3f94; --syntax-property:#12625f;
-  --source:#1747b0; --external:#b4326f; --edited:#9a4d0b;
-  --pass:#22703c; --fail:#b3213a; --graph-node:#1d2b5c; --graph-edge:#6a76a3;
-  color-scheme:light;
-}
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=nord] {
-  --bg:#050a08; --s1:#0c1310; --s2:#131c18; --s3:#1a2621;
-  --line:#1f2d27; --line-2:#2c3e36; --line-3:#4c6359; --t1:#ecf5f1;
-  --t2:#bccdc6; --t3:#97aba2; --t4:#879c93; --focus:#34d39b;
-  --palette-active:#10b981; --syntax-keyword:#6fd9b0; --syntax-string:#d6c98a; --syntax-function:#a4bcff;
-  --syntax-number:#f2b46d; --syntax-type:#d5b7ee; --syntax-property:#8ad7de;
-  --source:#7cc8f0; --external:#c3a8f0; --edited:#f2b46d;
-  --pass:#4ade80; --fail:#ff7d7d; --graph-node:#e7f6ef; --graph-edge:#8fb8a6;
-  color-scheme:dark;
-}
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=gruvbox] {
-  --bg:#0c0908; --s1:#15110e; --s2:#1e1814; --s3:#28201b;
-  --line:#2f2620; --line-2:#40342c; --line-3:#6a5a4e; --t1:#f6efe9;
-  --t2:#d4c6bb; --t3:#b0a194; --t4:#a39283; --focus:#fc8a66;
-  --palette-active:#fc734d; --syntax-keyword:#ff9e7d; --syntax-string:#a9d6a3; --syntax-function:#6ec1f0;
-  --syntax-number:#ffc28a; --syntax-type:#d6b8ff; --syntax-property:#91d8cc;
-  --source:#6ec1f0; --external:#d6a8e8; --edited:#ffb36b;
-  --pass:#7fd29a; --fail:#ff7f86; --graph-node:#f8ece2; --graph-edge:#c7a995;
+  --line:#1d2a33; --line-2:#2a3a45; --line-3:#4a5d6a; --t1:#f0f7fb;
+  --t2:#c9d7e0; --t3:#9fb0bc; --t4:#8396a3; --focus:#29a9f0;
+  --palette-active:#0297de; --syntax-keyword:#ff9693; --syntax-string:#6bc770; --syntax-function:#cca0fe;
+  --syntax-number:#fb9d46; --syntax-type:#48bff5; --syntax-property:#2fc7c2;
+  --source:#7eb6fe; --external:#ef95dc; --edited:#d3b035;
+  --pass:#84f8d2; --fail:#ff9789; --graph-node:#e6f2fa; --graph-edge:#8fb3c9;
   color-scheme:dark;
 }
 /* State washes derive from the same semantic ink, rather than inherited sage. */
@@ -100,16 +61,13 @@
 :root[data-ui-version=modern] .theme-dark {--swatch-bg:#0a0a0a;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#8b92ec;--swatch-border:#27272a;}
 :root[data-ui-version=modern] .theme-light {--swatch-bg:#f6f9fb;--swatch-node:#fcffff;--swatch-raised:#eef3f6;--swatch-accent:#0593c6;--swatch-border:#d7e0e6;}
 :root[data-ui-version=modern] .theme-midnight {--swatch-bg:#02070a;--swatch-node:#0a1116;--swatch-raised:#111a21;--swatch-accent:#0297de;--swatch-border:#1d2a33;}
-:root[data-ui-version=modern] .theme-mocha {--swatch-bg:#0b090d;--swatch-node:#141118;--swatch-raised:#1c1821;--swatch-accent:#d83995;--swatch-border:#2c2633;}
-:root[data-ui-version=modern] .theme-tokyo {--swatch-bg:#f7f8fc;--swatch-node:#ffffff;--swatch-raised:#eff1f8;--swatch-accent:#09318d;--swatch-border:#dadeec;}
-:root[data-ui-version=modern] .theme-nord {--swatch-bg:#050a08;--swatch-node:#0c1310;--swatch-raised:#131c18;--swatch-accent:#10b981;--swatch-border:#1f2d27;}
-:root[data-ui-version=modern] .theme-gruvbox {--swatch-bg:#0c0908;--swatch-node:#15110e;--swatch-raised:#1e1814;--swatch-accent:#fc734d;--swatch-border:#2f2620;} :root:where(:not([data-ui-skin=clarity]))[data-ui-version=modern][data-theme=light] .modern-native-composer.open { box-shadow:0 12px 30px #30271e14!important; }
-/* UI-8: on the four dark accent palettes, controls take the palette's own accent; --source keeps its meaning (a file read). Jet Black is unchanged,
-   and the light palettes' --source is already in their accent's family. */
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) :is(.workspace-header,.folder-explorer,.workbench-station,.prompt-composer,.workspace-bar,.product-dialog,.search,.home) { --modern-surface:color-mix(in srgb,var(--s1) 95%,var(--focus) 5%); --modern-raised:color-mix(in srgb,var(--s2) 96%,var(--focus) 4%); }
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .mini-switch.on { background:color-mix(in srgb,var(--focus) 22%,var(--bg)); border-color:var(--focus); }
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .mini-switch.on::before { background:var(--focus); }
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) :is(.workspace-grant,.runtime-tools summary,.workspace-toggles button[aria-pressed="true"],.atlas-eyebrow,.atlas-ref>span) { color:var(--focus); }
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .atlas-commit[aria-pressed=true] { box-shadow:inset -2px 0 var(--focus); }
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .commit-row[aria-pressed=true] { box-shadow:inset 2px 0 var(--focus); }
-:root[data-ui-version=modern][data-experience=classic]:is([data-palette=midnight],[data-palette=mocha],[data-palette=nord],[data-palette=gruvbox]) .history article.op[data-search-hit] { box-shadow:0 0 0 1px var(--focus); }
+ :root:where(:not([data-ui-skin=clarity]))[data-ui-version=modern][data-theme=light] .modern-native-composer.open { box-shadow:0 12px 30px #30271e14!important; }
+/* UI-8: on Midnight, controls take the palette's own accent; --source keeps its meaning (a file read). Jet Black's accent is already indigo,
+   and Daylight's --source is already in its accent's family. */
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] :is(.workspace-header,.folder-explorer,.workbench-station,.prompt-composer,.workspace-bar,.product-dialog,.search,.home) { --modern-surface:color-mix(in srgb,var(--s1) 95%,var(--focus) 5%); --modern-raised:color-mix(in srgb,var(--s2) 96%,var(--focus) 4%); }
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .mini-switch.on { background:color-mix(in srgb,var(--focus) 22%,var(--bg)); border-color:var(--focus); }
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .mini-switch.on::before { background:var(--focus); }
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] :is(.workspace-grant,.runtime-tools summary,.workspace-toggles button[aria-pressed="true"],.atlas-eyebrow,.atlas-ref>span) { color:var(--focus); }
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .atlas-commit[aria-pressed=true] { box-shadow:inset -2px 0 var(--focus); }
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .commit-row[aria-pressed=true] { box-shadow:inset 2px 0 var(--focus); }
+:root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .history article.op[data-search-hit] { box-shadow:0 0 0 1px var(--focus); }
