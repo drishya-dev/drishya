@@ -308,6 +308,16 @@ The navbar and page controls are out of pointer and keyboard reach while the ove
 
 `introFrame(elapsedMs: number): IntroFrame` projects reveal stage, seed opacity, assembly, seven letter progress values and descriptor progress. Stages are `seed` below 120 ms, `assemble` to 300 ms, `name` to 840 ms and `hold` thereafter. Negative time clamps to zero and non-finite time returns the settled identity. Handoff time starts on the visitor’s action. Test 0, 120, 300, 520, 788 and 840 ms, invalid input and early entry.
 
+#### Three-petal aperture follow-up
+
+Harsh selected the freestanding aperture on 10 November 2026. Its three broad curved petals suggest a hexagonal silhouette around a clear central opening. Preview the assembly in a standalone page before committing production geometry. Test the settled mark on light and dark fields at actual 16, 24 and 32 px, widening the blade gaps if they close up at favicon size.
+
+LAND-17 replaces the LAND-9 reveal sequence above when the new mark ships. Build the symbol from three independently movable paths in one SVG. Start the petals 10–14 px out from their final positions, with at most 8° of rotation. Each eases into place over 340 ms, starting at 0, 40 and 80 ms. At 420 ms the SVG reaches its exact final silhouette. Keep the center open during the assembly.
+
+At 420 ms, the whole light `Drishya` wordmark begins to appear 6 px below its final position. Settle it below the aperture over 240 ms. If the opening includes its tagline, bring it in with the wordmark. The complete lockup holds still from 660 ms. The preview exposes Replay and a reduced-motion control so the assembled and animated states can be compared. If the lockup is shown with reduced motion, render the finished state immediately.
+
+Keep LAND-9’s entry, skip, replay, focus, navbar and first-paint behavior. An early exit cancels the assembly and leaves the finished mark available. Use one reusable vector definition so the opening’s final frame and any flat application of the mark share the same silhouette.
+
 ### 2. Hero, repository depth and product recording
 
 Use a two-column hero at ≥1000 px. Give the left headline the larger typographic weight. Fit it to two lines at ≥1200 px and up to three at narrower supported widths. Keep both links and the right preview visible at 1440×900. At 600–999 px place the visual after the copy.
@@ -481,6 +491,8 @@ TASKS is the active queue; the steps here are the execution contract for those I
 
 Use this order for the shared landing files: LAND-9 → LAND-10 → LAND-11 → LAND-12 → LAND-13 → LAND-15 → LAND-16 → LAND-14. LAND-15 can prepare the capture locally once the replay is available. LAND-14 measures the combined page after the stack, preview and close are integrated.
 
+LAND-17 can be previewed independently. Its production change follows LAND-9 and selection of the final vector. Include its reveal in LAND-14 when it is part of the integrated page.
+
 ### LAND-9 — shared runtime and branded opening (maximum 15 paths)
 
 Use the existing `codex/land-9-opening-stack` implementation as the source baseline after review. Reconcile the known Home-only boot and reusable Replay controls there. Review the local changes in that checkout before integrating them.
@@ -563,6 +575,14 @@ Interfaces: `closingHTML(availabilityHTML: string): string` emits the Home-only 
 - [ ] Merge local and closing content into one compact section and keep the footer grouped in a simple utility row. Render the tree as aria-hidden decoration and add its one 240 ms emphasis.
 - [ ] Build, run the closing and navigation browser specs, and inspect 600 and 1440 px. Complete the item in its own PR.
 
+### LAND-17 — three-petal logo opening (maximum 8 paths)
+
+Depends on the LAND-9 opening and a selected vector from the standalone preview. Create `apps/landing/src/brand-mark.ts` as the geometry source. Modify `opening.ts`, `opening.css`, `scripts/build-landing.ts`, `tests/landing-motion.test.ts`, `tests/browser/landing-opening.spec.ts`, TASKS and STATUS.
+
+- [ ] Preview the freestanding mark at actual icon sizes and review assembly, name reveal and reduced-motion states in a standalone page. Record the selected geometry before integration.
+- [ ] Render three paths from the shared definition. Verify the 0/40/80 ms starts, settled SVG at 420 ms, wordmark hold at 660 ms and early-entry cancellation.
+- [ ] Verify Replay, Skip, Escape, wheel entry and the existing first-paint and static fallbacks on the built landing artifact. Review the hold state and supported desktop widths before completing the separate PR.
+
 ### LAND-14 — integrated acceptance (maximum 7 planned paths)
 
 Files: create `tests/browser/landing-acceptance.spec.ts`, `scripts/check-landing-performance.ts`, `docs/review/landing-motion-acceptance.md`; modify `tests/browser/landing.spec.ts`, `tests/browser/landing-motion.spec.ts`, TASKS and STATUS. If measured defects require source changes outside this bounded task, give them a whole TASKS item or update the claim before implementation; do not hide unfinished work in the acceptance report.
@@ -625,4 +645,4 @@ Every PR records its source revision, actual passing commands/counts, visual sta
 - Each implementation item has a bounded file list, a failing-test-first step, meaningful acceptance and an independent PR boundary.
 - TASKS remains the only active product queue. This MD is the selected design/execution contract; STATUS records claims, decisions and measured results.
 
-LAND-8 owns this specification. TASKS records completion for LAND-9 through LAND-16.
+LAND-8 owns this specification. TASKS records completion for LAND-9 through LAND-17.
