@@ -8,7 +8,7 @@ import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 import { HarnessController } from '../../apps/daemon/src/controller.ts';
 
-// UI-7: no visible text on the demo session (cards expanded: code, diff, test, search, shell) falls below 4.5:1 on any of the seven palettes.
+// UI-7: no visible text on the demo session (cards expanded: code, diff, test, search, shell) falls below 4.5:1 on any of the three shipped palettes.
 let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-palette-contrast-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-palette-contrast' }); });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir && resolve(dir).startsWith(resolve(tmpdir()) + sep)) rmSync(dir, { recursive: true, force: true }); });
@@ -44,19 +44,34 @@ test('visible text keeps 4.5:1 on every palette on the expanded demo session', a
   for (const card of await page.locator('article.op').all().then(a => a.slice(0, 6))) { await card.focus().catch(() => undefined); await page.keyboard.press('Enter').catch(() => undefined); }
   // Expanded cards show captured source: line numbers prove the guard is looking at real material.
   await expect(page.locator('.ln-no').first()).toBeVisible();
-  for (const palette of ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox']) {
+  for (const palette of ['jet', 'paper', 'midnight']) {
     await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette);
     await page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
     expect(await measure(page), palette).toEqual([]);
   }
 });
 
-// UI-7 slice 2: the overlays people open on top of the session, on the same seven palettes.
+// SHIP-17: the four retired palettes are gone from Settings, and a saved retired preference resolves to Jet Black (Royal, a light one, to Daylight).
+test('retired saved palettes fall back to a shipped palette and Settings lists three', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  for (const [stored, palette, scheme] of [['mocha', 'jet', 'dark'], ['nord', 'jet', 'dark'], ['gruvbox', 'jet', 'dark'], ['tokyo', 'paper', 'light'], ['midnight', 'midnight', 'dark']] as const) {
+    await page.addInitScript(v => { try { localStorage.setItem('drishya.theme', v); } catch { /* optional */ } }, stored);
+    await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
+    await expect(page.locator('.viewer')).toBeVisible();
+    await expect(page.locator('html'), stored).toHaveAttribute('data-palette', palette);
+    await expect(page.locator('html'), stored).toHaveAttribute('data-theme', scheme);
+  }
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await expect(page.locator('.theme-options .theme-option')).toHaveText([/Jet Black/, /Midnight/, /Daylight/]);
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^Inter,/);
+});
+
+// UI-7 slice 2: the overlays people open on top of the session, on the same three palettes.
 test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
   await expect(page.locator('.viewer')).toBeVisible();
-  const palettes = ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox'];
+  const palettes = ['jet', 'paper', 'midnight'];
   const settle = () => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
   const overlays: [string, () => Promise<void>, () => Promise<void>][] = [
     ['Settings', async () => { await page.getByRole('button', { name: 'Workspace settings', exact: true }).click(); await expect(page.getByRole('dialog', { name: 'Workspace settings' })).toBeVisible(); }, () => page.keyboard.press('Escape')],
@@ -77,7 +92,7 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
 });
 
 // UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Git review dialog and the header over the map.
-const ALL_PALETTES = ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox'];
+const ALL_PALETTES = ['jet', 'paper', 'midnight'];
 // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
 const settled = (page: Page) => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
 // With DRISHYA_CONTRAST_REPORT set the lowest ratios per state are printed instead of asserted, so a change can be measured before it is judged.

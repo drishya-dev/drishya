@@ -18,7 +18,7 @@
   --palette-active:#0593c6; --syntax-keyword:#a62a78; --syntax-string:#1d6b3f; --syntax-function:#0a6a94;
   --syntax-number:#a14a00; --syntax-type:#60448b; --syntax-property:#06635f;
   --source:#0a6a94; --external:#8a2fa0; --edited:#a14a00;
-  --pass:#1a7240; --fail:#b4233b; --graph-node:#2d4452; --graph-edge:#6d8593;
+  --pass:#006150; --fail:#b02a2d; --graph-node:#2d4452; --graph-edge:#6d8593;
   color-scheme:light;
 }
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight] {

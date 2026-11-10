@@ -71,7 +71,7 @@ async function failures(page: Page) {
   }, { scope: SCOPE, raised: RAISED });
 }
 async function everyPalette(page: Page, state: string) {
-  for (const palette of ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox']) {
+  for (const palette of ['jet', 'paper', 'midnight']) {
     await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);
     // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
     await page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(animation => animation.playState === 'running' && animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => undefined))), new Promise(done => setTimeout(done, 1500))]));
