@@ -1,0 +1,33 @@
+/* SHIP-18: History hierarchy by ink and weight, never by new boxes (Opus decision, 10 Nov; roles from SHIP-17 in tokens.css).
+   Prose, prompts, titles and values are primary ink; labels, kinds and provenance are muted; paths, outcomes and diffs take their role inks.
+   Colour and weight only: no spacing, layout, layer or motion. Loaded after the sheets it refines. */
+:root[data-ui-version=modern][data-experience=classic] {
+  --history-code-wash: color-mix(in srgb, var(--source) 11%, transparent);
+}
+
+/* Card title: primary and a step heavier. The tool kind and the provenance beneath it stay muted. */
+:root[data-ui-version=modern][data-experience=classic] .history .op-title { color: var(--text-primary); font-weight: var(--weight-medium); }
+:root[data-ui-version=modern][data-experience=classic] .history .op-kind,
+:root[data-ui-version=modern][data-experience=classic] .history .captured-clock,
+:root[data-ui-version=modern][data-experience=classic] .history .turn-who,
+:root[data-ui-version=modern][data-experience=classic] .history .material-context,
+:root[data-ui-version=modern][data-experience=classic] .history .result-lead,
+:root[data-ui-version=modern][data-experience=classic] .history .hunk-head { color: var(--text-muted); }
+
+/* Outcomes sit on their role inks. */
+:root[data-ui-version=modern][data-experience=classic] .history .state-ok { color: var(--pass); }
+:root[data-ui-version=modern][data-experience=classic] .history .state-error { color: var(--fail); }
+
+/* Values are primary: command output, requests, captured lines and definition values. Line numbers are metadata. */
+:root[data-ui-version=modern][data-experience=classic] .history :is(.output, .request-line, .case-peek, dd) { color: var(--text-primary); }
+:root[data-ui-version=modern][data-experience=classic] .history .diff .ln-tx { color: var(--text-primary); }
+:root[data-ui-version=modern][data-experience=classic] .history .ln-no { color: var(--text-muted); }
+:root[data-ui-version=modern][data-experience=classic] .history dt { color: var(--text-muted); }
+
+/* Paths and links carry the source ink; the file title above stays a primary title. */
+:root[data-ui-version=modern][data-experience=classic] .history :is(.md-path, .md-link, .notice-line-path, .browser-url) { color: var(--source); }
+
+/* Prose: body in primary, headings in primary at 600, inline code in the source ink on a faint wash of it (no border colour, so nothing shifts). */
+:root[data-ui-version=modern][data-experience=classic] .history .prose { color: var(--text-primary); }
+:root[data-ui-version=modern][data-experience=classic] .history .prose :is(.md-h, h1, h2, h3, h4) { color: var(--text-primary); font-weight: var(--weight-strong); }
+:root[data-ui-version=modern][data-experience=classic] .history .prose :is(p, li, td, dd) code { color: var(--source); background: var(--history-code-wash); border-color: transparent; }

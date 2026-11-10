@@ -247,8 +247,8 @@
 
 /* Developer refinement: one prompt, quiet utilities, distinct window-like materials. */
 .connected-workspace .history .ops-row { justify-content: safe center; }
-.connected-workspace .history .op { border-radius: var(--round-lg); overflow: hidden; border-color: color-mix(in srgb, var(--material) 42%, #333); }
-:root[data-palette] .connected-workspace .history .op-head { background: color-mix(in srgb, var(--material) 10%, #232323); border-bottom: 1px solid color-mix(in srgb, var(--material) 25%, #353535); padding: 8px 10px; min-height: 36px; }
+.connected-workspace .history .op { border-radius: var(--round-lg); overflow: hidden; border-color: color-mix(in srgb, var(--material) 42%, var(--line-2)); }
+:root[data-palette] .connected-workspace .history .op-head { background: color-mix(in srgb, var(--material) 10%, var(--s2)); border-bottom: 1px solid color-mix(in srgb, var(--material) 25%, var(--line-2)); padding: 8px 10px; min-height: 36px; }
 .file-format { flex: 0 0 16px; color: #a1b0be; }
 .format-folder { color: #dfbd74; } .format-ts, .format-tsx { color: #49baff; } .format-js, .format-jsx, .format-json { color: #efcf66; }
 .format-py { color: #72bfdc; } .format-rs { color: #e7a17b; } .format-css { color: #c995f2; } .format-md { color: #a3d6ff; }
@@ -290,8 +290,8 @@
 /* Vertical overscroll chains to the history at a result's edge, so cards never trap the wheel; horizontal stays contained against back-swipe. */
 .op-body, .op-expanded, .terminal-preview, .result-area { min-width: 0; max-width: 100%; box-sizing: border-box; overscroll-behavior-x: contain; overscroll-behavior-y: auto; }
 .op .cmd, .op .output, .terminal-preview pre { min-width: 0; max-width: 100%; box-sizing: border-box; white-space: pre-wrap; overflow-wrap: anywhere; }
-:root[data-palette='jet'] .history .op { border-color: color-mix(in srgb, var(--material) 55%, #383b42); box-shadow: inset 0 1px 0 #ffffff09; }
-:root[data-palette='jet'] .history .op-head { background: color-mix(in srgb, var(--material) 14%, #17191d); border-bottom-color: color-mix(in srgb, var(--material) 35%, #35373d); }
+:root[data-palette='jet'] .history .op { border-color: color-mix(in srgb, var(--material) 55%, var(--line-2)); box-shadow: inset 0 1px 0 #ffffff09; }
+:root[data-palette='jet'] .history .op-head { background: color-mix(in srgb, var(--material) 14%, var(--s2)); border-bottom-color: color-mix(in srgb, var(--material) 35%, var(--line-2)); }
 :root[data-palette='jet'] .tk-kw { color: #c586c0; }
 :root[data-palette='jet'] .tk-str { color: #ce9178; }
 :root[data-palette='jet'] .tk-fn { color: #dcdcaa; }
@@ -299,9 +299,9 @@
 :root[data-palette='jet'] .tk-com { color: #7fa66a; }
 :root[data-palette='jet'] .tk-type { color: #4ec9b0; }
 :root[data-palette='jet'] .tk-property { color: #9cdcfe; }
-:root[data-palette='jet'] .ln-hi { background: #163c60; border-left: 2px solid #55baff; }
+:root[data-palette='jet'] .ln-hi { background: color-mix(in srgb, var(--source) 22%, var(--s1)); border-left: 2px solid var(--source); }
 :root[data-palette='jet'] ::selection { background: #285c88; color: #fff; }
-.read-preview:hover .ln { color: #74c5ff; }
+.read-preview:hover .ln { color: var(--source); }
 .prompt-composer.open { padding: 8px 12px; }
 .prompt-composer .composer-target { margin: 0 0 4px; }
 .prompt-composer textarea { min-height: 38px; padding: 8px 10px; resize: none; }
