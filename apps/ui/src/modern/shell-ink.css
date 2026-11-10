@@ -1,0 +1,22 @@
+/* SHIP-19: Home, shell and overlay hierarchy by ink and weight (Opus decision, 10 Nov; roles from SHIP-17 in tokens.css).
+   Titles and values are primary, supporting copy secondary, labels and metadata muted; the harnesses carry their identity inks; no new boxes.
+   Colour and weight only: no spacing, layout, controls, layer or motion. Loaded after the sheets it refines. */
+
+/* Home: the harness mark takes the stable identity ink instead of an unrelated meaning colour. */
+:root[data-ui-version=modern][data-experience=classic] .home .mh-harness-icon.claude-code { color: var(--agent-claude-ink); }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-harness-icon.codex { color: var(--agent-codex-ink); }
+
+/* Titles step up in weight; the wordmark is primary. */
+:root[data-ui-version=modern][data-experience=classic] .home .brand { color: var(--text-primary); }
+:root[data-ui-version=modern][data-experience=classic] .home strong { color: var(--text-primary); font-weight: var(--weight-medium); }
+
+/* Supporting copy on Home and in dialogs is secondary; counts, times and group labels stay muted. */
+:root[data-ui-version=modern][data-experience=classic] .home p { color: var(--text-secondary); }
+:root[data-ui-version=modern][data-experience=classic] .home :is(time, small, h3) { color: var(--text-muted); }
+
+/* Dialogs, search and menus: titles primary at 600, descriptions secondary, option labels primary, notes muted. */
+:root[data-ui-version=modern][data-experience=classic] :is(.product-dialog, .settings-dialog) :is(h1, h2) { color: var(--text-primary); font-weight: var(--weight-strong); }
+:root[data-ui-version=modern][data-experience=classic] :is(.product-dialog, .settings-dialog) h3 { color: var(--text-primary); font-weight: var(--weight-strong); }
+:root[data-ui-version=modern][data-experience=classic] :is(.product-dialog, .settings-dialog) p:not(.muted) { color: var(--text-secondary); }
+:root[data-ui-version=modern][data-experience=classic] :is(.product-dialog, .settings-dialog) :is(.muted, small) { color: var(--text-muted); }
+:root[data-ui-version=modern][data-experience=classic] .theme-option :is(b, strong, span:first-of-type) { color: var(--text-primary); font-weight: var(--weight-strong); }
