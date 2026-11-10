@@ -44,6 +44,7 @@ import { SessionWorkspaceProvider, FolderExplorer, CurrentFileReader, PromptComp
 import { NowWatcher } from './NowWatcher.tsx';
 import { NotifyWatcher } from './NotifyWatcher.tsx';
 import { TurnsWatcher } from './TurnsWatcher.tsx';
+import { ContextReportWatcher } from './ContextReportWatcher.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { useExperience } from '../lib/experience.ts';
@@ -214,6 +215,7 @@ function WorkspaceViewer() {
       <Transport scene={scene} projection={projection} />
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
+      <ContextReportWatcher key={`context-report/${recordingId}`} />
       <PromptComposer key={`composer/${recordingId}`} />
       <DeveloperWorkspace />
       <Briefing projection={projection} />
@@ -280,7 +282,7 @@ function SessionLine({ projection }: { projection: Projection }) {
   const stateText = state === 'working' ? 'Agent working now' : state === 'watching' ? 'Watching the journal; the agent is quiet' : undefined;
   return <div className="session-line" title={[title, meta, stateText].filter(Boolean).join('\n')}>
     <span className="session-line-title">{title}</span>
-    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing usage={projection.usage} /><span className="session-line-repo">{repo ?? (source?.kind === 'bundle' ? 'Offline session' : '')}</span>{branch && <span className="session-line-branch" tabIndex={0} onMouseEnter={event => revealBranch(event.currentTarget)} onFocus={event => revealBranch(event.currentTarget)} onMouseLeave={event => dismissBranch(event.currentTarget)} onBlur={event => dismissBranch(event.currentTarget)} aria-label={`Branch: ${branch.name}. Last branch in session metadata; not current Git`} title="Last branch in session metadata; not current Git"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="19" r="2.5"/><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6"/></svg><span className="session-branch-name">{branch.name}</span></span>}<span className="session-line-harness">{[HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ')}</span></span>
+    <span className="session-line-meta">{state && <span className="session-line-state" data-state={state} role="img" aria-label={stateText} />}<ContextRing projection={projection} /><span className="session-line-repo">{repo ?? (source?.kind === 'bundle' ? 'Offline session' : '')}</span>{branch && <span className="session-line-branch" tabIndex={0} onMouseEnter={event => revealBranch(event.currentTarget)} onFocus={event => revealBranch(event.currentTarget)} onMouseLeave={event => dismissBranch(event.currentTarget)} onBlur={event => dismissBranch(event.currentTarget)} aria-label={`Branch: ${branch.name}. Last branch in session metadata; not current Git`} title="Last branch in session metadata; not current Git"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="5" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="6" cy="19" r="2.5"/><path d="M6 7.5v9M18 8.5v1a6 6 0 0 1-6 6H6"/></svg><span className="session-branch-name">{branch.name}</span></span>}<span className="session-line-harness">{[HARNESS_NAME[recording.harness] ?? recording.harness, model].filter(Boolean).join(' · ')}</span></span>
   </div>;
 }
 

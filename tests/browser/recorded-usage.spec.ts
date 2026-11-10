@@ -95,6 +95,50 @@ for (const width of [600, 1440]) test(`Limits keeps independently valid windows 
   }
 });
 
+// USAGE-1 (Yash, 8 Nov): a Claude Code session with a /context report shows its categories as one segmented bar and the window the
+// report printed, and never "window not recorded"; without a report it says plainly that none is recorded. The session line keeps a ring.
+for (const width of [600, 1440]) test('Context shows the /context report as one segmented bar at ' + width + 'px', async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
+  await page.route(/\/v1\/.*controller/, route => route.fulfill({ status: 404, body: '{}' }));
+  await page.route('**/live', route => route.fulfill({ contentType: 'application/json', body: '{"live":false}' }));
+  const grid = '⛁ ⛁ ⛶ ⛶';
+  const report = [' Context Usage', grid + '   claude-opus-5-5', grid + '   293k/1M tokens (29%)', grid + '   Estimated usage by category',
+    grid + '   ⛁ System prompt: 2.3k tokens (0.2%)', grid + '   ⛁ Messages: 266.9k tokens (26.7%)', grid + '   ⛶ Free space: 672.5k (67.3%)', grid + '   ⛝ Autocompact buffer: 33k tokens (3.3%)'].join('\n');
+  const source = readFileSync(resolve('fixtures/synthetic/usage/claude-usage.jsonl'), 'utf8').trim();
+  const withReport = join(dir, 'with-report.jsonl');
+  writeFileSync(withReport, source + '\n' + JSON.stringify({ cwd: '/home/dev/shop', sessionId: 'c0ffee00-0000-4000-8000-0000000000bb', version: '2.1.0', type: 'user', isSidechain: false, parentUuid: null,
+    message: { role: 'user', content: '<local-command-stdout>' + report + '</local-command-stdout>' }, uuid: '00000000-0000-4000-9000-0000000000ff', timestamp: '2026-10-20T09:30:00.000Z' }) + '\n');
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  const reportId = (await app.ingest.importSource('claude-code', withReport)).recordingId;
+  for (const [name, id] of [['with', reportId], ['without', ids.claude!]] as const) {
+    await page.goto(server.url + '/?experience=modern&motion=0#/r/' + id);
+    await expect(page.locator('.session-line')).toBeVisible();
+    await page.getByLabel('More workspace options', { exact: true }).click();
+    if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();
+    const context = page.locator('.usage-peek section[aria-label="Context"]');
+    await expect(context.getByText('window not recorded')).toHaveCount(0);
+    await expect(page.locator('.usage-peek section[aria-label="Limits"]')).toContainText('Claude Code does not record plan limits in its journal.');
+    if (name === 'with') {
+      await expect(context.locator('.usage-stack')).toHaveCount(1);
+      await expect(context.locator('.usage-stack > span')).toHaveCount(4);
+      await expect(context).toContainText('293k of 1M tokens');
+      await expect(context.locator('.usage-legend li')).toHaveCount(4);
+      await expect(context.getByText(/From \/context · read/)).toBeVisible();
+      await expect(page.locator('.session-line .context-ring')).toHaveCount(1);
+      await expect(page.locator('.session-line .context-ring')).toHaveAttribute('aria-label', /1,000,000 token window as printed by your latest \/context report/);
+      const widths = await context.locator('.usage-stack > span').evaluateAll(spans => spans.map(span => span.getBoundingClientRect().width));
+      expect(widths[2]!).toBeGreaterThan(widths[1]! * 2); // Free space is the long segment; Messages longer than System prompt
+      expect(widths[1]!).toBeGreaterThan(widths[0]!);
+    } else {
+      await expect(context.locator('.usage-stack')).toHaveCount(0);
+      await expect(context).toContainText('No context report is recorded');
+      await expect(page.locator('.session-line .context-ring')).toHaveCount(0);
+    }
+    expect(await page.locator('.usage-peek').evaluate(el => el.scrollWidth - el.clientWidth), name).toBeLessThanOrEqual(1);
+    await page.screenshot({ path: resolve('.local/usage-context-' + name + '-' + width + '.png') });
+  }
+});
+
 test('existing local recorded usage reads through an isolated copy without native or live routes', async ({ page }) => {
   test.skip(!process.env.DRISHYA_USAGE_REAL_CONFIG, 'Opt-in existing redacted store copy only');
   const config = JSON.parse(readFileSync(process.env.DRISHYA_USAGE_REAL_CONFIG!, 'utf8')) as { dir: string; selected: { id: string; harness: string }[] };

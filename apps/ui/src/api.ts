@@ -107,6 +107,8 @@ export interface DataSource {
   now?(id: string): Promise<NowFacts>;
   /** What each turn did, over the whole recording, whatever window the reader holds. */
   turns?(id: string): Promise<{ turns: TurnLedger[] }>;
+  /** USAGE-1: the newest captured `/context` outputs of a recording, whatever window the reader holds (a paged history carries no timeline). */
+  contextReport?(id: string): Promise<{ candidates: { time?: string; prompt: string }[] }>;
   historyMarker?(id: string, step: number, types: Marker['type'][], direction: 1 | -1): Promise<number | undefined>;
   fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string, selectedOperationId?: string): Promise<FileOperationPage>;
   /** `refresh` rebuilds a stale map; otherwise the cached map is returned unchanged. */
@@ -278,6 +280,7 @@ export const daemon: DataSource = {
   summary: (id, from = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/summary?from=${from}`),
   now: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/now`),
   turns: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/turns`),
+  contextReport: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/context-report`),
   kind: 'daemon',
   config: () => req('/v1/config'),
   recordings: async () => (await req<{ recordings: ReaderRecording[] }>('/v1/recordings')).recordings,
