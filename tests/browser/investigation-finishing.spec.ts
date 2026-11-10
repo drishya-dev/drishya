@@ -71,10 +71,33 @@ test('investigation finishing: encrypted recovery previews and restores exact dr
   expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).not.toContain('recoveryOnly');expect(submissions).toBe(0);
 });
 
+test('empty Notes returns focus to the exact selected step', async ({ page }) => {
+  await open(page);
+  const notes = page.getByRole('dialog', { name: 'Notes', exact: true });
+  const returnToStep = notes.getByRole('button', { name: 'Return to selected step', exact: true });
+  await command(page, 'Notes');
+  await expect(notes).toContainText('No notes yet. Open a step and add one.');
+  await expect(returnToStep).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await selectAction(page);
+  const card = page.locator(`article[data-op-id="${operationId}"]`);
+  await expect(card).toHaveClass(/\bselected\b/);
+  await command(page, 'Notes');
+  await returnToStep.press('Enter');
+  await expect(notes).toHaveCount(0);
+  await expect(card).toBeFocused();
+  await expect(card).toBeInViewport();
+  await expect(card.getByText('Add a note', { exact: true })).toBeVisible();
+});
+
 test('investigation finishing: selected saved moments produce an exact portable packet and survive reload',async({page})=>{
   await open(page);await selectAction(page);const detail=page.getByRole('region',{name:'Operation detail',exact:true});await detail.getByText('Add a note',{exact:true}).click();await detail.getByRole('textbox',{name:'Note on this step',exact:true}).fill('Check the boundary before accepting');await detail.getByRole('button',{name:'Save note',exact:true}).click();await expect(detail).toContainText('Saved locally');await page.keyboard.press('Escape');
   await page.reload();await expect(page.locator('.history')).toBeVisible();await command(page,'Prepare review packet');const packet=page.getByRole('dialog',{name:'Review packet',exact:true});
   await packet.getByLabel('Recording samples:',{exact:false}).uncheck();await packet.getByLabel('Open local reviewer questions',{exact:true}).uncheck();await packet.locator('details>summary').click();await packet.locator('details input[type=checkbox]').check();await packet.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const text=await packet.getByRole('textbox',{name:'Review packet preview',exact:true}).inputValue();expect(text).toContain(operationId);expect(text).toContain('Check the boundary');expect(text).not.toContain('## Prompt windows');expect(text).toContain('"recordingId"');
+  for (const choice of await packet.locator('.packet-choice').all()) {
+    await expect(choice).toHaveCSS('flex-direction', 'row');
+    await expect(choice).toHaveCSS('align-items', 'flex-start');
+  }
   const downloadPromise=page.waitForEvent('download');await packet.getByRole('button',{name:'Download Markdown',exact:true}).click();const download=await downloadPromise;expect(readFileSync((await download.path())!,'utf8')).toBe(text);
   await page.screenshot({path:resolve('.local/finishing-packet.png')});
 });

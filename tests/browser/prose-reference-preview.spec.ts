@@ -10,6 +10,7 @@ test.beforeEach(async()=>{
  }
  const path=join(outside,'report.txt').replace(/\\/g,'/');
  rows.push({...base,type:'assistant',uuid:'reply',message:{role:'assistant',content:[{type:'text',text:`Read guide.md, \`docs/guide.md:1\`, [the guide](docs/guide.md#L1), \`${path}\`, and [external file](${path}). Open folder \`docs\`. [image](docs/preview.png), current-only.md. Unmatched unknown.md and ambiguous same.ts stay text.\n\n\`cat docs/guide.md\` is a command.\n\n\`\`\`sh\ncat docs/guide.md\n\`\`\``}]}});
+ rows.push({...base,type:'assistant',uuid:'table',message:{role:'assistant',content:[{type:'text',text:'| Path | Description |\n| --- | --- |\n| `docs/guide.md` | Captured guide |'}]}});
  const journal=join(dir,'source.jsonl');writeFileSync(journal,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');app=new App(join(dir,'home'));id=(await app.ingest.importSource('claude-code',journal)).recordingId;server=await startServer({app,port:0});
 });
 test.afterEach(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('unsafe cleanup');rmSync(dir,{recursive:true,force:true});}});
@@ -18,6 +19,14 @@ for(const width of[600,1440])test(`prose file references show captured contents 
  const disk:string[]=[];page.on('request',r=>{if(/\/workspace\/(file|document|approve)/.test(r.url()))disk.push(r.url());});
  await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  const prose=page.locator('.prose').filter({hasText:'Unmatched unknown.md'});await expect(prose.locator('button.md-path')).toHaveCount(7);await expect(prose.locator('button.md-path svg.file-format')).toHaveCount(7);
+ const tablePath = page.getByRole('region', { name: 'Markdown table' }).getByRole('button', { name: 'Open work on docs/guide.md', exact: true });
+ await expect(tablePath).toHaveCSS('display', 'inline-flex');
+ await expect(tablePath.locator('code')).toHaveText('docs/guide.md');
+ await expect(tablePath.locator('code')).toHaveCSS('overflow-wrap', 'anywhere');
+ const [icon, label] = await Promise.all([tablePath.locator('svg').boundingBox(), tablePath.locator('code').boundingBox()]);
+ expect(icon!.x + icon!.width).toBeLessThanOrEqual(label!.x);
+ expect(icon!.y).toBeLessThan(label!.y + label!.height);
+ expect(label!.y).toBeLessThan(icon!.y + icon!.height);
  for(const index of[0,1,2,3,4]){
   const link=prose.locator('button.md-path').nth(index);await link.focus();await link.press('Enter');const dialog=page.locator('dialog[open]');await expect(dialog).toBeVisible();await expect(dialog).toContainText(`CAPTURED FILE CONTENT ${index<3?0:1}`);await expect(page.locator('.developer-workspace')).toHaveCount(0);await dialog.getByRole('button',{name:/^Close Work on /}).click();await expect(dialog).toHaveCount(0);
  }
