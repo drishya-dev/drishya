@@ -6,7 +6,7 @@ export function ProseFileLink({value,children,fallback}:{value:string;children:R
  const literal=<ProseFiles.Provider value={undefined}>{children}</ProseFiles.Provider>;
  if(!navigation)return fallback;
  if(!reference)return /^https?:\/\//i.test(value)?<ProseFiles.Provider value={undefined}>{fallback}</ProseFiles.Provider>:literal;
- return <button type="button" className="md-path md-link" title={value} aria-label={`${reference.folder?'Show folder':'Open work on'} ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>navigation.open(reference)}><span aria-hidden="true" style={{userSelect:'none'}}><FileIcon path={reference.path} folder={reference.folder}/></span>{literal}</button>;
+ return <button type="button" className="md-path md-link md-file-reference" title={value} aria-label={`${reference.folder?'Show folder':'Open work on'} ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>navigation.open(reference)}><span aria-hidden="true"><FileIcon path={reference.path} folder={reference.folder}/></span><span className="md-file-label">{literal}</span></button>;
 }
 /** Tokenize only prose, never code fences or command bodies; unresolved text is returned unchanged. */
 export function ProseFileText({text}:{text:string}){
