@@ -55,6 +55,7 @@ test('no JavaScript retains original identity, source and navigation',async({bro
 
 test('scroll story follows recorded stops and explicit reading keeps ownership',async({page})=>{
   await page.setViewportSize({width:1440,height:900});await page.goto(site.url);
+  await page.keyboard.press('Escape');
   await page.locator('.desktop-nav').getByRole('link',{name:'Demo',exact:true}).click();
   const section=page.locator('#session'),follow=page.getByRole('button',{name:'Follow scroll',exact:true});
   await expect(section).toHaveAttribute('data-story','scroll');
@@ -85,7 +86,7 @@ test('scroll story degrades to manual reading for motion preferences and missing
   await expect(page.locator('#follow-scroll')).toBeHidden();
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.setViewportSize({width:600,height:900});await expect(page.locator('#session')).toHaveAttribute('data-story','manual');
-  await page.route('**/chapters.json',route=>route.abort());await page.goto(site.url);
+  await page.route('**/chapters.json',route=>route.abort());await page.goto(site.url+'/#session');
   await expect(page.locator('#sample-error')).toBeVisible();await expect(page.locator('#follow-scroll')).toBeHidden();
   await page.locator('.static-walkthrough summary').click();await expect(page.locator('#moment-retest')).toContainText('6 passed');
 });

@@ -48,3 +48,12 @@ it('returns one ledger per prompt for the whole recording, authenticated', async
   expect((await get(`/v1/recordings/${id}/turns`, false)).status).toBe(401);
   expect((await get('/v1/recordings/rec_missing/turns')).status).toBe(404);
 });
+
+it('returns the newest captured /context outputs of a recording, authenticated (USAGE-1)', async () => {
+  // This fixture ran no /context, so the route answers with no candidates, never an invented report.
+  const response = await get(`/v1/recordings/${id}/context-report`);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ candidates: [] });
+  expect((await get(`/v1/recordings/${id}/context-report`, false)).status).toBe(401);
+  expect((await get('/v1/recordings/rec_missing/context-report')).status).toBe(404);
+});

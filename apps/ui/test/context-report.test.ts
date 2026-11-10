@@ -59,3 +59,16 @@ describe('the interactive report', () => {
     expect(contextReport(captured('Skills · /skills\n└ 28 skills · 5.4k tokens'))).toBeUndefined();
   });
 });
+describe('the window a report prints', () => {
+  it('keeps the used/window line as printed from both report shapes', () => {
+    const table = contextReport(captured('## Context Usage\n\n**Model:** m  \n**Tokens:** 28.1k / 1m (3%)\n\n| Category | Tokens | Percentage |\n|---|---|---|\n| System prompt | 2.9k | 0.3% |\n| Free space | 938.9k | 93.9% |'))!;
+    expect(table.total).toEqual({ text: '28.1k of 1m tokens', used: 28100, window: 1_000_000, percent: 3 });
+    const grid = '\x1b[38;2;1;2;3m⛁ ⛁ ⛶ ⛶\x1b[0m';
+    const interactive = contextReport(captured(` Context Usage\n${grid}   model-name\n${grid}   293k/1M tokens (29%)\n${grid}   ⛁ System prompt: 2.3k tokens (0.2%)\n${grid}   ⛁ Messages: 266.9k tokens (26.7%)\n${grid}   ⛶ Free space: 672.5k (67.3%)`))!;
+    expect(interactive.total).toEqual({ text: '293k of 1M tokens', used: 293000, window: 1_000_000, percent: 29 });
+  });
+  it('has no total when the report prints none, and never takes one from a row', () => {
+    expect(contextReport(captured(table))!.total).toBeUndefined();
+    expect(contextReport(captured('# Context Usage\n| Category | Tokens |\n| a | 5 / 3 (50%) |\n| b | 2 |'))!.total).toBeUndefined();
+  });
+});
