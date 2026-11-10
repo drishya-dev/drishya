@@ -8,7 +8,7 @@
 .history .op.shape-wide { flex: 1 1 100%; }
 .history .op:hover { transform: none; }
 .history .op.from-map, .history .op.from-dock, .history .result-arriving .result-content { animation: none; }
-.history .op.expanded { flex: 1 1 100%; max-height: none; background: #121419; }
+.history .op.expanded { flex: 1 1 100%; max-height: none; background: var(--s1); }
 .history .op-body { font-size: var(--text-sm); padding: 14px; mask-image: none; }
 .history .code, .history .diff { font-size: var(--text-md); line-height: 1.6; }
 .history .material-terminal, .history .material-verification, .history .material-matches { background: rgba(18,20,25,.88); border-bottom: 0; }
