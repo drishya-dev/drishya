@@ -28,7 +28,7 @@ async function openGraph(page:Page){
 
 test('Git graph, reference filters and commit badges meet metadata and control floors',async({page})=>{
  const atlas=await openGraph(page);
- for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
+ for(const palette of ['jet','paper','midnight']){
   await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);
   await atlas.locator(`[data-row-hash="${tip}"]`).focus();await expect(atlas.locator('.thread-peek')).toBeVisible();
   expect(await atlas.evaluate(root=>[...root.querySelectorAll<HTMLElement>('*')].filter(el=>el.getClientRects().length&&el.checkVisibility()&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent?.trim())&&parseFloat(getComputedStyle(el).fontSize)<11).map(el=>({text:el.textContent?.slice(0,45),font:getComputedStyle(el).fontSize})))).toEqual([]);

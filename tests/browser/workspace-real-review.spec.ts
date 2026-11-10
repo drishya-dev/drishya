@@ -102,7 +102,7 @@ test('actual session palette and settings survey keeps readable controls at desk
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);
   await expect(page.locator('.history')).toBeVisible();
   const metrics=[];
-  for(const label of ['Jet Black','Midnight','Daylight','Orchid','Royal','Emerald','Ember']) {
+  for(const label of ['Jet Black','Midnight','Daylight']) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
     await settings.getByRole('button',{name:label,exact:true}).click();

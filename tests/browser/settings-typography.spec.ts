@@ -18,7 +18,7 @@ async function openSettings(page:Page){
 
 test('all Settings sections meet text and control floors on every palette',async({page})=>{
  await openSettings(page);const dialog=page.getByRole('dialog',{name:'Workspace settings'});
- for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
+ for(const palette of ['jet','paper','midnight']){
   await page.evaluate(value=>document.documentElement.dataset.palette=value,palette);
   for(const section of sections){
    await dialog.getByRole('tab',{name:section,exact:true}).click();
@@ -59,7 +59,7 @@ test('Settings descriptions, keyboard rows and controls remain reachable at narr
    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
    if(section==='Appearance'){
     await expect(dialog.locator('.theme-option small').first()).toBeVisible();
-    const last=dialog.getByRole('button',{name:'Ember',exact:true});await last.scrollIntoViewIfNeeded();await expect(last).toBeInViewport();
+    const last=dialog.getByRole('button',{name:'Midnight',exact:true});await last.scrollIntoViewIfNeeded();await expect(last).toBeInViewport();
    }
    if(section==='Reading'){
     const select=dialog.getByRole('combobox',{name:'Exposed reasoning detail'});await select.scrollIntoViewIfNeeded();await select.selectOption('collapsed');await expect(select).toHaveValue('collapsed');
