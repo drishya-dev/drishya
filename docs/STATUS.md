@@ -34,7 +34,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-17 through SHIP-21 own bounded changes. Harsh authorized a Codex brief and scoped shared colour edits on separate branches for Yash’s review. Keep the Opus sign-off before acceptance and defer SHIP-2b/c/d until the palette system lands. |
-| SHIP-19 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `claude/ship-19-shell-colour` | 2026-11-10 | Colour and weight only in product/reliability, composer, HUD, recovered surfaces, Home, Settings, surroundings, workspace chrome, menu and Settings styles (10 Nov palette floors, hierarchy by ink and weight). No layout, controls, motion or overlay behaviour; stay out of MOTION, LAYOUT-1b, FINISH-0b and SHIP-6 files. |
 | SHIP-2b | @harsh + Codex | `codex/ship-2b` | 2026-11-09 | Queued after SHIP-2a and UI-27. History hierarchy and captured material presentation. Confirm section and stylesheet boundaries with UI-27, SHIP-12, MOTION-3 and AUDIT-1 before reserving paths. |
 | SHIP-2c | @harsh + Codex | `codex/ship-2c` | 2026-11-09 | Queued after SHIP-2a. Inventory click-opened surfaces and coordinate their presentation boundaries with FINISH-0b, USAGE-1, SHIP-14 and AUDIT-1 before reserving paths. |
 | SHIP-2d | @harsh + Codex | `codex/ship-2d` | 2026-11-09 | Queued after SHIP-2a and the file-reader fixes. Inventory the named reader and tool surfaces. Confirm boundaries with FILES-14, SHIP-13, CONTENT-19 and AUDIT-1 before reserving paths. |
@@ -61,6 +60,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-19 Home, shell and overlay colour adoption (taken over from Codex)
+
+- New Modern sheet `shell-ink.css`: Home wordmark and titles primary, harness marks on the agent identity inks, dialog titles 600 primary, supporting copy secondary, counts and labels muted. Removed 14 dead `.tk-*` literals and the dark `--modern-accent` literal, Jet `.brand` literal to a token. Colour and weight only. The Home contrast spec now sets `data-theme` with the palette (Daylight had measured the dark agent ink).
+- Checked: ink mapping before and after on Home, Settings and About; frames of the three palettes at 600 and 1440 in `.local/ship-19/` over real Claude Code `rec_f230ca48` and Codex `rec_44739d61`. `check:affected` 721 passed, 3 failed (the Home spec above, fixed; `landing-motion:94` and `toolbox-window:78` pass alone). Gaps: no standalone composer, Usage or card-menu frame.
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-18 History colour adoption (taken over from Codex)
 
