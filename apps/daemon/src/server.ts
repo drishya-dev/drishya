@@ -719,6 +719,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const url = `http://127.0.0.1:${port}`;
   // Enrichment uses the existing passive, sealed ingest path; the server is already listening.
   void app.ingest.rescanLegacyCodex().catch(() => undefined);
+  void app.ingest.rescanLegacyClaude().catch(() => undefined);
   return {
     url,
     token,

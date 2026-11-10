@@ -1,5 +1,6 @@
 import { liveBatches } from './real-cases/live-batches.ts';
 import { personPrompts } from './real-cases/person-prompts.ts';
+import { midTurnPrompts } from './real-cases/mid-turn-prompts.ts';
 // TEST-3: check a feature's case on real local sessions, read-only, in one command.
 //   node scripts/check-real.ts --list
 //   node scripts/check-real.ts <case> [--harness claude-code|codex] [--max-mb 90] [--pick 1]
@@ -44,7 +45,7 @@ import {blobDiffLines} from './real-cases/blob-diff-lines.ts';
 
 
 
-const cases: RealCase[] = [fullProse, liveBatches, personPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, usageContext];
+const cases: RealCase[] = [fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, usageContext];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
@@ -71,6 +72,7 @@ try {
     for (const file of walk(roots[harness])) {
       const size = statSync(file).size;
       if (size > maxBytes) { skippedLarge++; continue; }
+      chosen.reset?.();
       if (chosen === compaction) resetCompactionScan();
       if (chosen === sessionLineage) resetSessionLineageScan();
       let hits = 0, only = 0;
