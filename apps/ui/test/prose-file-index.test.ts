@@ -29,7 +29,7 @@ describe('evidence-backed prose files',()=>{
  it('renders file icons for bare, inline and Markdown references, while commands, fences, unknown names and text stay literal',()=>{
   const text='README.md, `src/main.ts` and [report](C:/outside/report.txt). unknown.md stays.\n\n```sh\ncat README.md\n```';
   const html=renderToStaticMarkup(createElement(ProseFiles.Provider,{value:{...index,open:()=>{}}},createElement(Markdown,{text,onPath:()=>{}})));
-  expect((html.match(/class="md-path md-link"/g)??[])).toHaveLength(3);expect((html.match(/class="file-format/g)??[])).toHaveLength(3);
+  expect((html.match(/class="md-path md-link md-file-reference"/g)??[])).toHaveLength(3);expect((html.match(/class="file-format/g)??[])).toHaveLength(3);
   expect(html).toContain('unknown.md stays.');expect(html.replace(/<[^>]*>/g,'')).toContain('cat README.md');expect(html).not.toContain('Open work on unknown.md');
   const document=renderToStaticMarkup(createElement(ProseFiles.Provider,{value:{...index,open:()=>{}}},createElement(Markdown,{text:'README.md',document:true})));
   expect(document).not.toContain('md-path');

@@ -336,6 +336,9 @@ code, kbd, pre, .mono { font-family: var(--mono); font-size: var(--text-sm); }
 .md-path { cursor: pointer; }
 button.md-path { display: inline; padding: 0; border: 0; border-radius: var(--round-xs); background: none; color: inherit; font: inherit; text-align: inherit; vertical-align: baseline; }
 button.md-path:focus-visible { outline: 2px solid var(--t2); outline-offset: 3px; }
+button.md-path.md-file-reference { display: inline-flex; align-items: flex-start; gap: 3px; max-width: 100%; }
+.md-file-reference > [aria-hidden="true"] { display: inline-flex; align-items: center; flex: none; min-height: 1lh; user-select: none; }
+.md-file-label { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .md-list { padding-inline-start: 1.6em; }
 .md-list > li > p { margin-block: .2em; }
 .md-list > li > .md-list { margin-block: .25em .5em; }

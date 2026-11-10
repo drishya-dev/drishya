@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r38';
+export const REDUCER_VERSION = 'r39';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -137,6 +137,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const turnByRecording = new Map<string, string>();
   // CONTENT-1: a prompt's turn by "<recording>|<record id>", and images seen before its text part.
   const turnByRecord = new Map<string, TimelineItem & { type: 'turn' }>();
+  // CONTENT-20: the journal line that first carried each part of a prompt record. Claude Code re-emits earlier rows (same uuid, same time) after a resume or
+  // compaction; a copy from another line is the same message, not a second prompt, so it is skipped by its native record id.
+  const promptRecordLine = new Map<string, string>();
   // `first` is the record's first image part: an image-only prompt keeps that position and id.
   const pendingTurnImages = new Map<string, { images: OperationImage[]; first: Observation }>();
   const unrecorded = new Map<string, Prose>();
@@ -526,6 +529,11 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           break;
         }
         case 'message.user': {
+          if (o.source.recordId) {
+            const line = `${o.source.sourceId}|${o.source.generation}|${o.source.byteOffset}`, key = `${o.recordingId}|${o.source.recordId}|${o.source.part}`;
+            if ((promptRecordLine.get(key) ?? line) !== line) break;
+            promptRecordLine.set(key, line);
+          }
           // Only an explicit queue identity can link a native delivery. A source
           // UUID, delivery UUID, equal text or nearby time cannot establish it.
           if (typeof p.nativeQueueId === 'string') timeline.push({type: 'queue', id: `delivery_${o.id}`, sequence: o.receivedSequence,

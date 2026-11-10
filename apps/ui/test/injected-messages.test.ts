@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { injectedLine, injectedMessage } from '../src/lib/injected-messages.ts';
+import { injectedLine, injectedMessage, isPersonPrompt } from '../src/lib/injected-messages.ts';
 
 // CONTENT-11: notices Claude Code wrote in the user role are recognised by an exact leading tag, nothing looser.
 describe('harness-written user messages', () => {
@@ -16,6 +16,16 @@ describe('harness-written user messages', () => {
     expect(injectedMessage('<local-command-stdout>Compacted</local-command-stdout>')).toMatchObject({ kind: 'command-output', detail: 'Compacted' });
     expect(injectedMessage('[Request interrupted by user for tool use]')).toMatchObject({ kind: 'interrupted', detail: 'Request interrupted by user for tool use' });
     expect(injectedMessage('<system-reminder>\nUse the task tools.\n</system-reminder>')).toMatchObject({ kind: 'reminder', detail: 'Use the task tools.' });
+  });
+  // CONTENT-20: Claude Code delivers another session's message (origin `peer`) like a queued prompt; the person did not type it.
+  it('reads a message another Claude Code session sent in as a notice, not a person prompt', () => {
+    const text = '<cross-session-message from="session-a" from-name="planner" from-mode="acceptEdits">\nPlease rebase before you push.\n</cross-session-message>';
+    expect(injectedMessage(text)).toMatchObject({ kind: 'cross-session', label: 'message from another session', detail: 'Please rebase before you push.', hover: 'From planner' });
+    expect(injectedLine(injectedMessage(text)!)).toBe('Claude Code · message from another session: Please rebase before you push.');
+    expect(isPersonPrompt(text)).toBe(false);
+    expect(isPersonPrompt('<cross-session-message from="a">clipped preview')).toBe(false);
+    expect(isPersonPrompt('Why does <cross-session-message> appear as a prompt?')).toBe(true);
+    expect(isPersonPrompt('<cross-session-message')).toBe(true);
   });
   it('leaves typed prompts, mentions of a tag, empty wrappers and unknown wrappers alone', () => {
     expect(injectedMessage('Fix the checkout total')).toBeUndefined();
