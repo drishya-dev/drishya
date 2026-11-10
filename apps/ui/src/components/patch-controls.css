@@ -6,8 +6,8 @@
 .modern-patch-tools .patch-reading-options :is(.patch-wrap,.desk-options>summary){display:grid;place-items:center;width:32px;height:32px;min-height:32px;padding:6px}
 .patch-reading-options .desk-options>summary>span{display:none}
 .patch-wrap svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
-.modern-patch-tools>.source-find-compact{display:flex;flex-wrap:nowrap;align-items:center;flex:1 1 170px;min-width:0;gap:3px;margin:0;padding:0;border:0}
-.modern-patch-tools>.source-find-compact>input{flex:1;width:0;min-width:0;min-height:32px;font-size:var(--text-xs);padding:5px 8px}
+.modern-patch-tools>.source-find-compact{display:flex;flex-wrap:wrap;align-items:center;flex:1 1 250px;min-width:min(100%,250px);gap:3px;margin:0;padding:0;border:0}
+.modern-patch-tools>.source-find-compact>input{flex:1 1 128px;width:0;min-width:min(100%,128px);min-height:32px;font-size:var(--text-xs);padding:5px 8px}
 .modern-patch-tools>.source-find-compact>.btn{flex:none;width:28px;min-width:28px;height:32px;min-height:var(--control-lg);padding:4px;font-size:var(--text-xs)}
 .modern-patch-tools>.source-find-compact>[role=status]{flex:none;max-width:56px;margin:0;font:var(--text-2xs)/1.5 var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .modern-patch-tools>.source-find-compact>[role=status]:empty{display:none}
