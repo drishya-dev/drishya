@@ -3,6 +3,7 @@
 // Every derived field says so; nothing here invents a location or a cause.
 
 import { createHash } from 'node:crypto';
+import { posix } from 'node:path';
 import type {
   AdapterDescriptor,
   SessionLineageView,
@@ -51,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r36';
+export const REDUCER_VERSION = 'r37';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -191,11 +192,13 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const roots = new Set([...rootsByRecording.values()].map(normalizedRoot));
   for (const o of obs) {
     const cwd = (o.payload as Rec).cwd;
-    const primary = rootsByRecording.get(o.recordingId);
-    if (o.workspaceRoot && (!primary || !insideRoot(o.workspaceRoot, primary))) roots.add(normalizedRoot(o.workspaceRoot));
-    if (typeof cwd === 'string' && (!primary || !insideRoot(cwd, primary))) roots.add(normalizedRoot(cwd));
+    const operationCwd = (o.payload as Rec).intent?.cwd;
+    // A descendant captured directory is a boundary too. This is recorded cwd
+    // evidence, not a claim that a folder name identifies a Git worktree.
+    for (const root of [o.workspaceRoot, cwd, operationCwd]) if (typeof root === 'string' && root) roots.add(normalizedRoot(root));
   }
   const multipleWorktrees = roots.size > 1;
+  const locationRoots = [...roots].sort((a, b) => b.length - a.length || a.localeCompare(b));
   const rootKey = (root: string) => createHash('sha256').update(normalizedRoot(root)).digest('hex').slice(0, 10);
   let currentRecording = '';
 
@@ -210,9 +213,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     let q = toPosix(p);
     const base = cwd ?? rootsByRecording.get(currentRecording);
     if (base && !/^([a-zA-Z]:)?\//.test(q)) q = toPosix(base).replace(/\/+$/, '') + '/' + q.replace(/^\.\//, '');
+    // Resolve dot segments before testing ancestry, preserving URL and UNC identities.
+    if (!/^[a-z]+:\/\//i.test(q)) q = (q.startsWith('//') ? '/' : '') + posix.normalize(q);
     if (multipleWorktrees) {
-      const primary = rootsByRecording.get(currentRecording);
-      const root = primary && insideRoot(q, primary) ? primary : base && insideRoot(q, base) ? base : undefined;
+      const root = locationRoots.find(root => insideRoot(q, root));
       if (root) {
         const relative = relativize(q, root);
         if (inWorkspace(relative)) return `worktree-${rootKey(root)}/${relative}`;

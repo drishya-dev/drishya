@@ -81,7 +81,8 @@ try {
   const fixture = join(installed, 'node_modules', '@drishya-dev', 'cli', 'fixtures', 'synthetic');
   const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
   const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
-  assert.match(claude, /\+34 observations, 0 capture gaps/);
+  // The fixture also retains its three captured assistant end_turn boundaries.
+  assert.match(claude, /\+37 observations, 0 capture gaps/);
   // 18 records plus the one `turn.detail` DATA-3 keeps for the fixture's recorded turn.
   assert.match(codex, /\+19 observations, 0 capture gaps/);
   assert.match(command(process.execPath, [entry, 'list']), /claude-code[\s\S]*codex|codex[\s\S]*claude-code/);
