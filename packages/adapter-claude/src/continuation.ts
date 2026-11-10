@@ -68,7 +68,7 @@ async function sharedContinuation(path: string, discoveredPaths: string[], depth
   const hits: string[] = [];
   for (const candidate of sameProject(path, discoveredPaths)) if (await mentionsAny(candidate, probes)) hits.push(candidate);
   if (!hits.length) return;
-  const child = await metadata(path), owners: { path: string; shared: number; complete: boolean }[] = [], siblings: string[] = [];
+  const child = await metadata(path), owners: { path: string; shared: number; complete: boolean }[] = [];
   let complete = true;
   for (const candidate of hits) {
     try {
@@ -77,12 +77,13 @@ async function sharedContinuation(path: string, discoveredPaths: string[], depth
       if (shared * 2 <= leading.length) continue;
       const earlier = await leadingMessageIds(candidate);
       // The candidate also starts with entries this journal holds: neither is shown to be the earlier one.
-      if (earlier.length && earlier.filter(id => child.messages.has(id)).length * 2 >= earlier.length) { siblings.push(candidate); continue; }
+      if (earlier.length && earlier.filter(id => child.messages.has(id)).length * 2 >= earlier.length) continue;
       owners.push({ path: candidate, shared, complete: item.complete });
     } catch { complete = false; }
   }
   // A journal that also starts with entries this one holds (a sibling copy of the same tail, or a full fork) is not shown to be earlier.
-  if (!owners.length) return siblings.length ? { boundaryRecordId: leading[0]!, logicalParentRecordId: leading[0]!, basis: 'shared-entry-uuids', status: 'ambiguous', candidatePaths: siblings, sharedMessageRecords: 0 } : undefined;
+  // Only siblings or forks: a shared start is no evidence that either journal is the earlier one, so no link is recorded.
+  if (!owners.length) return;
   // A match that is the parent of another match is an ancestor in the same chain.
   const ancestors = new Set<string>();
   if (depth < 4) for (const owner of owners) {

@@ -33,11 +33,11 @@ it('does not link an unrelated journal, a different project folder, or an earlie
   expect(await claudeContinuation(a, [a, child])).toBeUndefined();
 });
 
-it('keeps a sibling copy of the same tail from competing, and calls two full copies ambiguous', async () => {
+it('keeps a sibling copy of the same tail from competing, and records no link between two full copies', async () => {
   const origin = write('a', own('a', 0, 500));
   const sibling = write('s', [...own('a', 300, 500), ...own('s', 0, 20)]);
   const child = write('b', [...own('a', 300, 500), ...own('b', 0, 20)]);
   expect(await claudeContinuation(child, [origin, sibling, child])).toMatchObject({ status: 'linked', parentPath: origin });
   const fork = write('f', own('a', 0, 500));
-  expect(await claudeContinuation(fork, [origin, fork])).toMatchObject({ status: 'ambiguous', candidatePaths: [origin] });
+  expect(await claudeContinuation(fork, [origin, fork])).toBeUndefined();
 });
