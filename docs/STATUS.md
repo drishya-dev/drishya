@@ -38,7 +38,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | SHIP-2c | @harsh + Codex | `codex/ship-2c` | 2026-11-09 | Queued after SHIP-2a. Inventory click-opened surfaces and coordinate their presentation boundaries with FINISH-0b, USAGE-1, SHIP-14 and AUDIT-1 before reserving paths. |
 | SHIP-2d | @harsh + Codex | `codex/ship-2d` | 2026-11-09 | Queued after SHIP-2a and the file-reader fixes. Inventory the named reader and tool surfaces. Confirm boundaries with FILES-14, SHIP-13, CONTENT-19 and AUDIT-1 before reserving paths. |
 | SHIP-6 | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-6a/b/c preserve all eleven COMP-1 rows. Harsh authorized only the scoped shared sections on separate branches for Yash’s review. |
-| SHIP-6c | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `codex/ship-6c-reading-guidance` | 2026-11-10 | P09/P11/P13/P17/P18/P23 only. Review checkbox rules, Viewer unmatched search UI, BrowserEvidence missing URL copy, Notes selected-step action, prose file-link wrapping and ProductShell Playback section. Preserve SHIP-6a Viewer reader routing, FINISH Settings controls and shared palette work. Focused regressions. |
 | SHIP-8 | @harsh + Codex | `codex/ship-8` | 2026-11-09 | Queued. Coordinate the required Opus spec and map/style ownership with MOTION-3, SHIP-2 and AUDIT-1 before reserving paths. Verify dense-session reading, labels and the map frame budget. |
 | LAYOUT-1b | @harsh + Codex | `codex/layout-1b` | 2026-11-09 | Queued. Inventory stage scaling and zoom surfaces. Confirm root sizing and stylesheet boundaries with UI-28c, UI-26 and the release polish owners before reserving paths. |
 | SHIP-3 | @harsh + Codex | `codex/ship-3` | 2026-11-09 | Queued. Use the agreed LAND-1 direction. Confirm the Home file reservation with Yash's FINISH-1 claim before starting. Verify zero, one and many sessions at both supported widths. |
@@ -60,6 +59,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-6c reading guidance and compact controls (taken over from Codex), PR #395
+
+- Whole item as Codex wrote it plus one test fix: the prose-file-index unit now expects the new `md-file-reference` class on path links. Rows P09, P11, P13, P17, P18 and P23 as in TASKS. Branch merged with current main.
+- Checked at 600 and 1440 px, before (main's UI files) and after: Claude Code rec_64d5c199 (13.2 MB, 520 operations, 6 browser steps, 3 without a page URL), Codex rec_7cb1cda1 (15 MB, 1,115 operations) and a Claude Code run recorded on a throwaway repository with a Markdown table of long paths (rec_4de77e2d, 0.4 MB); Claude rec_024517cd (6.3 MB) was imported but has no prose file links in view. Before to after: Playback explanation and Replay sequence hidden to visible, and Replay sequence starts the replay transport (P23); unmatched search had no corpus, hint or Clear to corpus, hint and Clear with focus back in the input (P11); packet choices were column-direction labels 56 px tall, now row-direction 34 px (P09); "No URL in input" to "No page URL captured", recorded address unchanged (P13); no Return to selected step to one that closes Notes and focuses the selected card, on Claude and Codex (P17); the wrapping path's icon beside its first line 0 of 4 to 4 of 4 (P18, Claude recording only). Not covered: P18 on Codex (none of the available Codex sessions has a file-linked prose table; Codex cannot be recorded until 14 Nov) and P17 at 600 on the recorded session.
+- Gates: typecheck, ui build, UI units (522 passed), the five named specs and the search spec pass; `check:affected` at three workers had 723 + 28 browser passes with only the known baseline failures (conversation-chat, b2-live :63, material-motion :132, p1-pacing :40 and :266, all identical on main's sources) and the prose-file-index unit, now fixed. No full gate.
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-18 History colour adoption (taken over from Codex)
 
