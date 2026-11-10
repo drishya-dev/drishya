@@ -1,64 +1,74 @@
 # SHIP-17 — Modern palette contract
 
-Draft for Yash and Opus review. Release 1 uses Modern. UI-8 already walked the seven presets on real Claude Code and Codex recordings at 1440 px and three at 600 px. It reported a lowest measured solid-token contrast of 4.78:1. The Release 1 review still found dark card text muddy beside Daylight. The new contrast pairs guard legibility, while the palette decision also depends on side-by-side reading. [UI-8 evidence](ui-8-surface-pass.md#git-graph-one-original-switch-palettes-screen-trail-338341-4-nov) · [Release 1 review](release-1-scope.md)
+Release 1 uses Modern. The Release 1 review found dark card text muddy and content undifferentiated beside Daylight, so the contract fixes the ink and the face, not only the hue list. Opus reviewed the draft and set binding decisions ([#394 comment](https://github.com/drishya-dev/drishya/pull/394#issuecomment-6763280430), STATUS decisions log, 10 Nov). This page is the result. [UI-8 evidence](ui-8-surface-pass.md#git-graph-one-original-switch-palettes-screen-trail-338341-4-nov) · [Release 1 review](release-1-scope.md)
 
-## Release candidates
+## Shipped palettes
 
-Keep all seven existing preferences available for the review. Nominate Jet Black and Daylight as the core dark and light pair, with Daylight as the comparison baseline. Midnight, Orchid, Royal, Emerald and Ember are candidates for retention if their evidence is equally clear and their accent earns a separate preset. Jet Black stays the default. The existing stored System preference still resolves to Jet Black or Daylight with the OS scheme. SHIP-21 records the final decision and keeps the saved preference fallback valid if a preset is retired.
+Release 1 ships three. Orchid, Royal, Emerald and Ember are retired from Settings and can return after the release.
 
 | Settings name | Stored ID | Palette ID | Direction |
 | --- | --- | --- | --- |
-| Jet Black | `dark` | `jet` | Neutral graphite and indigo. More separation among source syntax hues. |
-| Daylight | `light` | `paper` | Cool paper and blue. Reference for quiet chrome and readable materials. |
-| Midnight | `midnight` | `midnight` | Navy and sky blue. Give functions a separate violet hue. |
-| Orchid | `mocha` | `mocha` | Violet-black and rose. Keep syntax and active control colours distinct. |
-| Royal | `tokyo` | `tokyo` | Cool white and deep blue. Check that it earns a place beside Daylight. |
-| Emerald | `nord` | `nord` | Green-black and emerald. Keep blue functions distinct from green keywords. |
-| Ember | `gruvbox` | `gruvbox` | Warm black and orange. Let cool property and type ink balance the warm literals. |
+| Jet Black (default) | `dark` | `jet` | Neutral graphite and indigo. |
+| Midnight | `midnight` | `midnight` | Navy and sky blue. |
+| Daylight | `light` | `paper` | Cool paper and blue. The light reference. |
 
-Use the existing Modern sans, Segoe UI Variable Text with its system fallback, for interface and prose. Use the already distributed JetBrains Mono as the proposed single face for code, commands and paths. Keep the current size scale. SHIP-17 changes colour declarations only, so the existing font resolution remains in effect for the preview. The type choice is part of the brief review.
+The stored System preference still resolves to Jet Black or Daylight with the OS scheme. A stored retired preference resolves silently: `mocha`, `nord` and `gruvbox` to Jet Black, `tokyo` (Royal, a light palette) to Daylight. The map lives inside `storedTheme()` in `state.ts`, because the store calls it while the module is still initialising. A module-level constant is not yet defined at that point, the lookup throws and the catch returns Jet Black (the browser spec caught this).
+
+## Ink floors
+
+Measured on every surface (`--bg`, `--s1`, `--s2`, `--s3`), the card surfaces included. Asserted by `apps/ui/test/palette-contrast.test.ts` for all three palettes.
+
+| Role | Floor | Measured minimum, worst surface (Jet Black / Midnight / Daylight) |
+| --- | --- | --- |
+| `--text-primary` | 13:1 | 14.3 / 14.7 / 13.6 |
+| `--text-secondary` | 7:1 | 10.3 / 10.9 / 7.5 |
+| `--text-muted` (metadata) | 4.5:1 | 6.9 / 7.2 / 5.1 |
+| `--text-chrome` | 3:1, non-text marks only | 5.0 / 5.2 / 4.9 |
+| Syntax, path, number, diff, outcome and agent inks | dark 7:1 with OKLCH chroma at least 0.09; Daylight 4.5:1 | dark at least 7.6 |
+
+Further assertions: the six syntax inks differ pairwise by at least 0.06 in OKLab; pass and fail differ by at least 0.1 in OKLab after a deuteranopia simulation (Machado 2009, severity 1), which holds because the outcome inks differ in lightness and in the blue-yellow axis (mint and coral on dark, teal and red on Daylight); primary ink on a diff wash keeps 7:1 and the diff ink on its own wash 6:1 on dark. Prose, prompt text, titles and values use primary ink; secondary is for supporting copy.
+
+Hierarchy comes from ink and weight, not boxes (Opus decision 4, applied by SHIP-18 and SHIP-19): prose headings in primary ink at weight 600; body prose in primary ink; inline code in `--source` ink on a faint wash of it; labels in opened surfaces in muted ink with their values in primary; card titles in primary, tool kind and provenance in muted.
+
+## Type
+
+The UI and prose sans is Inter (variable), bundled in `apps/ui/public/fonts/` as `InterVariable.woff2` with `Inter-OFL.txt`, the same files the landing site ships, and declared in `modern/settings.css`. The Segoe UI Variable stack stays as fallback, so a missing file degrades rather than breaks. JetBrains Mono stays the single mono. The size scale is unchanged: no layout moves, only the face.
 
 ## Colour roles
 
 | Material | Role and application |
 | --- | --- |
-| Primary content | `--text-primary` (`--t1`) for prose, prompt text, source text, titles and main values. Body text needs at least 4.5:1 on the actual surface. |
-| Secondary content | `--text-secondary` (`--t2`) for supporting copy and useful counts or values. Use tabular figures for aligned numbers. Supporting body copy needs at least 4.5:1. |
-| Metadata | `--text-muted` (`--t3`) for timestamps, provenance markers and line numbers. Metadata needs at least 3:1. Keep the existing 4.5:1 automated checks on the base and raised surfaces. |
-| Chrome | `--text-chrome` (`--t4`) for quiet utility marks. Use primary or secondary ink for actionable labels. Retain the canvas and material values `--bg`, `--s1`–`--s3`, neutral hairlines `--line`–`--line-3` and `--focus` for keyboard focus. `--palette-active` is accent paint. Measure any text placed on it. |
-| Paths | `--source` for source and verified path links. Keep existing affordances and provenance. Use secondary or muted ink for incidental path fragments. |
-| Numbers and syntax | `--syntax-number` for numeric literals. Use `--syntax-keyword`, `--syntax-string`, `--syntax-function`, `--syntax-type` and `--syntax-property` for their captured source roles. Comments use `--text-muted`. Use colour within the existing syntax classifier. |
-| Diffs | `--diff-added` and `--diff-removed` for signs and coloured line ink, with their matching `-wash` backing. Keep context and ordinary line text in primary ink, plus visible signs or labels. Measure ink over the composed wash. |
-| Outcomes | `--pass` and `--fail` for recorded outcomes, with the existing `--pass-wash` and `--fail-wash` where used. `--edited` marks changes and `--external` marks external tool material. Retain text labels and existing shapes alongside colour. |
-| Agent identity | `--agent-claude-ink` is warm and `--agent-codex-ink` cool. The four `--agent-*-ink` fallback hues support a stable harness assignment. Unattributed material uses muted ink. Subagent tint should preserve family hue and readable contrast. |
+| Primary content | `--text-primary` (`--t1`) for prose, prompt text, source text, titles and main values. |
+| Secondary content | `--text-secondary` (`--t2`) for supporting copy and useful counts or values. Use tabular figures for aligned numbers. |
+| Metadata | `--text-muted` (`--t3`) for timestamps, provenance markers and line numbers. |
+| Chrome | `--text-chrome` (`--t4`) for non-text marks only. Use primary or secondary ink for actionable labels. Retain the canvas and material values `--bg`, `--s1`–`--s3`, neutral hairlines `--line`–`--line-3` and `--focus` for keyboard focus. `--palette-active` is accent paint. Measure any text placed on it. |
+| Paths | `--source` for source and verified path links. Keep existing affordances and provenance. |
+| Numbers and syntax | `--syntax-number` for numeric literals. `--syntax-keyword`, `--syntax-string`, `--syntax-function`, `--syntax-type` and `--syntax-property` for their captured source roles. Comments use `--text-muted`. |
+| Diffs | `--diff-added` and `--diff-removed` for signs and coloured line ink, with their `-wash` backing. Context and ordinary line text stay primary, plus visible signs or labels. |
+| Outcomes | `--pass` and `--fail`, with `--pass-wash` and `--fail-wash` where used. `--edited` marks changes and `--external` external tool material. Keep text labels and shapes alongside colour. |
+| Agent identity | `--agent-claude-ink` warm, `--agent-codex-ink` cool, four fallback hues for a stable harness assignment. Shared across palettes, so each clears the dark floors on both Jet Black and Midnight surfaces; Daylight overrides them in `tokens.css`. |
 
-Modern's shared role declarations live in `tokens.css`. The active per-palette values and the existing syntax selectors live in `modern/theme-presets.css`. Keep derivations on the same root as their selected palette values. Use role tokens at the point of consumption. Compose washes from role colours and use palette-neutral backdrop and shadow roles when migrating those consumers. Check the composited result wherever translucency sits over a map, card or image.
+Shared role declarations live in `tokens.css`; per-palette values and the syntax selectors live in `modern/theme-presets.css`. Keep derivations on the same root as their palette. Use role tokens at the point of consumption and check composited results wherever translucency sits over a map, card or image.
 
 ## Adoption boundaries
 
-- **SHIP-18** adopts these roles in shared styles and History. Compare captured read, diff and outcome material on its real backing. Keep prose and turn layout and the motion timing with their owners.
-- **SHIP-19** adopts them in Home, shell, Settings, composer and overlays. Check labels, values, swatches, focus and translucent chrome against the contents underneath.
-- **SHIP-20** adopts them in captured readers, Workspace, file evidence, replay, search and Screen. Check code and diffs in each reader, including current and captured files. Keep evidence labels and media colours truthful.
-- **SHIP-21** adopts them in active Git and agent identity paint, including Now. Keep stable identity assignments when reading a palette in a DOM or canvas consumer. Audit the active shipped source for raw colour outside the token owners. Decide the shipped presets with Yash and record Opus sign-off from the private comparisons.
+- **SHIP-18** adopts these roles in shared styles and History, including the hierarchy above.
+- **SHIP-19** adopts them in Home, shell, Settings, composer and overlays.
+- **SHIP-20** adopts them in captured readers, Workspace, file evidence, replay, search and Screen.
+- **SHIP-21** adopts them in active Git and agent identity paint, including Now, and audits active shipped source for raw colour outside the token owners. The shipped list is already settled here.
 
-## Pending verification
+## Verification record
 
-Execution is deferred for this code-first draft. Start in the candidate worktree with Node 24 and an independent frozen install.
+Taken over from Codex by Claude Sonnet 5.5 on 10 Nov (Codex limits exhausted). Node 24, own worktree with its own frozen install.
 
-```powershell
-corepack pnpm install --frozen-lockfile
-corepack pnpm exec vitest run apps/ui/test/palette-contrast.test.ts
-corepack pnpm ui:build
-corepack pnpm exec playwright test tests/browser/palette-contrast.spec.ts
-corepack pnpm check:real -- content-parity
-corepack pnpm check:real -- workspace-files
-```
+- `apps/ui/test/palette-contrast.test.ts` passes; the whole `apps/ui` unit suite passes (107 files, 516 tests, 1 skipped); typecheck clean; `ui:build` and `package:verify` pass.
+- `palette-contrast.spec.ts` passes (7 tests, three palettes), including the new case: retired saved values fall back as above, Settings lists exactly Jet Black, Midnight and Daylight, and the body face resolves to Inter. The other palette-looping specs were reduced to the three shipped palettes.
+- `check:affected`: 28 passed, 1 skipped, 4 failed (`b2-live.spec.ts:63`, `material-motion.spec.ts:132`, `p1-pacing.spec.ts:40` and `:266`). Run alone, the same four fail identically on clean `origin/main` (05f31308), so they are not caused by this change; they belong to TEST-2.
+- `check:real` (`content-parity`, `workspace-files`) was not run: this change moves no data or projection. The rendered check used real sessions instead.
+- Side-by-side frames of Jet Black, Midnight and Daylight on the same anchors at 1440 and 600 px, from four genuine local recordings imported into a scratch home (never the real one): Claude Code operations `rec_f230ca48` (0.4 MB, 6 operations: read, edit, passing and failing shell), Claude Code prose `rec_ab67986c` (2.8 MB, headings, tables, code), Codex operations `rec_44739d61` (1 MB, 22 operations: edit, test, passing and failing shell) and Codex prose `rec_7cb1cda1` (15 MB, bold, lists). Frames are in the ignored `.local/ship-17/`, composites in `.local/ship-17/compare/`.
+- Gaps: no real Codex session renders a markdown heading (scanned every local Codex journal under 40 MB: one candidate, no heading element rendered), so the Codex prose anchor shows bold and lists. The Claude prose frame at 600 px has no prompt-capsule anchor. Opus sign-off from the frames is still required before SHIP-18 starts adopting.
 
-The unit covers all seven presets on the canvas and three raised surfaces, including the separate syntax and agent inks and the composed diff washes. The existing browser contrast checks retain their 4.5:1 floor. The real-case commands locate and count candidate material. Use an isolated redacted store for the rendered review, since those commands clean up their own scratch homes.
-
-For each harness, select a genuine recording with prose, source syntax, paths, a diff and passing and failing outcomes. Include a child agent where available and record a genuine case in a throwaway repository if a required case is missing. At 600 and 1440 px, capture Daylight and each candidate at the same History anchor with the same materials expanded. Sample actual foreground against rendered background for body and metadata, including the wash and header above a passing card. Check readable syntax roles and identity hues, distinguishable diff signs, outcome labels, and quiet chrome. Record only prefixes, byte sizes, counts, measured ratios and any gaps. Keep frames in the ignored `.local/` directory and have Opus review the same pairs before rollout.
-
-After the palette adoption batch is ready, run one full local gate in an isolated worktree. The browser command rebuilds the UI and uses the measured three-worker Windows configuration with its existing serial pass.
+After the palette adoption batch is ready, run one full local gate in an isolated worktree with its own install. The browser command rebuilds the UI and uses the measured three-worker Windows configuration with its existing serial pass.
 
 ```powershell
 corepack pnpm check

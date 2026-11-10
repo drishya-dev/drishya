@@ -37,7 +37,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | CONTENT-19 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `codex/content-19` | 2026-11-09 | First implementation priority. Diagnose blob-backed hunk lines at projection/reader boundaries and verify the evidenced fix across affected diff consumers, with a sealed regression fixture and genuine History/replay checks. Confirm exact paths against current owners before editing. |
 | SHIP-16 | @harsh + Codex | `codex/ship-16` | 2026-11-09 | Parallel release preparation. Own `.github/workflows/ci.yml` for the three-OS checks and package verification. Candidate CI runs against the frozen candidate. Genuine Linux acceptance waits for Yash's WSL2 run; physical macOS acceptance is MAC-1. |
 | SHIP-2a | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-17 through SHIP-21 own bounded changes. Harsh authorized a Codex brief and scoped shared colour edits on separate branches for Yash’s review. Keep the Opus sign-off before acceptance and defer SHIP-2b/c/d until the palette system lands. |
-| SHIP-17 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `codex/ship-17-palette-contract` | 2026-11-10 | Draft brief in docs/review, colour roles in tokens.css and modern/theme-presets.css, focused contrast regressions. Use colour declarations only in FINISH-0a shared files, preserve existing IDs, no layout, motion, stylesheet migration or palette removals. Implementation and draft PR first; verification later. |
 | SHIP-2b | @harsh + Codex | `codex/ship-2b` | 2026-11-09 | Queued after SHIP-2a and UI-27. History hierarchy and captured material presentation. Confirm section and stylesheet boundaries with UI-27, SHIP-12, MOTION-3 and AUDIT-1 before reserving paths. |
 | SHIP-2c | @harsh + Codex | `codex/ship-2c` | 2026-11-09 | Queued after SHIP-2a. Inventory click-opened surfaces and coordinate their presentation boundaries with FINISH-0b, USAGE-1, SHIP-14 and AUDIT-1 before reserving paths. |
 | SHIP-2d | @harsh + Codex | `codex/ship-2d` | 2026-11-09 | Queued after SHIP-2a and the file-reader fixes. Inventory the named reader and tool surfaces. Confirm boundaries with FILES-14, SHIP-13, CONTENT-19 and AUDIT-1 before reserving paths. |
@@ -67,6 +66,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-17 Modern palette contract, PR #394 (taken over from Codex, limits exhausted)
+
+- Applied the Opus decisions: three shipped palettes (Jet Black default, Midnight, Daylight); Orchid, Royal, Emerald and Ember retired from Settings, a stored retired value falls back to Jet Black (`mocha`, `nord`, `gruvbox`) or Daylight (`tokyo`). Dark inks regenerated in OKLCH: primary 13:1, secondary 7:1, metadata 4.5:1 on `--bg` and `--s1`-`--s3`; syntax, path, number, diff, outcome and agent inks at least 7:1 with chroma at least 0.09; pass and fail separated under deuteranopia (mint and coral on dark, teal and red on Daylight). Inter variable bundled in `apps/ui/public/fonts` with its licence, declared in `modern/settings.css`; no size or layout change.
+- Checked: palette unit (floors, chroma, distinctness, deuteranopia), whole `apps/ui` units, typecheck, `ui:build`, `package:verify`, `palette-contrast.spec.ts` incl. a new retired-preference and Inter case. `check:affected` had four failures (`b2-live:63`, `material-motion:132`, `p1-pacing:40` and `:266`) that fail identically on clean main 05f31308 (TEST-2). Frames of the three palettes on the same real anchors at 600 and 1440 (Claude Code `rec_f230ca48`, `rec_ab67986c`; Codex `rec_44739d61`, `rec_7cb1cda1`) are in `.local/ship-17/compare/`. Gaps: no real Codex session renders a markdown heading; `check:real` not run (no data change).
+- Bug caught by the new spec: a module-level map read by `storedTheme()` during store creation is not yet initialised; the map now lives inside the function.
+- Next: Opus signs off from the frames, then SHIP-18 to SHIP-21 adopt the roles.
 
 ### Yash with Claude Sonnet 5.5 - 9 Nov: UI-27 conversation reads like a chat, PR #390
 
