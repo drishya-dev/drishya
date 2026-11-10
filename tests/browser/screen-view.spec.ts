@@ -109,6 +109,24 @@ for(const width of [600,1440])test(`the screen reader draws each recorded action
  expect(external).toEqual([]);
 });
 
+test('a held frame loading slowly is explicit until its pixels are decoded',async({page})=>{
+ const run=await app.history.screen(id),last=run.steps.findLast(step=>step.image?.sha)!;
+ let release!:()=>void;const gate=new Promise<void>(resolve=>{release=resolve;});
+ await page.route(`**/images/${last.image!.sha}`,async route=>{await gate;await route.continue().catch(()=>{});});
+ try{
+  await open(page);await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.screen-entry').click();
+  const reader=page.getByRole('dialog',{name:'Screen view',exact:true});await expect(reader).toBeVisible();
+  await page.keyboard.press('Home');await expect.poll(()=>reader.locator('.screen-image').evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBe(400);
+  await reader.getByRole('option').last().click();
+  await expect(reader.locator('.screen-meta')).toContainText('No new frame recorded');
+  await expect(reader.getByRole('status')).toContainText('Loading recorded frame');
+  await expect(reader.locator('.screen-mark')).toHaveCount(0);
+  release();
+  await expect.poll(()=>reader.locator('.screen-image').evaluate(el=>(el as HTMLImageElement).naturalWidth)).toBe(400);
+  await expect(reader.getByRole('status')).toHaveCount(0);
+ }finally{release();}
+});
+
 test('the session menu opens the same reader, and reduced motion keeps the swap without the zoom',async({page})=>{
  await page.emulateMedia({reducedMotion:'reduce'});
  await page.setViewportSize({width:1440,height:900});

@@ -36,6 +36,8 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
     await page.getByLabel('More workspace options', { exact: true }).click();
     if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();
     const usage = page.locator('.usage-peek');
+    const tokenDetails=usage.locator('details').filter({has:page.locator('summary',{hasText:'Token details'})});
+    if(!await tokenDetails.evaluate(el=>(el as HTMLDetailsElement).open))await tokenDetails.locator('summary').click();
     await expect(usage.getByText('Not reported', { exact: true })).toHaveCount(0);
     if (name === 'codex') {
       await expect(usage).toContainText('Recorded · Codex token_count');
@@ -49,9 +51,10 @@ test('recorded usage stays sourced and hides absent values', async ({ page }) =>
       await expect(usage.getByText('Cost · harness estimate')).toHaveCount(name === 'unknown' ? 0 : 1);
       if (name === 'claude') await expect(usage).toContainText('$0.0871');
     }
-    // The rescan is about the journal, not about usage: it sits with Share, not inside Usage (UI-15).
+    // The rescan is about the journal: it lives inside Session details, never Usage (UI-29).
     const menu = page.locator('.workspace-menu');
     await expect(usage.getByRole('button', { name: 'Rescan original journal' })).toHaveCount(0);
+    await menu.locator('.session-identity > summary').click();
     await expect(menu.getByRole('button', { name: 'Rescan original journal' })).toBeVisible();
     await menu.getByRole('button', { name: 'Rescan original journal' }).click();
     await expect(menu.getByRole('status').filter({hasText:'0 new observations'})).toHaveCount(1);

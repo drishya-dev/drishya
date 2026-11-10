@@ -20,7 +20,7 @@ test('the Modern session surface keeps metadata at 11 px, controls at 12 px and 
   await page.goto(new URL('/?demo&experience=modern&motion=0', server.launchUrl).href);
   const history = page.locator('.history'); await expect(history).toBeVisible();
   // Keyboard, not a pointer: a resting pointer can start hover reading and move the card.
-  for (const expand of await page.locator('button.op-expand').all()) await expand.press('Enter').catch(() => {});
+  for (const expand of await page.locator('button.op-expand').all()) await expand.press('Enter', { timeout: 1000 }).catch(() => {});
   await page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button').first().hover();
   for (const palette of ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox']) {
     await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);

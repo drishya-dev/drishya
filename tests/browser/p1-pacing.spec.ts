@@ -471,7 +471,7 @@ test('verification refreshes while reading and hides whole-recording facts durin
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Tests  1 passed (1)' }] } });
   await app.ingest.sync(recordingId);
   await expect(panel).toContainText('npm test -- p1-live-verification');
-  await page.getByLabel('More workspace options',{exact:true}).click();
+  await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options',{exact:true}).click();
   await page.getByRole('button', { name: 'Replay this session', exact:true }).click();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
   await page.getByRole('slider', { name: 'Timeline' }).press('End');
@@ -714,7 +714,7 @@ test('paged replay retains its history and camera while the next page loads', as
   });
   await page.goto(server.launchUrl);
   await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
-  await page.getByLabel('More workspace options',{exact:true}).click();
+  await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options',{exact:true}).click();
   await page.getByRole('button', { name: 'Replay this session', exact:true }).click();
   await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Pause', exact: true }).click();
