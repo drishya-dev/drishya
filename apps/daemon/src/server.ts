@@ -489,7 +489,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
             if (!chunk) throw new HttpError(404, 'Queued input was not captured at this point.');
             return json(res, chunk);
           }
-          return json(res, await app.history.queue(app.readingId(id), id, {through, before: intParam(url, 'before', Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER), count: intParam(url, 'count', 20, 1, 50)}));
+          const state=url.searchParams.get('state') ?? undefined;
+          if (state !== undefined && state !== 'pending' && state !== 'history') throw new HttpError(400,'Invalid queue state.');
+          return json(res, await app.history.queue(app.readingId(id), id, {through, ...(url.searchParams.has('step') ? {step:intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER)} : {}), ...(state ? {state} : {}), before: intParam(url, 'before', Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER), count: intParam(url, 'count', 20, 1, 50)}));
         } catch (error) {
           if (error instanceof HttpError) throw error;
           throw new HttpError(400, 'Invalid queue reading boundary or range.');

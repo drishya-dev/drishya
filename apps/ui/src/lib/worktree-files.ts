@@ -26,10 +26,46 @@ export function canonicalFileFolders(opened:Set<string>, roots:RecordedFileRoot[
   return next??opened;
 }
 
+/** Resolve navigation against the display tree, including suppressed inventory
+ * aliases. A current path may match only the exact primary root, never a sibling. */
+export function workspaceFileReveal(path:string, paths:string[], roots:RecordedFileRoot[], workspaceRoot:string|undefined, placement:FilePlacement, origin=path):{path:string; ancestors:string[]} | undefined {
+  if(!path)return;
+  const opened=new Set(['',WORKTREE_GROUP,UNPLACED_GROUP]);
+  const candidates=new Set([path,origin,...paths.filter(candidate=>currentWorkspacePath(candidate,roots,workspaceRoot)===path)]);
+  for(const candidate of candidates){const canonical=currentWorkspacePath(candidate,roots,workspaceRoot);if(canonical)candidates.add(canonical);}
+  for(const candidate of candidates)for(let end=candidate.indexOf('/');end>=0;end=candidate.indexOf('/',end+1))opened.add(candidate.slice(0,end));
+  const rows=worktreeFileRows(paths,roots,workspaceRoot,opened,'',placement);
+  const exact=rows.find(row=>!row.folder&&row.path===path);
+  const leaf=(origin!==path?rows.find(row=>!row.folder&&row.path===origin):undefined)
+    ??(exact&&!exact.unplaced?exact:undefined)
+    ??rows.find(row=>!row.folder&&!row.unplaced&&currentWorkspacePath(row.path,roots,workspaceRoot)===path)
+    ??exact;
+  if(!leaf){
+    // FILES-14 deliberately suppresses primary inventory below a separately
+    // captured nested cwd. Reveal that root only, never invent a captured leaf.
+    const absolute=workspaceRoot?normalize(workspaceRoot+'/'+path):undefined;
+    const root=absolute&&roots.filter(root=>absolute.startsWith(normalize(root.root)+'/')).sort((a,b)=>b.root.length-a.root.length).find(root=>rows.some(row=>row.worktree&&row.path===root.prefix));
+    return root?{path:root.prefix,ancestors:['',WORKTREE_GROUP]}:undefined;
+  }
+  const byPath=new Map(rows.map(row=>[row.path,row]));
+  const ancestors=[''];let parent=leaf.parent;
+  while(parent){ancestors.push(parent);parent=byPath.get(parent)?.parent??'';}
+  return {path:leaf.unplaced?UNPLACED_GROUP:leaf.path,ancestors};
+}
+
 /** Display structure only: every leaf keeps the projection's exact path identity. */
 export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], workspaceRoot: string | undefined, opened: Set<string>, query = '', placement?: FilePlacement): FileTreeRow[] {
   const byPrefix = new Map(roots.map(root => [root.prefix, root]));
-  const located = paths.map(path => {
+  // A separately captured descendant is not ordinary primary inventory. Keep only
+  // its projection leaf identity; never rebase an indexed alias into captured evidence.
+  const nestedRoots = workspaceRoot ? roots.filter(root => normalize(root.root).startsWith(normalize(workspaceRoot) + '/')) : [];
+  const located = paths.filter(path => {
+    const root = byPrefix.get(path.split('/')[0]!);
+    if (root && (!workspaceRoot || normalize(root.root) !== normalize(workspaceRoot))) return true;
+    const relative = root ? path.slice(root.prefix.length + 1) : path;
+    const absolute = workspaceRoot ? normalize(workspaceRoot + '/' + relative) : undefined;
+    return !absolute || !nestedRoots.some(root => absolute === normalize(root.root) || absolute.startsWith(normalize(root.root) + '/'));
+  }).map(path => {
     const root = byPrefix.get(path.split('/')[0]!);
     const relative = root ? path.slice(root.prefix.length + 1) : path;
     const main = !!root && !!workspaceRoot && normalize(root.root) === normalize(workspaceRoot);
