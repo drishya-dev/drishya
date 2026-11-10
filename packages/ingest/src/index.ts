@@ -215,6 +215,8 @@ export class Ingestor extends EventEmitter {
         if (this.closed) break;
         const key = 'claude-shared-lineage-v1:' + recording.id;
         if (this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key)) continue;
+        // An exact link is already known; only recordings with no link, an ambiguous or a missing parent are looked at again.
+        if (this.store.lineageView(recording.id)?.links.some(link => link.childRecordingId === recording.id && link.status === 'linked')) continue;
         try {
           await this.locked(recording.id, () => this.refreshLineage(recording.id, new Set()));
           this.store.db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)').run(key, '1');
