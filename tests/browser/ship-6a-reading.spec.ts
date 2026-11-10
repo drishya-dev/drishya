@@ -31,12 +31,14 @@ test.afterAll(async () => {
 
 for (const width of [600, 1440]) test(`reader ownership and history clearance at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.continue());
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   const workspace = page.getByRole('button', { name: 'Open developer workspace', exact: true });
   const desk = page.getByRole('region', { name: 'Developer workspace', exact: true });
   await workspace.click();
   const approve = desk.getByRole('button', { name: 'Approve workspace reading', exact: true });
+  await expect(approve.or(desk.getByRole('tablist'))).toBeVisible();
   if (await approve.isVisible()) await approve.click();
   await expect(desk.getByRole('tablist')).toBeVisible();
   await desk.getByRole('button', { name: 'Back to agent', exact: true }).click();
