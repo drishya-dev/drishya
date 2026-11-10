@@ -51,11 +51,11 @@ test('plan-mode and desktop checklist records show as one proposed plan and one 
     await expect(document).not.toContainText('approved');
 
     // update_plan: three recorded changes are one pinned list that ends with the last state.
-    const pinned = page.locator('.plan-card[role=group]');
-    await expect(pinned).toHaveCount(1);
+    await expect(page.locator('.plan-card[role=group]')).toHaveCount(3);
+    const pinned = page.locator('.plan-card[role=group]').last();
     await expect(pinned).toContainText('Revision 3 · 2 of 3 done');
-    // Folded at first; the open choice is remembered on the second width.
-    const show = pinned.getByRole('button',{name:'Show plan',exact:true}); if (await show.isVisible()) await show.click();
+    await expect(page.getByRole('button',{name:/Show plan|Collapse plan/})).toHaveCount(0);
+    for (const checklist of await page.locator('.plan-card[role=group]').all()) await expect(checklist.locator('li')).toHaveCount(3);
     await expect(pinned.locator('li.plan-completed')).toHaveCount(2);
     await expect(pinned.locator('li.plan-in_progress')).toContainText('Run the tests');
   }

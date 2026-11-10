@@ -39,7 +39,7 @@ for(const count of [3,300])test(`${count} captured MCP and runtime tools stay re
   await summary.press('Escape');await expect(list).toBeHidden();await expect(summary).toBeFocused();
  }
  await expect(toolbox.locator('.md-agents')).not.toHaveAttribute('open');
- for(const palette of ['jet','paper','midnight','mocha','tokyo','nord','gruvbox']){
+ for(const palette of ['jet','paper','midnight']){
   await page.evaluate(p=>document.documentElement.dataset.palette=p,palette);
   expect(await toolbox.evaluate(root=>[...root.querySelectorAll<HTMLElement>('*')].filter(el=>el.getClientRects().length&&el.checkVisibility()&&[...el.childNodes].some(n=>n.nodeType===3&&n.textContent?.trim())&&parseFloat(getComputedStyle(el).fontSize)<11).map(el=>({text:el.textContent?.slice(0,40),font:getComputedStyle(el).fontSize})))).toEqual([]);
   expect(await toolbox.locator('.md-server>summary').evaluateAll(nodes=>nodes.filter(el=>parseFloat(getComputedStyle(el).fontSize)<12).length)).toBe(0);

@@ -15,7 +15,9 @@ test.afterAll(async()=>{await site?.close();});
 for(const width of [600,1024,1440,1920])test(`public landing routes and readable composition at ${width}`,async({page})=>{
   await page.setViewportSize({width,height:1000});const errors:string[]=[];page.on('pageerror',error=>errors.push(error.message));
   for(const [path,title]of [['/','See what'],['/get-started/','From the example'],['/privacy/','A public example'],['/releases/','Release availability']]){
-    await page.goto(site.url+path);await expect(page.locator('h1')).toContainText(title!);await page.evaluate(()=>document.fonts.ready);
+    await page.goto(site.url+path);
+    if(path==='/')await page.keyboard.press('Escape');
+    await expect(page.locator('h1')).toContainText(title!);await page.evaluate(()=>document.fonts.ready);
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await expect(page.getByRole('link',{name:'Drishya home'})).toBeVisible();
     await page.screenshot({path:`.local/landing-checks/${path==='/'?'home':path.split('/')[1]}-${width}.png`,fullPage:true});
@@ -49,12 +51,13 @@ test('no JavaScript and metadata failure retain the complete example and setup',
   const context=await browser.newContext({javaScriptEnabled:false,viewport:{width:600,height:1000}}),plain=await context.newPage();
   await plain.goto(site.url);await plain.locator('.static-walkthrough summary').click();for(const title of ['Read the checkout guard','Inspect the failing test','Review the guard edit','Check the next test run'])await expect(plain.locator('.static-walkthrough')).toContainText(title);
   await expect(plain.locator('#play-sample')).toBeHidden();await plain.goto(site.url+'/get-started/');await expect(plain.locator('#setup-commands')).toContainText('pnpm serve');await context.close();
-  await page.route('**/chapters.json',route=>route.abort());await page.goto(site.url);await expect(page.locator('#sample-error')).toBeVisible();await expect(page.locator('#play-sample')).toBeHidden();
+  await page.route('**/chapters.json',route=>route.abort());await page.goto(site.url+'/#session');await expect(page.locator('#sample-error')).toBeVisible();await expect(page.locator('#play-sample')).toBeHidden();
   await page.locator('.static-walkthrough summary').click();await expect(page.locator('#moment-edit')).toContainText('cart.total == null');
 });
 
 test('compact menu, copy fallback, setup anchors and public availability work without dead actions',async({page})=>{
   await page.setViewportSize({width:600,height:1000});await page.goto(site.url);const menu=page.locator('.compact-nav');
+  await page.keyboard.press('Escape');
   await menu.locator('summary').click();await expect(menu).toHaveAttribute('open','');await page.keyboard.press('Escape');await expect(menu).not.toHaveAttribute('open');await expect(menu.locator('summary')).toBeFocused();
   await menu.locator('summary').click();await page.locator('h1').click();await expect(menu).not.toHaveAttribute('open');
   await menu.locator('summary').click();await menu.getByRole('link',{name:'Privacy',exact:true}).click();await expect(page).toHaveURL(/\/privacy\/$/);
@@ -97,7 +100,7 @@ test('keyboard, rapid reversal, compact desktop reflow and lightweight home asse
   for(const value of [4,1,3,2]){await range.evaluate((el,value)=>{(el as HTMLInputElement).value=String(value);el.dispatchEvent(new Event('input',{bubbles:true}));},value);await expect(page.locator('#chapter-counter')).toHaveText(`${value} of 4`);}
   await play.click();await page.setViewportSize({width:1440,height:900});await expect(play).toHaveAttribute('aria-pressed','false');
   expect(resources.filter(p=>p.startsWith('/demo/assets/'))).toEqual([]);
-  await page.goto(site.url);await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Skip to content'})).toBeFocused();
+  await page.goto(site.url);await page.keyboard.press('Escape');await page.keyboard.press('Tab');await expect(page.getByRole('link',{name:'Skip to content'})).toBeFocused();
   await page.keyboard.press('Enter');await expect(page).toHaveURL(/#main$/);
 });
 
