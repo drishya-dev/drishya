@@ -50,7 +50,7 @@
 :root[data-palette="jet"] .crown { position: relative; border-bottom: 0; }
 :root[data-palette="jet"] .crown::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: linear-gradient(90deg, #d4b98a00 2%, #d4b98a66 30%, #d4b98a2e 70%, #d4b98a00 98%); pointer-events: none; }
 :root[data-palette="jet"] .transport { border-top-color: #1c1c1c; }
-:root[data-palette="jet"] .brand { color: #f4f1eb; letter-spacing: .01em; }
+:root[data-palette="jet"] .brand { color: var(--text-primary); letter-spacing: .01em; }
 :root[data-palette="jet"] .brand-mark { border-color: var(--gold); }
 :root[data-palette="jet"] .brand-mark::after { background: var(--gold); }
 :root[data-palette="jet"] .crown .agent { background: transparent; border-color: #2a2a2a; }

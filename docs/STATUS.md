@@ -33,12 +33,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-17 through SHIP-21 own bounded changes. Harsh authorized a Codex brief and scoped shared colour edits on separate branches for Yash’s review. Keep the Opus sign-off before acceptance and defer SHIP-2b/c/d until the palette system lands. |
-| SHIP-19 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `claude/ship-19-shell-colour` | 2026-11-10 | Colour and weight only in product/reliability, composer, HUD, recovered surfaces, Home, Settings, surroundings, workspace chrome, menu and Settings styles (10 Nov palette floors, hierarchy by ink and weight). No layout, controls, motion or overlay behaviour; stay out of MOTION, LAYOUT-1b, FINISH-0b and SHIP-6 files. |
 | SHIP-2b | @harsh + Codex | `codex/ship-2b` | 2026-11-09 | Queued after SHIP-2a and UI-27. History hierarchy and captured material presentation. Confirm section and stylesheet boundaries with UI-27, SHIP-12, MOTION-3 and AUDIT-1 before reserving paths. |
 | SHIP-2c | @harsh + Codex | `codex/ship-2c` | 2026-11-09 | Queued after SHIP-2a. Inventory click-opened surfaces and coordinate their presentation boundaries with FINISH-0b, USAGE-1, SHIP-14 and AUDIT-1 before reserving paths. |
 | SHIP-2d | @harsh + Codex | `codex/ship-2d` | 2026-11-09 | Queued after SHIP-2a and the file-reader fixes. Inventory the named reader and tool surfaces. Confirm boundaries with FILES-14, SHIP-13, CONTENT-19 and AUDIT-1 before reserving paths. |
 | SHIP-6 | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-6a/b/c preserve all eleven COMP-1 rows. Harsh authorized only the scoped shared sections on separate branches for Yash’s review. |
-| SHIP-8 | @yash + Claude Sonnet 5.5 (taken over from Codex, limits exhausted, Yash 10 Nov) | `claude/ship-8-map-2bba31` | 2026-11-10 | In progress. Coordinate the required Opus spec and map/style ownership with MOTION-3, SHIP-2 and AUDIT-1 before reserving paths. Verify dense-session reading, labels and the map frame budget. |
 | LAYOUT-1b | @harsh + Codex | `codex/layout-1b` | 2026-11-09 | Queued. Inventory stage scaling and zoom surfaces. Confirm root sizing and stylesheet boundaries with UI-28c, UI-26 and the release polish owners before reserving paths. |
 | SHIP-3 | @harsh + Codex | `codex/ship-3` | 2026-11-09 | Queued. Use the agreed LAND-1 direction. Confirm the Home file reservation with Yash's FINISH-1 claim before starting. Verify zero, one and many sessions at both supported widths. |
 | MOTION-4 | @harsh + Codex | `codex/motion-4` | 2026-11-09 | Queued after release presentation scopes are agreed. Inventory paired open and close actions and coordinate shared tokens, overlay owners and MOTION-3 before reserving paths. Keep MOTION-3's final evaluation after this item. |
@@ -60,10 +58,23 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+<<<<<<< HEAD
 ### Claude Sonnet 5.5 — 10 Nov: UI-28c opening and closing the composer moves nothing else
 
 - `--composer-gap` is the fixed `--composer-rest` token (+24), not the box's measured height; the prompt rail clears the same rest height. Toggling the composer (and growing it) now moves no Files panel, Toolbox, rail or history position at 600, 1440 and 2560 px. Spec `composer-grows.spec.ts`. Real sessions: Claude Code `rec_b45458d5`, Codex `rec_44739d61` (stand-in transport).
 
+=======
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-8 the map under reading (taken over from Codex)
+
+- Whole item. At rest the map recedes beneath the reading column (dots 30 %, import lines 8 %, 72 px soft edge; hovered and passage-file dots stay sharp); labels are placed from measured boxes, with the selected file's working set first, so no two visible labels or controls overlap; hovering or focusing a spatial group lists its files. Rotation, camera and evidence untouched. Details and limits: [ship-8-map-quiet.md](review/ship-8-map-quiet.md).
+- Checked on real Claude Code sessions `rec_452bae4c` (307 recorded files) and `rec_5128e5bd` (108) at 600 and 1440 px in Jet Black and Daylight: 16 zoom steps, 0 overlapping labels. Codex: no real session here yields a map above two files (`rec_fa9e37da`, 2), so only rendering was checked; no imported session has a current graph with import edges, so lines are verified on a synthetic dense repository (new `map-quiet` spec, 4 tests). Units, typecheck, the map specs and `check:affected` pass; four load-only failures pass 9/9 alone.
+- Found and recorded, not fixed (present on unchanged code): MAP-2, a squeezed first Explore that Fit does not recover.
+
+### Yash with Claude Sonnet 5.5 - 10 Nov: SHIP-19 Home, shell and overlay colour adoption (taken over from Codex)
+
+- New Modern sheet `shell-ink.css`: Home wordmark and titles primary, harness marks on the agent identity inks, dialog titles 600 primary, supporting copy secondary, counts and labels muted. Removed 14 dead `.tk-*` literals and the dark `--modern-accent` literal, Jet `.brand` literal to a token. Colour and weight only. The Home contrast spec now sets `data-theme` with the palette (Daylight had measured the dark agent ink).
+- Checked: ink mapping before and after on Home, Settings and About; frames of the three palettes at 600 and 1440 in `.local/ship-19/` over real Claude Code `rec_f230ca48` and Codex `rec_44739d61`. `check:affected` 721 passed, 3 failed (the Home spec above, fixed; `landing-motion:94` and `toolbox-window:78` pass alone). Gaps: no standalone composer, Usage or card-menu frame.
+>>>>>>> origin/main
 ### Yash with Claude Sonnet 5.5 - 10 Nov: CONTENT-20 mid-turn messages are prompts, PR #396
 
 - Whole item. Cause (genuine `dd136b25`, counts only): not the classifier. The real store held 303 `message.user` observations against 356 on a fresh import; the 53 missing (14 person, 39 notices) are `queued_command` rows consumed before #310 and never re-read. Fix: one-time per-recording startup rescan `rescanLegacyClaude`; one prompt per re-emitted journal record (reducer r39, five duplicated person rows in `dd136b25`); a `<cross-session-message>` is a notice. Codex: steers are ordinary user items, no gap, none local to re-check.

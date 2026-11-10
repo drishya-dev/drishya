@@ -6,7 +6,9 @@ import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
-import { mapDetail, type MapGroup } from '../lib/map-detail.ts';
+import { groupMemberPaths, mapDetail, type MapGroup } from '../lib/map-detail.ts';
+import { QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
+import { placeLabels, type LabelCandidate } from '../lib/map-labels.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
@@ -252,9 +254,39 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   const previousGraph=useRef(graph);
   useLayoutEffect(()=>{const before=previousGraph.current;previousGraph.current=graph;if(explore&&before?.approvalNeeded&&graph&&!graph.approvalNeeded)fitWorld(true);},[graph,explore]);
 
+  // SHIP-8: the reading column is the one allocation the map recedes beneath at rest. Measured with the layout
+  // (not per frame) and held in a ref so rotation redraws never read the DOM. Exploring has no reading material.
+  const quiet = useRef<QuietZone[]>([]);
+  const redraw = useRef<() => void>(undefined);
+  useLayoutEffect(() => {
+    const map = wrap.current, column = map?.closest('.viewer')?.querySelector<HTMLElement>('.history-inner > *') ?? undefined;
+    const measure = () => {
+      if (!map || explore || !column || !map.clientWidth) { quiet.current = []; map?.removeAttribute('data-map-quiet'); return; }
+      const m = map.getBoundingClientRect(), c = column.getBoundingClientRect();
+      quiet.current = c.width > 0 ? [{ left: c.left - m.left, right: c.right - m.left, top: 0, bottom: map.clientHeight }] : [];
+      if (quiet.current.length) map.setAttribute('data-map-quiet', `${Math.round(quiet.current[0]!.left)},${Math.round(quiet.current[0]!.right)}`); else map.removeAttribute('data-map-quiet');
+    };
+    measure();
+    if (!map || explore || !column) return;
+    // The column can settle after the first measure (rail or composer changes); repaint only when the zone really moved.
+    let last = map.getAttribute('data-map-quiet');
+    const observer = new ResizeObserver(() => { measure(); const now = map.getAttribute('data-map-quiet'); if (now !== last) { last = now; redraw.current?.(); } });
+    observer.observe(column); observer.observe(map);
+    return () => observer.disconnect();
+  }, [readingRect, size.w, size.h, explore]);
+  // The dots of files the reader is looking at stay crisp: the hovered file and the files of the current passage.
+  // Import lines never do: a line is never the evidence of an origin, so none crosses prose at rest.
+  const sharpIds = useMemo(() => {
+    const keep = new Set<string>(passagePaths);
+    if (hoveredPath) keep.add(hoveredPath);
+    if (connections?.root) keep.add(connections.root.id);
+    return new Set(displayNodes.filter(n => keep.has(n.id) || n.members?.some(id => keep.has(id))).map(n => n.id));
+  }, [detail, passagePaths, hoveredPath, connections]);
+
   const draw = () => {
     const c = canvas.current;
     if (!c || !graph) return false;
+    const zones = explore ? [] : quiet.current;
     // A full-screen 2x canvas reserves four pixels per CSS pixel. Keep the
     // repository sharp enough while bounding the backing store on local GPUs.
     const dpr = Math.min(lowResource ? 1 : 1.5, window.devicePixelRatio || 1);
@@ -270,7 +302,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         const p = project(node);
         return { ...p, size: (node.members ? Math.min(8, 4 + Math.log2(node.members.length) * .4) : 2.5) * p.scale, alpha: (node.opacity ?? 1) * opacity };
       };
-      const nodes = displayNodes.filter(n => (n.opacity ?? 1) > .02).map(vertex);
+      const nodes = displayNodes.filter(n => (n.opacity ?? 1) > .02).map(n => {
+        const v = vertex(n);
+        return zones.length && !sharpIds.has(n.id) ? { ...v, alpha: v.alpha * quietFactor(v.x, v.y, zones, QUIET_NODE_FLOOR) } : v;
+      });
       const edges: MapVertex[] = [];
       const budget = Math.min(600, Math.round(120 * Math.max(1, cam.k)));
       const stride = Math.max(1, Math.ceil((detail?.edges.length ?? 0) / budget));
@@ -278,7 +313,12 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         const edge = detail!.edges[i]!, a = displayById.get(edge.from), b = displayById.get(edge.to);
         if (!a || !b) continue;
         const va = vertex(a), vb = vertex(b), alpha = Math.min(va.alpha, vb.alpha);
-        edges.push({ ...va, alpha }, { ...vb, alpha });
+        if (!zones.length) { edges.push({ ...va, alpha }, { ...vb, alpha }); continue; }
+        // Cut the line where it meets the quiet zone so it fades under prose and returns on the far side.
+        const points = quietEdgePoints(va.x, va.y, vb.x, vb.y, zones, QUIET_EDGE_FLOOR);
+        for (let k = 1; k < points.length; k++) {
+          for (const point of [points[k - 1]!, points[k]!]) edges.push({ x: point.x, y: point.y, z: va.z + (vb.z - va.z) * point.t, size: va.size, alpha: alpha * point.factor });
+        }
       }
       renderer.current.draw(nodes, edges, mapPalette(c).node, size.w, size.h, dpr);
       return;
@@ -302,12 +342,22 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
-      g.globalAlpha = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : .68);
-      if (g.globalAlpha < .02) continue;
-      g.beginPath();
-      g.moveTo(pa.x, pa.y);
-      g.lineTo(pb.x, pb.y);
-      g.stroke();
+      const base = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : .68);
+      if (base < .02) continue;
+      if (!zones.length) {
+        g.globalAlpha = base;
+        g.beginPath();
+        g.moveTo(pa.x, pa.y);
+        g.lineTo(pb.x, pb.y);
+        g.stroke();
+      } else {
+        // The flat renderer has no per-vertex alpha: stroke each cut run at its own strength.
+        const points = quietEdgePoints(pa.x, pa.y, pb.x, pb.y, zones, QUIET_EDGE_FLOOR);
+        for (let k = 1; k < points.length; k++) {
+          g.globalAlpha = base * (points[k - 1]!.factor + points[k]!.factor) / 2;
+          g.beginPath(); g.moveTo(points[k - 1]!.x, points[k - 1]!.y); g.lineTo(points[k]!.x, points[k]!.y); g.stroke();
+        }
+      }
       if (++drawnEdges >= edgeBudget) break;
     }
     g.globalAlpha = 1;
@@ -342,7 +392,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       // Group detail crossfades without semantic rings or a changed file position.
-      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : .68);
+      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : .68) * (zones.length && !sharpIds.has(n.id) ? quietFactor(p.x, p.y, zones, QUIET_NODE_FLOOR) : 1);
       g.beginPath();
       const radius = n.members ? Math.min(4.5, 2 + Math.log2(n.members.length) * .25) : hoveredPath === n.id ? r0 + .5 : r0;
       g.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -354,9 +404,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
 
   };
 
+  redraw.current = draw;
   // Paint the camera's committed frame; scheduling another RAF here can cancel
   // every intermediate paint while React commits the next camera position.
-  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, spatialActive, yaw, pitch]);
+  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, spatialActive, yaw, pitch, passagePaths]);
 
   // ── interaction (explore mode) ────────────────────────────────────────────
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; yaw: number; pitch: number; rotate: boolean; moved: boolean } | undefined>(undefined);
@@ -376,35 +427,67 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     return best;
   };
 
+  // Label text is measured in the stylesheet's mono face; widths are recomputed when a web font finishes loading.
+  const [fontsReady, setFontsReady] = useState(0);
+  useEffect(() => {
+    const bump = () => setFontsReady(v => v + 1);
+    document.fonts?.addEventListener?.('loadingdone', bump);
+    return () => document.fonts?.removeEventListener?.('loadingdone', bump);
+  }, []);
+  const labelWidth = useMemo(() => {
+    const context = document.createElement('canvas').getContext('2d');
+    const family = getComputedStyle(document.documentElement).getPropertyValue('--mono').trim() || 'monospace';
+    if (context) context.font = `11px ${family}`;
+    const cache = new Map<string, number>();
+    return (text: string) => {
+      let width = cache.get(text);
+      if (width === undefined) { width = context ? context.measureText(text).width : text.length * 6.6; cache.set(text, width); }
+      return width;
+    };
+  }, [fontsReady]);
   const labels = useMemo(() => {
     if (!explore) return [];
-    const accepted: { node: MapGroup; x: number; y: number; width: number }[] = [];
     const world = wrap.current?.getBoundingClientRect();
     const chrome = world ? [...wrap.current!.querySelectorAll<HTMLElement>('.map-tools, .map-zoom, .map-legend, .map-connections')].map(el => {
       const r = el.getBoundingClientRect(); return { left: r.left - world.left - 8, right: r.right - world.left + 8, top: r.top - world.top - 8, bottom: r.bottom - world.top + 8 };
     }) : [];
+    // SHIP-8: boxes come from measured text, so what is placed is what is drawn and no two visible labels touch.
+    // The explicit import-path working set (the selected file and up to eight neighbours) is placed first.
+    const candidates: LabelCandidate[] = [];
+    const seen = new Set<string>();
+    const byId = new Map<string, MapGroup>();
+    if (connections?.root) {
+      for (const node of [connections.root, ...connections.neighbors.slice(0, 8).map(item => item.node)]) {
+        if (seen.has(node.id)) continue;
+        seen.add(node.id); byId.set(node.id, node);
+        const p = project(node);
+        if (p.x < 6 || p.y < 6 || p.x > size.w - 180 || p.y > size.h - 24) continue;
+        candidates.push({ id: node.id, x: p.x, y: p.y, kind: 'file', text: node.path, pinned: true });
+      }
+    }
     // Cull before ranking: zooming into one region must not sort every file in a huge repo.
     const sorted = displayNodes.filter(n => {
       const p = project(n);
-      return (n.opacity ?? 1) > .6 && p.x >= 6 && p.y >= 70 && p.x < size.w - 20 && p.y < size.h - 50;
+      return !seen.has(n.id) && (n.opacity ?? 1) > .6 && p.x >= 6 && p.y >= 70 && p.x < size.w - 20 && p.y < size.h - 50;
     }).sort((a, b) =>
       Number(b.id === hoveredPath) - Number(a.id === hoveredPath) || Number(heatMap.has(b.id)) - Number(heatMap.has(a.id)) || (b.members?.length ?? 0) - (a.members?.length ?? 0));
     for (const node of sorted) {
-      const p = project(node), width = Math.min(190, node.path.length * 6 + 24);
-      if (p.x < 6 || p.y < 70 || p.x + width > size.w || p.y > size.h - 50) continue;
-      if (chrome.some(r => p.x + width > r.left && p.x < r.right && p.y + 10 > r.top && p.y - 10 < r.bottom)) continue;
-      if (accepted.some(a => Math.abs(a.y - p.y) < 24 && p.x < a.x + a.width && p.x + width > a.x)) continue;
-      accepted.push({ node, ...p, width });
-      // Reserve at most nine labels for the explicit import-path working set.
-      if (accepted.length >= (connections?.root ? 39 : 48)) break;
+      byId.set(node.id, node);
+      const p = project(node);
+      candidates.push(node.members ? { id: node.id, x: p.x, y: p.y, kind: 'group', text: node.path, count: node.members.length } : { id: node.id, x: p.x, y: p.y, kind: 'file', text: node.path });
     }
-    return accepted;
-  }, [detail, explore, cam, size, hoveredPath, heatMap, connections, spatialActive, yaw, pitch, lowResource, query]);
+    return placeLabels(candidates, { width: size.w, height: size.h }, chrome, labelWidth, 48).map(label => ({ node: byId.get(label.id)!, x: label.x, y: label.y, pinned: !!label.pinned }));
+  }, [detail, explore, cam, size, hoveredPath, heatMap, connections, spatialActive, yaw, pitch, lowResource, query, fontsReady]);
 
   // Share exact renderer coordinates for a bounded working set, never a guessed graph origin.
   const anchors = [...heat].sort((a, b) => b.heat - a.heat).slice(0, 63).map((h) => h.path);
   if (hoveredPath && !anchors.includes(hoveredPath)) anchors.push(hoveredPath);
   const matches = query.trim() && viewGraph ? viewGraph.nodes.filter((node) => !(viewGraph.temporal === 'current' && node.path.startsWith('.local/')) && node.path.toLowerCase().includes(query.trim().toLowerCase())) : [];
+
+  // A generic "Mixed files" cluster says nothing alone; hovering it names its members (touched ones first).
+  const pathById = useMemo(() => new Map((graph?.nodes ?? []).map(n => [n.id, n.path])), [graph]);
+  const tipMembers = useMemo(() => tip?.node.members ? groupMemberPaths(tip.node.members, id => pathById.get(id), id => heatMap.has(id)) : undefined, [tip?.node, pathById, heatMap]);
+  const revealGroup = (node: MapGroup, x: number, y: number) => setTip(current => current?.node.id === node.id ? current : { node, x, y: y + 12 });
 
   return (
     <div
@@ -536,13 +619,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         return <span key={path} className="map-origin-point" data-origin-file={path} data-origin-visible={visible} style={{ left: p.x - 3, top: p.y - 3 }} aria-hidden="true" />;
       })}
       {labels.map(({ node, x, y }) => node.members
-        ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} title={`${node.members.length} spatially grouped files · zoom to reveal`} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
+        ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} aria-label={`${node.path} · ${node.members.length} grouped files; zoom to reveal`} onPointerEnter={() => revealGroup(node, x, y)} onPointerLeave={() => setTip(current => current?.node.id === node.id ? undefined : current)} onFocus={() => revealGroup(node, x, y)} onBlur={() => setTip(current => current?.node.id === node.id ? undefined : current)} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>
         : <button className="map-file-label" key={node.id} title={node.path} onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} style={{ left: x + 8, top: y - 9, opacity: node.opacity ?? 1 }}>{node.path}</button>)}
-      {explore && connections?.root && [connections.root, ...connections.neighbors.slice(0, 8).map(item => item.node)].filter((node, i, nodes) => nodes.findIndex(n => n.id === node.id) === i && !labels.some(label => label.node.id === node.id)).map(node => {
-        const p = project(node);
-        if (p.x < 6 || p.y < 6 || p.x > size.w - 180 || p.y > size.h - 24) return null;
-        return <button className="map-file-label" onClick={() => set(workspace?.approved ? { currentFile: node.path, filePanel: undefined } : { filePanel: node.id, currentFile: undefined })} key={`connected/${node.id}`} style={{ left: p.x + 8, top: p.y - 9 }}>{node.path}</button>;
-      })}
       {explore && tip && (
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
           <div className="map-tip-path">{tip.node.path}</div>
@@ -550,6 +628,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
             {tip.node.members ? `${tip.node.members.length} files · ` : tip.node.lines ? `${tip.node.lines} lines · ` : ''}
             {heatMap.get(tip.node.id) ? 'touched in this run' : 'not touched in this run'}
           </div>
+          {tipMembers && <ul className="map-tip-members" aria-label="Files in this group">{tipMembers.paths.map(path => <li key={path}>{path}</li>)}{tipMembers.more > 0 && <li className="muted">+ {tipMembers.more} more</li>}</ul>}
         </div>
       )}
       {graph && explore && (
