@@ -77,6 +77,8 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     await more.click();
     await expect(text).not.toHaveClass(/clamped/);
     await expect(long.getByRole('button', { name: 'Show less' })).toBeVisible();
+    await long.getByRole('button', { name: 'Show less' }).click(); // the choice is remembered; leave it as found for the next width
+    await expect(text).toHaveClass(/clamped/);
 
     // A notice written in the user role is not the person's: no capsule styling, on the agent's side.
     const notice = turns.nth(2);

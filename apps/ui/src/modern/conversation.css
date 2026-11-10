@@ -4,13 +4,13 @@
 
 /* Prose: the block spans the whole reading column; the paragraph measure (about 100 characters) keeps lines readable
    while code, tables and quotes may use the full column. */
-:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose { max-width: none; width: 100%; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose { max-width: none; width: auto; }
 :root[data-ui-version=modern] .history .prose :is(p, li) { max-width: 100ch; }
 
 /* The person's prompt: right-aligned capsule. The label stays for assistive technology and the turn's tests; a capsule on
    the right says "you" without a word. Notices Claude Code wrote in the user role (turn-source) are not the person's. */
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .turn {
-  width: 100%; max-width: none; margin: 0 0 26px; padding: 0; border: 0; background: none;
+  width: auto; max-width: none; margin-block: 0 26px; padding: 0; border: 0; background: none;
   justify-content: flex-end; align-items: flex-start; row-gap: 4px; position: relative;
 }
 :root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-who {
@@ -30,7 +30,10 @@
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-more,
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-ledger { text-align: left; }
 
-/* Narrow windows (600 px and up): the history's own padding is 16 px, less than the prompt rail needs; keep the reading material clear of it. */
+/* The prompt rail sits just inside the history's right padding (a few pixels over the content edge on wide windows, 20 px on narrow ones);
+   prose and prompts keep clear of it. Passages keep their own edge. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn) { margin-right: 16px; }
+/* Narrow windows (600 px and up): the history's own padding is 16 px, less than the rail needs. */
 @media (max-width: 880px) {
   :root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn) { margin-right: 26px; width: auto; }
 }
