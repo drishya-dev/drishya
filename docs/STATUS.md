@@ -56,6 +56,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
 | CONTENT-20 | @yash + Claude Sonnet 5.5 | `claude/content-20-mid-turn-prompts` | 2026-11-10 | Claude adapter queued_command handling, the shared person-prompt classifier (`injectedMessage` and its callers), prompt projection and `REDUCER_VERSION`, the prompt rail count in History.tsx (counting only), `scripts/real-cases/`, units. Not colour tokens or SHIP-18/6a-c files. |
+| CONTENT-21 | @yash + Claude Sonnet 5.5 | `claude/content-21-continued-journals` | 2026-11-10 | Claude continuation detection (`packages/adapter-claude/src/continuation.ts`), `refreshLineage` in `packages/ingest/src/index.ts`, lineage store and projection join (`session-lineage`), `scripts/real-cases/session-lineage.ts`, units. Not colour tokens or CONTENT-20's files (queued-command rescan, reducer prompt dedupe). |
 
 
 ---
