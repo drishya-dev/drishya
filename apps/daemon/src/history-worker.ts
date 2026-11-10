@@ -27,6 +27,7 @@ import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/hist
 import { historySummary } from '../../../packages/scene/src/history.ts';
 import { nowFacts } from '../../../packages/scene/src/now.ts';
 import { turnLedgers } from '../../../packages/scene/src/turns.ts';
+import { contextReportCandidates } from './context-report-turns.ts';
 import { SqliteBlobStore, Store } from '@drishya/store';
 import { sanitize } from '@drishya/privacy';
 import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
@@ -355,6 +356,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'reading-target') value = readingTarget(current(a.id).projection, a.query);
     else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? current(a.id).projection : asOfProjection(current(a.id).projection, a.step), a.paths);
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
+    else if (message.method === 'context-report') value = contextReportCandidates(current(a.id).projection.timeline);
     else if (message.method === 'turns') value = turnLedgers(current(a.id).projection).slice(-2000);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);
     else if (message.method === 'read-before') value = readBeforeWriteFor(current(a.id).projection, a.operationId) ?? null;

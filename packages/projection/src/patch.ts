@@ -1,7 +1,24 @@
 // Edits: hunk construction and verified reconstruction (engineering plan §4). A patch is only
 // applied against a base we hold; if anything fails to match, reconstruction is unavailable.
 
-import type { Hunk } from '@drishya/contracts';
+import { isBlobText, type BlobText, type Hunk } from '@drishya/contracts';
+
+/** Restore sealed text before exposing a hunk to string-only diff consumers. */
+export function resolveHunkLines(hunks: Hunk[], read?: (reference: BlobText) => string | undefined): Hunk[] {
+  if (hunks.every(hunk => hunk.lines.every(line => typeof line === 'string'))) return hunks;
+  return hunks.map(hunk => ({
+    ...hunk,
+    lines: hunk.lines.map((line: unknown) => {
+      if (typeof line === 'string') return line;
+      if (!isBlobText(line)) return ' [Captured diff line unavailable]';
+      const full = read?.(line);
+      if (full !== undefined) return full;
+      const preview = typeof line.preview === 'string' ? line.preview : '';
+      if (!preview) return ' [Captured diff line unavailable]';
+      return preview + ' [Remaining captured text unavailable]';
+    }),
+  }));
+}
 
 export interface PatchFile {
   path: string;

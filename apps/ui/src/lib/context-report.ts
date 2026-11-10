@@ -2,7 +2,22 @@
 export interface ContextReportRow { label: string; value: string; percent?: number }
 /** Another table the harness printed in the same report (its Skills, MCP tools, Memory files), kept apart from the categories. */
 export interface ContextReportSection { title: string; rows: ContextReportRow[] }
-export interface ContextReport { rows: ContextReportRow[]; sections: ContextReportSection[]; heading: string; raw: string; clipped: boolean }
+/** The used/window line the report prints ("28.1k / 1m (3%)"), kept as printed with the numbers it states. */
+export interface ContextReportTotal { text: string; used: number; window: number; percent: number }
+export interface ContextReport { rows: ContextReportRow[]; sections: ContextReportSection[]; heading: string; raw: string; clipped: boolean; total?: ContextReportTotal }
+const SCALE: Record<string, number> = { k: 1e3, m: 1e6, b: 1e9 };
+const printed = (value: string) => { const m = /^([0-9][0-9.,]*)([kKmMbB]?)$/.exec(value); const n = m && Number(m[1]!.replace(/,/g, '')); return m && Number.isFinite(n) ? Math.round(n! * (SCALE[m[2]!.toLowerCase()] ?? 1)) : undefined; };
+const TOTAL = /(?<![\w.])([0-9][0-9.,]*[kKmMbB]?)\s*\/\s*([0-9][0-9.,]*[kKmMbB]?)(?:\s+tokens)?\s*\((\d+(?:\.\d+)?)%\)/;
+/** What the report says about the whole window. Harness-printed and rounded as printed; Claude Code's journal records no window of its own. */
+function reportTotal(text: string): ContextReportTotal | undefined {
+  for (const line of text.slice(0, 262144).split('\n')) {
+    const match = TOTAL.exec(line.replace(/[⛀-⛃⛶⛝]/g, ' '));
+    if (!match) continue;
+    const used = printed(match[1]!), window = printed(match[2]!), percent = Number(match[3]);
+    if (used === undefined || !window || used > window || percent > 100) continue;
+    return { text: `${match[1]} of ${match[2]} tokens`, used, window, percent };
+  }
+}
 const CATEGORY_ROWS = 48, SECTION_ROWS = 100, SECTIONS = 8;
 export function contextReport(captured: string): ContextReport | undefined {
   const match = /^\s*<local-command-stdout>([\s\S]*?)<\/local-command-stdout>\s*$/.exec(captured);
@@ -45,7 +60,8 @@ export function contextReport(captured: string): ContextReport | undefined {
     const percent = percentText ? Number(percentText[1]) : undefined;
     current.push({ label, value, ...(table === 'categories' && percent !== undefined && percent >= 0 && percent <= 100 ? { percent } : {}) });
   }
-  return { heading, rows, sections: sections.filter(s => s.rows.length), raw: captured, clipped };
+  const total = reportTotal(text);
+  return { heading, rows, sections: sections.filter(s => s.rows.length), raw: captured, clipped, ...(total ? { total } : {}) };
 }
 
 // The interactive `/context` prints a colour grid whose legend carries one line per category ("Messages: 266.9k tokens (26.7%)"),
@@ -75,5 +91,18 @@ function interactiveReport(text: string, captured: string): ContextReport | unde
   }
   // A report is the harness's own category list; fewer than two recorded categories is not one.
   if (rows.length < 2) return;
-  return { heading: 'Context Usage', rows, sections: sections.filter(item => item.rows.length), raw: captured, clipped };
+  const total = reportTotal(text);
+  return { heading: 'Context Usage', rows, sections: sections.filter(item => item.rows.length), raw: captured, clipped, ...(total ? { total } : {}) };
+}
+
+/** The newest `/context` report the person ran, from the loaded timeline (only the first `upto` items when replaying). */
+export function newestContextReport(timeline: ReadonlyArray<{ type: string; prompt?: string; time?: string }> | undefined, upto?: number): { report: ContextReport; time?: string } | undefined {
+  const items = timeline ?? [];
+  for (let i = Math.min(items.length, upto ?? items.length) - 1; i >= 0; i--) {
+    const item = items[i]!;
+    if (item.type !== 'turn' || !item.prompt?.includes('local-command-stdout')) continue;
+    const found = contextReport(item.prompt);
+    if (found) return { report: found, time: item.time };
+  }
+  return undefined;
 }
