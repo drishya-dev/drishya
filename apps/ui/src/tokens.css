@@ -26,3 +26,35 @@
 
 /* `<small>` otherwise shrinks relative to its parent, which lands off the scale. */
 small { font-size: var(--text-2xs); }
+
+/* Modern colour roles resolve at the same root as the selected palette. */
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette] {
+  --text-primary: var(--t1);
+  --text-secondary: var(--t2);
+  --text-muted: var(--t3);
+  --text-chrome: var(--t4);
+
+  --diff-added: var(--pass);
+  --diff-removed: var(--fail);
+  --diff-added-wash: color-mix(in srgb, var(--diff-added) 10%, transparent);
+  --diff-removed-wash: color-mix(in srgb, var(--diff-removed) 10%, transparent);
+
+  --agent-claude-ink: #e0896a;
+  --agent-codex-ink: #6fc3b3;
+  --agent-violet-ink: #c7a0e8;
+  --agent-gold-ink: #e6c86e;
+  --agent-blue-ink: #7fb2f0;
+  --agent-rose-ink: #e88fb4;
+}
+
+:root[data-ui-version=modern][data-experience=classic][data-theme=light][data-palette] {
+  --diff-added: #145931;
+  --diff-removed: #8c1d30;
+
+  --agent-claude-ink: #974625;
+  --agent-codex-ink: #14675d;
+  --agent-violet-ink: #66408b;
+  --agent-gold-ink: #76560c;
+  --agent-blue-ink: #295f9a;
+  --agent-rose-ink: #8e3864;
+}

@@ -4,8 +4,9 @@
   --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
   --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#ededed;
   --t2:#b5b7c1; --t3:#9b9da8; --t4:#8b8d98; --focus:#8b92ec;
-  --palette-active:#5e6ad2; --syntax-keyword:#c0a8e8; --syntax-string:#adc9b2; --syntax-function:#a9c5eb;
-  --syntax-number:#d4bc96; --source:#9fc8f3; --external:#c8b0ec; --edited:#eac18a;
+  --palette-active:#5e6ad2; --syntax-keyword:#ff9f9a; --syntax-string:#a8d7ab; --syntax-function:#c5b1ff;
+  --syntax-number:#f0bc82; --syntax-type:#9fcbff; --syntax-property:#80d3da;
+  --source:#9fc8f3; --external:#c8b0ec; --edited:#eac18a;
   --pass:#80d7aa; --fail:#ff939b; --graph-node:#e8edf5; --graph-edge:#b4bfce;
   color-scheme:dark;
 }
@@ -14,7 +15,8 @@
   --line:#d7e0e6; --line-2:#c2ced6; --line-3:#8796a1; --t1:#14202a;
   --t2:#3c4a55; --t3:#55636e; --t4:#59656f; --focus:#036a8f;
   --palette-active:#0593c6; --syntax-keyword:#a62a78; --syntax-string:#1d6b3f; --syntax-function:#0a6a94;
-  --syntax-number:#a14a00; --source:#0a6a94; --external:#8a2fa0; --edited:#a14a00;
+  --syntax-number:#a14a00; --syntax-type:#60448b; --syntax-property:#06635f;
+  --source:#0a6a94; --external:#8a2fa0; --edited:#a14a00;
   --pass:#1a7240; --fail:#b4233b; --graph-node:#2d4452; --graph-edge:#6d8593;
   color-scheme:light;
 }
@@ -22,8 +24,9 @@
   --bg:#02070a; --s1:#0a1116; --s2:#111a21; --s3:#18232c;
   --line:#1d2a33; --line-2:#2a3a45; --line-3:#4a5d6a; --t1:#eef4f8;
   --t2:#b9c7d0; --t3:#93a4b0; --t4:#8396a3; --focus:#29a9f0;
-  --palette-active:#0297de; --syntax-keyword:#7cc4ff; --syntax-string:#9ad8b0; --syntax-function:#7fd1f5;
-  --syntax-number:#fd9a7a; --source:#5cbdf5; --external:#c4a7f5; --edited:#fc8a66;
+  --palette-active:#0297de; --syntax-keyword:#7cc4ff; --syntax-string:#9ad8b0; --syntax-function:#c6b4ff;
+  --syntax-number:#fd9a7a; --syntax-type:#e6c180; --syntax-property:#87d3d3;
+  --source:#5cbdf5; --external:#c4a7f5; --edited:#fc8a66;
   --pass:#5fd49a; --fail:#ff7a85; --graph-node:#e6f2fa; --graph-edge:#8fb3c9;
   color-scheme:dark;
 }
@@ -32,7 +35,8 @@
   --line:#2c2633; --line-2:#3d3547; --line-3:#655a73; --t1:#f5eff7;
   --t2:#d3c8d9; --t3:#ad9fb5; --t4:#a092a9; --focus:#ec5fae;
   --palette-active:#d83995; --syntax-keyword:#f28ac4; --syntax-string:#9fd6b7; --syntax-function:#6ec4ea;
-  --syntax-number:#f5b98a; --source:#5cbde6; --external:#f28ac4; --edited:#f5b07a;
+  --syntax-number:#f5b98a; --syntax-type:#d4b1ff; --syntax-property:#88cbbf;
+  --source:#5cbde6; --external:#f28ac4; --edited:#f5b07a;
   --pass:#79d3a1; --fail:#ff7f8e; --graph-node:#f6eaf3; --graph-edge:#b9a0bd;
   color-scheme:dark;
 }
@@ -41,7 +45,8 @@
   --line:#dadeec; --line-2:#c4cade; --line-3:#8389a3; --t1:#111633;
   --t2:#373d5c; --t3:#50567a; --t4:#5a6083; --focus:#09318d;
   --palette-active:#09318d; --syntax-keyword:#a32a63; --syntax-string:#2a6b3e; --syntax-function:#1747b0;
-  --syntax-number:#9a4d0b; --source:#1747b0; --external:#b4326f; --edited:#9a4d0b;
+  --syntax-number:#9a4d0b; --syntax-type:#5d3f94; --syntax-property:#12625f;
+  --source:#1747b0; --external:#b4326f; --edited:#9a4d0b;
   --pass:#22703c; --fail:#b3213a; --graph-node:#1d2b5c; --graph-edge:#6a76a3;
   color-scheme:light;
 }
@@ -49,8 +54,9 @@
   --bg:#050a08; --s1:#0c1310; --s2:#131c18; --s3:#1a2621;
   --line:#1f2d27; --line-2:#2c3e36; --line-3:#4c6359; --t1:#ecf5f1;
   --t2:#bccdc6; --t3:#97aba2; --t4:#879c93; --focus:#34d39b;
-  --palette-active:#10b981; --syntax-keyword:#6fd9b0; --syntax-string:#d6c98a; --syntax-function:#7cc8f0;
-  --syntax-number:#f2b46d; --source:#7cc8f0; --external:#c3a8f0; --edited:#f2b46d;
+  --palette-active:#10b981; --syntax-keyword:#6fd9b0; --syntax-string:#d6c98a; --syntax-function:#a4bcff;
+  --syntax-number:#f2b46d; --syntax-type:#d5b7ee; --syntax-property:#8ad7de;
+  --source:#7cc8f0; --external:#c3a8f0; --edited:#f2b46d;
   --pass:#4ade80; --fail:#ff7d7d; --graph-node:#e7f6ef; --graph-edge:#8fb8a6;
   color-scheme:dark;
 }
@@ -59,7 +65,8 @@
   --line:#2f2620; --line-2:#40342c; --line-3:#6a5a4e; --t1:#f6efe9;
   --t2:#d4c6bb; --t3:#b0a194; --t4:#a39283; --focus:#fc8a66;
   --palette-active:#fc734d; --syntax-keyword:#ff9e7d; --syntax-string:#a9d6a3; --syntax-function:#6ec1f0;
-  --syntax-number:#ffc28a; --source:#6ec1f0; --external:#d6a8e8; --edited:#ffb36b;
+  --syntax-number:#ffc28a; --syntax-type:#d6b8ff; --syntax-property:#91d8cc;
+  --source:#6ec1f0; --external:#d6a8e8; --edited:#ffb36b;
   --pass:#7fd29a; --fail:#ff7f86; --graph-node:#f8ece2; --graph-edge:#c7a995;
   color-scheme:dark;
 }
@@ -69,17 +76,19 @@
   --fail-wash:color-mix(in srgb,var(--fail) 12%,transparent);
   --gold:var(--focus);--gold-soft:color-mix(in srgb,var(--focus) 16%,transparent);
   --bg-canvas:var(--bg);--bg-panel:var(--s1);--bg-node:var(--s2);
-  --border-subtle:var(--line);--text-primary:var(--t1);--text-muted:var(--t3);--accent-active:var(--palette-active);
+  --border-subtle:var(--line);--accent-active:var(--palette-active);
 }
 :root[data-ui-version=modern][data-experience=classic][data-palette] :is(.workspace-header,.folder-explorer,.workbench-station,.prompt-composer,.workspace-bar,.product-dialog,.search,.home) {
   --modern-accent:var(--focus);--modern-hairline:var(--line);--modern-surface:var(--s1);--modern-raised:var(--s2);
   --modern-panel-material:linear-gradient(145deg,color-mix(in srgb,var(--s2) 88%,transparent),color-mix(in srgb,var(--s1) 94%,transparent));
 }
-:root[data-ui-version=modern][data-experience=classic][data-palette] :is(.tk-kw,.tk-type) {color:var(--syntax-keyword);}
+:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-kw {color:var(--syntax-keyword);}
+:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-type {color:var(--syntax-type);}
 :root[data-ui-version=modern][data-experience=classic][data-palette] .tk-str {color:var(--syntax-string);}
-:root[data-ui-version=modern][data-experience=classic][data-palette] :is(.tk-fn,.tk-property) {color:var(--syntax-function);}
+:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-fn {color:var(--syntax-function);}
+:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-property {color:var(--syntax-property);}
 :root[data-ui-version=modern][data-experience=classic][data-palette] .tk-num {color:var(--syntax-number);}
-:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-com {color:var(--t3);}
+:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-com {color:var(--text-muted);}
 :root[data-ui-version=modern] ::selection {background:color-mix(in srgb,var(--focus) 25%,var(--s1));color:var(--t1);}
 :root[data-ui-version=modern] .theme-options {grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
 /* Preview the actual canvas, two raised materials and the accent in every card. */
