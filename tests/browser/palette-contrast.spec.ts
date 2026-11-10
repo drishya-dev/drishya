@@ -140,6 +140,8 @@ test('the composer and its menus keep 4.5:1 on every palette', async ({ page }) 
   await at('composer draft');
   await expect(composer.getByRole('button', { name: 'Enable this workspace', exact: true })).toBeVisible();
   await at('setup row (workspace not enabled)');
+  // This fixture needs a session grant; remembered checkout identity has its own spec.
+  await composer.getByRole('checkbox', { name: 'Remember for this checkout', exact: true }).uncheck();
   await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
   await expect(composer.locator('.composer-setup')).toHaveCount(0);
   await composer.getByRole('button', { name: 'Model', exact: true }).click();
