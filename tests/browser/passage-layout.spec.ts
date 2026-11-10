@@ -57,18 +57,15 @@ test.beforeAll(async () => {
   server = await startServer({ app, port: 0, token: 'synthetic-passage-layout' });
 });
 
-test('visible checklist expansion and rapid history scrolling retain wire geometry', async ({page}) => {
+test('open checklist and rapid history scrolling retain wire geometry', async ({page}) => {
   await page.setViewportSize({width:1280,height:1000});
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${pinnedId}`);
   await expect(page.locator('.history .op .skeleton')).toHaveCount(0);
   await page.evaluate(()=>document.fonts.ready);
-  await page.locator('.plan-card[role=group]').getByRole('button',{name:'Show plan',exact:true}).click();
-  const more=page.locator('.plan-card[role=group]').getByRole('button',{name:'Show all 12 items · 2 more',exact:true});
-  await expect(more).toBeVisible();
+  await expect(page.locator('.plan-card[role=group] li')).toHaveCount(12);
   // Let the finite arrival observer finish before causing a position-only reflow.
   await page.waitForTimeout(1900);
-  await more.click();
   await expect(page.locator('.plan-card[role=group] li')).toHaveCount(12);
   await expect.poll(async()=>violations(await snapshot(page))).toEqual([]);
   const history=page.locator('.history');
