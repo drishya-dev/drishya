@@ -94,6 +94,7 @@ export class HistoryService {
   readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }
   fileEvidence(id: string, paths: string[], step?: number) { return this.request<FileEvidence[]>('file-evidence', { id, paths, step }); }
   now(id: string) { return this.request<NowFacts>('now', { id }); }
+  contextReport(id: string) { return this.request<{ time?: string; prompt: string }[]>('context-report', { id }); }
   turns(id: string) { return this.request<TurnLedger[]>('turns', { id }); }
   since(id: string, after: number, page = 0) { return this.request<SinceSnapshot>('since', { id, after, page }); }
   readBefore(id: string, operationId: string) { return this.request<ReadBeforeWrite | null>('read-before', { id, operationId }); }

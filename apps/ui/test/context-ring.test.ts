@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Projection, UsagePayload } from '@drishya/contracts';
-import { contextLabel, contextOccupancy } from '../src/lib/context-ring.ts';
+import { contextReport } from '../src/lib/context-report.ts';
+import { contextLabel, contextOccupancy, liveContextOccupancy } from '../src/lib/context-ring.ts';
 
 const request = (input: number, contextWindow?: number): UsagePayload => ({ source: 'codex-token-count', cumulative: false, tokens: { input }, ...(contextWindow ? { contextWindow } : {}) });
 const cumulative = (total: number, contextWindow?: number): UsagePayload => ({ source: 'codex-token-count', cumulative: true, tokens: { total, input: total }, ...(contextWindow ? { contextWindow } : {}) });
@@ -29,5 +30,24 @@ describe('context occupancy', () => {
   });
   it('clamps an over-full request to the whole ring', () => {
     expect(contextOccupancy(usage({ a: request(300_000, 258_400) }))?.fraction).toBe(1);
+  });
+});
+describe('live context with a /context report (USAGE-1)', () => {
+  const reading = (tokens: number) => ({ id: 'c', agentId: 'a', source: 'claude-message-usage' as const, availableAfterStep: 1, observationIds: [], input: { tokens, basis: 'derived-request-input' as const } });
+  const report = (line: string) => contextReport(`<local-command-stdout> Context Usage\n⛁ ⛁   model\n⛁ ⛁   ${line}\n⛁ ⛁   ⛁ System prompt: 2.3k tokens (0.2%)\n⛁ ⛁   ⛁ Messages: 266.9k tokens (26.7%)</local-command-stdout>`) && { report: contextReport(`<local-command-stdout> Context Usage\n⛁ ⛁   model\n⛁ ⛁   ${line}\n⛁ ⛁   ⛁ System prompt: 2.3k tokens (0.2%)\n⛁ ⛁   ⛁ Messages: 266.9k tokens (26.7%)</local-command-stdout>`)!, time: '2026-11-01T10:00:00Z' };
+  const projection = (tokens = 293_000) => ({ agents: [{ id: 'a' }], usage: undefined, context: { readings: [reading(tokens)] } }) as any;
+  it('takes the window the report printed, labelled as computed from it', () => {
+    const c = liveContextOccupancy(projection(250_000), report('293k/1M tokens (29%)'))!;
+    expect(c).toMatchObject({ used: 250_000, window: 1_000_000, fraction: .25 });
+    expect(contextLabel(c)).toMatch(/\/context report.*25% ratio, computed\.$/);
+  });
+  it('shows nothing without a report, without a printed window, or without a reading', () => {
+    expect(liveContextOccupancy(projection())).toBeUndefined();
+    expect(liveContextOccupancy(projection(), report('no total here'))).toBeUndefined();
+    expect(liveContextOccupancy({ ...projection(), context: { readings: [] } }, report('293k/1M tokens (29%)'))).toBeUndefined();
+  });
+  it('prefers a window the harness recorded itself', () => {
+    const recorded = { latest: { source: 'codex-token-count', cumulative: true, contextWindow: 100_000 }, byTurn: { a: { source: 'codex-token-count', cumulative: false, tokens: { input: 50_000 }, contextWindow: 100_000 } } } as any;
+    expect(liveContextOccupancy({ ...projection(), usage: recorded }, report('293k/1M tokens (29%)'))?.fraction).toBe(.5);
   });
 });
