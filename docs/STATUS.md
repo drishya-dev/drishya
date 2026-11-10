@@ -1587,6 +1587,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 
 ## Decisions made
 
+- **10 Nov, Harsh: freestanding aperture for Drishya.** Prototype the three petals assembling above the wordmark. The opening stays readable as the mark forms, and the same final silhouette can serve flat contexts. LAND-17 records the timing and integration checks after preview review. [Landing plan](review/land-7-reference-motion-inventory.md#three-petal-aperture-follow-up)
+
 - **9 Nov, Harsh: calm entry and a shorter evidence path.** Use a spaced, light Inter wordmark and a finite reveal that holds for manual entry. Match the hero copy to the right-side product proof, combine the explanation and walkthrough, reveal evidence on the showcase cards, and use one ASCII closing area. Ordinary scrolling keeps selections stable. [LAND-8 revision](review/land-7-reference-motion-inventory.md).
 
 - **9 Nov, Harsh: product proof in less space.** Use a short on-demand Drishya recording beneath the hero SVG and a selectable evidence stack inside `#workspace`. Visitors can see the actual interface immediately through its poster and choose the evidence they want to read in one section. [LAND-8 revision](review/land-7-reference-motion-inventory.md).
