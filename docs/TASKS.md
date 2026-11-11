@@ -376,6 +376,7 @@ Decided by Yash with Claude, 8 November: [release-1-scope.md](review/release-1-s
     3. Honest highlighting: `text`, `plaintext`, an unlabelled block and unknown languages are never coloured. Known languages use `highlight.tsx` with the palette's syntax inks, and shell prompts and commands read as commands.
     4. Wrap defaults to on for text and off for code. Long lines scroll inside the block, never the page.
     5. Keep the existing Copy as one line.
+    6. Yash, 11 Nov: the block is not full width. It sizes to its content up to the reading measure of the prose around it, never wider than that column, and never a wide band across the screen. A short command stays a compact box; long lines wrap or scroll inside it.
   - **Accept:** genuine Claude Code and Codex replies containing text, shell, TypeScript, JSON and diff blocks, at 600 and 1440 in all three palettes, framed beside Claude Desktop's block for the same content. No plain-text block shows syntax colour (a unit covers it). Screenshots stay in `.local/`.
 - [ ] **SHIP-3 · Home hero** · P0 · `ui` `home` — Yash, 8 Nov: the same kind of opening as the landing page, above the session list.
   - **Do:** after LAND-1 is agreed, add one calm hero band above Home's session list: what Drishya does in one sentence, and the user's own running or latest session as the first action. Use the landing page's type and colour; no marketing copy beyond one sentence, no stock motion.
