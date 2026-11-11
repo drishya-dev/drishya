@@ -282,7 +282,7 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 
 ### P2 — later
 
-**7 of 14 done**
+**7 of 15 done**
 
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
@@ -300,6 +300,7 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☐ | 12 | LAND-10 | Compact plain-language product explanation | `rel` `ui` |
 | ☐ | 13 | LAND-17 | Three-petal logo opening | `rel` `ui` |
 | ☐ | 14 | MAP-2 | Explore can open with the whole map squeezed into a corner and no labels | `map` `bug` |
+| ☐ | 15 | LAND-18 | Matte woven logo in the landing hero | `rel` `ui` |
 
 ### P3 — deferred ideas
 
@@ -1441,6 +1442,8 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [ ] **LAND-10 · Compact plain-language product explanation** · P2 · `rel` `ui` — Harsh, 9 November. [Selected contract](review/land-7-reference-motion-inventory.md#land-10--compact-plain-language-explanation-maximum-8-paths). **Accept** the exact two-phrase and paragraph copy above the walkthrough in normal flow. Check the three finite emblem arrivals, readable static content, anchor and keyboard behavior. Verify responsive hero SVG geometry and bounded pointer motion across the supported desktop range. At most 9 paths including the responsive hero stylesheet after LAND-9, in its own PR.
 
 - [ ] **LAND-17 · Three-petal logo opening** · P2 · `rel` `ui` — Harsh, 10 November. [Selected contract](review/land-7-reference-motion-inventory.md#land-17--three-petal-logo-opening-maximum-8-paths). Preview the chosen freestanding aperture before integration. **Accept** the exact final SVG at 420 ms, the `Drishya` wordmark below it at 660 ms, a still hold, immediate reduced-motion state and passing LAND-9 entry, Replay and fallback regressions. At most 8 paths after LAND-9 and preview review.
+
+- [ ] **LAND-18 · Matte woven logo in the landing hero** · P2 · `rel` `ui` — Harsh, 11 November. Use the supplied ivory woven mark as the hero reference. **Accept** a static original SVG with visible interlacing and shallow matte depth, a proportional fit at 600 and 1440 px and short desktop windows, and a readable adjacent preview. Verify the hero remains still through entry, scroll and pointer movement. Base on LAND-11 in its own PR.
 
 - [x] **LAND-4 · Reference motion analysis and execution plan** · P2 · `rel` `ui` — Harsh, 8 November: REA-guided investigation of Superconscious and an original Drishya adaptation. **Accept:** observed effects and source evidence/limits, exact motion states and fallbacks, original asset direction, file ownership, execution sequence and validation commands in an independent plan PR. No publication or app changes.
 - [x] **LAND-5 · Dimensional hero and scroll-linked Drishya identity** · P2 · `rel` `ui` — Harsh, 8 November: jet-black/mint dimensional repository hero, scroll-linked logo/map and compact navigation. **Accept:** immediate headline/CTA; original local visuals; reversible scroll motion; no idle loop; no-JS/reduced-motion fallbacks; 600/1024/1440/1920 browser checks and targeted landing regression suite; separate PR. No app theme edits or blurred captured text.
