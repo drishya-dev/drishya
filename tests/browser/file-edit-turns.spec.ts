@@ -4,6 +4,7 @@ import {resolve,join,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {openSessionReview} from './session-review.ts';
 // READ-5 slice 1: the Changes view lists each file's captured edits as `turn N · +a −b → next test run ✓/✗`.
 let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-edit-turns-'));app=new App(dir);server=await startServer({app,port:0});});
@@ -31,7 +32,7 @@ test('the Changes view lists each edit with its turn, +/- and next test run, and
  const id=(await app.ingest.importSource('claude-code',file)).recordingId;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  await expect(page.locator('article.op-edit').first()).toBeVisible();
- await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
+ await openSessionReview(page);
  const dialog=page.getByRole('dialog',{name:'Changes',exact:true});
  await dialog.locator('.review-file-more>summary').first().click();
  const edits=dialog.getByRole('list',{name:'Edits of this file'}).getByRole('listitem');

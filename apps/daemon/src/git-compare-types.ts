@@ -7,6 +7,8 @@ export interface CompareRef {
 }
 export interface CompareRefs {
   generation:string; shallow:boolean;
+  /** The commit HEAD points at; present even when HEAD is detached and no branch is checked out. */
+  head?:string;
   /** The checked-out branch, when HEAD is on one. */
   current?:CompareRef;
   /** The repository's default branch: `origin/HEAD` when present locally, else `main` or `master`. */

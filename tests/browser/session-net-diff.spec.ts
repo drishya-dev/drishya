@@ -5,6 +5,7 @@ import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 import {sinceSnapshot} from '../../packages/scene/src/since.ts';
+import {openSessionReview} from './session-review.ts';
 let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-session-net-'));app=new App(dir);server=await startServer({app,port:0});});
 test.afterAll(async()=>{await server?.close();await app?.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe cleanup');rmSync(dir,{recursive:true,force:true});});
@@ -13,7 +14,7 @@ for(const width of [600,1440]) test(`captured net lines expose edit provenance w
  const facts=sinceSnapshot(app.projection(id),-1);const entry=Object.entries(facts.fileStats??{}).find(([,stat])=>stat.netDiff?.status==='complete'&&stat.netDiff.lines.length);
  expect(entry).toBeDefined();
  await page.setViewportSize({width,height:1000});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
- await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
+ await openSessionReview(page);
  const dialog=page.getByRole('dialog',{name:'Changes',exact:true});const file=dialog.locator(`.review-file[data-review-row="${entry![0]}"]`);await file.locator('.review-file-more>summary').click();
  const toggle=file.getByRole('button',{name:/Net diff/});await toggle.click();const lines=file.getByLabel('Net changed lines, each linked to its edit');await expect(lines.locator('.review-net-line')).toHaveCount(entry![1].netDiff!.lines.length);
  expect(await lines.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);

@@ -45,6 +45,7 @@ const ago=(time:string|undefined)=>{
   const days=Math.floor((Date.now()-then)/86_400_000);
   return days<1?'today':days<2?'yesterday':days<60?`${days} days ago`:days<700?`${Math.round(days/30)} months ago`:`${Math.round(days/365)} years ago`;
 };
+const isOid=(value:string|undefined)=>!!value&&/^[a-f0-9]{40,64}$/.test(value);
 const nameOf=(ref:{name:string}|undefined)=>ref?.name??'';
 
 /** Opens Compare from anywhere (header button, palette). Workspace and the file readers step aside. */
@@ -53,17 +54,18 @@ export const openCompare=()=>useApp.setState({compareOpen:true,developerWorkspac
 export function CompareButton() {
   const open=useApp(s=>s.compareOpen),mode=useApp(s=>s.mode),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
   const unavailable=source?.kind==='daemon'&&!!id?.includes('+');
-  const unsupported=source?.kind!=='daemon';
-  return <button className="btn ghost compare-open" data-compare-open aria-expanded={open} disabled={mode==='replay'||unavailable||unsupported}
-    title={mode==='replay'?'Return to history to compare':unavailable?'Choose one native recording to compare':unsupported?'Compare reads a repository on this machine':'Compare two branches or a pull request, with the agent work behind each file'}
-    onClick={()=>{if(open)useApp.setState({compareOpen:false});else openCompare();}}>Compare</button>;
+  return <button className="btn ghost compare-open" data-compare-open aria-expanded={open} disabled={mode==='replay'||unavailable}
+    title={mode==='replay'?'Return to history to compare':unavailable?'Choose one native recording to compare':'Compare two branches or a pull request, with the agent work behind each file'}
+    onClick={()=>{if(open)window.dispatchEvent(new Event('drishya-compare-close'));else openCompare();}}>Compare</button>;
 }
 
 /** Mounted once in the viewer, beside the Workspace. Remembers its sides and file for the session so closing returns to the same place. */
 export function CompareWindow() {
   const open=useApp(s=>s.compareOpen),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),workspaceOpen=useApp(s=>s.developerWorkspace);
   useEffect(()=>{if(open&&workspaceOpen)useApp.setState({compareOpen:false});},[open,workspaceOpen]);
-  if(!open||mode!=='history'||source?.kind!=='daemon'||!id||id.includes('+'))return null;
+  if(!open||mode!=='history'||!id||id.includes('+'))return null;
+  // An offline copy or the bundled demo has no repository on this machine; say so instead of a dead button.
+  if(source?.kind!=='daemon')return <section className="developer-workspace compare-window" aria-label="Compare"><header className="compare-header"><strong>Compare</strong><span className="compare-header-end"><button className="btn ghost" onClick={()=>useApp.setState({compareOpen:false})}>Back to agent</button></span></header><p className="compare-note">Compare reads a repository on this machine. This copy of the session has none, so there is nothing to compare.</p></section>;
   return <CompareContent key={id} id={id}/>;
 }
 
@@ -110,7 +112,7 @@ function CompareContent({id}:{id:string}) {
     if(preset==='session'||preset==='branch'){
       // The session's own branch is the one its journal recorded, when it still exists here; else the branch checked out now.
       const own=recorded?refs.refs.find(ref=>ref.ref===`refs/heads/${recorded}`)?.ref:undefined;
-      const base=preset==='branch'&&baseRef?baseRef:refs.defaultBase?.ref,head=preset==='branch'?headRef??own??refs.current?.ref:own??refs.current?.ref;
+      const base=preset==='branch'&&baseRef?baseRef:refs.defaultBase?.ref,head=preset==='branch'?headRef??own??refs.current?.ref:own??refs.current?.ref??refs.head;
       return base&&head?{base,head}:undefined;
     }
     if(preset==='pr'&&pull)return pull.local&&pull.baseRef?{base:pull.baseRef.ref,head:pull.headOid}:{base:'',head:'',remote:pull.number};
@@ -183,11 +185,14 @@ function CompareContent({id}:{id:string}) {
     const exit=element.animate([{opacity:1,transform:'translateY(0)'},{opacity:0,transform:'translateY(4px)'}],{duration:120,easing,fill:'forwards'});
     void exit.finished.then(done,()=>{});
   };
+  // The header's Compare toggles the window through the same leaving motion as Back to agent.
+  const closer=useRef(requestClose);closer.current=requestClose;
+  useEffect(()=>{const close=()=>closer.current();window.addEventListener('drishya-compare-close',close);return()=>window.removeEventListener('drishya-compare-close',close);},[]);
   const identity=workspace?.root?.replace(/\\/g,'/').split('/').at(-1)??'Repository';
   const ahead=result?.ahead,behind=result?.behind;
 
   // A pull request's head is a commit id to Git; the person knows it by its branch name.
-  const headName=pull?.headName??nameOf(result?.head),baseName=pull?.baseName??nameOf(result?.base);
+  const headName=pull?.headName??(result&&isOid(result.head.ref)?'Detached HEAD':nameOf(result?.head)),baseName=pull?.baseName??nameOf(result?.base);
   const groups:{key:CompareGroup|'tree';title?:string;hint?:string}[]=preset==='uncommitted'?[{key:'tree'}]:[
     {key:'both',title:'Changed on both',hint:`Edited on ${headName} and on ${baseName} since they diverged. A merge can conflict here.`},
     {key:'head',title:`Only on ${headName}`},
@@ -204,7 +209,8 @@ function CompareContent({id}:{id:string}) {
       </span>
     </header>
     {consent===undefined&&!error?<p className="compare-note" role="status">Checking Git access…</p>
-      :!ready?<GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);void grantGit(id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>
+      :!workspace?.root?<p className="compare-note">This session recorded no repository on this machine, so there is nothing to compare.</p>
+      :!ready?<><GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);setError(undefined);void grantGit(id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>{error&&<p className="compare-note" role="alert">{error}</p>}</>
       :<>
       <div className="compare-sides" aria-label="Sides compared">
         {preset==='uncommitted'?<span className="compare-line"><b>{snapshot?.branch??'Working tree'}</b>{snapshot&&<span>{snapshot.head.slice(0,10)}</span>}<span>{identity} · uncommitted changes</span></span>
@@ -309,7 +315,7 @@ function SidePicker({label,value,refs,pick}:{label:string;value?:string;refs:Com
     return [...refs].filter(ref=>!q||ref.name.toLowerCase().includes(q)).sort((a,b)=>(Date.parse(b.lastCommit??'')||0)-(Date.parse(a.lastCommit??'')||0)||a.name.localeCompare(b.name)).slice(0,80);
   },[refs,query]);
   return <span className="compare-picker" ref={box}>
-    <button className="compare-side" aria-label={`${label} side: ${current?.name??'choose'}`} aria-haspopup="listbox" aria-expanded={open} title={current?.ref} onClick={()=>{setOpen(!open);setQuery('');}}>{current?.name??'Choose'}<svg viewBox="0 0 10 6" aria-hidden="true"><path d="m1 1 4 4 4-4"/></svg></button>
+    <button className="compare-side" aria-label={`${label} side: ${current?.name??(isOid(value)?'Detached HEAD':'choose')}`} aria-haspopup="listbox" aria-expanded={open} title={current?.ref} onClick={()=>{setOpen(!open);setQuery('');}}>{current?.name??(isOid(value)?'Detached HEAD':'Choose')}<svg viewBox="0 0 10 6" aria-hidden="true"><path d="m1 1 4 4 4-4"/></svg></button>
     {open&&<div className="compare-menu" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setOpen(false);}}}>
       <input autoFocus aria-label={`Find a ${label.toLowerCase()} branch or tag`} placeholder="Find a branch or tag" value={query} onChange={event=>setQuery(event.target.value)}/>
       <ul role="listbox" aria-label={`${label} side`}>{list.map(ref=><li key={ref.ref} role="option" aria-selected={ref.ref===value}>

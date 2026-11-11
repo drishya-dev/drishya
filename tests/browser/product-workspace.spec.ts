@@ -5,6 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import {openSessionReview} from './session-review.ts';
 
 let dir: string;
 let app: App;
@@ -36,7 +37,7 @@ const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
 test('completed evidence links keep full history and the chosen live-demo design', async ({ page }) => {
   await page.goto(`${demoUrl()}&experience=modern`);
-  await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
+  await openSessionReview(page);
   await page.getByRole('region', { name: 'Failures', exact: true }).getByRole('button').first().click();
   const detail = page.getByRole('region', { name: 'Operation detail' });
   await detail.locator('.step-links>summary').click();
@@ -135,7 +136,7 @@ test('failed shell preview surfaces buried errors and preserves the full preview
 
 test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
   await page.goto(demoUrl());
-  await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
+  await openSessionReview(page);
   const review = page.getByRole('dialog', { name: 'Changes', exact: true });
   await expect(review.getByRole('region', { name: 'Files with changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
@@ -151,7 +152,7 @@ test('first-visit evidence review opens exact file work without a reading mark a
   await file.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
   await expect(file).toHaveCount(0);
   await page.setViewportSize({ width: 600, height: 1000 });
-  await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
+  await openSessionReview(page);
   await expect(review).toBeVisible();
   const bounds = await review.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);

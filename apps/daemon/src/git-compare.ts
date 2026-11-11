@@ -35,7 +35,7 @@ export async function gitCompareRefs(git:Git):Promise<CompareRefs> {
   const shallow=(await git(['rev-parse','--is-shallow-repository'])).trim()==='true';
   const refs=before.refs.filter(ref=>!/^refs\/remotes\/[^/]+\/HEAD$/.test(ref.raw));
   const current=before.refs.find(ref=>ref.current),base=defaultBase(before);
-  return {generation:before.generation,shallow,...(current?{current:toRef(current)}:{}),...(base?{defaultBase:toRef(base)}:{}),refs:refs.slice(0,500).map(toRef),total:refs.length};
+  return {generation:before.generation,shallow,...(before.head?{head:before.head}:{}),...(current?{current:toRef(current)}:{}),...(base?{defaultBase:toRef(base)}:{}),refs:refs.slice(0,500).map(toRef),total:refs.length};
 }
 
 async function resolveSide(git:Git,before:RefState,value:string):Promise<CompareSide> {
