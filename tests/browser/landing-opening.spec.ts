@@ -99,7 +99,7 @@ test('no JavaScript retains the complete static hero and native navigation',asyn
   const page=await context.newPage();
   await page.goto(site.url);
   await expect(page.locator('.hero-copy h1')).toBeVisible();
-  await expect(page.locator('.identity-sculpture polygon')).toHaveCount(192);
+  await expect(page.locator('.identity-sculpture [data-logo-ribbon]')).toHaveCount(6);
   await context.close();
 });
 

@@ -226,29 +226,20 @@ for(const {width,height} of [
   });
 }
 
-test('hero aperture stays proportional when resized and only moves for a fine pointer',async({page})=>{
+test('hero logo stays proportional and clear of the preview when resized',async({page})=>{
   const mark=page.locator('.identity-sculpture');
+  const preview=page.locator('.hero-world .product-scene');
   await page.setViewportSize({width:600,height:900});
   await page.goto(site.url+'/#main');
-  const compact=await mark.boundingBox();
-  expect(compact).not.toBeNull();
-
-  await page.setViewportSize({width:1024,height:600});
-  const short=await mark.boundingBox();
-  expect(short).not.toBeNull();
-  expect(short!.width/short!.height).toBeCloseTo(460/430,2);
-  expect(short!.width).toBeGreaterThan(compact!.width);
-
-  await page.setViewportSize({width:1920,height:1080});
-  const wide=await mark.boundingBox();
-  expect(wide).not.toBeNull();
-  expect(wide!.width).toBeGreaterThan(short!.width);
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
-  await mark.hover({position:{x:180,y:100}});
-  await expect(mark).toHaveCSS('rotate','4deg');
-  await page.mouse.move(8,80);
-  await expect(mark).toHaveCSS('rotate','none');
-  await page.emulateMedia({reducedMotion:'reduce'});
-  await page.mouse.move(wide!.x+180,wide!.y+100);
-  await expect(mark).toHaveCSS('rotate','none');
+  let previousWidth=0;
+  for(const [width,height] of [[600,900],[1024,600],[1920,1080]]){
+    await page.setViewportSize({width,height});
+    const markBox=(await mark.boundingBox())!;
+    const previewBox=(await preview.boundingBox())!;
+    expect(markBox.width/markBox.height).toBeCloseTo(460/430,2);
+    expect(markBox.width).toBeGreaterThan(previousWidth);
+    expect(markBox.y+markBox.height).toBeLessThanOrEqual(previewBox.y);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    previousWidth=markBox.width;
+  }
 });

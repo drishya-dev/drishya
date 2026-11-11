@@ -13,35 +13,37 @@ test.afterAll(async()=>{await site?.close();});
 for(const width of [600,1024,1440,1920])test(`dimensional home remains readable at ${width}`,async({page})=>{
   await page.setViewportSize({width,height:900});
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(site.url);await expect(page.locator('h1')).toContainText('Follow your');
+  await page.goto(site.url+'/#main');await expect(page.locator('h1')).toContainText('Follow your');
   await expect(page.locator('.hero-copy .primary')).toBeVisible();
-  await expect(page.locator('.identity-sculpture polygon')).toHaveCount(192);
+  await expect(page.locator('.identity-sculpture [data-logo-ribbon]')).toHaveCount(6);
   expect(await page.evaluate(()=>getComputedStyle(document.documentElement).backgroundColor)).toBe('rgb(0, 0, 0)');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   const action=await page.locator('.hero-copy .primary').boundingBox();expect(action!.y+action!.height).toBeLessThanOrEqual(900);
   expect(errors).toEqual([]);
 });
 
-test('hero responds once on arrival and subtly to pointer, and has no idle animation',async({page})=>{
+test('matte hero logo stays still through entry, pointer movement and scroll',async({page})=>{
   await page.setViewportSize({width:1440,height:900});await page.goto(site.url);
+  const mark=page.locator('.identity-sculpture');
+  await expect(mark.locator('[data-logo-ribbon]')).toHaveCount(6);
+  const readMark=()=>mark.evaluate(el=>({
+    markup:el.innerHTML,
+    transform:getComputedStyle(el).transform,
+    rotate:getComputedStyle(el).rotate,
+    animations:el.getAnimations({subtree:true}).length
+  }));
+  const initial=await readMark();
+  expect(initial).toMatchObject({transform:'none',rotate:'none',animations:0});
   await page.keyboard.press('Escape');
-  const track=page.locator('[data-identity-track]'),mesh=page.locator('.identity-sculpture');
-  await expect(mesh.locator('polygon')).toHaveCount(192);
-
-  // Move pointer over hero world to test pointer depth
+  await expect(page.locator('.hero-copy .primary')).toBeVisible();
   const world=page.locator('.hero-world');
   await world.hover({position:{x:300,y:200}});
-  await expect.poll(async()=>{
-    return page.evaluate(()=>getComputedStyle(document.querySelector('.hero-world')!).getPropertyValue('--pointer-front-x'));
-  }).not.toBe('');
-
-  // Mouse leave settles back
-  await page.mouse.move(0,0);
-  await expect.poll(async()=>{
-    return page.evaluate(()=>getComputedStyle(document.querySelector('.hero-world')!).getPropertyValue('--pointer-front-x'));
-  }).toBe('0px');
-
-  await expect.poll(()=>page.evaluate(()=>document.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  expect(await readMark()).toEqual(initial);
+  await page.evaluate(()=>scrollTo({top:innerHeight,behavior:'instant'}));
+  expect(await page.evaluate(()=>scrollY)).toBeGreaterThan(0);
+  await page.evaluate(()=>scrollTo({top:0,behavior:'instant'}));
+  expect(await readMark()).toEqual(initial);
 });
 
 test('reduced motion, explicit motion off and short windows keep a static composition',async({page})=>{
@@ -58,7 +60,7 @@ test('reduced motion, explicit motion off and short windows keep a static compos
 
 test('no JavaScript retains original identity, source and navigation',async({browser})=>{
   const context=await browser.newContext({javaScriptEnabled:false,viewport:{width:600,height:900}}),page=await context.newPage();
-  await page.goto(site.url);await expect(page.locator('.identity-sculpture polygon')).toHaveCount(192);
+  await page.goto(site.url);await expect(page.locator('.identity-sculpture [data-logo-ribbon]')).toHaveCount(6);
   await expect(page.locator('.hero-copy .primary')).toBeVisible();
   await page.locator('.hero-copy .primary').click();await expect(page).toHaveURL(/#session$/);
   await context.close();

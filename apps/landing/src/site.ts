@@ -3,14 +3,13 @@ import './landing-motion.css';
 import './opening.css';
 import './explainer.css';
 import './living-sample.css';
-import {initLandingMotion,initSectionArrivals,motionAllowed} from './landing-motion.ts';
+import {initSectionArrivals,motionAllowed} from './landing-motion.ts';
 import {createMotionRuntime} from './motion-runtime.ts';
 import {initOpening} from './opening.ts';
 import {initExplainer} from './explainer.ts';
 import {loadAndInitLivingSample} from './living-sample.ts';
 
 const motionRuntime=createMotionRuntime();
-initLandingMotion(motionRuntime);
 initSectionArrivals(motionRuntime);
 initOpening(motionRuntime);
 initExplainer(motionRuntime);

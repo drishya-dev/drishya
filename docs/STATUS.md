@@ -55,6 +55,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — 11 Nov: LAND-18 matte woven logo
+
+- The supplied six-lobed ivory knot is the landing hero artwork. Six tapered SVG ribbons and an offset edge create matte depth. The hero mark holds still through entry, pointer movement and scroll.
+- The logo sits above the checkout sample at compact, wide and short desktop sizes. The opening and sample regressions exercise the built marketing site and its synthetic evidence.
+- Verified nine viewport sizes, 41 browser tests in Edge with one worker, 14 unit tests, the landing typecheck and build.
+
 ### Harsh with Codex — 9 Nov: LAND-11 living synthetic sample and pointer depth
 
 - Completed compact walkthrough and hero motion: `sample-model.ts`, `sample-controller.ts`, `living-sample.ts`, `living-sample.css`, `site.ts`, `landing-motion.ts`, `landing-motion.css`, `identity-geometry.ts`, `identity.ts`, `scripts/build-landing.ts`.
