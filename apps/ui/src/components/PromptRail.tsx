@@ -34,7 +34,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
         if(control.matches('.prompt-composer')) {
           // UI-28b/28c: the rail clears the composer at rest (its fixed --composer-rest above its bottom edge), whether the box is open,
           // collapsed to the pill or grown by a long prompt, so the rail never moves with it.
-          const rest=(parseFloat(getComputedStyle(viewer??document.documentElement).getPropertyValue('--composer-gap'))||158)-24;
+          const rest=(parseFloat(getComputedStyle(viewer??document.documentElement).getPropertyValue('--composer-gap'))||158)-24; // the gap is written in px by SessionWorkspace
           if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-r.bottom+rest+12);
         }
         else if(control.matches('.catalog-toggle,.workspace-follow,.follow-pill')) bottom=Math.max(bottom,innerHeight-r.top+12);

@@ -87,6 +87,3 @@
 :root[data-ui-version=modern] .modern-native-composer .composer-setup { height:var(--composer-setup-h); box-sizing:border-box; overflow:auto; }
 :root[data-ui-version=modern] .modern-native-composer .composer-setup:has(.cli-setup) { --composer-setup-h:176px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer:not(.composer-minimized) { min-height:var(--composer-rest); box-sizing:border-box; }
-/* A box grown by a long prompt, the setup row or an attachment strip covers the controls that sit above its resting height (Follow, history
-   transport, catalog toggle) instead of lying under them, so everything in the box stays reachable. */
-:root[data-ui-version=modern] .connected-workspace .modern-native-composer:not(.composer-minimized) { z-index:45; }

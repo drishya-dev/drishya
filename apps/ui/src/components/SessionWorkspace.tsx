@@ -665,7 +665,10 @@ export function PromptComposer() {
       // an attachment strip or a confirmation grow the box over the history, and collapsing to the pill or opening again moves nothing
       // else. Only the composer animates.
       const tokens = getComputedStyle(viewer);
-      const rest = parseFloat(tokens.getPropertyValue('--composer-rest')) || 134;
+      // The build writes lengths in rem (the interface scales with the viewport), so tokens are read with their unit.
+      const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const length = (value: string) => parseFloat(value) * (value.trim().endsWith('rem') ? rootSize : 1);
+      const rest = length(tokens.getPropertyValue('--composer-rest')) || 134;
       // The setup content (enable, connect the CLI) has a fixed height (composer.css; it scrolls inside) and is part of the box's resting
       // height while it is there, open or collapsed, so collapsing and opening never changes the reserved space. The extras that come and
       // go with typing (growth, attachments, confirmation) are not.

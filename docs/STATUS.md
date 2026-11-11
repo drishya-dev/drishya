@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @harsh + Codex | — | 2026-11-09 | Umbrella. SHIP-17 through SHIP-21 own bounded changes. Harsh authorized a Codex brief and scoped shared colour edits on separate branches for Yash’s review. Keep the Opus sign-off before acceptance and defer SHIP-2b/c/d until the palette system lands. |
 | SHIP-2b | @harsh + Codex | `codex/ship-2b` | 2026-11-09 | Queued after SHIP-2a and UI-27. History hierarchy and captured material presentation. Confirm section and stylesheet boundaries with UI-27, SHIP-12, MOTION-3 and AUDIT-1 before reserving paths. |
@@ -56,6 +55,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Claude Sonnet 5.5 — 11 Nov: UI-28c opening and closing the composer moves nothing else
+
+- `--composer-gap` is the fixed `--composer-rest` token plus the setup row's fixed height, not the box's measured height (read with its rem unit); the prompt rail clears the same rest height and re-measures when the gap changes. Toggling or growing the composer moves no Files panel, Toolbox, rail, control or history position at 600, 1440 and 2560 px. Spec `composer-grows.spec.ts`. Real sessions: Claude Code `rec_b45458d5`, Codex `rec_44739d61` (stand-in transport). Failing on clean main too and left alone: `toolbox-window` 81 (modern/clarity) and `composer-access` 19 (Replay this session was removed by UI-29).
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: CONTENT-21 continued sessions join their earlier journal
 
