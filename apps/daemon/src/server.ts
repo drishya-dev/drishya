@@ -475,7 +475,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'file-roots' && m === 'GET') {
         const ids=app.readingId(id).split('+'); for(const key of ids) app.recording(key);
         const metadata=await recordedFileRoots(app.store,ids);
-        const roots=await app.history.fileRoots(app.readingId(id),metadata.roots,app.recording(ids[0]!).workspaceRoot);
+        const roots=await app.history.fileRoots(app.readingId(id),metadata.roots,app.recording(id.includes('+')?ids[0]!:id).workspaceRoot);
         return json(res,await withFileRootDiskState({...metadata,roots}));
       }
       if (sub === 'lineage' && m === 'GET') { app.recording(id); return json(res, { lineage: app.store.lineageView(id) ?? null }); }

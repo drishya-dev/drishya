@@ -73,7 +73,8 @@ export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], wor
     const unplaced = !!placement && ((!root && /^worktree-[a-f0-9]{10}\//.test(path)) || !placement.direct.has(path) && !(placement.indexed.has(path) || main && placement.indexed.has(relative)));
     return { path, root, unplaced, other: !!root && !!workspaceRoot && normalize(root.root) !== normalize(workspaceRoot) };
   });
-  if (query.trim()) return located.filter(({path, root}) => `${path} ${root?.root ?? ''}`.toLowerCase().includes(query.toLowerCase())).map(({path, root, unplaced}) => ({path, folder:false, depth:0, name:root ? path.slice(root.prefix.length + 1) : path, parent:'', unplaced, location:root && !unplaced ? `${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length + 1)}` : undefined}));
+  const mainNamespaced = new Set(located.filter(item => item.root && !item.other && !item.unplaced).map(item => item.path.slice(item.root!.prefix.length + 1)));
+  if (query.trim()) return located.filter(item=>!(placement&&!item.root&&mainNamespaced.has(item.path))).filter(({path, root}) => `${path} ${root?.root ?? ''}`.toLowerCase().includes(query.toLowerCase())).map(({path, root, unplaced}) => ({path, folder:false, depth:0, name:root ? path.slice(root.prefix.length + 1) : path, parent:'', unplaced, location:root && !unplaced ? `${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length + 1)}` : undefined}));
   const rows: FileTreeRow[] = [], seen = new Set<string>();
   const append = (path: string, root: RecordedFileRoot | undefined, base: string, depth: number) => {
     const relative = root ? path.slice(root.prefix.length + 1) : path;
@@ -89,18 +90,17 @@ export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], wor
       parent = next;
     }
   };
-  const mainNamespaced = new Set(located.filter(item => item.root && !item.other && !item.unplaced).map(item => item.path.slice(item.root!.prefix.length + 1)));
   for (const item of located.filter(item => !item.other && !item.unplaced && !(placement && !item.root && mainNamespaced.has(item.path)))) append(item.path, item.root, '', 0);
   const others = located.filter(item => item.other && !item.unplaced && item.root && (item.root.fileCount===undefined||item.root.fileCount>0));
   if (others.length) {
-    rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Other working directories',parent:'',worktree:true,count:new Set(others.map(item=>item.root!.prefix)).size,description:'Captured file evidence only; Files, Git and the map stay on this session’s checkout.'});
+    rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Other working directories',parent:'',worktree:true,count:new Set(others.map(item=>item.root!.prefix)).size,description:`${new Set(others.map(item=>item.root!.prefix)).size} recorded directories with file activity. Captured evidence only; Files, Git and the map stay on this session’s checkout.`});
     if (opened.has(WORKTREE_GROUP)) for (const root of [...evidencedRoots].sort((a,b)=>(b.lastFileSequence??0)-(a.lastFileSequence??0))) {
       const entries = others.filter(item => item.root === root);
       if (!entries.length) continue;
       const disk=root.onDisk==='present'?'On disk':root.onDisk==='removed'?'Removed':root.onDisk==='unavailable'?'Disk unavailable':'';
       const names=root.agents?.map(agent=>agent.label)??[],agents=names.join(', ');
       const compactAgent=names.length>1?names[0]+' +'+(names.length-1):names[0];
-      rows.push({path:root.prefix,folder:true,depth:1,name:root.branch??workingDirectoryName(root.root,roots),parent:WORKTREE_GROUP,location:root.root,worktree:true,count:root.fileCount,metadata:[disk,compactAgent].filter(Boolean).join(' · '),description:[root.root,root.branch?'Recorded branch '+root.branch:undefined,disk,agents?'Recorded agents: '+agents:undefined].filter(Boolean).join(' · ')});
+      rows.push({path:root.prefix,folder:true,depth:1,name:root.branch&&root.branch!=='HEAD'&&root.branch!=='detached'?root.branch:workingDirectoryName(root.root,roots),parent:WORKTREE_GROUP,location:root.root,worktree:true,count:root.fileCount,metadata:[disk,compactAgent].filter(Boolean).join(' · '),description:[root.root,root.branch?'Recorded ref '+root.branch:undefined,disk,agents?'Recorded agents: '+agents:undefined].filter(Boolean).join(' · ')});
       for (const item of entries) append(item.path, root, root.prefix, 2);
     }
   }

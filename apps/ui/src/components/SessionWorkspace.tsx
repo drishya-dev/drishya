@@ -1,3 +1,4 @@
+import './worktree-evidence.css';
 import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {ProseFilesProvider} from './ProseFiles.tsx';
 import {QueuedInputs} from './QueuedInputs.tsx';
@@ -168,7 +169,8 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const files = useApp(s => s.projection?.files);
   const capturedRoot=useApp(s=>s.recording?.workspaceRoot);
   const [touchedOnly, setTouchedOnly] = useState(false);
-  const fileRoots=useFileRoots(projection.observationCount);
+  const [rootRefresh,setRootRefresh]=useState(0);
+  const fileRoots=useFileRoots(projection.observationCount+rootRefresh);
   useEffect(() => setTouchedOnly(false), [id]);
   const touched = useMemo(() => touchedFiles(files ?? []), [files]);
   const hidden = useApp(s => s.foldersHidden);
@@ -401,12 +403,14 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-selected={row.path===(workspaceFile?activeReveal?.path:revealedFolder)} aria-label={row.name} aria-description={row.description??(draftFiles.includes(row.path)?"Local draft; file not created on disk.":fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined))} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} data-file-location={row.unplaced ? 'unplaced' : undefined} style={{ paddingLeft: (8 + Math.min(row.depth, 12) * 12)*interfaceScale, height: rowHeight, minHeight: rowHeight }} title={row.unplaced ? `Captured path; repository location unresolved: ${row.path}` : row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);
         if(!row.folder&&currentPath!==undefined&&source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);
+        // Reopening evidence refreshes disk state even while its native journal is idle.
+        if(row.worktree&&!opened.has(row.path))setRootRefresh(value=>value+1);
         if (row.folder) { if(opened.has(row.path)){manuallyCollapsed.current=true;pendingFile.current=undefined;} folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }
         else if (row.unplaced || row.location && currentPath===undefined) useApp.getState().set({filePanel:row.path,currentFile:undefined,...(narrow?{foldersHidden:true}:{})});
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: currentPath ?? row.path }));
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
-      }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} /><FileRowName name={row.name} folder={row.folder}/>{row.metadata&&<small className="muted file-row-name" title={row.description}>{row.metadata}</small>}{row.count!==undefined&&<small className="muted" aria-hidden="true">{row.count}</small>}<FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
+      }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} />{row.metadata?<span className="worktree-root-text" title={row.description}><FileRowName name={row.name} folder={row.folder}/><small className="muted">{row.metadata}</small></span>:<FileRowName name={row.name} folder={row.folder}/>}{row.count!==undefined&&<small className="muted" aria-hidden="true">{row.count}</small>}<FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>

@@ -1,0 +1,4 @@
+.folder-tree .worktree-root-text {flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;line-height:1.2;}
+.folder-tree .worktree-root-text>.file-row-name {flex:none;}
+.folder-tree .worktree-root-text>small {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--text-2xs)/1.2 var(--sans);}
+.folder-explorer .folder-tree .folder-row:has(>.worktree-root-text) {padding-block:1px;}

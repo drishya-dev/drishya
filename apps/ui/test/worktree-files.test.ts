@@ -177,3 +177,7 @@ describe('FILES-15 evidence-only worktree groups',()=>{
  });
  it('does not suppress ordinary primary inventory for an unrelated cwd-only descendant',()=>{const roots=[{root:'C:/repo/nested',prefix:'cwd',fileCount:0}];const rows=worktreeFileRows(['nested/a.ts'],roots,'C:/repo',new Set(['','nested']));expect(rows.some(r=>r.path==='nested/a.ts')).toBe(true);});
 });
+
+it('search keeps one main file when current indexing and captured root aliases both contain it',()=>{const roots=[{root:'C:/repo',prefix:'main',fileCount:1},{root:'C:/other',prefix:'other',fileCount:1}];const rows=worktreeFileRows(['src/same.ts','main/src/same.ts','other/src/same.ts'],roots,'C:/repo',new Set(['']),'same.ts',{indexed:new Set(['src/same.ts']),direct:new Set(['main/src/same.ts','other/src/same.ts'])});expect(rows.map(r=>r.path)).toEqual(['main/src/same.ts','other/src/same.ts']);});
+
+it('uses a directory name for a captured detached HEAD rather than indistinguishable HEAD rows',()=>{const roots=[{root:'C:/repo',prefix:'main',fileCount:1},{root:'C:/worker',prefix:'other',fileCount:1,branch:'HEAD',onDisk:'present' as const}];const rows=worktreeFileRows(['main/a.ts','other/a.ts'],roots,'C:/repo',new Set(['',WORKTREE_GROUP]));expect(rows.find(row=>row.path==='other')).toMatchObject({name:'worker',description:expect.stringContaining('Recorded ref HEAD')});});

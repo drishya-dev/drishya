@@ -1,3 +1,4 @@
+import {recordedFileRoots,recordedMainRootPrefixes} from './file-roots.ts';
 // Shared application wiring used by the server and the CLI.
 
 import { existsSync, realpathSync, statSync } from 'node:fs';
@@ -128,10 +129,18 @@ export class App {
    */
   async graph(idOrIds: string, refresh = false): Promise<RepoGraph> {
     const ids = this.readingId(idOrIds).split('+');
-    const rec = this.recording(ids[0]!);
+    // A proven continuation contributes evidence, not the earlier journal's checkout.
+    const rec = this.recording(idOrIds.includes('+')?ids[0]!:idOrIds);
     const large = this.paged(idOrIds);
     const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
-    const filesOnly = () => graphFromPaths(projection.files.map((f) => f.path));
+    const roots=rec.workspaceRoot?await recordedFileRoots(this.store,ids):undefined;
+    const primary=new Set(recordedMainRootPrefixes(roots?.roots??[],rec.workspaceRoot));
+    const namespaces=new Set(roots?.roots.map(root=>root.prefix)??[]);
+    const filesOnly = () => graphFromPaths(projection.files.filter(file=>{
+      if(!rec.workspaceRoot)return true;
+      const prefix=file.path.split('/')[0]!;
+      return namespaces.has(prefix)?primary.has(prefix):!/^worktree-[a-f0-9]{10}\//.test(file.path);
+    }).map(file=>file.path));
     // Multiple recorded roots namespace evidence; they do not replace this session's checkout.
     if (!rec.workspaceRoot) return filesOnly();
     let root = rec.graphRoot || undefined;
