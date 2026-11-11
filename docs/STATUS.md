@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-16 | @yash + Codex | main (docs-only verification) | 2026-11-11 | Verify existing phase-B workflow #388 against the updated order; record its implementation status and the phase-E candidate/WSL acceptance dependency in TASKS/STATUS. No CI dispatch, workflow duplication or platform-readiness claim. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: SHIP-17 to SHIP-21 merging. |
 | SHIP-2b | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
@@ -56,6 +55,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 11 Nov: SHIP-16 phase B verified; no duplicate CI patch
+
+- #388 / `9f9461bb` already implements the entire requested workflow change: two three-OS matrices and package verification in the check job. Static checks confirm manual dispatch, read-only permissions and retained failure artifacts. No source change or hosted run needed now.
+- The whole SHIP-16 parent remains open only for phase E: frozen-candidate CI results, WSL2 native install/import/live walk and accurate platform release notes. No platform acceptance is claimed. Continue SHIP-21, then assigned SHIP-3; extra palette additions come after the current work if time permits.
 
 ### Claude Sonnet 5.5 — 11 Nov: SHIP-6d the Remember checkbox
 
