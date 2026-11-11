@@ -2,8 +2,8 @@
   position: fixed; z-index: 180; left: 50%; top: 76px; transform: translateX(-50%);
   width: min(620px, calc(100vw - 24px)); max-height: calc(100dvh - 100px); overflow: auto;
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
-  padding: 12px 16px; background: var(--s1, #202124); color: var(--t1, #eee);
-  border: 1px solid var(--line, #555); border-radius: var(--round-md); font-size: var(--text-xs);
+  padding: 12px 16px; background: var(--s1, var(--s2)); color: var(--t1, var(--text-primary));
+  border: 1px solid var(--line, var(--line-2)); border-radius: var(--round-md); font-size: var(--text-xs);
 }
 .connection-recovery span { flex: 1 1 300px; line-height: 1.5; }
 .attachment-chip .attachment-preview { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

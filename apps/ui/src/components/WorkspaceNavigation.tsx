@@ -1,6 +1,7 @@
 import {openGitHistory} from './GitHistory.tsx';
 import {openGitReview} from './GitReview.tsx';
 import {openReviewTool} from './ReviewInsights.tsx';
+import {openCompare} from './CompareWindow.tsx';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -46,10 +47,11 @@ export function WorkspaceNavigation() {
       })});
       for(const [view,name,detail] of [['findings','Review findings','Commands that keep failing, missing outcomes and gaps'],['prompts','Prompt overview','Prompts and activity counts'],['packet','Prepare review packet','Changes, checks, gaps and your open reviewer questions']] as const)all.push({key:`review-${view}`,name,detail,run:()=>requestAnimationFrame(()=>openReviewTool(view))});
       all.push({key:'commands',name:'Find commands',detail:'Search, copy and inspect shell and test runs',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-commands')))});
-      all.push({ key: 'review', name: 'Review changes and checks', detail: 'Outcomes, not coverage', run: () => click('.review-open') });
+      all.push({ key: 'review', name: 'Review changes and checks', detail: 'Outcomes, not coverage', run: () => { if (document.querySelector('.review-open')) click('.review-open'); else window.dispatchEvent(new Event('drishya-session-review')); } });
       all.push({key:'notes',name:'Notes',detail:'Your notes and saved steps',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-notes-open')))});
       if (kind === 'daemon' && id && !id.includes('+')) {
         all.push({key:'git-history',name:'Explore Git branches and commits',detail:'Local parent topology, refs and commit changes',run:()=>requestAnimationFrame(openGitHistory)});
+        all.push({ key: 'compare', name: 'Compare branches or a pull request', detail: 'Two sides from their merge-base, with the agent work behind each file', run: () => requestAnimationFrame(openCompare) });
         all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => requestAnimationFrame(openGitReview) });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });
       }

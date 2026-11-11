@@ -1,4 +1,4 @@
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,statSync,symlinkSync,unlinkSync,rmSync} from 'node:fs';
+import {mkdtempSync,realpathSync,mkdirSync,writeFileSync,readFileSync,statSync,symlinkSync,unlinkSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -11,13 +11,13 @@ import {WorkspaceAccess} from '../../daemon/src/workspace.ts';
 let directory:string,root:string;
 const base='export const before = 1;\r\n',draft={base,text:'export const recovered = 2;\r\n',modifiedAt:'2026-10-28T00:00:00Z'};
 const sameFile=(a:string,b:string)=>{const x=statSync(a,{bigint:true}),y=statSync(b,{bigint:true});return x.dev===y.dev&&x.ino===y.ino;};
-beforeAll(()=>{directory=mkdtempSync(join(tmpdir(),'drishya-files5-filesystem-'));root=join(directory,'repo');mkdirSync(root);});
-afterAll(()=>{if(!resolve(directory).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary directory');rmSync(directory,{recursive:true,force:true});});
+beforeAll(()=>{directory=realpathSync.native(mkdtempSync(join(tmpdir(),'drishya-files5-filesystem-')));root=join(directory,'repo');mkdirSync(root);});
+afterAll(()=>{if(!resolve(directory).startsWith(resolve(realpathSync.native(tmpdir()))+sep))throw Error('Unsafe temporary directory');rmSync(directory,{recursive:true,force:true});});
 
-it('round trips opt-in encrypted drafts with exact Unicode spelling and leaves real disk bytes unchanged',async()=>{
+it('round trips exact Unicode draft spellings even on normalising volumes and leaves real disk bytes unchanged',async()=>{
  const paths=['résumé.ts','re\u0301sume\u0301.ts','日本語.ts','emoji-🧠.ts'];
  for(const path of paths)writeFileSync(join(root,path),base);
- expect(sameFile(join(root,paths[0]!),join(root,paths[1]!))).toBe(false);
+ // APFS can alias NFC/NFD names; recovery preserves inert draft spellings, not an invented count of distinct disk files.
  const source=new WorkspaceDrafts();for(const path of paths)source.set('synthetic',path,draft);
  const sealed=await sealRecovery(recoverySnapshot(source,'synthetic',root),'synthetic filesystem recovery password');
  for(const path of paths)expect(sealed).not.toContain(path);

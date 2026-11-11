@@ -20,7 +20,7 @@ for(const width of [600,1440])test(`no version chooser or developer bypass at ${
     await expect(page.locator('html')).toHaveAttribute('data-ui-version','modern');
     await expect(page.locator('html')).toHaveAttribute('data-ui-skin','modern');
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
-    const settings=page.getByRole('dialog',{name:'Workspace settings'});await expect(settings.getByRole('tab')).toHaveText(['Appearance','Reading','Playback','Privacy','Keyboard']);
+    const settings=page.getByRole('dialog',{name:'Workspace settings'});await expect(settings.getByRole('tab')).toHaveText(['Appearance','Reading','Links','Playback','Privacy','Keyboard']);
     await expect(settings).not.toContainText(/UI versions|Clarity|Legacy|Choose your workspace/);
     await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
   }

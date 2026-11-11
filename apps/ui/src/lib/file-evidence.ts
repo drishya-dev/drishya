@@ -9,6 +9,8 @@ export interface FileEvidence {
   startLine?: number;
   /** Exact captured search result, not a whole-file snapshot or reconstructed source. */
   snippet?: string;
+  /** Captured command output associated with a path, never a source snapshot. */
+  commandOutput?: string;
 }
 
 /** Choices reference actual captured artifacts, never today's disk or an invented intermediate file. */
@@ -26,6 +28,9 @@ export function fileEvidence(op: Operation, path: string): FileEvidence[] {
       const id = op.artifactIds.find((id) => id.endsWith(`_${state}`));
       if (id) add(state, `${state === 'before' ? 'Before' : 'After'}-state reference`, id);
     }
+  }
+  if(detail.kind==='shell'&&op.paths.some(ref=>ref.path===path&&(ref.role==='read'||ref.role==='write'))&&(detail.outputArtifactId||detail.outputPreview)) {
+    choices.push({key:`${op.id}/command-output`,label:'Command output',operation:op,artifactId:detail.outputArtifactId,commandOutput:detail.outputPreview??''});
   }
   return choices;
 }

@@ -15,14 +15,21 @@ import './review-changes.css';
 /** Modern calls this the Changes view everywhere (UI-8); the older experiences keep "Review work". */
 const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Changes' : 'Review work';
 
-export function EvidenceReview({ projection, label = reviewName(), after=-1 }: { projection: Projection; label?: string;after?:number }) {
+/** `trigger={false}`: Modern's header carries Compare (GIT-8) instead; this dialog (failures, recorded checks, gaps, each file's edits) stays one palette step away and opens on the `drishya-session-review` event. */
+export function EvidenceReview({ projection, label = reviewName(), after=-1, trigger=true }: { projection: Projection; label?: string;after?:number;trigger?:boolean }) {
   const [open, setOpen] = useState(false);
   const mode = useApp(s => s.mode);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
   const unavailable = source?.kind === 'daemon' && id?.includes('+');
   const left = useRef<ReviewVisit>({});
-  return <><button className={`btn ghost ${after<0?'review-open':'review-turn-open'}`} disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
+  useEffect(() => {
+    if (trigger) return;
+    const show = () => { if (useApp.getState().mode !== 'replay' && !unavailable) { useApp.setState({ compareOpen: false }); setOpen(true); } };
+    window.addEventListener('drishya-session-review', show);
+    return () => window.removeEventListener('drishya-session-review', show);
+  }, [trigger, unavailable]);
+  return <>{trigger && <button className={`btn ghost ${after<0?'review-open':'review-turn-open'}`} disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>}
     {open && mode !== 'replay' && <ReviewContent key={after} projection={projection} after={after} left={left} close={() => setOpen(false)} />}</>;
 }
 

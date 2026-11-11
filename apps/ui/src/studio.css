@@ -1,10 +1,10 @@
 /* Studio is a separate composition. Classic's material and geometry rules remain intact. */
 :root[data-experience='classic'][data-theme='dark'][data-palette='jet'] {
-  --bg: #090b0d; --s1: #131619; --s2: #1b2025; --s3: #252c32;
-  --t1: #edf2f5; --t2: #a9b4bd; --t3: #87939d; --t4: #66727c;
-  --line: #ffffff13; --line-2: #ffffff24; --line-3: #ffffff40;
-  --focus: #9ccdbb; --source: #74c7ee; --external: #b6a1ed; --edited: #f0bd76;
-  --pass: #71d6a7; --fail: #ff7a86; --graph-node: #dcecf5; --graph-edge: #aec2d2;
+  --bg: var(--default-bg-214); --s1: var(--default-s1-215); --s2: var(--default-s2-216); --s3: var(--default-s3-217);
+  --t1: var(--default-t1-218); --t2: var(--default-t2-219); --t3: var(--default-t3-220); --t4: var(--default-t4-221);
+  --line: var(--default-line-222); --line-2: var(--default-line-2-223); --line-3: var(--default-line-3-224);
+  --focus: var(--default-focus-225); --source: var(--source); --external: var(--source); --edited: var(--default-edited-226);
+  --pass: var(--default-pass-227); --fail: var(--default-fail-228); --graph-node: var(--source); --graph-edge: var(--source);
 }
 :root[data-experience='classic'] .connected-workspace { --stage-rail: clamp(190px, 15.5vw, 234px); --dock-w: var(--stage-rail); --spine-w: var(--stage-rail); --crown-h: 64px; }
 :root[data-experience='classic'] .viewer::before,

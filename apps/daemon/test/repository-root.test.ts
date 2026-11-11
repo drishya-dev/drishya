@@ -13,7 +13,7 @@ beforeAll(() => {
   git(repo, 'init'); git(repo, 'config', 'user.name', 'Synthetic'); git(repo, 'config', 'user.email', 'fixture@example.invalid');
   writeFileSync(join(repo, 'a.ts'), 'export const a = 1;\n'); git(repo, 'add', '.'); git(repo, 'commit', '-m', 'fixture');
 });
-afterAll(() => { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe fixture'); rmSync(dir, { recursive: true, force: true }); });
+afterAll(() => { if (!resolve(dir).startsWith(resolve(realpathSync.native(tmpdir())) + sep)) throw new Error('unsafe fixture'); rmSync(dir, { recursive: true, force: true }); });
 
 it('a linked worktree anywhere on disk belongs to its repository', async () => {
   const linked = join(dir, 'elsewhere', 'shop-feature');

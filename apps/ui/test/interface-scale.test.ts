@@ -1,15 +1,10 @@
 import {expect,it} from 'vitest';
-import {interfaceScale,interfaceRem} from '../src/lib/interface-scale.ts';
+import {interfaceScale,interfaceRem,currentInterfaceScale} from '../src/lib/interface-scale.ts';
 import {interfaceCssLengths} from '../scale-lengths.ts';
 
-it('uses both dimensions, preserves the supported baseline and bounds very large screens',()=>{
-  for(const width of [600,1024,1440])expect(interfaceScale(width,900)).toBe(1);
-  expect(interfaceScale(1920,1080)).toBe(1.2);
-  expect(interfaceScale(2560,1440)).toBe(1.6);
-  expect(interfaceScale(3840,2160)).toBe(2.25);
-  expect(interfaceScale(3840,800)).toBe(1);
-  expect(interfaceScale(1200,2160)).toBe(1);
-  expect(interfaceScale(Number.NaN,1440)).toBe(1);
+it('never derives the interface size from the viewport: browser zoom and OS scaling own it (Yash, 11 Nov)',()=>{
+  for(const [width,height] of [[600,900],[1440,900],[1920,1080],[2560,1440],[3840,2160],[3840,800],[1200,2160],[Number.NaN,1440]])expect(interfaceScale(width,height)).toBe(1);
+  expect(currentInterfaceScale()).toBe(1);
   expect(interfaceRem(260)).toBe('16.25rem');
 });
 it('normalizes lengths while preserving hairlines, relative units, strings and resource URLs',()=>{

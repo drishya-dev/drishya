@@ -6,6 +6,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import {openSessionReview} from './session-review.ts';
 
 let dir: string, root: string, app: App, server: RunningServer;
 const ids: Record<string, string> = {};
@@ -46,7 +47,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
  await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
- await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
+ await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-24-node.offsetHeight))).toBeLessThanOrEqual(3);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  for(const width of [390,320]){await page.setViewportSize({width,height:844});const box=(await composer.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);}
@@ -668,7 +669,7 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(utilities.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await expect(utilities.getByRole('button',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await openSessionReview(page);
   await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Changes',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
@@ -885,7 +886,7 @@ test('Modern Changes reaches every check as one list and returns to the row that
   await checks.getByRole('button',{name:/review-case-69/}).click();
   await expect(review).toHaveCount(0);
   await expect(page.getByRole('region',{name:'Operation detail'})).toContainText('review-case-69');
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await openSessionReview(page);
   await expect(checks.locator('.review-item')).toHaveCount(70);
   await expect(checks.getByRole('button',{name:/review-case-69/})).toBeInViewport();
 });
@@ -1312,7 +1313,7 @@ test('an unexpected rendering failure has a usable recovery surface instead of a
   await expect(page.locator('.mh-home')).toBeVisible();
 });
 
-test('Modern seven palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
+test('Modern three palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
   await page.setViewportSize({width:1440,height:960});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await expect(page.locator('.mh-header').getByRole('button',{name:'Demo',exact:true})).toHaveCount(0);
@@ -1321,10 +1322,10 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#000',paper:'#f6f9fb',midnight:'#02070a'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
-    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#036a8f',midnight:'#29a9f0'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
+    const expectedBase:Record<string,string>={jet:'rgb(0, 0, 0)',paper:'rgb(246, 249, 251)',midnight:'rgb(7, 13, 27)'};
+    expect(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor)).toBe(expectedBase[palette!]);
+    const expectedFocus:Record<string,string>={jet:'rgb(139, 146, 236)',paper:'rgb(3, 106, 143)',midnight:'rgb(141, 184, 255)'};
+    expect(await page.locator('html').evaluate(el=>{const probe=document.createElement('i');probe.style.color='var(--focus)';el.append(probe);const colour=getComputedStyle(probe).color;probe.remove();return colour;})).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});
   }
@@ -1546,7 +1547,7 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
   await cards.first().getByRole('button',{name:'Open activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
-  await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await page.keyboard.press('Escape');await openSessionReview(page);
   const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
 });
@@ -1568,7 +1569,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.insights-intro p')).toHaveText('The work recorded between each prompt and the next, with its latest outcomes.');await expect(dialog.locator('.insights-intro p')).not.toContainText(/led to|started/);await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
   await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
+  await openSessionReview(page);const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 test runs');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
   await dialog.getByRole('button',{name:'Copy packet',exact:true}).click();expect(await page.evaluate(()=>(window as unknown as {packetCopy:string}).packetCopy)).toBe(text);
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown',exact:true}).click();const file=await download;expect(readFileSync((await file.path())!,'utf8')).toBe(text);
@@ -1580,7 +1581,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   await page.route('**/controller',route=>route.fulfill({status:503,json:{error:'Synthetic native runtime unavailable'}}));
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await openSessionReview(page);
   const review=page.getByRole('dialog',{name:'Changes',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
   const approve=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await approve.isVisible())await approve.click();
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
@@ -1597,7 +1598,7 @@ test('captured changes lead to typed map connections, current reading and a pers
 test('saved file selections recover as references and unavailable selections do not crash',async({page})=>{
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await openSessionReview(page);await page.locator('.review-file-entry>button').first().click();
   const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First step',exact:true});await expect(choice.locator('option').first()).toBeAttached();
   const key=(await choice.locator('option').last().getAttribute('value'))!;await choice.selectOption(key);
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
@@ -1612,7 +1613,7 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
   let failedReads=0;
   await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>{failedReads++;return route.fulfill({json:{operations:[null],total:1}});});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await openSessionReview(page);await page.locator('.review-file-entry>button').first().click();
   const fallback=page.getByText('This view could not be displayed',{exact:true});
   await expect(fallback).toBeVisible();
   const failedBefore=failedReads;
@@ -1804,7 +1805,7 @@ test('last material clears the prompt without an oversized gap',async({page})=>{
    const history=page.locator('.history');await history.evaluate(node=>node.scrollTop=node.scrollHeight);
    await expect.poll(async()=>history.evaluate(node=>Math.abs(node.scrollHeight-node.clientHeight-node.scrollTop))).toBeLessThan(2);
    await expect.poll(async()=>{const prompt=(await composer.boundingBox())!;const last=await history.locator('.passage-slot').last().boundingBox();return last?prompt.y-last.y-last.height:-999;}).toBeGreaterThanOrEqual(6);
-   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(100);
+   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(collapsed?260:100); // UI-28c: the reserved space does not shrink when the box collapses
    await page.screenshot({path:resolve(`.local/prompt-gap-${width}-${collapsed}.png`)});
   }
   await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();

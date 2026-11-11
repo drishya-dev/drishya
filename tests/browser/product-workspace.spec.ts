@@ -5,6 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import {openSessionReview} from './session-review.ts';
 
 let dir: string;
 let app: App;
@@ -36,14 +37,14 @@ const demoUrl = () => new URL('/?demo', server.launchUrl).href;
 
 test('completed evidence links keep full history and the chosen live-demo design', async ({ page }) => {
   await page.goto(`${demoUrl()}&experience=modern`);
-  await page.getByRole('button', { name: 'Changes', exact: true }).click();
+  await openSessionReview(page);
   await page.getByRole('region', { name: 'Failures', exact: true }).getByRole('button').first().click();
   const detail = page.getByRole('region', { name: 'Operation detail' });
   await detail.locator('.step-links>summary').click();
   await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
   await expect(detail).toContainText('canCheckout');
   await expect(detail).not.toContainText('Result has not arrived');
-  await expect(page.getByRole('button', { name: 'Changes', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeEnabled();
   await page.keyboard.press('Escape');
   await page.goto(new URL('/?demo=live', server.launchUrl).href);
   await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
@@ -135,7 +136,7 @@ test('failed shell preview surfaces buried errors and preserves the full preview
 
 test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
   await page.goto(demoUrl());
-  await page.getByRole('button', { name: 'Changes', exact: true }).click();
+  await openSessionReview(page);
   const review = page.getByRole('dialog', { name: 'Changes', exact: true });
   await expect(review.getByRole('region', { name: 'Files with changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
@@ -151,7 +152,7 @@ test('first-visit evidence review opens exact file work without a reading mark a
   await file.getByRole('button', { name: 'Close Work on src/checkout/guard.ts' }).click();
   await expect(file).toHaveCount(0);
   await page.setViewportSize({ width: 600, height: 1000 });
-  await page.getByRole('button', { name: 'Changes', exact: true }).click();
+  await openSessionReview(page);
   await expect(review).toBeVisible();
   const bounds = await review.boundingBox();
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
@@ -159,7 +160,7 @@ test('first-visit evidence review opens exact file work without a reading mark a
   await page.screenshot({ path: resolve('.local/evidence-review-narrow.png') });
   await review.getByRole('button', { name: 'Close Changes' }).click();
   await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
-  await expect(page.getByRole('button', { name: 'Changes', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeDisabled();
 });
 
 test('returning from an authenticated demo retains local workspace access', async ({ page }) => {
@@ -711,7 +712,7 @@ test('history activity timeline opens recorded failures and edits; named palette
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(2, 7, 10)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(7, 13, 27)');
   await dialog.getByRole('button', { name: 'Daylight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
   await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();

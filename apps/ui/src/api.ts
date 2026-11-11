@@ -195,6 +195,18 @@ export const workspaceApi = {
   gitSnapshot: (id: string, start = 0) => req<import('../../daemon/src/git-types.ts').GitSnapshot>(`/v1/recordings/${encodeURIComponent(id)}/git/snapshot?start=${encodeURIComponent(start)}`),
   gitHistory:(id:string,query:{start?:number;referenceStart?:number;reference?:string;q?:string;generation?:string}={})=>req<import('../../daemon/src/git-types.ts').GitHistoryPage>(`/v1/recordings/${encodeURIComponent(id)}/git/history?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
   gitCommit:(id:string,hash:string,parent=0,start=0,generation?:string)=>req<import('../../daemon/src/git-types.ts').GitCommitDetail>(`/v1/recordings/${encodeURIComponent(id)}/git/commit?${new URLSearchParams({hash,parent:String(parent),start:String(start),...(generation?{generation}:{})})}`),
+  /** LINK-1 hover cards: a commit or local branch from read-only Git (needs the session's Git approval). */
+  gitRef: (id: string, rev: string) => req<import('../../daemon/src/link-types.ts').GitRefSummary>(`/v1/recordings/${encodeURIComponent(id)}/git/ref?rev=${encodeURIComponent(rev)}`),
+  /** GIT-8 Compare: read-only, behind the same Git approval as Git review. */
+  compareRefs: (id: string) => req<import('../../daemon/src/git-compare-types.ts').CompareRefs>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-refs`),
+  compare: (id: string, base: string, head: string) => req<import('../../daemon/src/git-compare-types.ts').GitCompareResult>(`/v1/recordings/${encodeURIComponent(id)}/git/compare?${new URLSearchParams({ base, head })}`),
+  compareFile: (id: string, base: string, head: string, path: string, side: 'head' | 'base') => req<import('../../daemon/src/git-compare-types.ts').CompareFilePatch>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-file?${new URLSearchParams({ base, head, path, side })}`),
+  comparePulls: (id: string) => req<import('../../daemon/src/git-compare-types.ts').ComparePulls>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-pulls`),
+  compareRemote: (id: string, pr: number) => req<import('../../daemon/src/git-compare-types.ts').GitCompareResult>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-remote?pr=${pr}`),
+  compareEvidence: (id: string, paths: string[]) => req<import('../../daemon/src/git-compare-types.ts').CompareEvidence>(`/v1/recordings/${encodeURIComponent(id)}/compare-evidence?${new URLSearchParams(paths.map(path => ['path', path]))}`),
+  githubStatus: () => req<{ enabled: boolean; available?: boolean }>('/v1/github/status'),
+  githubOptIn: (enabled: boolean) => req<{ enabled: boolean; available?: boolean }>('/v1/github/optin', { method: 'POST', json: { enabled } }),
+  githubItem: (url: string) => req<import('../../daemon/src/link-types.ts').GithubReply>(`/v1/github/item?url=${encodeURIComponent(url)}`),
   status: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace`),
   approve: (id: string,remember=false) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {remember} }),
   revoke: (id:string)=>req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/revoke`,{method:'POST',json:{}}),
