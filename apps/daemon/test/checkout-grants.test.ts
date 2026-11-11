@@ -1,7 +1,7 @@
 import {mkdtemp,mkdir,writeFile,rename,rm,symlink,realpath,open} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
-import {spawn,execFileSync} from 'node:child_process';
+import {spawn,spawnSync,execFileSync} from 'node:child_process';
 import {afterEach,expect,it,vi} from 'vitest';
 import {App} from '../src/app.ts';
 import {checkoutIdentity,checkoutGrantKey} from '../src/checkout-grants.ts';
@@ -66,7 +66,8 @@ it('does not transfer a remembered grant when an alias is retargeted',async()=>{
 it.runIf(process.platform==='win32')('restores a real Windows 8.3 path as the same checkout',async context=>{
   const f=await fixture(),long=join(f.dir,'Long Checkout Name');await mkdir(long);
   // A fixed read-only command, with no interpolated filesystem or prompt text.
-  const short=execFileSync('cmd.exe',['/d','/s','/c','for %I in ("Long Checkout Name") do @echo %~fsI'],{cwd:f.dir,encoding:'utf8',windowsHide:true,windowsVerbatimArguments:true}).trim();
+  const command=spawnSync('cmd.exe',['/d','/s','/c','for %I in ("Long Checkout Name") do @echo %~fsI'],{cwd:f.dir,encoding:'utf8',windowsHide:true,windowsVerbatimArguments:true});
+  expect(command.status).toBe(0);const short=command.stdout.trim();
   if(!short.includes('~')||short.toLowerCase()===long.toLowerCase()){context.skip();return;}
   expect(await realpath(short)).toBe(await realpath(long));
   expect(checkoutGrantKey(short)).toBe(checkoutGrantKey(long));
