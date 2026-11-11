@@ -12,7 +12,7 @@ import { useApp } from '../state.ts';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
 import { ReadingDialog } from './ProductShell.tsx';
-import { useSessionWorkspace } from './SessionWorkspace.tsx';
+import { useReadingWorkspace } from './SessionWorkspace.tsx';
 import { GitPatchReader } from './GitPatchReader.tsx';
 import { fileName } from '../lib/file-identity.ts';
 import { FileIcon } from './FileIcon.tsx';
@@ -48,6 +48,7 @@ export const openGitReview = () => window.dispatchEvent(new Event('drishya-git-r
 
 /** The reader owner stays mounted while its one trigger moves between header and fallback row. */
 export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: Element | null }) {
+  const checkoutId=useApp(s=>s.checkoutId);
   const [open, setOpen] = useWorkspaceState('git/open', false);
   const [choices, setChoices] = useState(false);
   const [returnFile, setReturnFile] = useState<string>();
@@ -90,7 +91,7 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
     window.addEventListener('drishya-git-review', review);
     return () => { window.removeEventListener('drishya-git-history', close); window.removeEventListener('drishya-git-review', review); };
   }, [setOpen]);
-  useEffect(() => { dismiss(); setReturnFile(undefined); setBrowsingFiles(false); if (modern && !eligible) setOpen(false); }, [id, source, mode]);
+  useEffect(() => { dismiss(); setReturnFile(undefined); setBrowsingFiles(false); if (modern && !eligible) setOpen(false); }, [id,checkoutId, source, mode]);
   useEffect(() => { if (!filesInFront) setBrowsingFiles(false); }, [filesInFront]);
   useEffect(() => {
     if (!choices) return;
@@ -115,7 +116,7 @@ export function GitReviewEntry({ icon = false, slot }: { icon?: boolean; slot?: 
         buttons[event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1 : (current + (event.key === 'ArrowUp' ? -1 : 1) + buttons.length) % buttons.length]?.focus();
       }
     }}><button aria-label="Git review" onClick={chooseReview}><strong>Git review</strong><small>Current changes</small></button><button aria-label="Git graph" onClick={() => { dismiss(); trigger.current?.focus({ preventScroll: true }); openGitHistory(); }}><strong>Git graph</strong><small>Branches and commits</small></button></div>
-  </>, document.body)}{eligible && open && <GitReader key={id} suspended={suspended} returnFile={returnFile} browseFiles={modern && narrow ? browseFiles : undefined} close={() => { setOpen(false); requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true })); }} />}</>;
+  </>, document.body)}{eligible && open && <GitReader key={`${id}:${checkoutId??"main"}`} suspended={suspended} returnFile={returnFile} browseFiles={modern && narrow ? browseFiles : undefined} close={() => { setOpen(false); requestAnimationFrame(() => trigger.current?.focus({ preventScroll: true })); }} />}</>;
 }
 
 function GitReader({ close, suspended, returnFile, browseFiles }: { close: () => void; suspended: boolean; returnFile?: string; browseFiles?: () => void }) {
@@ -124,7 +125,8 @@ function GitReader({ close, suspended, returnFile, browseFiles }: { close: () =>
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const current = () => alive.current && useApp.getState().recordingId === id && useApp.getState().source === source;
-  const { workspace, approve } = useSessionWorkspace();
+  const checkoutId=useApp(s=>s.checkoutId);
+  const { workspace, approve } = useReadingWorkspace();
   const [consent, setConsent] = useState<boolean>();
   const [snapshot, setSnapshot] = useState<GitSnapshot>();
   const [error, setError] = useState<string>();
@@ -142,10 +144,10 @@ function GitReader({ close, suspended, returnFile, browseFiles }: { close: () =>
   const key = `drishya-git-review-v1:${id}`;
   const [marks, setMarks] = useState(() => readMarks(key));
   const [packet, setPacket] = useState<string>();
-  useEffect(() => { let active = true; void workspaceApi.gitStatus(id).then(s => { if (active) setConsent(s.approved); }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
+  useEffect(() => { let active = true; void workspaceApi.gitStatus(checkoutId??id).then(s => { if (active) setConsent(s.approved); }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
   const refresh = async (start = snapshot?.pageStart ?? pageStart) => {
     setBusy(true); setError(undefined); setPacket(undefined);
-    try { const next = await workspaceApi.gitSnapshot(id, start); if (current()) { setSnapshot(next); setPageStart(next.pageStart ?? 0); setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? ''); } }
+    try { const next = await workspaceApi.gitSnapshot(checkoutId??id, start); if (current()) { setSnapshot(next); setPageStart(next.pageStart ?? 0); setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? ''); } }
     catch (e) { if (current()) setError((e as Error).message); }
     finally { if (current()) setBusy(false); }
   };
@@ -165,7 +167,7 @@ function GitReader({ close, suspended, returnFile, browseFiles }: { close: () =>
     try { localStorage.setItem(key, JSON.stringify(Object.fromEntries(Object.entries(next).slice(-100)))); } catch { setError('Review progress could not be saved in this browser.'); }
   };
   const validate = async () => {
-    const next = await workspaceApi.gitSnapshot(id, snapshot?.pageStart ?? 0);
+    const next = await workspaceApi.gitSnapshot(checkoutId??id, snapshot?.pageStart ?? 0);
     if (!current()) return;
     setSnapshot(next);
     setSelected(path => next.files.some(f => f.path === path) ? path : next.files[0]?.path ?? '');
@@ -199,7 +201,7 @@ function GitReader({ close, suspended, returnFile, browseFiles }: { close: () =>
   return <ReadingDialog title="Git review" headerActions={<>{browseFiles && <button type="button" className="btn ghost" aria-label="Browse files" onClick={browseFiles}>Files</button>}{returnFile && <button className="btn ghost" aria-label="Return to file" title="Return to file" onClick={() => useApp.getState().set({currentFile: returnFile, explore: false})}>← File</button>}</>} windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
     {!modern && <div className="git-history-entry"><button className="btn ghost" disabled={busy||checking} onClick={()=>{close();requestAnimationFrame(openGitHistory);}}>Branches &amp; commits ↗</button></div>}
     {modern && (!workspace?.approved || !consent) && <div className="modern-git-context"><strong>{workspaceName}</strong><small>Read-only · current changes</small></div>}
-    {consent === undefined && !error ? <section aria-busy="true"><p>Checking Git access…</p></section> : !workspace?.approved || !consent ? <GitAccess workspaceApproved={!!workspace?.approved} busy={busy} disabled={busy || checking} grant={() => { setBusy(true); void grantGit(id, !!workspace?.approved, approve).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }} /> : <>
+    {consent === undefined && !error ? <section aria-busy="true"><p>Checking Git access…</p></section> : !workspace?.approved || !consent ? <GitAccess workspaceApproved={!!workspace?.approved} busy={busy} disabled={busy || checking} grant={() => { setBusy(true); void grantGit(checkoutId??id, !!workspace?.approved, approve).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }} /> : <>
       {modern ? <nav className="git-review-toolbar git-review-compact" aria-label="Git review controls">
         <div className="git-review-identity"><strong title={workspace?.root}>{workspaceName}</strong><span title={snapshot ? `${snapshot.branch} · ${snapshot.head}` : 'Current Git'}>{snapshot ? `${snapshot.branch} · ${snapshot.head.slice(0, 10)}` : 'Current Git'}</span><small>Read-only · current changes</small></div>
         {snapshot && <button className="btn git-file-toggle" aria-expanded={!filesHidden} aria-controls="git-changed-files" onClick={() => setFilesHidden(!filesHidden)} title={filesHidden ? 'Show changed files' : 'Hide changed files'}><InterfaceGlyph name="folder"/>Files <span>{snapshot.files.length}</span></button>}

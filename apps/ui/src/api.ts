@@ -26,6 +26,13 @@ import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
 import type { BlobSearchResult, SessionSearchHit } from '../../../packages/store/src/search-types.ts';
 
+/** A browsing choice routes maps only; native controls and captured identity never use it. */
+const checkoutContexts=new Map<string,string>();
+export function setCheckoutContext(owner:string,context?:string) {
+  if(context&&context!==owner)checkoutContexts.set(owner,context);else checkoutContexts.delete(owner);
+}
+function graphCheckoutId(owner:string) {return checkoutContexts.get(owner)??owner;}
+
 /** The reader's mark: the last observation sequence they marked as seen, and the one before it. */
 export interface ReadingBoundary {
   sequence: number;
@@ -186,6 +193,7 @@ export interface ControllerStatus {
 }
 /** Explicit local workspace/controller capabilities; offline bundles never call them. */
 export const workspaceApi = {
+  chooseCheckout:(id:string,prefix?:string)=>req<{id:string;recordingId:string;root?:string;prefix?:string}>(`/v1/recordings/${encodeURIComponent(id)}/checkout`,{method:'POST',json:{prefix}}),
   fileRoots: (id:string) => req<{roots:import('./lib/worktree-files.ts').RecordedFileRoot[];truncated:boolean}>(`/v1/recordings/${encodeURIComponent(id)}/file-roots`),
   searchLibrary: (query:import('../../../packages/store/src/search-types.ts').LibrarySearchQuery) => req<import('../../../packages/store/src/search-types.ts').LibrarySearchPage>(`/v1/search-library?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
   workingLocations: () => req<import('../../../packages/contracts/src/working-locations.ts').WorkingLocations>('/v1/working-locations'),
@@ -304,8 +312,20 @@ export const daemon: DataSource = {
   history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
   fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
-  graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
-  approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
+  graph: async (id, refresh) => {
+    for(let attempt=0;attempt<4;attempt++){
+      const target=graphCheckoutId(id);
+      const graph=await req<RepoGraph>(`/v1/recordings/${encodeURIComponent(target)}/graph${refresh?'?refresh=1':''}`);
+      if(graphCheckoutId(id)===target)return graph;
+    }
+    throw new Error('Checkout changed while the map was loading. Try again.');
+  },
+  approveGraph: async (id) => {
+    const target=graphCheckoutId(id);
+    const graph=await req<RepoGraph>(`/v1/recordings/${encodeURIComponent(target)}/graph/approve`,{method:'POST',json:{}});
+    if(graphCheckoutId(id)===target)return graph;
+    const current=await daemon.graph(id);if(!current)throw new Error('The selected checkout map is unavailable.');return current;
+  },
   artifactChunk: (id, art, start, field) => req<StoredResultChunk>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?byteStart=${start}${field?`&field=${field}`:''}`),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
   artifactFind: (id, art, query, start, continuation) => req<BlobSearchResult>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?${new URLSearchParams({ find: query, start: String(start), ...(continuation ? { cursor: continuation } : {}) })}`),

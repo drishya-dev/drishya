@@ -1,3 +1,4 @@
+import {setCheckoutContext} from './api.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
 // always compose(projection, cursor) — the store never holds a hand-built scene.
 
@@ -31,6 +32,7 @@ interface State {
   error?: string;
   recordings: ReaderRecording[];
   recordingId?: string;
+  checkoutId?:string; checkoutRoot?:string; checkoutPrefix?:string;
   resumeRecordingId?: string;
   recoveryState?: 'saved' | 'unavailable';
   recoveryError?: string;
@@ -182,7 +184,8 @@ export const useApp = create<State>((set, get) => ({
     const memory = workspaceMemory(src);
     if (opts.at !== undefined || opts.play) memory.clear(id);
     const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, compareOpen: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
+    setCheckoutContext(id);
+    set({ checkoutId:undefined,checkoutRoot:undefined,checkoutPrefix:undefined, error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, compareOpen: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     let opened = () => {};
     const mine = { id, done: new Promise<void>(resolve => { opened = resolve; }) };

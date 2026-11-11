@@ -6,7 +6,7 @@ import {useApp} from '../state.ts';
 import {agentName} from '../lib/identity.ts';
 import {fileName,fileFolder} from '../lib/file-identity.ts';
 import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
-import {useSessionWorkspace} from './SessionWorkspace.tsx';
+import {useReadingWorkspace} from './SessionWorkspace.tsx';
 import {GitAccess,grantGit} from './GitAccess.tsx';
 import {GitPatchReader} from './GitPatchReader.tsx';
 import {FileIcon} from './FileIcon.tsx';
@@ -61,16 +61,18 @@ export function CompareButton() {
 
 /** Mounted once in the viewer, beside the Workspace. Remembers its sides and file for the session so closing returns to the same place. */
 export function CompareWindow() {
+  const checkoutId=useApp(s=>s.checkoutId);
   const open=useApp(s=>s.compareOpen),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),workspaceOpen=useApp(s=>s.developerWorkspace);
   useEffect(()=>{if(open&&workspaceOpen)useApp.setState({compareOpen:false});},[open,workspaceOpen]);
   if(!open||mode!=='history'||!id||id.includes('+'))return null;
   // An offline copy or the bundled demo has no repository on this machine; say so instead of a dead button.
   if(source?.kind!=='daemon')return <section className="developer-workspace compare-window" aria-label="Compare"><header className="compare-header"><strong>Compare</strong><span className="compare-header-end"><button className="btn ghost" onClick={()=>useApp.setState({compareOpen:false})}>Back to agent</button></span></header><p className="compare-note">Compare reads a repository on this machine. This copy of the session has none, so there is nothing to compare.</p></section>;
-  return <CompareContent key={id} id={id}/>;
+  return <CompareContent key={`${id}:${checkoutId??"main"}`} id={id}/>;
 }
 
 function CompareContent({id}:{id:string}) {
-  const {workspace,approve}=useSessionWorkspace();
+  const checkoutId=useApp(s=>s.checkoutId);
+  const {workspace,approve}=useReadingWorkspace();
   const projection=useApp(s=>s.projection);
   const section=useRef<HTMLElement>(null);
   const alive=useRef(true);
@@ -90,20 +92,20 @@ function CompareContent({id}:{id:string}) {
   const [evidence,setEvidence]=useState<CompareEvidence>(),[evidenceFor,setEvidenceFor]=useState('');
   const [patch,setPatch]=useState<{key:string;file:GitFile}>(),[patchError,setPatchError]=useState<{key:string;message:string}>();
 
-  useEffect(()=>{let active=true;void workspaceApi.gitStatus(id).then(s=>{if(active)setConsent(s.approved);}).catch(e=>{if(active){setConsent(false);setError(e.message);}});return()=>{active=false;};},[id]);
+  useEffect(()=>{let active=true;void workspaceApi.gitStatus(checkoutId??id).then(s=>{if(active)setConsent(s.approved);}).catch(e=>{if(active){setConsent(false);setError(e.message);}});return()=>{active=false;};},[id]);
   const ready=!!workspace?.approved&&!!consent;
   useEffect(()=>{
     if(!ready)return;
     let active=true;
-    void workspaceApi.compareRefs(id).then(value=>{if(active)setRefs(value);}).catch(e=>{if(active)setError(e.message);});
+    void workspaceApi.compareRefs(checkoutId??id).then(value=>{if(active)setRefs(value);}).catch(e=>{if(active)setError(e.message);});
     return()=>{active=false;};
-  },[id,ready,refresh]);
+  },[id,checkoutId,ready,refresh]);
   useEffect(()=>{
     if(!ready||preset!=='pr')return;
     let active=true;setPulls(undefined);
-    void workspaceApi.comparePulls(id).then(value=>{if(active)setPulls(value);}).catch(e=>{if(active)setPulls({status:'failed',pulls:[]});});
+    void workspaceApi.comparePulls(checkoutId??id).then(value=>{if(active)setPulls(value);}).catch(e=>{if(active)setPulls({status:'failed',pulls:[]});});
     return()=>{active=false;};
-  },[id,ready,preset,refresh]);
+  },[id,checkoutId,ready,preset,refresh]);
 
   const pull=preset==='pr'?pulls?.pulls.find(item=>item.number===prNumber):undefined;
   // The two sides this preset reads. `remote` means GitHub's compare: the pull request's head is not on this machine.
@@ -131,14 +133,14 @@ function CompareContent({id}:{id:string}) {
     if(loaded.current!==key){setResult(undefined);setSnapshot(undefined);}
     if(preset==='uncommitted'){
       setLoading(true);
-      void workspaceApi.gitSnapshot(id,0).then(value=>{if(active){loaded.current=key;setSnapshot(value);setResult(undefined);}}).catch(e=>{if(active){setSnapshot(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+      void workspaceApi.gitSnapshot(checkoutId??id,0).then(value=>{if(active){loaded.current=key;setSnapshot(value);setResult(undefined);}}).catch(e=>{if(active){setSnapshot(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
     }else if(sides){
       setLoading(true);
-      const request='remote' in sides&&sides.remote?workspaceApi.compareRemote(id,sides.remote as number):workspaceApi.compare(id,sides.base,sides.head);
+      const request='remote' in sides&&sides.remote?workspaceApi.compareRemote(checkoutId??id,sides.remote as number):workspaceApi.compare(checkoutId??id,sides.base,sides.head);
       void request.then(value=>{if(active){loaded.current=key;setResult(value);setSnapshot(undefined);}}).catch(e=>{if(active){setResult(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
     }else{setResult(undefined);setSnapshot(undefined);}
     return()=>{active=false;};
-  },[id,ready,preset,sidesKey,refresh]);
+  },[id,checkoutId,ready,preset,sidesKey,refresh]);
 
   const rows=useMemo<Row[]>(()=>{
     if(preset==='uncommitted')return (snapshot?.files??[]).map(file=>({path:file.path,group:'tree',git:file,note:gitWord(file.status),...(file.status.trim()==='??'?{}:patchCounts(file.patch))}));
@@ -153,9 +155,9 @@ function CompareContent({id}:{id:string}) {
     let active=true;
     const paths=rows.map(row=>row.path),chunks:string[][]=[];
     for(let n=0;n<paths.length;n+=200)chunks.push(paths.slice(n,n+200));
-    void Promise.all(chunks.map(chunk=>workspaceApi.compareEvidence(id,chunk))).then(all=>{if(active){setEvidence(Object.assign({},...all));setEvidenceFor(rowKey);}}).catch(()=>{if(active){setEvidence({});setEvidenceFor(rowKey);}});
+    void Promise.all(chunks.map(chunk=>workspaceApi.compareEvidence(checkoutId??id,chunk))).then(all=>{if(active){setEvidence(Object.assign({},...all));setEvidenceFor(rowKey);}}).catch(()=>{if(active){setEvidence({});setEvidenceFor(rowKey);}});
     return()=>{active=false;};
-  },[id,rowKey]);
+  },[id,checkoutId,rowKey]);
   const evidenceReady=evidenceFor===rowKey&&!!evidence||!rows.length;
   const agentByName=useCallback((agentId:string)=>agentName(projection?.agents.find(agent=>agent.id===agentId)),[projection]);
 
@@ -174,7 +176,7 @@ function CompareContent({id}:{id:string}) {
     if(row.file?.patch!==undefined){setPatch({key:patchKey,file:{path:row.path,status:'M',fingerprint:`${patchKey}`,patch:row.file.patch}});return;}
     if(!result||result.source==='github'){setPatch(undefined);return;}
     let active=true;
-    void workspaceApi.compareFile(id,result.base.ref,result.head.ref,row.path,side).then(value=>{if(active)setPatch({key:patchKey,file:{path:value.path,status:'M',fingerprint:value.fingerprint,patch:value.patch}});}).catch(e=>{if(active){setPatch(undefined);setPatchError({key:patchKey,message:e.message});}});
+    void workspaceApi.compareFile(checkoutId??id,result.base.ref,result.head.ref,row.path,side).then(value=>{if(active)setPatch({key:patchKey,file:{path:value.path,status:'M',fingerprint:value.fingerprint,patch:value.patch}});}).catch(e=>{if(active){setPatch(undefined);setPatchError({key:patchKey,message:e.message});}});
     return()=>{active=false;};
   },[patchKey]);
 
@@ -214,7 +216,7 @@ function CompareContent({id}:{id:string}) {
     </header>
     {consent===undefined&&!error?<p className="compare-note" role="status">Checking Git access…</p>
       :!workspace?.root?<p className="compare-note">This session recorded no repository on this machine, so there is nothing to compare.</p>
-      :!ready?<><GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);setError(undefined);void grantGit(id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>{error&&<p className="compare-note" role="alert">{error}</p>}</>
+      :!ready?<><GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);setError(undefined);void grantGit(checkoutId??id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>{error&&<p className="compare-note" role="alert">{error}</p>}</>
       :<>
       <div className="compare-sides" aria-label="Sides compared">
         {preset==='uncommitted'?<span className="compare-line"><b>{snapshot?.branch??'Working tree'}</b>{snapshot&&<span>{snapshot.head.slice(0,10)}</span>}<span>{identity} · uncommitted changes</span></span>
