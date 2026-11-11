@@ -1,3 +1,4 @@
+import {useSurfacePresence} from '../lib/surface-motion.ts';
 import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import type {Operation} from '@drishya/contracts';
@@ -24,6 +25,7 @@ function aim(element:Element):{target:Target;origin:HTMLElement}|undefined {
 export function ProductMenu() {
   const [open,setOpen]=useState<Open>(),[status,setStatus]=useState('');
   const menu=useRef<HTMLDivElement>(null);
+  const shown=useSurfacePresence(open,menu,'menu');
   useEffect(()=>{
     const show=(event:MouseEvent)=>{
       const element=event.target instanceof Element?event.target:undefined;
@@ -39,22 +41,22 @@ export function ProductMenu() {
   },[]);
   const close=(restore=true)=>{setOpen(old=>{if(restore)old?.origin.focus({preventScroll:true});return undefined;});};
   useLayoutEffect(()=>{
-    const node=menu.current;if(!open||!node)return;
+    const node=menu.current;if(!shown||!node)return;
     const box=node.getBoundingClientRect();
-    node.style.left=`${Math.max(8,Math.min(open.x,innerWidth-box.width-8))}px`;
-    node.style.top=`${Math.max(8,Math.min(open.y,innerHeight-box.height-8))}px`;
+    node.style.left=`${Math.max(8,Math.min(shown.x,innerWidth-box.width-8))}px`;
+    node.style.top=`${Math.max(8,Math.min(shown.y,innerHeight-box.height-8))}px`;
     const items=[...node.querySelectorAll<HTMLButtonElement>('button')];
     for(const item of items)item.setAttribute('role','menuitem');
     items.find(item=>!item.disabled)?.focus({preventScroll:true});
-  },[open]);
+  },[shown]);
   useEffect(()=>{
     if(!open)return;
     const outside=(event:Event)=>{if(!menu.current?.contains(event.target as Node))close(false);};
     document.addEventListener('pointerdown',outside,true);window.addEventListener('blur',outside);window.addEventListener('resize',outside);document.addEventListener('wheel',outside,{capture:true,passive:true});
     return()=>{document.removeEventListener('pointerdown',outside,true);window.removeEventListener('blur',outside);window.removeEventListener('resize',outside);document.removeEventListener('wheel',outside,true);};
   },[open]);
-  if(!open)return null;
-  const {target}=open,state=useApp.getState;
+  if(!shown)return null;
+  const {target}=shown,state=useApp.getState;
   const run=(action:()=>void)=>()=>{close(false);action();};
   const copyPath=(path:string)=>()=>{void navigator.clipboard.writeText(path).then(()=>{close();},()=>setStatus('Copy unavailable'));};
   const step=target.kind==='step'?target.op:undefined,expanded=step&&state().expandedOp===step.id;
@@ -66,7 +68,7 @@ export function ProductMenu() {
     const next=event.key==='Home'?0:event.key==='End'?items.length-1:(at+(event.key==='ArrowDown'?1:-1)+items.length)%items.length;
     items[next]?.focus();
   };
-  return createPortal(<div ref={menu} className="product-menu" role="menu" aria-label={step?`Actions for ${step.title}`:`Actions for ${target.path}`} style={{left:open.x,top:open.y}} onKeyDown={move}>
+  return createPortal(<div ref={menu} className="product-menu" role="menu" aria-label={step?`Actions for ${step.title}`:`Actions for ${target.path}`} style={{left:shown.x,top:shown.y}} onKeyDown={move}>
     {step&&<>
       <button type="button" className="btn ghost" onClick={run(()=>state().set({expandedOp:expanded?undefined:step.id,follow:false}))}>{expanded?'Close':'Expand'}</button>
       <button type="button" className="btn ghost" onClick={run(()=>{state().set({expandedOp:step.id,follow:false});requestAnimationFrame(()=>requestAnimationFrame(()=>{const editor=document.querySelector<HTMLDetailsElement>(`article[data-op-id="${CSS.escape(step.id)}"] .review-question-editor`);if(editor){editor.open=true;editor.querySelector('textarea')?.focus();}}));})}>Add a note</button>

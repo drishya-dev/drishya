@@ -1,3 +1,4 @@
+import {useSurfacePresence} from '../lib/surface-motion.ts';
 import './worktree-evidence.css';
 import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {ProseFilesProvider} from './ProseFiles.tsx';
@@ -197,6 +198,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const readingWidth = Math.max(220*interfaceScale, Math.min(maximumWidth, width*interfaceScale));
   const shown = !hidden && (!narrow || hidden === false);
   const explorer = useRef<HTMLElement>(null);
+  const present=useSurfacePresence(shown?true:undefined,explorer,'panel',id);
   const closeExplorer = (returnFocus = false) => {
     useApp.setState({ foldersHidden: true });
     if (returnFocus && narrow) document.querySelector<HTMLElement>(developerWorkspace ? '.developer-workspace [data-workspace-files-trigger]' : '.workspace-bar [data-workspace-files-trigger]')?.focus({ preventScroll: true });
@@ -370,7 +372,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     setTreeScroll(element.scrollTop);
   },[tree,shown,treeHeight,query,touchedOnly,opened,activeReveal,setTreeScroll]);
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
-  if (!shown) return null;
+  if (!present) return null;
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(260)} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
@@ -422,7 +424,8 @@ export function CurrentFileReader() {
   const modern=document.documentElement.dataset.uiVersion==='modern';
   const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]}),[error,setError]=useState('');
   const tabs=useMemo(()=>filePeekState(saved),[saved]);
-  const select=(next:string)=>useApp.getState().set({currentFile:next,filePanel:undefined,selectedOp:undefined});
+  const [closingTab,setClosingTab]=useState<FilePeekState|undefined>();
+  const select=(next:string)=>{setClosingTab(undefined);useApp.getState().set({currentFile:next,filePanel:undefined,selectedOp:undefined});};
   const open=(next:string,pin=false)=>{const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
   useEffect(()=>{if(modern&&path&&!explore&&!tabs.files.includes(path)&&tabs.preview!==path)setSaved(openFilePeek(tabs,path).state);},[modern,path,explore,tabs]);
   useEffect(()=>{
@@ -431,10 +434,11 @@ export function CurrentFileReader() {
   },[modern,id,tabs]);
   // Keep the selected peek location while the full Workspace owns the screen.
   if(!path||!id||inWorkspace)return null;
-  const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setSaved(next);setError('');if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
-  return <CurrentDocument key={id} id={id} path={path} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
+  const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setError('');if(path===file&&!next.preview&&!next.files.length){setClosingTab(next);return;}setSaved(next);if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
+  const dismiss=()=>{if(closingTab)setSaved(closingTab);setClosingTab(undefined);useApp.setState({currentFile:undefined});};
+  return <CurrentDocument key={id} id={id} path={path} closing={!!closingTab} dismiss={dismiss} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
 }
-function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:ReactNode }) {
+function CurrentDocument({ id, path, tabs,closing,dismiss }: { id: string; path: string;tabs?:ReactNode;closing?:boolean;dismiss?:()=>void }) {
   const memory=useWorkspaceMemory();
   const source=useApp(s=>s.source),revision=useApp(s=>s.projection?.observationCount??0);
   const fileRoots=useFileRoots(revision);
@@ -487,7 +491,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   const peek=modern&&!explore;
   const returnToGit = peek && memory.get('git/open') === true ? <button className="btn ghost" aria-label="Return to Git review" title="Return to Git review" onClick={() => window.dispatchEvent(new Event('drishya-git-review'))}>← Git</button> : undefined;
   const refusal=target.reason??currentReadingFailure(error)??currentReadingFailure(grantError);
-  if(projection&&!file&&refusal)return <ReadingDialog title={path} close={()=>useApp.setState({currentFile:undefined})} className="current-file-reader file-peek-reader" modeless floating headerExtra={tabs} headerActions={returnToGit}><CapturedFileFallback path={recordedPath??path} projection={projection} reason={refusal}/></ReadingDialog>;
+  if(projection&&!file&&refusal)return <ReadingDialog title={path} closing={closing} close={dismiss??(()=>useApp.setState({currentFile:undefined}))} className="current-file-reader file-peek-reader" modeless floating headerExtra={tabs} headerActions={returnToGit}><CapturedFileFallback path={recordedPath??path} projection={projection} reason={refusal}/></ReadingDialog>;
   const fileActions=<><button disabled={!target.path} className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open this current file in Workspace for split views and local drafts">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Agent work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Agent work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button>{!narrow&&<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace compact/>}</>;
   const lineControls=<form className="source-go" onSubmit={e=>{e.preventDefault();go();}}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e=>{setLineInput(e.target.value);setLineError(undefined);}}/><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={()=>setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>;
   const phoneOptions=<details className="desk-options current-reader-options" onKeyDown={event=>{if(event.key!=='Escape'||!event.currentTarget.open)return;event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector<HTMLElement>(':scope>summary')?.focus({preventScroll:true});}}><summary aria-label="Reading options" title="Reading options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 3v6M15 9v6M9 15v6"/></svg></summary><div>
@@ -496,7 +500,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
    <button className="btn ghost" disabled={!file} onClick={()=>void copy()}>Copy file</button>{fileActions}<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace/>
    {copied&&<span role="status">{copied}</span>}
   </div></details>;
-  return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} close={() => useApp.setState({ currentFile: undefined })} className={`current-file-reader${modern&&!explore?' file-peek-reader':''}`} modeless={explore||modern} floating={modern&&!explore} headerExtra={tabs} headerActions={peek?<>{returnToGit}{narrow?phoneOptions:fileActions}</>:undefined} style={explore ? undefined : { width: modern?undefined:`min(${width}px, calc(100vw - 28px))` }}>
+  return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} closing={closing} close={dismiss??(() => useApp.setState({ currentFile: undefined }))} className={`current-file-reader${modern&&!explore?' file-peek-reader':''}`} modeless={explore||modern} floating={modern&&!explore} headerExtra={tabs} headerActions={peek?<>{returnToGit}{narrow?phoneOptions:fileActions}</>:undefined} style={explore ? undefined : { width: modern?undefined:`min(${width}px, calc(100vw - 28px))` }}>
     {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">This reading location was saved for another file version.</p>}
     {!explore && !modern && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} reset={()=>setWidth(1040)} label="Resize current source reading space" fromRight />}
     {!peek&&<div className="current-file-meta"><EvidenceNavigation compact hideEmpty/><span className="tag" title="Checked disk snapshot · not a historical artifact">{current.candidate?'Retained':file?'On disk':'Current file'}</span>{fileActions}</div>}

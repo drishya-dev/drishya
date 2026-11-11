@@ -1,3 +1,4 @@
+import {useSurfacePresence} from '../lib/surface-motion.ts';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {workspaceApi} from '../api.ts';
 import type {CompareEvidence,CompareFile,CompareGroup,CompareRef,CompareRefs,ComparePull,ComparePulls,GitCompareResult} from '../../../daemon/src/git-compare-types.ts';
@@ -62,17 +63,18 @@ export function CompareButton() {
 /** Mounted once in the viewer, beside the Workspace. Remembers its sides and file for the session so closing returns to the same place. */
 export function CompareWindow() {
   const open=useApp(s=>s.compareOpen),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),workspaceOpen=useApp(s=>s.developerWorkspace);
+  const surface=useRef<HTMLElement>(null),present=useSurfacePresence(open?true:undefined,surface,'panel',id);
   useEffect(()=>{if(open&&workspaceOpen)useApp.setState({compareOpen:false});},[open,workspaceOpen]);
-  if(!open||mode!=='history'||!id||id.includes('+'))return null;
+  if(!present||mode!=='history'||!id||id.includes('+'))return null;
   // An offline copy or the bundled demo has no repository on this machine; say so instead of a dead button.
-  if(source?.kind!=='daemon')return <section className="developer-workspace compare-window" aria-label="Compare"><header className="compare-header"><strong>Compare</strong><span className="compare-header-end"><button className="btn ghost" onClick={()=>useApp.setState({compareOpen:false})}>Back to agent</button></span></header><p className="compare-note">Compare reads a repository on this machine. This copy of the session has none, so there is nothing to compare.</p></section>;
-  return <CompareContent key={id} id={id}/>;
+  if(source?.kind!=='daemon')return <section ref={surface} className="developer-workspace compare-window" aria-label="Compare"><header className="compare-header"><strong>Compare</strong><span className="compare-header-end"><button className="btn ghost" onClick={()=>useApp.setState({compareOpen:false})}>Back to agent</button></span></header><p className="compare-note">Compare reads a repository on this machine. This copy of the session has none, so there is nothing to compare.</p></section>;
+  return <CompareContent key={id} id={id} surface={surface}/>;
 }
 
-function CompareContent({id}:{id:string}) {
+function CompareContent({id,surface}:{id:string;surface:React.RefObject<HTMLElement|null>}) {
   const {workspace,approve}=useSessionWorkspace();
   const projection=useApp(s=>s.projection);
-  const section=useRef<HTMLElement>(null);
+  const section=surface;
   const alive=useRef(true);
   useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
   const [consent,setConsent]=useState<boolean>(),[granting,setGranting]=useState(false);

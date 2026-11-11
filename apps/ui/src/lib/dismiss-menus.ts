@@ -1,3 +1,4 @@
+import {surfaceMotion,surfaceMotionAllowed} from './surface-motion.ts';
 import { useEffect } from 'react';
 import { useApp } from '../state.ts';
 
@@ -8,8 +9,24 @@ export function useDismissMenus() {
     // Hiding the outer utility menu must not overwrite their explicit choices.
     const menus = '.workspace-menu, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options';
     const selectors = menus.split(', ').map(selector => `${selector}[open]`).join(', ');
+    const actors=new Map<HTMLDetailsElement,ReturnType<typeof surfaceMotion>[]>();
+    // Native/React toggles change the same real details element. This microtask runs before paint,
+    // including on the very first opening and on action-driven light dismissal.
+    const observer=new MutationObserver(records=>{
+      for(const record of records){const details=record.target;if(!(details instanceof HTMLDetailsElement)||!details.matches(menus+', details[data-reading-disclosure]'))continue;
+        let current=actors.get(details);
+        if(!details.hasAttribute('data-pointer-menu')||!surfaceMotionAllowed()){current?.forEach(actor=>actor.cancel());continue;}
+        if(!current){current=[...details.children].filter((node):node is HTMLElement=>node instanceof HTMLElement&&node.tagName!=='SUMMARY').map(node=>surfaceMotion(node,'menu'));actors.set(details,current);}
+        current.forEach(actor=>{if(details.open)actor.open(!actor.closing);else actor.close(()=>actor.cancel());});
+      }
+    });
+    observer.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['open']});
+
     const motion = (menu: HTMLDetailsElement, pointer: boolean) => {
       menu.toggleAttribute('data-pointer-menu', pointer && useApp.getState().motion && !useApp.getState().lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches);
+      const panel=menu.querySelector<HTMLElement>(':scope > :not(summary)');
+      if(pointer&&panel){const style=getComputedStyle(panel);menu.style.setProperty('--menu-origin',`${style.bottom!=='auto'&&style.top==='auto'?'bottom':'top'} ${style.right!=='auto'&&style.left==='auto'?'right':'left'}`);if(!menu.open)void style.opacity;}
+
     };
     const fit = (menu: HTMLDetailsElement) => {
       if (!menu.matches('.workspace-menu, .permission-policy, .desk-options')) return;
@@ -42,16 +59,17 @@ export function useDismissMenus() {
       }
     };
     const pointer = (event: PointerEvent) => {
+      for(const [details,current] of actors)if(!details.isConnected){current.forEach(actor=>actor.dispose());actors.delete(details);}
       const summary = event.target instanceof Element ? event.target.closest('summary') : null;
       const menu = summary?.parentElement;
-      if (menu instanceof HTMLDetailsElement && menu.matches(menus)) { motion(menu, true); fit(menu); }
+      if (menu instanceof HTMLDetailsElement && menu.matches(menus+', details[data-reading-disclosure]')) { motion(menu, true); fit(menu); }
       document.documentElement.setAttribute('data-ui-press', '');
       dismiss(event, true);
     };
     const keyboard = (event: KeyboardEvent) => {
       document.documentElement.removeAttribute('data-ui-press');
       const trigger = event.target instanceof Element ? event.target.closest('summary')?.parentElement : null;
-      if (trigger instanceof HTMLDetailsElement && trigger.matches(menus)) { motion(trigger, false); fit(trigger); }
+      if (trigger instanceof HTMLDetailsElement && trigger.matches(menus+', details[data-reading-disclosure]')) { motion(trigger, false); fit(trigger); }
       const active = event.target instanceof Element ? event.target.closest<HTMLDetailsElement>(selectors) : null;
       if (active) { motion(active, false); fit(active); }
       // Visible utility rows form one keyboard path, including opened disclosures.
@@ -77,6 +95,6 @@ export function useDismissMenus() {
     document.addEventListener('focusin', focus);
     window.addEventListener('resize', resize);
     document.addEventListener('keydown', keyboard);
-    return () => { document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('click', click); document.removeEventListener('focusin', focus); window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard); };
+    return () => { observer.disconnect();actors.forEach(current=>current.forEach(actor=>actor.dispose()));document.removeEventListener('pointerdown', pointer, true); document.removeEventListener('click', click); document.removeEventListener('focusin', focus); window.removeEventListener('resize', resize); document.removeEventListener('keydown', keyboard); };
   }, []);
 }

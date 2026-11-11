@@ -1,3 +1,4 @@
+import {surfaceDuration} from '../lib/surface-motion.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
@@ -79,7 +80,7 @@ export function ModernToolStation({ projection, scene, agents }: {
       const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.16, 1, .3, 1)';
       recentering.current = node.animate(
         [{ transform: 'translateY(' + offset + 'px)' }, { transform: 'none' }],
-        { duration: 180, easing },
+        { duration: surfaceDuration('panel'), easing },
       );
     });
   }

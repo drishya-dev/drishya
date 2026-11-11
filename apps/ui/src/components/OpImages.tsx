@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {surfaceMotion} from '../lib/surface-motion.ts';
+import { useEffect,useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import './op-images.css';
@@ -48,18 +49,21 @@ function ImageThumbnail({ src, image, label, onOpen }: { src: string; image: Ope
 /** The whole image: fitted first, actual pixels on click; Escape or the backdrop closes it. */
 export function ImageReader({ src, image, onClose, currentCaption }: { src: string; image: OperationImage; onClose: () => void; currentCaption?: string }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const transition=useRef<ReturnType<typeof surfaceMotion>|undefined>(undefined);
+  const requestClose=()=>{transition.current?.close(()=>dialog.current?.close());};
+  useLayoutEffect(()=>{if(transition.current?.closing){if(!dialog.current?.open)dialog.current?.showModal();transition.current.open();}},[src]);
   const [actual, setActual] = useState(false);
   const [failed, setFailed] = useState(false);
   const [retry, setRetry] = useState(0);
   // Explicit retry bypasses a cached failed response without changing the image's hash/owner.
   const imageSrc = retry ? `${src}${src.includes('?') ? '&' : '?'}retry=${retry}` : src;
-  useEffect(() => { dialog.current?.showModal(); }, []);
+  useEffect(() => {const node=dialog.current!;node.showModal();transition.current=surfaceMotion(node,'dialog');transition.current.open(true);return()=>transition.current?.dispose();}, []);
   const caption = currentCaption ?? `Image${image.width && image.height ? ` · ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${size(image.bytes)}` : ''}`;
-  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Image reader'} onClose={onClose} onCancel={event=>event.stopPropagation()} onClick={(e) => { if (e.target === dialog.current) dialog.current.close(); }}>
+  return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Image reader'} onClose={()=>{if(!dialog.current?.open)onClose();}} onCancel={event=>{event.preventDefault();event.stopPropagation();requestClose();}} onClick={(e) => { if (e.target === dialog.current) requestClose(); }}>
     <div className="image-reader-bar">
       <span title={caption}>{caption}</span>
       <button type="button" disabled={failed} aria-pressed={actual} onClick={() => setActual((v) => !v)}>{actual ? 'Fit' : 'Actual size'}</button>
-      <button type="button" onClick={() => dialog.current?.close()}>Close</button>
+      <button type="button" onClick={requestClose}>Close</button>
     </div>
     {currentCaption && <p className="image-reader-context">Current file. It may differ from what the agent saw.</p>}
     <div className={`image-reader-stage${actual ? ' actual' : ''}`}>

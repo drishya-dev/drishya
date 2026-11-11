@@ -1,3 +1,4 @@
+import {useSurfacePresence} from '../lib/surface-motion.ts';
 import {fileName,fileFolder} from '../lib/file-identity.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
 import {FileReadingActions} from './FileReadingActions.tsx';
@@ -39,6 +40,7 @@ export function DeveloperWorkspace() {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const narrow = useNarrowWorkspace(), foldersHidden = useApp(s => s.foldersHidden);
   const desk = useRef<HTMLElement>(null);
+  const present=useSurfacePresence(open?true:undefined,desk,'panel',id);
   const mode = useApp(s => s.mode), { workspace, approve, controller } = useSessionWorkspace();
   const [files, setFiles] = useWorkspaceState<string[]>('desk/files', []);
   const [primary, setPrimary] = useWorkspaceState('desk/primary', '');
@@ -82,7 +84,7 @@ export function DeveloperWorkspace() {
     measure();
     return () => { observer.disconnect(); viewer.style.removeProperty('--desk-tools-bottom'); };
   }, [open, narrow]);
-  if (!open || mode !== 'history' || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (!present || mode !== 'history' || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const closeTab = (path: string) => {
     const next = files.filter(file => file !== path); setFiles(next); tabs.current = next;
     if (primary === path) setPrimary(next[0] ?? '');
