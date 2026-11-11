@@ -86,6 +86,10 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
     palettes.push(palette!);
     const isLight = /color-scheme:\s*light\s*;/.test(body!);
     const tokens = { ...preset, ...shared, ...(isLight ? light : {}) };
+    if(palette==='midnight')for(const name of surfaces){
+      const [r,,b]=channels(ink(tokens,name));
+      expect(b!-r!,`Midnight ${name} stays visibly navy rather than neutral graphite`).toBeGreaterThanOrEqual(10);
+    }
     // Yash, 11 Nov: the same meaning-ink floor applies to every shipped palette.
     const meaningFloor = 7;
 

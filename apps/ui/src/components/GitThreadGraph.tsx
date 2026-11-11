@@ -1,4 +1,4 @@
-import {paletteRGB} from '../lib/palette-paint.ts';
+import {paletteRGB,usePaletteKey} from '../lib/palette-paint.ts';
 import {gitSessionLinkDescription} from '../../../daemon/src/git-types.ts';
 import {useCallback,useEffect,useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
@@ -23,7 +23,7 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
   const fit=()=>{const el=viewport.current;if(el){setInset({});setScale(clampScale(Math.min(1,(el.clientWidth-48)/graph.width,lit?9:(el.clientHeight-70)/graph.height)));el.scrollLeft=0;centerRiver.current=true;}};
   const previous=useRef<{graph:typeof graph;key:string}|undefined>(undefined);
   const gradient=useId().replace(/:/g,'');
-  const lowResource=useApp(state=>state.lowResource),motion=useApp(state=>state.motion),theme=useApp(state=>state.theme);
+  const lowResource=useApp(state=>state.lowResource),motion=useApp(state=>state.motion),theme=usePaletteKey();
   const paint=useMemo(()=>Array.from({length:8},(_,i)=>paletteRGB(`--git-light-${i}`)),[theme]);
   // GIT-1: filament light drawn by WebGL behind the DOM commits; the SVG ribbon remains only where WebGL2 is unavailable.
   const canvas=useRef<HTMLCanvasElement>(null),world=useRef<HTMLDivElement>(null),renderer=useRef<LightRenderer|undefined>(undefined),[lit,setLit]=useState(false);

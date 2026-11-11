@@ -1312,7 +1312,7 @@ test('an unexpected rendering failure has a usable recovery surface instead of a
   await expect(page.locator('.mh-home')).toBeVisible();
 });
 
-test('Modern seven palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
+test('Modern three palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
   await page.setViewportSize({width:1440,height:960});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await expect(page.locator('.mh-header').getByRole('button',{name:'Demo',exact:true})).toHaveCount(0);
@@ -1321,10 +1321,10 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#000',paper:'#f6f9fb',midnight:'#02070a'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
-    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#036a8f',midnight:'#29a9f0'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
+    const expectedBase:Record<string,string>={jet:'rgb(0, 0, 0)',paper:'rgb(246, 249, 251)',midnight:'rgb(7, 13, 27)'};
+    expect(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor)).toBe(expectedBase[palette!]);
+    const expectedFocus:Record<string,string>={jet:'rgb(139, 146, 236)',paper:'rgb(3, 106, 143)',midnight:'rgb(141, 184, 255)'};
+    expect(await page.locator('html').evaluate(el=>{const probe=document.createElement('i');probe.style.color='var(--focus)';el.append(probe);const colour=getComputedStyle(probe).color;probe.remove();return colour;})).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});
   }

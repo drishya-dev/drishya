@@ -1,4 +1,4 @@
-import {palettePaint} from '../lib/palette-paint.ts';
+import {palettePaint,usePaletteKey} from '../lib/palette-paint.ts';
 import { useEffect, useState } from 'react';
 import type { NowFacts } from '../../../../packages/scene/src/now.ts';
 import { useApp } from '../state.ts';
@@ -15,7 +15,7 @@ const BASE_TITLE = 'Drishya';
  * ticks once a second for elapsed time, and mirrors the state in the tab title and favicon.
  */
 export function NowWatcher() {
-  const theme=useApp(s=>s.theme);
+  const theme=usePaletteKey();
   const source = useApp((s) => s.source);
   const id = useApp((s) => s.recordingId);
   const recording = useApp((s) => s.recording);
