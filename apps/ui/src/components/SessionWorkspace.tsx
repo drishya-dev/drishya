@@ -475,13 +475,14 @@ export function CurrentFileReader() {
   const modern=document.documentElement.dataset.uiVersion==='modern';
   const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]},readingId),[error,setError]=useState('');
   const tabs=useMemo(()=>filePeekState(saved),[saved]);
-  const select=(next:string)=>useApp.getState().set({currentFile:prefix&&!next.startsWith('worktree-')?`${prefix}/${next}`:next,filePanel:undefined,selectedOp:undefined});
-  const open=(next:string,pin=false)=>{const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
+  const qualify=(next:string)=>prefix&&!/^worktree-[a-f0-9]{10}\//.test(next)?`${prefix}/${next}`:next;
+  const select=(next:string)=>useApp.getState().set({currentFile:qualify(next),filePanel:undefined,selectedOp:undefined});
+  const open=(next:string,pin=false)=>{next=qualify(next);const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
   useEffect(()=>{if(modern&&path&&!explore&&!tabs.files.includes(path)&&tabs.preview!==path)setSaved(openFilePeek(tabs,path).state);},[modern,path,explore,tabs]);
   useEffect(()=>{
     const receive=(event:Event)=>{const request=(event as CustomEvent<{path:string;pin?:boolean}>).detail;if(!modern||!id||!request||typeof request.path!=='string')return;open(request.path,request.pin);};
     window.addEventListener('drishya-preview-file',receive);return()=>window.removeEventListener('drishya-preview-file',receive);
-  },[modern,id,tabs]);
+  },[modern,id,tabs,prefix]);
   // Keep the selected peek location while the full Workspace owns the screen.
   if(!path||!id||inWorkspace)return null;
   const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setSaved(next);setError('');if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};

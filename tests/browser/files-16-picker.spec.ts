@@ -33,6 +33,12 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440])test(
  await expect(files).toHaveAttribute('data-reading-access','captured');await expect(query).toHaveValue('');const status=await page.request.get(`${server.url}/v1/recordings/${id}/workspace`);expect((await status.json()).root).toBe(main);
  await files.getByRole('button',{name:/Enable workspace reading/}).click();await expect(files).toHaveAttribute('data-reading-access','current');await expect(files.getByRole('treeitem',{name:'worker-only.ts',exact:true})).toBeVisible();
  await files.getByTitle(`${worker}/shared.ts`,{exact:true}).click();await expect(page.locator('.current-file-reader')).toContainText('checkout = "worker"');if(width===600)await page.getByLabel('Reading options',{exact:true}).click();
+ await page.evaluate(()=>window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:'shared.ts',pin:true}})));
+ const peekTabs=page.getByRole('tablist',{name:'Open file previews'});
+ await expect(peekTabs.locator('.file-peek-tab:not(.preview)')).toHaveAttribute('data-peek-path',`${prefix}/shared.ts`);
+ await expect(peekTabs.getByRole('tab')).toHaveCount(1);
+ const selectedMap=await (await page.request.get(`${server.url}/v1/recordings/${encodeURIComponent(chosen.id)}/graph`)).json();
+ expect(selectedMap.root).toBe(worker);expect(selectedMap.nodes.every((node:{path:string})=>node.path.startsWith(prefix+'/'))).toBe(true);
  await expect(page.getByRole('button',{name:'Open in Workspace',exact:true})).toBeDisabled();
  await page.getByRole('button',{name:'Agent work on this file',exact:true}).click();
  const captured=page.getByRole('dialog').filter({has:page.getByRole('region',{name:'File history',exact:true})});
