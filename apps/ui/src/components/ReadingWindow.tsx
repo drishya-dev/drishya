@@ -1,11 +1,9 @@
-import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {useLayoutEffect,useRef,useState,type CSSProperties,type RefObject,type PointerEvent} from 'react';
 import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
 import {readingWindowLayout,resizeReadingWindow,type ReadingWindowLayout,type ReadingEdge,type WindowRect,type ReadingWindowBounds} from '../lib/reading-window.ts';
 
 /** One geometry owner anchors direct manipulation; it never changes evidence or drafts. */
 export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string|undefined) {
- const scale=useInterfaceScale();
  const [saved,setSaved]=useWorkspaceState<ReadingWindowLayout>(id?`surface/${id}`:undefined,{});
  const [viewport,setViewport]=useState<ReadingWindowBounds>(()=>({width:innerWidth,height:innerHeight,top:64}));
  const [size,setSize]=useState({width:0,height:0});
@@ -19,27 +17,28 @@ export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string
    const controls=document.querySelector('.workspace-secondary')?.getBoundingClientRect();
    const composer=document.querySelector<HTMLElement>('.prompt-composer');
    // Layout height ignores the composer's finite scale animation; geometry must not chase it.
-   const bottom=peek&&composer?innerHeight-composer.offsetHeight-(parseFloat(getComputedStyle(composer).bottom)||0)-12*scale:innerHeight-12*scale;
+   const bottom=peek&&composer?innerHeight-composer.offsetHeight-(parseFloat(getComputedStyle(composer).bottom)||0)-12:innerHeight-12;
    // The right-docked Git drawer starts below the navigation buttons so Review and Graph stay reachable.
    const drawer=ref.current?.classList.contains('modern-git-drawer')&&innerWidth>820;
-   const drawerTop=Math.max((header?.bottom??52*scale)+12*scale,controls&&controls.height>0?controls.bottom+12*scale:0);
+   const drawerTop=Math.max((header?.bottom??52)+12,controls&&controls.height>0?controls.bottom+12:0);
    if(drawer)ref.current?.style.setProperty('--drawer-top',`${drawerTop}px`);
-   // LAYOUT-1b: the composition fills the viewport; the old stage cap is gone.
-   const stageMax=innerWidth,stageEdge=0;
-   const top=peek?Math.min(Math.max(100*scale,(controls?.bottom??124*scale)+12*scale),bottom-120*scale):drawer?drawerTop:(header?.bottom??52*scale)+12*scale;
-   const next:ReadingWindowBounds={width:innerWidth,height:innerHeight,top,...(peek?{left:stageEdge+Math.round(Math.min(innerWidth,stageMax)*.48),right:innerWidth-48*scale-stageEdge,bottom}:{})};
+   // LAYOUT-1: past --stage-max (Modern only; the variable is undefined elsewhere) the peek docks to the stage, not the screen edge.
+   // The build writes design lengths in rem (identity at the 16 px root), so the variable is resolved to CSS pixels here.
+   const rootStyle=getComputedStyle(document.documentElement),stageRaw=rootStyle.getPropertyValue('--stage-max').trim(),stageMax=parseFloat(stageRaw)*(stageRaw.endsWith('rem')?parseFloat(rootStyle.fontSize)||16:1)||innerWidth,stageEdge=Math.max(0,Math.round((innerWidth-stageMax)/2));
+   const top=peek?Math.min(Math.max(100,(controls?.bottom??124)+12),bottom-120):drawer?drawerTop:(header?.bottom??52)+12;
+   const next:ReadingWindowBounds={width:innerWidth,height:innerHeight,top,...(peek?{left:stageEdge+Math.round(Math.min(innerWidth,stageMax)*.48),right:innerWidth-48-stageEdge,bottom}:{})};
    setViewport(previous=>JSON.stringify(previous)===JSON.stringify(next)?previous:next);
    const node=ref.current!;setSize(previous=>previous.width===node.offsetWidth&&previous.height===node.offsetHeight?previous:{width:node.offsetWidth,height:node.offsetHeight});
   };
   const observer=new ResizeObserver(measure);observer.observe(ref.current);const header=document.querySelector('.workspace-header');if(header)observer.observe(header);for(const selector of ['.prompt-composer','.workspace-secondary']){const element=document.querySelector(selector);if(element)observer.observe(element);}
   window.addEventListener('resize',measure);measure();return()=>{observer.disconnect();window.removeEventListener('resize',measure);};
- },[id,ref,scale]);
+ },[id,ref]);
  useLayoutEffect(()=>{drag.current=null;},[id,viewport.width,viewport.height]);
  const peek=enabled&&ref.current?.classList.contains('file-peek-reader');
  const maxWidth=(viewport.right??viewport.width-12)-(viewport.left??12),maxHeight=(viewport.bottom??viewport.height-12)-viewport.top;
  // Old modal coordinates are constrained to the adjacent reading lane, including on restore.
- const previewWidth=Math.max(360*scale,Math.min(720*scale,innerWidth*.28));
- const preference=peek?{width:previewWidth,height:Math.max(120*scale,maxHeight-24*scale),x:(viewport.right??innerWidth-48*scale)-previewWidth,y:viewport.top+12*scale,...saved}:saved;
+ const previewWidth=Math.max(360,Math.min(720,innerWidth*.28));
+ const preference=peek?{width:previewWidth,height:Math.max(120,maxHeight-24),x:(viewport.right??innerWidth-48)-previewWidth,y:viewport.top+12,...saved}:saved;
  const layout=readingWindowLayout(preference,size,viewport);
  const style:CSSProperties=enabled?{...(layout.width!==undefined?{width:layout.width}:{}),...(layout.height!==undefined?{height:layout.height}:{}),maxWidth,maxHeight:Math.max(120,maxHeight),...(layout.x!==undefined?{position:'fixed',left:layout.x,top:layout.y,right:'auto',bottom:'auto',margin:0}: {})}:{};
  useLayoutEffect(()=>{window.dispatchEvent(new Event('drishya-reading-layout'));},[layout.x,layout.y,layout.width,layout.height]);

@@ -1,10 +1,43 @@
-/* LAYOUT-1b: one rem reference, one bounded factor, no independently capped
-   stage or per-component large-screen breakpoints. DOM/map coordinates remain
-   ordinary CSS pixels; design lengths grow with the reference rem. */
+/* LAYOUT-1b revert (Yash, 11 Nov): the interface size is never derived from the viewport. Browser zoom and the OS display
+   scaling own it. The build converts design px to rem, so the root stays at the 16 px reference: a different browser default
+   font size must not resize the product, and every computed length equals LAYOUT-1's px. --ui-scale is always 1. */
+:root[data-ui-version=modern] { font-size: calc(16px * var(--ui-scale, 1)); }
+
+/* LAYOUT-1 · Large screens and browser zoom.
+   Zooming out (67 % on a laptop is 2150 CSS px) and large monitors both give the page more CSS pixels. The reading column
+   already stops growing at 1280 px, but the docks, the header groups and the Workspace stayed pinned to the screen edges,
+   so the space between the divisions grew without limit. Decision: the whole working composition (header groups, Files,
+   history column, Toolbox, Workspace, peek) is one stage that stops at --stage-max and is centred. The map stays full
+   width behind it, so extra width becomes more map, never a wider gap between a dock and the thing it belongs to.
+   Nothing here applies at or below --stage-max, so 600 to 1920 px are exactly as before. No motion is involved. */
 :root[data-ui-version=modern] {
-  font-size:calc(16px * var(--ui-scale,1));
-  --stage-max:100vw;
-  --stage-edge:0px;
+  --stage-max: 1920px;
+  --stage-edge: max(0px, calc((100vw - var(--stage-max)) / 2));
+}
+
+@media (min-width: 1921px) {
+  :root[data-ui-version=modern][data-experience=classic] {
+    /* Header groups: identity at the stage's left edge, actions at its right. */
+    .workspace-header .modern-session-header { padding-inline: calc(24px + var(--stage-edge)); }
+    .workspace-leading { left: calc(18px + var(--stage-edge)); }
+    .toolbox-rail { left: calc(18px + var(--stage-edge)); right: calc(18px + var(--stage-edge)); }
+    .connected-workspace .folder-explorer { left: calc(18px + var(--stage-edge)); }
+    .connected-workspace .history { margin-inline: var(--stage-edge); }
+    .connected-workspace .developer-workspace {
+      left: calc(var(--files-rail, calc(var(--stage-rail, 220px) + 6px)) + var(--stage-edge));
+      right: calc(18px + var(--stage-edge));
+    }
+    .connected-workspace.folders-hidden .developer-workspace { left: calc(18px + var(--stage-edge)); }
+    /* The file peek is placed in script (ReadingWindow.tsx reads --stage-max); the Git drawer is placed here. */
+    .modern-git-drawer { right: calc(16px + var(--stage-edge)); }
+    .search, .connected-workspace > .search { right: calc(24px + var(--stage-edge)); }
+    .connected-workspace .follow-pill { right: calc(128px + var(--stage-edge)); }
+    .connected-workspace:has(.modern-native-composer):has(.history-transport) .follow-pill { right: calc(132px + var(--stage-edge)); }
+    /* The map reader is a panel of the stage, not of the screen. */
+    .product-dialog.map-reader { right: calc(20px + var(--stage-edge)); width: min(calc(46vw - 32px), 880px); }
+    /* Queued inputs are placed inline by the component. */
+    .queued-input-receipts { right: calc(20px + var(--stage-edge)) !important; }
+  }
 }
 
 /* Yash, 10 Nov: the world scrolls from the screen's top under floating controls.
@@ -18,13 +51,20 @@
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner {
   padding-top:calc(var(--workspace-tools-bottom,134px) + 16px);
 }
+/* Drawers stay in front of the prompt. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {
   max-height:calc(100dvh - var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px)) - 16px);
   z-index:35;
 }
+/* The rail keeps LAYOUT-1's geometry (its bottom follows the composer's fixed reserve, so toggling the prompt moves nothing since UI-28c).
+   It sits just in front of the prompt (z 9). Its empty part is pointer-events:none and only the Toolbox itself takes the pointer, so it
+   never covers header menus or History. Do not raise it above the header controls (z 6 stacking context holds their menus). */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .toolbox-rail {
-  bottom:24px;
-  z-index:35;
+  z-index:10;
+  pointer-events:none;
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .toolbox-rail > * {
+  pointer-events:auto;
 }
 
 /* Conversation is reading text; retain Modern's previous face for it. Plans,
