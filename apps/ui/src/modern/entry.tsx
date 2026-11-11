@@ -17,6 +17,7 @@ import './interaction-polish.css';
 import './reading-windows.css';
 import './finishing.css';
 import './composer.css';
+import './remember.css';
 import './conversation.css';
 // SHIP-18: History hierarchy by ink and weight, after the sheets it refines.
 import './history-ink.css';

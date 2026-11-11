@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-6d | @yash + Claude Sonnet 5.5 | `claude/ship-6d-remember` | 2026-11-11 | The Remember checkbox in `components/SessionWorkspace.tsx` (Files card and composer setup row), new `RememberCheckbox.tsx` and `modern/remember.css`. No colour tokens; not SHIP-6a-c files. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-20 | @yash + Codex | `codex/ship-20` | 2026-11-11 | Whole approved reader/Workspace semantic-colour adoption, while MOTION-4 waits for UI-28c. Own modern/reader-ink.css and its entry import; bounded reader/editor/source/syntax/diff/Screen/search colour and weight declarations only, focused contrast/browser checks, STATUS/TASKS and docs/review/ship-20-reader-colour.md. Initial ceiling 15 paths; agree any larger footprint first. Use the settled SHIP-17 palette roles/floors; no new palette, typography family, layout, spacing, layers, motion or renderer-data changes. No LINK-1 source files, composer gap/PromptRail/SessionWorkspace/composer.css, lineage or protected files. Two browser workers, one suite at a time, no full gate; Opus reviews/merges. |
 | SHIP-2a | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: SHIP-17 to SHIP-21 merging. |
@@ -58,6 +57,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Claude Sonnet 5.5 — 11 Nov: SHIP-6d the Remember checkbox
+
+- New `RememberCheckbox` + `modern/remember.css`: one compact Modern checkbox inside the Files "Enable workspace reading" card and in the composer's setup row, in the card's own type size and colour, checked by default, keyboard and focus ring working. Real unapproved Claude Code session `rec_b45458d5` at 600 and 1440 (before/after in `.local/`). No colour tokens changed.
 ### Claude Sonnet 5.5 — 11 Nov: UI-28c opening and closing the composer moves nothing else
 
 - `--composer-gap` is the fixed `--composer-rest` token plus the setup row's fixed height, not the box's measured height (read with its rem unit); the prompt rail clears the same rest height and re-measures when the gap changes. Toggling or growing the composer moves no Files panel, Toolbox, rail, control or history position at 600, 1440 and 2560 px. Spec `composer-grows.spec.ts`. Real sessions: Claude Code `rec_b45458d5`, Codex `rec_44739d61` (stand-in transport). Failing on clean main too and left alone: `toolbox-window` 81 (modern/clarity) and `composer-access` 19 (Replay this session was removed by UI-29).
