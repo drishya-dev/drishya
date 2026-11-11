@@ -62,7 +62,16 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation.locator('.state-running')).toHaveCount(1);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Emit');
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Materials: { move: string; width: number; height: number }[] }).p1Materials.some((material) => material.move === 'Emit' && material.width > 0 && material.height > 0))).toBe(true);
-  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => !(animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color')).length)).toBe(0);
+  expect(await operation.locator('.op-body').evaluate((el) => el.getAnimations({ subtree: true }).filter(animation => {
+    if (animation instanceof CSSTransition && animation.transitionProperty === 'scrollbar-color') return false;
+    // The approved preview-edge mask follows scroll position, not elapsed time.
+    // Exempt only that custom property; a transform/opacity/text animation still fails.
+    if (animation instanceof CSSAnimation && animation.animationName === 'bounded-fade' && animation.timeline?.constructor.name === 'ScrollTimeline' && animation.effect instanceof KeyframeEffect) {
+      const frames = animation.effect.getKeyframes();
+      if (frames.every(frame => Object.keys(frame).every(key => ['offset', 'computedOffset', 'easing', 'composite', '--bounded-fade'].includes(key)))) return false;
+    }
+    return true;
+  }).length)).toBe(0);
 
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'drishya-live-output' }] } });
   await app.ingest.sync(recordingId);
@@ -70,6 +79,11 @@ test('the tool request is visible before its result and remains beside it', asyn
   await expect(operation).toContainText('drishya-live-input');
   await expect(operation.locator('.state-running')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => (window as unknown as { p1Moves: string[] }).p1Moves)).toContain('Resolve');
+  // Surface requires a genuinely visible recorded agent origin; hidden drawers are not origins.
+  const agents = page.locator('.modern-toolbox .md-agents');
+  if (await agents.getAttribute('open') === null) await agents.locator(':scope > summary').press('Enter');
+  await agents.locator('.station-agents [data-agent-id]').first().scrollIntoViewIfNeeded();
+  await expect(agents.locator('.station-agents [data-agent-id]').first()).toBeInViewport();
   append({ type: 'assistant', message: { id: 'p1-captured-explanation', role: 'assistant', model: 'synthetic', content: [{ type: 'text', text: 'The command returned its output. Now reading the guard.' }] } });
   await app.ingest.sync(recordingId);
   await expect(page.locator('.prose').last()).toContainText('Now reading the guard');
@@ -278,9 +292,9 @@ test('file relationships start at measured renderer nodes and fall back when the
     const response = await route.fetch();
     const bundle = await response.json();
     const node = bundle.graph.nodes.find((node: { path: string }) => node.path === 'test/checkout.test.ts');
-    // Keep this fixed planar fixture above the settled action row, outside prose.
-    // The previous .76/.35 position was covered by the card after its final reflow.
-    node.x = .8; node.y = .2;
+    // Keep this fixed planar fixture in the exposed left gutter. A point behind
+    // an action is deliberately ineligible as an origin, even when mounted.
+    node.x = .22; node.y = .2;
     await route.fulfill({ response, json: bundle });
   });
   const demo = new URL(server.launchUrl); demo.search = '?demo'; demo.hash = '';

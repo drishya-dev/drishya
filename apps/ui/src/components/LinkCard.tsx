@@ -93,20 +93,27 @@ function OpenLinkCard({ target, children, focusable = false }: { target: LinkTar
   const [state, setState] = useState<CardState>({ phase: 'loading' });
   const [place, setPlace] = useState<{ left: number; top: number; above: boolean }>();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const request = useRef(0);
   const key = `${target.kind}|${target.kind === 'commit' || target.kind === 'branch' ? recording : ''}|${target.value}`;
 
   const clear = () => { if (timer.current) { clearTimeout(timer.current); timer.current = undefined; } };
+  const focused = () => !!anchor.current?.contains(document.activeElement);
+  const position = () => {
+    const el=anchor.current;if(!el)return;
+    const r=el.getBoundingClientRect(),width=Math.min(340,window.innerWidth-16);
+    const above=r.bottom+190>window.innerHeight&&r.top>190;
+    setPlace({left:Math.max(8,Math.min(r.left,window.innerWidth-width-8)),top:above?r.top-6:r.bottom+6,above});
+  };
   const close = useCallback((delay = CLOSE_DELAY) => {
     clear();
-    timer.current = setTimeout(() => { setPhase(p => p === 'open' ? 'closing' : p); timer.current = setTimeout(() => setPhase('closed'), CLOSE_FADE); }, delay);
+    timer.current = setTimeout(() => { request.current++; setPhase(p => p === 'open' ? 'closing' : p); timer.current = setTimeout(() => setPhase('closed'), CLOSE_FADE); }, delay);
   }, []);
   const open = useCallback((delay: number) => {
     clear();
+    const ticket=++request.current;
     timer.current = setTimeout(async () => {
       const el = anchor.current; if (!el) return;
-      const r = el.getBoundingClientRect(), width = Math.min(340, window.innerWidth - 16);
-      const above = r.bottom + 190 > window.innerHeight && r.top > 190;
-      setPlace({ left: Math.max(8, Math.min(r.left, window.innerWidth - width - 8)), top: above ? r.top - 6 : r.bottom + 6, above });
+      position();
       const cached = cache.get(key);
       if (cached === null) return;            // known not to be a commit or branch: stay a plain token
       setPhase('open');
@@ -114,6 +121,7 @@ function OpenLinkCard({ target, children, focusable = false }: { target: LinkTar
       setState({ phase: 'loading' });
       let body: CardBody | null = null;
       try { body = await load(target, recording, local); } catch { body = { heading: hostOf(target.value) || 'Link', title: target.value, note: 'Details are unavailable right now.' }; }
+      if(ticket!==request.current||!anchor.current?.isConnected)return;
       if (body === null) { cache.set(key, null); setPhase('closed'); return; }
       // A note means "not yet": Git approval is pending, or the lookup failed. Ask again next time.
       if (target.kind !== 'github' && !body.note) cache.set(key, body);
@@ -121,11 +129,18 @@ function OpenLinkCard({ target, children, focusable = false }: { target: LinkTar
     }, delay);
   }, [key, target, recording, local]);
 
-  useEffect(() => () => clear(), []);
+  useEffect(() => () => {request.current++;clear();}, []);
+  useEffect(() => {request.current++;clear();setPhase('closed');},[key]);
   useEffect(() => {
     if (phase === 'closed') return;
-    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { clear(); setPhase('closing'); timer.current = setTimeout(() => setPhase('closed'), CLOSE_FADE); } };
-    const scroll = () => { clear(); setPhase('closed'); };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { request.current++; clear(); setPhase('closing'); timer.current = setTimeout(() => setPhase('closed'), CLOSE_FADE); } };
+    const scroll = () => {
+      const r=anchor.current?.getBoundingClientRect();
+      // Focus can scroll its token into view after the delayed lookup starts.
+      // Keep the keyboard description attached; pointer-only cards still close.
+      if(phase==='open'&&focused()&&r&&r.bottom>0&&r.top<innerHeight&&r.right>0&&r.left<innerWidth){clear();position();return;}
+      request.current++;clear();setPhase('closed');
+    };
     document.addEventListener('keydown', escape); window.addEventListener('scroll', scroll, true);
     return () => { document.removeEventListener('keydown', escape); window.removeEventListener('scroll', scroll, true); };
   }, [phase]);
@@ -138,13 +153,13 @@ function OpenLinkCard({ target, children, focusable = false }: { target: LinkTar
   const shown = phase !== 'closed' && place;
   return <span ref={anchor} className="link-card-anchor" data-link-kind={target.kind} {...(focusable ? { tabIndex: 0 } : {})} {...(phase === 'open' ? { 'aria-describedby': id } : {})}
     onPointerEnter={event => { if (event.pointerType !== 'touch') open(OPEN_HOVER); }}
-    onPointerLeave={() => { if (phase === 'closed') clear(); else close(); }}
+    onPointerLeave={() => { if(focused())return; if (phase === 'closed') clear(); else close(); }}
     onFocus={() => open(OPEN_FOCUS)}
     onBlur={() => { if (phase === 'closed') clear(); else close(0); }}>
     {children}
     {shown && createPortal(
       <div id={id} role="tooltip" className="link-card" data-phase={phase} data-above={place.above || undefined} style={{ left: place.left, top: place.top }}
-        onPointerEnter={() => { clear(); setPhase('open'); }} onPointerLeave={() => close()}>
+        onPointerEnter={() => { clear(); setPhase('open'); }} onPointerLeave={() => {if(!focused())close();}}>
         {state.phase === 'loading' ? <p className="link-card-note">Looking up…</p> : state.phase === 'ready' ? <>
           <small className="link-card-heading">{state.body.heading}</small>
           {state.body.title && <strong className="link-card-title">{state.body.title}</strong>}
