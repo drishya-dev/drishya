@@ -1,3 +1,4 @@
+import {interfaceRem,useInterfaceScale} from '../lib/interface-scale.ts';
 import {currentReadingTarget} from '../lib/file-reading.ts';
 import {FileReadingActions} from './FileReadingActions.tsx';
 import {OpImages} from './OpImages.tsx';
@@ -42,6 +43,7 @@ export function CapturedFileFallback({path,projection,reason}:{path:string;proje
 
 function FileWorkspace({ path, projection,embedded=false,reason }: { path: string; projection: Projection;embedded?:boolean;reason?:string }) {
   const memoryScope=embedded?`file-fallback/${path}`:'file';
+  const interfaceScale=useInterfaceScale();
   const roots=useFileRoots(projection.observationCount);
   const root=roots.find(root=>path.startsWith(root.prefix+'/'));
   const recordedLocation=root?`${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length+1)}`:undefined;
@@ -192,8 +194,8 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
     <div className="file-reading-context">{(!modern||(embedded&&!reason))&&<EvidenceNavigation compact={modern} hideEmpty={modern} />}
     {recoveryError&&<p role="status" className="file-workspace-intro">{recoveryError}</p>}
     {(mode === 'replay' || requestedLine !== undefined) && <div className="file-workspace-intro"><span className="muted small">{mode === 'replay' ? 'Up to this replay step' : ''}{mode === 'replay' && requestedLine !== undefined && ' · '}{requestedLine !== undefined && `Line ${requestedLine}, within the lines the agent saw`}</span></div>}</div>
-    <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
-      {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} reset={()=>setTrailWidth(230)} label="Resize file action history" />}
+    <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': interfaceRem(trailWidth) } as React.CSSProperties}>
+      {!trailHidden && <ReadingResize value={trailWidth*interfaceScale} minimum={160*interfaceScale} maximum={440*interfaceScale} change={pixels=>setTrailWidth(pixels/interfaceScale)} reset={()=>setTrailWidth(230)} label="Resize file action history" />}
       <nav ref={trail} className="file-trail" aria-label="File action history">
         <input className="file-filter" aria-label="Filter actions on this file" placeholder={page ? `${page.total} action${page.total === 1 ? '' : 's'} on this file` : 'Loading…'} value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
         {error && <p role="alert" className="bad">{error} <button className="btn" onClick={() => { setFailure(undefined); setRetry((n) => n + 1); }}>Retry</button></p>}
@@ -228,7 +230,7 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
       </section>
     </div>
   </>;
-  return embedded?<section className="file-workspace captured-file-fallback" aria-label="File fallback" style={{width:'100%',height:'100%',maxHeight:'none',minHeight:0,border:0,borderRadius:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>{reason&&(modern?<div className="captured-fallback-head"><p role="status">{reason}</p><EvidenceNavigation compact hideEmpty/></div>:<p className="file-workspace-intro" role="status">{reason}</p>)}{content}</section>:<ReadingDialog title={`Work on ${recordedLocation ?? path}`} headerIcon={modern?<EvidenceNavigation compact hideEmpty/>:undefined} heading={modern?<span className="file-heading" tabIndex={-1} data-dialog-focus><strong>{fileName(path)}</strong><small title={recordedLocation ?? path}>{fileFolder(recordedLocation ?? path,4)}</small></span>:undefined} windowId={explore?undefined:'File'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>{content}</ReadingDialog>;
+  return embedded?<section className="file-workspace captured-file-fallback" aria-label="File fallback" style={{width:'100%',height:'100%',maxHeight:'none',minHeight:0,border:0,borderRadius:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>{reason&&(modern?<div className="captured-fallback-head"><p role="status">{reason}</p><EvidenceNavigation compact hideEmpty/></div>:<p className="file-workspace-intro" role="status">{reason}</p>)}{content}</section>:<ReadingDialog title={`Work on ${recordedLocation ?? path}`} headerIcon={modern?<EvidenceNavigation compact hideEmpty/>:undefined} heading={modern?<span className="file-heading" tabIndex={-1} data-dialog-focus><strong>{fileName(path)}</strong><small title={recordedLocation ?? path}>{fileFolder(recordedLocation ?? path,4)}</small></span>:undefined} windowId={explore?undefined:'File'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${interfaceRem(windowWidth)},calc(100vw - ${interfaceRem(28)}))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth*interfaceScale} minimum={640*interfaceScale} maximum={1800*interfaceScale} change={pixels=>setWindowWidth(pixels/interfaceScale)} reset={()=>setWindowWidth(1700)} label="Resize file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>{content}</ReadingDialog>;
 }
 
 /** The file is the window's title, so a row says what this step was. */

@@ -1,7 +1,8 @@
 import { READING_SHORTCUTS } from './ReadingKeys.tsx';
 import { DOCUMENT_SIZES, type DocumentSize } from '../lib/document-limit.ts';
 import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
-import { useEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useId, useRef, useState, type ReactNode, type CSSProperties } from 'react';
+import {installInterfaceScale} from '../lib/interface-scale.ts';
 import { createPortal } from 'react-dom';
 import { setLowResource, setMapVisible, setMotion, setHoverReading, setDocumentSize, setTheme, setPresentationPreferences, useApp } from '../state.ts';
 import { useEvidenceScroll } from './EvidenceNavigation.tsx';
@@ -71,6 +72,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
 }
 
 export function ProductShell({ children }: { children: ReactNode }) {
+  useLayoutEffect(installInterfaceScale,[]);
   const [readingHelp,setReadingHelp]=useState(false);
   useEffect(()=>{const open=()=>setReadingHelp(true);window.addEventListener('drishya-reading-help',open);return()=>window.removeEventListener('drishya-reading-help',open);},[]);
   useDismissMenus();
