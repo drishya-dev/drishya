@@ -1,10 +1,10 @@
 /* Studio's independent workbench. Shared evidence/motion primitives, new composition. */
 :root[data-experience=studio][data-theme=dark][data-palette=jet] {
-  --bg: #0b0e11; --s1: #171c21; --s2: #20272d; --s3: #2b353d;
-  --t1: #eef5f7; --t2: #b5c2ca; --t3: #8d9da8; --t4: #697a85;
-  --line: #c7dce614; --line-2: #c7dce62b; --line-3: #c7dce64d;
-  --focus: #a1d7c4; --source: #86cbed; --external: #c0aaf2; --edited: #f2c081;
-  --pass: #7adbb1; --fail: #ff8c96; --graph-node: #edf7fc; --graph-edge: #b6d1e0;
+  --bg: var(--default-bg-246); --s1: var(--default-s1-247); --s2: var(--default-s2-248); --s3: var(--default-s3-249);
+  --t1: var(--default-t1-250); --t2: var(--default-t2-251); --t3: var(--default-t3-252); --t4: var(--default-t4-253);
+  --line: var(--default-line-254); --line-2: var(--default-line-2-255); --line-3: var(--default-line-3-256);
+  --focus: var(--default-focus-257); --source: var(--source); --external: var(--source); --edited: var(--default-edited-258);
+  --pass: var(--default-pass-259); --fail: var(--default-fail-260); --graph-node: var(--text-primary); --graph-edge: var(--source);
 }
 :root[data-experience=studio] .viewer { --stage-rail: clamp(200px, 17vw, 260px); --spine-w: var(--stage-rail); --dock-w: var(--stage-rail); --crown-h: 76px; background-image: none; }
 :root[data-experience=studio] .viewer::before, :root[data-experience=studio] .viewer::after { background-image: none; }

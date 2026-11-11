@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { gitThreadLayout } from '../src/lib/git-thread-layout.ts';
-import { branchAt, branchWidth, gitLight, lightLayout, riverWidth } from '../src/lib/git-light.ts';
+import { branchAt, branchWidth, gitLight as paintGitLight, lightLayout, riverWidth } from '../src/lib/git-light.ts';
+
+// Synthetic paint input: geometry tests assert topology, caching and bounds, not a second product palette.
+const palette:readonly [number,number,number][]=Array.from({length:8},(_,i)=>[i/8,1-i/8,.5]);
+const gitLight=(...args: [Parameters<typeof paintGitLight>[0],Parameters<typeof paintGitLight>[1],Parameters<typeof paintGitLight>[2],Partial<Parameters<typeof paintGitLight>[3]>?])=>paintGitLight(args[0],args[1],args[2],{palette,...args[3]});
 
 // main: base → m1 → merge → m3; feature (2 commits) forks at base and merges; spike (3 commits) forks at m1, unmerged;
 // nested (1 commit) leaves spike's second commit.

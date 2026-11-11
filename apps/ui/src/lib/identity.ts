@@ -2,16 +2,18 @@ import type { Agent } from '@drishya/contracts';
 
 // Colour carries identity only. Harness hues are fixed (VISION §5); subagents take a lighter
 // tint of their parent's hue so the family reads at a glance.
-const HARNESS: Record<string, string> = { 'claude-code': '#E0896A', codex: '#6FC3B3' };
-const FALLBACK = ['#C7A0E8', '#E6C86E', '#7FB2F0', '#E88FB4'];
+const HARNESS: Record<string, string> = { 'claude-code': 'var(--agent-claude-ink)', codex: 'var(--agent-codex-ink)' };
+const FALLBACK = ['var(--agent-violet-ink)', 'var(--agent-gold-ink)', 'var(--agent-blue-ink)', 'var(--agent-rose-ink)'];
 
 export function agentColor(a: Pick<Agent, 'harness' | 'parentId' | 'id'> | undefined, agents: Agent[] = []): string {
-  if (!a) return '#71717A';
+  if (!a) return 'var(--text-muted)';
   const base = HARNESS[a.harness] ?? FALLBACK[Math.abs(hash(a.harness)) % FALLBACK.length]!;
   if (!a.parentId) return base;
   const siblings = agents.filter((x) => x.parentId === a.parentId);
   const i = Math.max(0, siblings.findIndex((x) => x.id === a.id));
-  return mix(base, '#FFFFFF', 0.28 + 0.1 * (i % 3));
+  const tint=0.28+0.1*(i%3);
+  // On Daylight, tint toward the palette's dark primary ink rather than white.
+  return `color-mix(in srgb, ${base} ${(1-tint)*100}%, var(--text-primary))`;
 }
 
 export function agentName(a: Agent | undefined): string {
@@ -28,11 +30,6 @@ function hash(s: string) {
   return h;
 }
 
-function mix(a: string, b: string, t: number) {
-  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
-  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
-  return '#' + pa.map((v, i) => Math.round(v + (pb[i]! - v) * t).toString(16).padStart(2, '0')).join('');
-}
 
 export const KIND_LABEL: Record<string, string> = {
   read: 'Read',

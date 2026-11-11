@@ -13,8 +13,8 @@
 
 .thread-caption select {display:block;width:100%;max-width:260px;margin-bottom:6px;background:var(--s1);border:1px solid var(--line);color:var(--t2);padding:5px 7px;border-radius:var(--round-sm);font:var(--text-2xs)/1.5 var(--sans);}
 
-.thread-graph .thread-commit {color:#edffff;}.thread-primary i {box-shadow:none;}.thread-graph .thread-commit:hover {color:#a9f5ff;}
-:root[data-theme=light] .thread-graph .thread-commit {color:#876233;}
+.thread-graph .thread-commit {color:var(--text-primary);}.thread-primary i {box-shadow:none;}.thread-graph .thread-commit:hover {color:var(--pass);}
+:root[data-theme=light] .thread-graph .thread-commit {color:var(--edited);}
 @media(max-width:360px){:root[data-ui-version=modern][data-experience=classic] .workspace-toggles button {font-size:0;width:42px;min-width:42px;padding:9px;gap:0;justify-content:center;}}
 
 .git-atlas .atlas-back {display:inline-flex;}
@@ -25,9 +25,9 @@
 .thread-stage:not(.lit) .thread-light {display:none;}
 .thread-stage.lit .thread-viewport {position:relative;background:none;}
 .thread-stage.lit .thread-commit i {opacity:0;}
-.thread-stage.lit .thread-commit:focus-visible {outline:1px solid #8fd8ff;}
-.thread-stage.lit .thread-label {background:color-mix(in srgb,#020203 62%,transparent);border-color:rgba(210,220,240,.16);color:#eef2fb;}
-.thread-stage.lit {background:#010102;}
+.thread-stage.lit .thread-commit:focus-visible {outline:1px solid var(--focus);}
+.thread-stage.lit .thread-label {background:color-mix(in srgb,var(--bg) 62%,transparent);border-color:color-mix(in srgb,var(--line-2) 16%,transparent);color:var(--text-primary);}
+.thread-stage.lit {background:var(--bg);}
 .thread-stage.lit .thread-viewport.on-branch {cursor:pointer;}
 .thread-branch-peek ol {margin:2px 0 0;padding:0;list-style:none;display:grid;gap:3px;}
 .thread-branch-peek li {display:flex;gap:8px;min-width:0;color:var(--t2);font-size:var(--text-2xs);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
