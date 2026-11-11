@@ -43,6 +43,8 @@ The shared ReadingDialog has callers in 19 component files: CapturedCommands, Ca
 
 ## Dependency decision — 11 November
 
+Opus's later execution order, recorded on main `9f643c76` and confirmed by Yash: MOTION-4 runs last, only after **UI-28c, LINK-1 and the LAYOUT-1b redo** merge. Until then #403 contains this inventory and the genuine baseline only. SHIP-20, SHIP-16's CI workflow, SHIP-21 and SHIP-3 run ahead of it, in that order. This supersedes the earlier UI-28c-only wait below.
+
 Yash chose **leave UI-28c with the actively working Claude session; resume MOTION-4 after its merge**. The local `claude/ui-28c-composer-toggle` branch had fresh commits at 09:31 and uncommitted PromptRail/SessionWorkspace/composer.css edits at 09:36 when checked. No takeover, copying of its uncommitted work or overlapping source edit was made. Draft #403 and the main claim record this wait. This task remains open; no UI behaviour is marked complete by the inventory.
 
 ## File boundaries
