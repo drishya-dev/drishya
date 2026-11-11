@@ -22,6 +22,8 @@ export interface CompareFile {
   path:string; group:CompareGroup;
   /** Git status letter of the compare side's change (`A`, `M`, `D`, `T`), and of the base side's change. */
   headStatus?:string; baseStatus?:string;
+  /** Identity of the change shown first (the blobs it goes from and to), and of the base side's change for a file changed on both. Reviewed marks key on it. */
+  fingerprint:string; baseFingerprint?:string;
   /** `+N −M` of the side shown first: the compare side's change, else the base side's. Absent for binary files. */
   added?:number; removed?:number; baseAdded?:number; baseRemoved?:number; binary?:boolean;
   /** Remote (GitHub) compares carry each patch; local compares fetch it per file. */

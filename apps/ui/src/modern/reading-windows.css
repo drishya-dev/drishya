@@ -13,7 +13,6 @@
 .adjustable-reading-window>.reading-resize,.adjustable-reading-window>header>.reading-resize{display:none;}
 .reading-window-edge:focus-visible{outline:1px solid var(--focus);outline-offset:-2px;}
 .reading-window-height:focus-visible {outline:1px solid var(--focus);outline-offset:-2px;}
-:root[data-ui-version=modern] .modern-git-drawer>header .reading-window-actions .icon-btn {width:28px;height:28px;}
 @media(max-width:820px) {.reading-window-move,.reading-window-edge {display:none;}}
 
 /* File peeks share the world with the agent; only full Workspace owns the stage. */

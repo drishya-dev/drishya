@@ -70,6 +70,8 @@ interface State {
   developerWorkspace: boolean;
   /** GIT-8: the Compare window, a working window like the Workspace. */
   compareOpen: boolean;
+  /** Which view Changes opens on when something asks for a particular one (the palette); read once, then cleared. */
+  comparePreset?: 'uncommitted' | 'session' | 'branch' | 'pr';
   theme: ThemePreference;
   settingsOpen: boolean;
   selectedOp?: string;

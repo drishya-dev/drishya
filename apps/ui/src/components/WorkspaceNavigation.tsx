@@ -1,7 +1,6 @@
 import {openGitHistory} from './GitHistory.tsx';
-import {openGitReview} from './GitReview.tsx';
 import {openReviewTool} from './ReviewInsights.tsx';
-import {openCompare} from './CompareWindow.tsx';
+import {openChanges} from '../lib/open-changes.ts';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useApp } from '../state.ts';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -51,8 +50,8 @@ export function WorkspaceNavigation() {
       all.push({key:'notes',name:'Notes',detail:'Your notes and saved steps',run:()=>requestAnimationFrame(()=>window.dispatchEvent(new Event('drishya-notes-open')))});
       if (kind === 'daemon' && id && !id.includes('+')) {
         all.push({key:'git-history',name:'Explore Git branches and commits',detail:'Local parent topology, refs and commit changes',run:()=>requestAnimationFrame(openGitHistory)});
-        all.push({ key: 'compare', name: 'Compare branches or a pull request', detail: 'Two sides from their merge-base, with the agent work behind each file', run: () => requestAnimationFrame(openCompare) });
-        all.push({ key: 'git', name: 'Review current Git changes', detail: 'Separately approved staged and worktree patches', run: () => requestAnimationFrame(openGitReview) });
+        all.push({ key: 'compare', name: 'Changes: compare branches or a pull request', detail: 'Two sides from their merge-base, with the agent work behind each file', run: () => requestAnimationFrame(() => openChanges('branch')) });
+        all.push({ key: 'git', name: 'Review current Git changes', detail: 'Changes on Uncommitted: staged and working-tree patches, separately approved', run: () => requestAnimationFrame(() => openChanges('uncommitted')) });
         all.push({ key: 'workspace', name: 'Open developer workspace', detail: 'Read current files and prepare local drafts with workspace consent', run: () => { if(!useApp.getState().developerWorkspace)click('[aria-label="Open developer workspace"]'); } });
       }
       all.push({key:'files',name:'Browse workspace files',detail:'Current files once approved; until then, the session’s files',run:()=>{useApp.getState().set({foldersHidden:false,explore:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});requestAnimationFrame(()=>document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({preventScroll:true}));}});

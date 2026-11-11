@@ -41,7 +41,6 @@
 }
 
 
-.git-history-entry {padding:8px 14px;border-bottom:1px solid var(--line);}
 .atlas-message>pre {max-height:180px;overflow:auto;scrollbar-gutter:stable;}
 .atlas-copy-message {margin-block:5px;}
 .atlas-message>span {display:block;margin-top:8px;}

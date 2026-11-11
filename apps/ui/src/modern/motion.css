@@ -3,21 +3,14 @@
    so keyboard use stays immediate. Inventory and reasons: docs/review/motion-1-inventory.md. */
 @media (prefers-reduced-motion: no-preference) {
   /* Press: a 1 px dip that eases in and out instead of snapping, on every control that presses. */
-  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn,.workspace-toggles>button,.workspace-menu>summary,.original-toggle,.git-entry-choices>button) {
+  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn,.workspace-toggles>button,.workspace-menu>summary,.original-toggle) {
     transition-property:background-color,border-color,color,opacity,transform; transition-duration:120ms; transition-timing-function:var(--ease-out);
   }
-  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.workspace-toggles>button,.workspace-menu>summary,.original-toggle,.git-entry-choices>button):active:not(:disabled) { transform:translateY(1px); }
+  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.workspace-toggles>button,.workspace-menu>summary,.original-toggle):active:not(:disabled) { transform:translateY(1px); }
 
   /* Switches: the knob travels on the product curve, and the track's colour follows it. */
   :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .mini-switch { transition:background-color 160ms var(--ease-out),border-color 160ms var(--ease-out); }
   :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .mini-switch::before { transition:transform 160ms var(--ease-out),background-color 160ms var(--ease-out); }
-
-  /* The Git popover opens from its trigger like the session menu (scale .95 → 1, 160 ms) and leaves faster (120 ms). */
-  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .git-entry-choices {
-    transform-origin:top right; transition:opacity 160ms var(--ease-out),transform 160ms var(--ease-out),overlay 120ms allow-discrete,display 120ms allow-discrete;
-  }
-  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .git-entry-choices:not(:popover-open) { opacity:0; transform:scale(.95); transition-duration:120ms; }
-  @starting-style { :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .git-entry-choices:popover-open { opacity:0; transform:scale(.95); } }
 
   /* Disclosures in menus and Settings (not the Toolbox, which re-renders with the stage and would replay it): the opened content settles in place (no height animation, nothing moves below it). */
   :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.workspace-utilities,.settings-dialog) details[data-reading-disclosure][open]>:not(summary) { animation:motion-settle-in 140ms var(--ease-out); }

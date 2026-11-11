@@ -46,7 +46,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
     const state = useApp.getState();
     // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
-    // MOTION-1: modeless reading windows (Git review, Git graph, file readers) open often, so theirs is shorter and smaller than a modal's.
+    // MOTION-1: modeless reading windows (Git graph, file readers) open often, so theirs is shorter and smaller than a modal's.
     const animate = !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
     const arrival = animate ? dialog.animate([{ opacity: 0, transform: modeless ? 'translateY(4px) scale(.99)' : 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: modeless ? 160 : 200, easing }) : undefined;

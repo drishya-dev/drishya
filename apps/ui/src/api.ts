@@ -197,7 +197,7 @@ export const workspaceApi = {
   gitCommit:(id:string,hash:string,parent=0,start=0,generation?:string)=>req<import('../../daemon/src/git-types.ts').GitCommitDetail>(`/v1/recordings/${encodeURIComponent(id)}/git/commit?${new URLSearchParams({hash,parent:String(parent),start:String(start),...(generation?{generation}:{})})}`),
   /** LINK-1 hover cards: a commit or local branch from read-only Git (needs the session's Git approval). */
   gitRef: (id: string, rev: string) => req<import('../../daemon/src/link-types.ts').GitRefSummary>(`/v1/recordings/${encodeURIComponent(id)}/git/ref?rev=${encodeURIComponent(rev)}`),
-  /** GIT-8 Compare: read-only, behind the same Git approval as Git review. */
+  /** GIT-8 Changes (comparison): read-only, behind the one Git approval the working-tree snapshot also uses. */
   compareRefs: (id: string) => req<import('../../daemon/src/git-compare-types.ts').CompareRefs>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-refs`),
   compare: (id: string, base: string, head: string) => req<import('../../daemon/src/git-compare-types.ts').GitCompareResult>(`/v1/recordings/${encodeURIComponent(id)}/git/compare?${new URLSearchParams({ base, head })}`),
   compareFile: (id: string, base: string, head: string, path: string, side: 'head' | 'base') => req<import('../../daemon/src/git-compare-types.ts').CompareFilePatch>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-file?${new URLSearchParams({ base, head, path, side })}`),

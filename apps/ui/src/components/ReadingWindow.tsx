@@ -18,14 +18,10 @@ export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string
    const composer=document.querySelector<HTMLElement>('.prompt-composer');
    // Layout height ignores the composer's finite scale animation; geometry must not chase it.
    const bottom=peek&&composer?innerHeight-composer.offsetHeight-(parseFloat(getComputedStyle(composer).bottom)||0)-12:innerHeight-12;
-   // The right-docked Git drawer starts below the navigation buttons so Review and Graph stay reachable.
-   const drawer=ref.current?.classList.contains('modern-git-drawer')&&innerWidth>820;
-   const drawerTop=Math.max((header?.bottom??52)+12,controls&&controls.height>0?controls.bottom+12:0);
-   if(drawer)ref.current?.style.setProperty('--drawer-top',`${drawerTop}px`);
    // LAYOUT-1: past --stage-max (Modern only; the variable is undefined elsewhere) the peek docks to the stage, not the screen edge.
    // The build writes design lengths in rem (identity at the 16 px root), so the variable is resolved to CSS pixels here.
    const rootStyle=getComputedStyle(document.documentElement),stageRaw=rootStyle.getPropertyValue('--stage-max').trim(),stageMax=parseFloat(stageRaw)*(stageRaw.endsWith('rem')?parseFloat(rootStyle.fontSize)||16:1)||innerWidth,stageEdge=Math.max(0,Math.round((innerWidth-stageMax)/2));
-   const top=peek?Math.min(Math.max(100,(controls?.bottom??124)+12),bottom-120):drawer?drawerTop:(header?.bottom??52)+12;
+   const top=peek?Math.min(Math.max(100,(controls?.bottom??124)+12),bottom-120):(header?.bottom??52)+12;
    const next:ReadingWindowBounds={width:innerWidth,height:innerHeight,top,...(peek?{left:stageEdge+Math.round(Math.min(innerWidth,stageMax)*.48),right:innerWidth-48-stageEdge,bottom}:{})};
    setViewport(previous=>JSON.stringify(previous)===JSON.stringify(next)?previous:next);
    const node=ref.current!;setSize(previous=>previous.width===node.offsetWidth&&previous.height===node.offsetHeight?previous:{width:node.offsetWidth,height:node.offsetHeight});
