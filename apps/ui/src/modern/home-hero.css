@@ -1,0 +1,16 @@
+/* SHIP-3: the landing's Inter, close tracking and quiet type, sized for a working Home. */
+.mh-home-hero .mh-hero {display:grid;grid-template-columns:minmax(0,1fr) minmax(260px,360px);gap:32px;align-items:center;padding-block:24px;}
+.mh-home-hero .mh-hero-copy {min-width:0;}
+.mh-home-hero .mh-hero h1 {margin:4px 0 10px;font:var(--weight-medium) var(--text-3xl)/1.08 var(--sans);letter-spacing:-.045em;color:var(--t1);}
+.mh-home-hero .mh-hero p {display:block;max-width:58ch;margin:0;font:var(--text-sm)/1.65 var(--sans);color:var(--t2);text-wrap:pretty;}
+.mh-home-hero .mh-hero-open {display:flex;align-items:center;gap:14px;width:100%;min-width:0;margin:0;padding:16px;text-align:left;border:1px solid var(--line);border-radius:var(--round-md);background:var(--s1);color:var(--t1);}
+.mh-home-hero .mh-hero-session {flex:1;min-width:0;display:flex;flex-direction:column;gap:3px;}
+.mh-home-hero .mh-hero-session small {color:var(--t2);font:var(--text-2xs)/1.5 var(--sans);}
+.mh-home-hero .mh-hero-session strong {display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--weight-medium) var(--text-sm)/1.5 var(--sans);color:var(--t1);}
+.mh-home-hero .mh-hero-session>span {display:block;color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.mh-home-hero .mh-hero-open>svg {width:18px;height:18px;flex:none;color:var(--t2);}
+.mh-home-hero .mh-hero-open:is(:hover,:focus-visible) {border-color:var(--line-2);background:var(--s2);}
+.mh-home-hero .mh-hero-open:disabled {cursor:progress;}
+@media(max-width:900px) {.mh-home-hero .mh-hero {grid-template-columns:minmax(0,1fr) minmax(220px,280px);gap:20px;}.mh-home-hero .mh-hero h1 {font-size:var(--text-2xl);}}
+@media(max-width:650px) {.mh-home-hero .mh-hero {grid-template-columns:minmax(0,1fr);gap:14px;padding-block:16px;}.mh-home-hero .mh-hero-open {padding:10px 12px;}.mh-home-hero .mh-hero p {font-size:var(--text-sm);}.mh-home-hero .mh-hero h1 {margin-bottom:7px;}}
+@media(max-height:700px) {.mh-home-hero .mh-hero {padding-block:12px;}.mh-home-hero .mh-hero h1 {font-size:var(--text-2xl);}}
