@@ -26,6 +26,8 @@ async function state(git:Git) {
   refs.sort((a,b)=>Number(b.current)-Number(a.current)||Number(b.kind==='branch')-Number(a.kind==='branch')||(Date.parse(b.lastCommit??'')||0)-(Date.parse(a.lastCommit??'')||0)||a.name.localeCompare(b.name));
   return {raw,head,branch,refs,generation:hash(raw+'\0'+head+'\0'+branch)};
 }
+/** Compare (GIT-8) reads the same reference snapshot History does. */
+export const gitRefState=state;
 const publicRef=({raw,...reference}:GitReference&{raw:string}):GitReference=>reference;
 export async function verifyGitHistoryGeneration(git:Git,generation:string) {if((await state(git)).generation!==generation)throw changed();}
 

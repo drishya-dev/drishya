@@ -6,6 +6,7 @@ import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 import {openGitDestination} from './git-navigation.ts';
+import {openSessionReview} from './session-review.ts';
 let dir:string,app:App,server:RunningServer;
 const samples=new Map<string,{id:string;ops:{id:string;path:string;kind:string;location:string}[]}>();
 test.beforeAll(async()=>{
@@ -59,7 +60,7 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review find files
   await peek.getByLabel('Reading options',{exact:true}).or(peek.getByLabel(`File reading actions for ${op.path}`,{exact:true})).press('Enter');
   await peek.getByRole('button',{name:'Show in Files',exact:true}).click();
   await expect(page.getByRole('textbox',{name:'Find repository files',exact:true})).toHaveValue(op.path);
-  await page.getByRole('button',{name:'Changes',exact:true}).click();const changes=page.locator('.evidence-review');await expect(changes).toBeVisible();await changes.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await changes.getByRole('button',{name:'View what the agent saw',exact:true}).click();
+  await openSessionReview(page);const changes=page.locator('.evidence-review');await expect(changes).toBeVisible();await changes.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await changes.getByRole('button',{name:'View what the agent saw',exact:true}).click();
   await expect(changes).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await captured.getByRole('button',{name:/^Close Work on/}).click();
   const statusResponse=page.waitForResponse(response=>response.request().method()==='GET'&&response.url().endsWith(`/recordings/${sample.id}/git`));
   await openGitDestination(page,'Git review');const git=page.getByRole('dialog',{name:'Git review',exact:true}),consent=git.getByRole('button',{name:'Approve read-only Git',exact:true}),refresh=git.getByRole('button',{name:'Refresh changes',exact:true});

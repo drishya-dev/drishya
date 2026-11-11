@@ -38,6 +38,7 @@ import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
 import { GithubLinks, type GhRun } from './github-links.ts';
+import { GitCompareService } from './git-compare-service.ts';
 import { repositoryRoots } from './repository-root.ts';
 import { sessionLinks } from './git-session-links.ts';
 import { HarnessController } from './controller.ts';
@@ -131,6 +132,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const workspace = new WorkspaceAccess(app);
   const gitReview = new GitReview(workspace,undefined,app.history);
   const github = new GithubLinks(app, opts.gh);
+  const gitCompare = new GitCompareService(app, gitReview, github);
   const repositoryRoot = repositoryRoots();
   const imports = new Map<string, { recordingId: string; total: number }>();
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
@@ -358,6 +360,17 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
       if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
+      if(sub==='git'&&subId==='compare-refs'&&m==='GET')return json(res,await gitCompare.refs(id));
+      if(sub==='git'&&subId==='compare'&&m==='GET')return json(res,await gitCompare.compare(id,{base:url.searchParams.get('base')??'',head:url.searchParams.get('head')??''}));
+      if(sub==='git'&&subId==='compare-file'&&m==='GET')return json(res,await gitCompare.file(id,{base:url.searchParams.get('base')??'',head:url.searchParams.get('head')??'',path:url.searchParams.get('path')??'',side:url.searchParams.get('side')==='base'?'base':'head'}));
+      if(sub==='git'&&subId==='compare-pulls'&&m==='GET')return json(res,await gitCompare.pulls(id));
+      if(sub==='git'&&subId==='compare-remote'&&m==='GET')return json(res,await gitCompare.remote(id,intParam(url,'pr',0,1,999_999_999)));
+      if(sub==='compare-evidence'&&m==='GET'){
+        for(const key of id.split('+'))app.recording(key);
+        const paths=url.searchParams.getAll('path');
+        if(!paths.length||paths.length>200||paths.some(path=>!path||path.length>1024))throw new HttpError(400,'Choose 1 to 200 file paths');
+        return json(res,await gitCompare.evidence(id,paths));
+      }
       if(sub==='git'&&subId==='ref'&&m==='GET')return json(res,await gitReview.ref(id,url.searchParams.get('rev')??''));
       if(sub==='git'&&subId==='commit'&&m==='GET')return json(res,await gitReview.commit(id,url.searchParams.get('hash')??'',intParam(url,'parent',0,0,1023),intParam(url,'start',0,0,10_000_000),url.searchParams.get('generation')??undefined));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') {

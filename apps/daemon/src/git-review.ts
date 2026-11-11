@@ -97,6 +97,8 @@ export class GitReview {
       return result;
     });
   }
+  /** GIT-8: Compare reads through the same consent, turn and repository-root checks as History. */
+  inspect<T>(id:string,read:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {return this.readHistory(id,read);}
   history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async git=>{
     const page=await gitHistory(git,query);
     if(!this.historyService||id.includes('+'))return page;
