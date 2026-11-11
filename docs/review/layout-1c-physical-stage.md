@@ -1,6 +1,6 @@
 # LAYOUT-1c — the stage follows physical screen width
 
-Yash with Codex, 11 November. Claimed on main before work; runtime `9b8aab21`. Whole implementation and genuine acceptance complete; the final broader gate is still running. No merge by Codex, hosted dispatch or clean-main comparison.
+Yash with Codex, 11 November. Claimed on main before work; runtime `9b8aab21`. Whole task complete for Opus review; final broader verification passes. No merge by Codex, hosted dispatch or clean-main comparison.
 
 ## Behaviour
 
@@ -35,7 +35,10 @@ The initial 50% baseline on both harnesses had the Files controls at x=978 CSS p
 - Both project typechecks and fresh UI build pass.
 - Three focused units pass: immediate ratio installation, resolution-only updates/listener rearming, high-density physical limiting, invalid-ratio fallback and complete cleanup/previous-state restoration. They also assert no font-size write.
 - All 17 large-screen browser cases pass with two Edge workers and no retries, including old reader bounds, composer toggles, 600 px overflow, the five device ratios and an in-place ratio sequence. Old stage geometry expectations intentionally move from 1920 CSS pixels to 2560 device pixels. The new right-header assertion initially assumed 25 px; measured existing 30 px is now asserted exactly. No product margin was changed to make that new test pass.
-- Final all-unit/package/affected-browser results pending. Do not call the whole gate green from these focused results alone. TASKS completion and claim removal belong in the final PR.
+- Final all units with two workers: **1,399 passed, one existing skip**, 230 files, zero failures. Package verification passes (isolated offline install, both native imports, authenticated API and persisted restart).
+- `check:affected` passes as one complete command: both types, 46 related units, fresh UI build, **769 parallel + 32 serial browsers passed / 28 existing skips / zero failures or retries**, two Edge workers plus one serial worker. Source frozen at `9b8aab21`; later changes are completion docs only. No clean-main comparison or hosted dispatch.
+- `check:real workspace-files --max-mb 12 --pick 1` supplements the actual screen checks: Claude `rec_024517cd`, 6.3 MB / 426 operations / 242 native file-shell calls / 63 file references; Codex `rec_275b92f0`, 6 MB / 83 operations / 12 calls / two file references. Those are capture counts, not claims of current-file availability.
+- TASKS ticked, sync-tasks run, own claim removed in the finishing PR. TEST-2's strict multi-run streak and hosted/physical-platform release acceptance are not cleared by this single local pass.
 
 ## Merge boundary
 
