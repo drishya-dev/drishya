@@ -13,13 +13,14 @@ export interface CheckoutIdentity {
 }
 interface SavedGrant {version:1;identity:CheckoutIdentity;requestedRoot?:string;createdAt:string;revision:string}
 export interface CheckoutGrant {id:string;root:string;identity:CheckoutIdentity;createdAt:string}
-const PREFIX='checkout-read-grant-v1:',LIMIT=128;
+const PREFIX='checkout-read-grant-v1:',ALIASES='checkout-read-alias-v1:',LIMIT=128,ALIAS_LIMIT=4096;
 const normalize=(path:string)=>process.platform==='win32'?resolve(path).toLowerCase():resolve(path);
+const spellingKey=(path:string)=>createHash('sha256').update(normalize(path)).digest('hex');
 export const checkoutGrantKey=(path:string)=>{
   // A spelling alias is the same capability. A vanished alias is found through
   // its saved approval spelling when a canonical lookup is no longer possible.
   let canonical=path;try{canonical=realpathSync.native(path);}catch{}
-  return createHash('sha256').update(normalize(canonical)).digest('hex');
+  return spellingKey(canonical);
 };
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const safe=(value:unknown)=>same(value,sanitize(value).value);
@@ -95,21 +96,33 @@ export class CheckoutGrants {
     try {
       if(row.value.length>8192)throw Error();
       const value=JSON.parse(row.value) as SavedGrant;
-      if(value.version!==1||typeof value.createdAt!=='string'||typeof value.revision!=='string'||value.requestedRoot!==undefined&&(typeof value.requestedRoot!=='string'||value.requestedRoot.length>4096)||!value.identity?.root||checkoutGrantKey(value.identity.root)!==id||!safe(value))throw Error();
+      if(value.version!==1||typeof value.createdAt!=='string'||typeof value.revision!=='string'||value.requestedRoot!==undefined&&(typeof value.requestedRoot!=='string'||value.requestedRoot.length>4096)||!value.identity?.root||spellingKey(value.identity.root)!==id||!safe(value))throw Error();
       return value;
     } catch {this.remove(id);return;}
   }
   remove(id:string) {
     if(!/^[a-f0-9]{64}$/.test(id))throw new CheckoutIdentityError('Invalid checkout grant identity.');
     this.store.db.prepare('DELETE FROM meta WHERE key=?').run(PREFIX+id);
+    // An explicit reset of all remembered grants also resets their alias history.
+    if(!(this.store.db.prepare('SELECT 1 FROM meta WHERE key LIKE ? LIMIT 1').get(PREFIX+'%')))this.store.db.prepare('DELETE FROM meta WHERE key LIKE ?').run(ALIASES+'%');
+  }
+  private bind(root:string,id:string) {
+    const key=ALIASES+spellingKey(root);
+    const exists=this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key);
+    const count=this.store.db.prepare('SELECT count(*) AS n FROM meta WHERE key LIKE ?').get(ALIASES+'%') as {n:number};
+    if(!exists&&count.n>=ALIAS_LIMIT)throw new CheckoutIdentityError('Remembered alias limit reached; revoke remembered checkout grants first.');
+    this.store.db.prepare('INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(key,id);
   }
   private forRoot(root:string):{id:string;saved:SavedGrant}|undefined {
-    const id=checkoutGrantKey(root),saved=this.saved(id);
-    if(saved)return {id,saved};
+    const binding=this.store.db.prepare('SELECT value FROM meta WHERE key=?').get(ALIASES+spellingKey(root)) as {value:string}|undefined;
+    if(binding){const saved=/^[a-f0-9]{64}$/.test(binding.value)?this.saved(binding.value):undefined;return saved?{id:binding.value,saved}:undefined;}
+    const literal=spellingKey(root),exact=this.saved(literal);
+    if(exact){this.bind(root,literal);return {id:literal,saved:exact};}
     // Missing or retargeted approval spellings must revoke the old receipt too.
     // Looking up an exact recorded spelling is never proof of current access.
     const rows=this.store.db.prepare('SELECT key FROM meta WHERE key LIKE ? LIMIT ?').all(PREFIX+'%',LIMIT) as {key:string}[];
-    for(const row of rows){const key=row.key.slice(PREFIX.length);if(!/^[a-f0-9]{64}$/.test(key))continue;const value=this.saved(key);if(value&&[value.identity.root,value.requestedRoot].some(path=>path!==undefined&&normalize(path)===normalize(root)))return {id:key,saved:value};}
+    for(const row of rows){const key=row.key.slice(PREFIX.length);if(!/^[a-f0-9]{64}$/.test(key))continue;const value=this.saved(key);if(value&&[value.identity.root,value.requestedRoot].some(path=>path!==undefined&&normalize(path)===normalize(root))){this.bind(root,key);return {id:key,saved:value};}}
+    const id=checkoutGrantKey(root),saved=this.saved(id);if(saved){this.bind(root,id);return {id,saved};}
   }
   forget(root:string){this.remove(this.forRoot(root)?.id??checkoutGrantKey(root));}
   async remember(root:string,identity:CheckoutIdentity,allowed:()=>boolean=()=>true) {
@@ -121,6 +134,7 @@ export class CheckoutGrants {
     if(!allowed())throw new CheckoutIdentityError('Workspace access changed during approval.');
     const rows=this.store.db.prepare('SELECT key FROM meta WHERE key LIKE ? LIMIT ?').all(PREFIX+'%',LIMIT) as {key:string}[];
     for(const row of rows){const key=row.key.slice(PREFIX.length);if(key===id||!/^[a-f0-9]{64}$/.test(key))continue;const value=this.saved(key);if(value&&normalize(value.requestedRoot??value.identity.root)===normalize(root))this.remove(key);}
+    this.bind(root,id);this.bind(identity.root,id);
     this.store.db.prepare('INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(PREFIX+id,JSON.stringify(record));
   }
   async restore(root:string):Promise<CheckoutIdentity|undefined> {

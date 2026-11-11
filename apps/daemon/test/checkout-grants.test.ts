@@ -80,6 +80,14 @@ it('a fresh explicit approval after retargeting leaves only the latest spelling 
   await symlink(other,alias,process.platform==='win32'?'junction':'dir');expect(await f.access.remembered.restore(alias)).toBeUndefined();
   expect(await f.access.remembered.list()).toEqual([]);
 });
+it('never transfers an observed alias to an independently approved checkout after retargeting',async()=>{
+  const f=await fixture(),alias=join(f.dir,'alias'),other=join(f.dir,'independently-approved');await mkdir(other);
+  await f.access.remembered.remember(f.root,await checkoutIdentity(f.root));await f.access.remembered.remember(other,await checkoutIdentity(other));
+  await symlink(await realpath(f.root),alias,process.platform==='win32'?'junction':'dir');expect(await f.access.remembered.restore(alias)).toEqual(await checkoutIdentity(f.root));
+  await rm(alias);await symlink(other,alias,process.platform==='win32'?'junction':'dir');
+  expect(await f.access.remembered.restore(alias)).toBeUndefined();expect(await f.access.remembered.restore(alias)).toBeUndefined();
+  expect(await f.access.remembered.restore(other)).toEqual(await checkoutIdentity(other));
+});
 it.runIf(process.platform==='win32')('restores a real Windows 8.3 path as the same checkout',async context=>{
   const f=await fixture(),long=join(f.dir,'Long Checkout Name');await mkdir(long);
   // A fixed read-only command, with no interpolated filesystem or prompt text.
