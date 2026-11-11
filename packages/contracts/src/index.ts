@@ -423,7 +423,7 @@ export interface SessionLineageLink {
   childRecordingId: string;
   parentRecordingId?: string;
   status: 'linked' | 'parent-missing' | 'ambiguous';
-  basis: 'native-logical-parent';
+  basis: 'native-logical-parent' | 'shared-entry-uuids';
   childSourceId: string;
   boundaryRecordId: string;
   logicalParentRecordId: string;

@@ -1,3 +1,4 @@
+import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {ProseFilesProvider} from './ProseFiles.tsx';
 import {QueuedInputs} from './QueuedInputs.tsx';
 import {currentReadingTarget,currentReadingFailure} from '../lib/file-reading.ts';
@@ -185,11 +186,12 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const [activeFile,activeOrigin,draftFiles]=useMemo(()=>JSON.parse(workspaceSnapshot) as [string,string,string[]],[workspaceSnapshot]);
   const workspaceFile=developerWorkspace?activeFile:'';
   const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const interfaceScale = useInterfaceScale();
   const [width, setWidth] = useWorkspaceState('folders/width', 260);
   const [viewport, setViewport] = useState(() => innerWidth);
   useEffect(() => { const resize = () => setViewport(innerWidth); window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize); }, []);
-  const maximumWidth = Math.max(220, Math.min(420, Math.floor(viewport * .32)));
-  const readingWidth = Math.max(220, Math.min(maximumWidth, width));
+  const maximumWidth = Math.max(220*interfaceScale, Math.min(420*interfaceScale, Math.floor(viewport * .32)));
+  const readingWidth = Math.max(220*interfaceScale, Math.min(maximumWidth, width*interfaceScale));
   const shown = !hidden && (!narrow || hidden === false);
   const explorer = useRef<HTMLElement>(null);
   const closeExplorer = (returnFocus = false) => {
@@ -216,9 +218,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     const viewer = document.querySelector<HTMLElement>('.viewer');
     if (!viewer || !modern || narrow) return;
     // Minimised, Files gives its width to the stage (Yash, 3 Nov: a small screen can give the work the whole width).
-    viewer.style.setProperty('--files-rail', shown ? `${readingWidth + 34}px` : '24px');
+    viewer.style.setProperty('--files-rail', shown ? `${readingWidth + 34*interfaceScale}px` : `${24*interfaceScale}px`);
     return () => { viewer.style.removeProperty('--files-rail'); };
-  }, [modern, narrow, readingWidth, shown]);
+  }, [modern, narrow, readingWidth, shown, interfaceScale]);
   useEffect(() => {
     if (graph || !source || !id) return;
     let active = true; setError(undefined);
@@ -285,7 +287,17 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     return positions;
   }, [tree]);
   // One continuous scrollbar; a bounded DOM window keeps large repositories cheap.
-  const rowHeight = 32;
+  const rowHeight = 32*interfaceScale;
+  const previousRowHeight = useRef(rowHeight);
+  useLayoutEffect(()=>{
+    const ratio=rowHeight/previousRowHeight.current;
+    previousRowHeight.current=rowHeight;
+    if(ratio===1)return;
+    if(folderAnchor.current)folderAnchor.current.offset*=ratio;
+    const top=treeScroll*ratio;
+    if(treeElement.current)treeElement.current.scrollTop=top;
+    setTreeScroll(top);
+  },[rowHeight]);
   const firstRow = Math.max(0, Math.floor(treeScroll / rowHeight) - 10);
   const lastRow = Math.min(tree.length, firstRow + Math.ceil(treeHeight / rowHeight) + 24);
   const evidence = useFileEvidence(tree.slice(firstRow, lastRow).filter(row => !row.folder).map(row => row.path), projection, shown);
@@ -357,7 +369,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
   if (!shown) return null;
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
-    {modern && !narrow && <ReadingResize value={readingWidth} minimum={220} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(260)} label="Resize Files reading space" />}
+    {modern && !narrow && <ReadingResize value={readingWidth} minimum={220*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(260)} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
     <div className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={modern ? 'Find repository files' : 'Find session files'} placeholder={touchedOnly?'Find touched files…':'Find files…'} maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}
       <details className="desk-options tree-evidence-filter" data-touched={touchedOnly} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.open){event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}>
@@ -385,7 +397,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
-      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-selected={row.path===(workspaceFile?activeReveal?.path:revealedFolder)} aria-label={row.name} aria-description={draftFiles.includes(row.path)?"Local draft; file not created on disk.":fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} data-file-location={row.unplaced ? 'unplaced' : undefined} style={{ paddingLeft: 8 + Math.min(row.depth, 12) * 12, height: rowHeight, minHeight: rowHeight }} title={row.unplaced ? `Captured path; repository location unresolved: ${row.path}` : row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
+      {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-selected={row.path===(workspaceFile?activeReveal?.path:revealedFolder)} aria-label={row.name} aria-description={draftFiles.includes(row.path)?"Local draft; file not created on disk.":fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined)} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} data-file-location={row.unplaced ? 'unplaced' : undefined} style={{ paddingLeft: (8 + Math.min(row.depth, 12) * 12)*interfaceScale, height: rowHeight, minHeight: rowHeight }} title={row.unplaced ? `Captured path; repository location unresolved: ${row.path}` : row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
         const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);
         if(!row.folder&&currentPath!==undefined&&source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);
         if (row.folder) { if(opened.has(row.path)){manuallyCollapsed.current=true;pendingFile.current=undefined;} folderAnchor.current = { path: row.path, offset: (firstRow + i) * rowHeight - (treeElement.current?.scrollTop ?? 0) }; setOpened(prev => { const next = new Set(prev); next.has(row.path) ? next.delete(row.path) : next.add(row.path); if (next.size > 256) next.delete([...next].find(path => path !== '')!); return next; }); }

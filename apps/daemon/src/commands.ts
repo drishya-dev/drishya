@@ -55,6 +55,8 @@ export async function main() {
         token: process.env.DRISHYA_TOKEN || undefined,
         devOrigins: values.dev ? ['http://127.0.0.1:5173', 'http://localhost:5173'] : [],
       });
+      // CONTENT-21: looks across the project's journals, so only the real daemon does it, not every test server.
+      void running.app.ingest.refreshClaudeLineages().catch(() => undefined);
       console.log(`\n  Drishya ${VERSION} — local agent workspace.\n`);
       console.log(`  Open:  ${running.launchUrl}`);
       if (values.dev) console.log(`  Dev UI: http://127.0.0.1:5173/#token=${running.token}  (run \`pnpm ui:dev\`)`);

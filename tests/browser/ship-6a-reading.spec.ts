@@ -49,7 +49,8 @@ for (const width of [600, 1440]) test(`reader ownership and history clearance at
     const controls = [...el.querySelectorAll('.workspace-header,.workspace-leading,.workspace-secondary')].map(node => node.getBoundingClientRect());
     return { history: history.top, controlBottom: Math.max(viewer.top, ...controls.filter(r => r.width && r.height).map(r => r.bottom)) };
   });
-  expect(boundary.history).toBeGreaterThanOrEqual(boundary.controlBottom);
+  // LAYOUT-1b / Yash 10 Nov: the scrolling world reaches y=0 beneath floating controls.
+  expect(boundary.history).toBe(0);
   await history.evaluate(el => { el.scrollTop = 0; el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true })); });
   const latest = page.getByRole('button', { name: /Back to latest/ });
   await expect(latest).toBeVisible();
