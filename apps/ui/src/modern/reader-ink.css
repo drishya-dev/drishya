@@ -1,0 +1,40 @@
+/* SHIP-20: colour and weight only. Captured material stays primary; provenance is
+   muted, paths use source ink, and diffs keep their signs and semantic washes.
+   Palette declarations belong to SHIP-17, not to an individual reader. */
+:root[data-ui-version=modern][data-experience=classic] :is(.developer-workspace,.current-file-reader,.file-workspace,.source-version-dialog,.image-reader,.screen-view) {
+  color:var(--text-primary);
+}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-header strong,.desk-empty h2,.current-file-reader>header h2,.file-workspace>header h2,.screen-title,.insight-row h3) {
+  color:var(--text-primary);font-weight:var(--weight-strong);
+}
+/* File names identify the reading target; provenance beside them is not code. */
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-document>header strong,.current-file-meta code,.file-workspace-intro code,.path-image-path,.screen-url,.library-search-results>button>small,.library-search-results>.md-path) {color:var(--source);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-document>footer,.desk-header small,.desk-comparison-context small,.reader-source-context,.current-file-meta,.source-import-context,.image-reader-context,.path-image-current figcaption,.screen-count,.screen-meta,.prompt-facts,.insight-row>footer,.review-packet label,.library-search-scope,.search-turn,.search-hit>small) {color:var(--text-muted);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-empty p,.desk-comparison-note,.desk-comparison-empty,.path-image-consent,.screen-caption,.insights-intro p,.review-packet) {color:var(--text-secondary);}
+
+/* The text being read, edited or reviewed is never demoted to metadata. */
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-code,.current-file-code,.file-evidence-material,.source-version-dialog) :is(.code,.ln-tx,.output),
+:root[data-ui-version=modern][data-experience=classic] :is(.insight-row p,.insight-command,.finding-member p,.review-packet textarea,.library-search-results>button>p,.search-hit>p) {color:var(--text-primary);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-code,.current-file-code,.file-evidence-material,.source-version-dialog) :is(.ln-no,.ln-more,.hunk-head),
+:root[data-ui-version=modern][data-experience=classic] .draft-editor-host .cm-gutters {color:var(--text-muted);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-code,.current-file-code,.file-evidence-material,.source-version-dialog) .ln-hi {background:color-mix(in srgb,var(--source) 11%,transparent);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-draft-comparison,.file-evidence-material,.source-version-dialog) .diff .add {background:var(--diff-added-wash);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-draft-comparison,.file-evidence-material,.source-version-dialog) .diff .del {background:var(--diff-removed-wash);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-draft-comparison,.file-evidence-material,.source-version-dialog) .diff .add .ln-sign {color:var(--diff-added);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-draft-comparison,.file-evidence-material,.source-version-dialog) .diff .del .ln-sign {color:var(--diff-removed);}
+
+/* Structured documents retain their typography, with the same content hierarchy. */
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-markdown,.current-file-document,.file-evidence-material) :is(p,li,td,dd) {color:var(--text-primary);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-markdown,.current-file-document,.file-evidence-material) :is(h1,h2,h3,h4,.md-h) {color:var(--text-primary);font-weight:var(--weight-strong);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-markdown,.current-file-document,.file-evidence-material) :is(p,li,td,dd) code {color:var(--source);background:color-mix(in srgb,var(--source) 11%,transparent);}
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer .file-outside {color:var(--text-muted);}
+:root[data-ui-version=modern][data-experience=classic] :is(.desk-draft-bar,.desk-document>footer small,.file-change.change-E) {color:var(--edited);}
+:root[data-ui-version=modern][data-experience=classic] .file-change.change-A {color:var(--pass);}
+:root[data-ui-version=modern][data-experience=classic] :is(.file-change.change-D,.desk-error,.screen-fail,.insights-error) {color:var(--fail);}
+
+/* Replay text is readable data; the recorded edit/failure jumps keep their inks. */
+:root[data-ui-version=modern][data-experience=classic] .modern-replay-position output {color:var(--text-primary);}
+:root[data-ui-version=modern][data-experience=classic] .modern-replay-caption {color:var(--text-muted);}
+/* Thumbnail numbers have an opaque token surface: their contrast must not depend
+   on the screenshot underneath. Pointer marks retain the black/white double edge. */
+:root[data-ui-version=modern][data-experience=classic] .screen-cell small {background:var(--s1);color:var(--text-primary);}

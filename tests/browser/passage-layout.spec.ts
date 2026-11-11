@@ -90,7 +90,7 @@ test.afterAll(async () => {
 });
 
 async function open(page: Page, recording: Recording, width: number) {
-  await page.setViewportSize({ width, height: 6000 });
+  await page.setViewportSize({ width, height: 6400 });
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[recording]}`);
   await expect(page.locator('.history article.op[data-op-id]').first()).toBeVisible();
