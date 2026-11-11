@@ -173,7 +173,7 @@ export class App {
     // A proven continuation contributes evidence, not the earlier journal's checkout.
     const rec = this.workspaceRecording(idOrIds.includes('+')?ids[0]!:idOrIds);
     const large = this.paged(idOrIds);
-    const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
+    const projection = large ? (await this.history.page(this.readingId(idOrIds), { count: 1 })).projection : this.projection(idOrIds);
     // An explicitly combined export is evidence from several sessions, not one current checkout.
     if(idOrIds.includes('+'))return graphFromPaths(projection.files.map(file=>file.path));
     const roots=rec.workspaceRoot?await recordedFileRoots(this.store,ids):undefined;

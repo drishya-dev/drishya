@@ -2,7 +2,7 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync,realpathSync,renameSync} from
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {execFileSync} from 'node:child_process';
-import {beforeEach,afterEach,it,expect} from 'vitest';
+import {beforeEach,afterEach,it,expect,vi} from 'vitest';
 import {App} from '../src/app.ts';
 import {WorkspaceAccess} from '../src/workspace.ts';
 import {GitReview} from '../src/git-review.ts';
@@ -47,4 +47,12 @@ it('does not let a replacement directory borrow a temporary checkout grant',asyn
  const choice=await app.chooseCheckout(id,await prefix(worker));await workspace.approve(choice.id);
  const old=join(dir,'previous-worker');if(!resolve(old).startsWith(dir+sep)||!resolve(worker).startsWith(dir+sep))throw Error('Unsafe move fixture');renameSync(worker,old);mkdirSync(worker);writeFileSync(join(worker,'worker.ts'),'export const replacement=1;');
  await expect(workspace.read(choice.id,'worker.ts')).rejects.toMatchObject({status:403});
+});
+
+it('uses the real history identity for a paged checkout map',async()=>{
+ const choice=await app.chooseCheckout(id,await prefix(worker)),projection=app.projection(id);
+ const paged=vi.spyOn(app,'paged').mockReturnValue(true);
+ const page=vi.spyOn(app.history,'page').mockResolvedValue({projection} as never);
+ try{expect((await app.graph(choice.id)).approvalNeeded?.root).toBe(worker);expect(page).toHaveBeenCalledWith(id,{count:1});}
+ finally{page.mockRestore();paged.mockRestore();}
 });

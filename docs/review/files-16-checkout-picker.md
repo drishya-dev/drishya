@@ -28,7 +28,7 @@ Genuine journals were imported read-only into fresh scratch homes. No journal co
 
 The older Codex samples' secondary roots were removed or cwd-only, so a fresh native Codex session read two synthetic throwaway Git worktrees. The native CLI ran with its saved defaults and fixed argv; it owned its journal writes. No fabricated journal or sandbox/approval change. Native stdout remains private.
 
-All four journeys: approve the original root, open a current file, choose a distinct actual recorded worktree, prove access is not inherited, approve that root, read its actual current material, inspect its Git and qualified map, return to the original file/search. All preserve the recorded identity; zero page errors and zero controller prompts. Twelve private choice/current/Git/return frames plus count-only results are retained (four frames per journey).
+All four journeys: approve the original root, open a current file, choose a distinct actual recorded worktree, prove access is not inherited, approve that root, read its actual current material, inspect its Git and qualified map, return to the original file/search. All preserve the recorded identity; zero page errors and zero controller prompts. Sixteen private choice/current/Git/return frames plus count-only results are retained (four frames per journey).
 
 ## Checks and current status
 
