@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
-| SHIP-21 | @yash + Codex | `codex/ship-21` | 2026-11-11 | Whole expanded scope explicitly assigned by Yash 11 Nov: audit roughly 259 remaining product colour literals, centralise palette paint in tokens.css, tune three shipped palettes (distinct navy Midnight), Git/Now/agent ink, strict contrast/chroma units and one both-harness 600/1440 frame set in .local/ship-21/compare/. Global colour-only footprint may reach 90 source/test/docs paths, with grouped coherent commits, because this is a product-wide token migration; no layout, spacing, fonts, geometry or motion. Never edit toolbox rail, large-screens.css, protected files or another active claim. Shadows/masks and Clarity may remain. Known rail timeouts are listed, never clean-main-compared. New theme additions are optional after current tasks. Opus reviews/merges. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: SHIP-17 to SHIP-21 merging. |
 | SHIP-2b | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
@@ -57,10 +56,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — 11 Nov: SHIP-16 phase B verified; no duplicate CI patch
+### Yash with Codex — 11 Nov: SHIP-21 complete for review, #408
 
-- #388 / `9f9461bb` already implements the entire requested workflow change: two three-OS matrices and package verification in the check job. Static checks confirm manual dispatch, read-only permissions and retained failure artifacts. No source change or hosted run needed now.
-- The whole SHIP-16 parent remains open only for phase E: frozen-candidate CI results, WSL2 native install/import/live walk and accurate platform release notes. No platform acceptance is claimed. Continue SHIP-21, then assigned SHIP-3; extra palette additions come after the current work if time permits.
+- Whole expanded colour scope built: palette values in tokens.css, 564 declarations migrated, deterministic renderer paint inputs, three strict palette floors, distinct navy Midnight. No spacing, layout, font, rail or motion changes.
+- 132 genuine-session frames / 44 combined strips in `.local/ship-21/compare/`: Claude `rec_39af3c94` (14,545,573 bytes, 747 ops, 46 file references), Codex `rec_7f72dcb0` (1,981,961 bytes, 38 ops, 3 file references), eleven surfaces in three palettes at 600/1440, zero page errors.
+- Both types/build, 25 related units, 18 focused units and 22 targeted browsers pass. Broad affected run: 745 parallel +27 serial pass, 28 skip, 11 fail; two old-colour expectations corrected and verified. Nine non-colour failures recur in focused reruns; no clean-main comparison. Pacing's three animations are the existing scroll-linked edge masks. Full exact record: [SHIP-21](review/ship-21-product-palettes.md). No toolbox-rail interception timeout observed after #409; no green full-gate claim.
+- Opus must sign off palettes and assess the listed failures before merge. Claim removed in this PR, TASKS marked implementation-complete for review; no merge performed. Latest main adds SHIP-16a before SHIP-3, then FILES-15, LAYOUT-1c and MOTION-4. LAYOUT-1c uses devicePixelRatio, never viewport-scaled text. Extra themes wait until the assigned work is done.
 
 ### Claude Sonnet 5.5 — 11 Nov: SHIP-6d the Remember checkbox
 
