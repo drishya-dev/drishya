@@ -1,7 +1,7 @@
 /* Current integrated stage. Captured materials have edges; workspace chrome fades away. */
 :root[data-palette='jet'], :root[data-palette='midnight'] {
-  --source: #52caff; --focus: #38bfff; --external: #c493ff; --edited: #ffc15a;
-  --pass: #59e8a1; --fail: #ff738d; --graph-node: #f3f5fa; --graph-edge: #77818d;
+  --source: var(--source); --focus: var(--default-focus-210); --external: var(--source); --edited: var(--default-edited-211);
+  --pass: var(--default-pass-212); --fail: var(--default-fail-213); --graph-node: var(--text-primary); --graph-edge: var(--text-muted);
 }
 .connected-workspace { --crown-h: 74px; --workspace-h: 30px; --transport-h: 0px; }
 .connected-workspace .crown {
@@ -31,7 +31,7 @@
 .connected-workspace .dock .inst-tools, .connected-workspace .dock .server-tool, .connected-workspace .runtime-tools { font-size: var(--text-2xs); }
 .connected-workspace .dock .server-name { font-size: var(--text-2xs); }
 .connected-workspace .dock .tool-mark { width: 21px; height: 21px; }
-.dock .instrument:hover, .dock .server-tool:hover, .dock .instrument.on { border-color: transparent; outline: none; background: #ffffff07; }
+.dock .instrument:hover, .dock .server-tool:hover, .dock .instrument.on { border-color: transparent; outline: none; background: color-mix(in srgb,var(--focus) 2.745%,transparent); }
 .dock .instrument:focus-visible, .dock .server-tool:focus-visible { outline: 1px solid var(--t2); outline-offset: -1px; }
 .dock .instrument:hover .op-kind, .dock .server-tool:hover { color: var(--t1); }
 :root[data-palette] .dock .instrument:hover .tool-mark, :root[data-palette] .dock .instrument.on .tool-mark { border-color: var(--line-2); background: transparent; }
@@ -50,13 +50,13 @@
 .connected-workspace .history .op-title { font-size: var(--text-2xs); }
 .connected-workspace .history .op-body { padding: 6px 8px 8px; }
 .connected-workspace .history .code, .connected-workspace .history .diff, .connected-workspace .history .cmd, .connected-workspace .history .output { font-size: var(--text-2xs); line-height: 1.55; }
-:root[data-theme='dark'] .tk-kw { color: #f087da; }
-:root[data-theme='dark'] .tk-str { color: #ffb58a; }
-:root[data-theme='dark'] .tk-fn { color: #ffe18c; }
-:root[data-theme='dark'] .tk-num { color: #b5eca1; }
-:root[data-theme='dark'] .tk-com { color: #93b68d; }
-:root[data-theme='dark'] .tk-type { color: #55e0c4; }
-:root[data-theme='dark'] .tk-property { color: #8ad8ff; }
+:root[data-theme='dark'] .tk-kw { color: var(--syntax-keyword); }
+:root[data-theme='dark'] .tk-str { color: var(--syntax-string); }
+:root[data-theme='dark'] .tk-fn { color: var(--syntax-function); }
+:root[data-theme='dark'] .tk-num { color: var(--syntax-number); }
+:root[data-theme='dark'] .tk-com { color: var(--text-muted); }
+:root[data-theme='dark'] .tk-type { color: var(--syntax-type); }
+:root[data-theme='dark'] .tk-property { color: var(--syntax-property); }
 .connected-workspace .history-transport { position: fixed; bottom: 12px; left: 12px; right: 12px; height: 30px; padding: 0; min-height: 0; border: 0; background: transparent; justify-content: space-between; pointer-events: none; }
 .history-transport > * { pointer-events: auto; }
 .history-transport .prompt-menu > summary { padding: 6px 10px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-sm); }

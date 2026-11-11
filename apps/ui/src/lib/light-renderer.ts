@@ -1,3 +1,4 @@
+import {paletteRGB} from './palette-paint.ts';
 /**
  * Draws additive light only: hair-fine line segments and soft points into a half-float buffer, then a three-level bloom
  * and a tone map, so a bright core comes from overlapping filaments rather than paint. No text is ever drawn here.
@@ -31,9 +32,10 @@ void main(){ vec3 s = texture(src, uv).rgb * .227; float w[4] = float[](.194, .1
 const FINAL_FS = `#version 300 es
 precision highp float; in vec2 uv; uniform sampler2D sharp, b1, b2, b3; uniform float bloom, exposure, nebula; uniform vec2 aspect; out vec4 o;
 float blob(vec2 p, vec2 c, float r){ p = (p - c) * aspect; return exp(-dot(p, p) / (r * r)); }
+uniform vec3 hazeViolet; uniform vec3 hazeCyan; uniform vec3 canvasInk;
 void main(){ vec3 light = texture(sharp, uv).rgb + bloom * (texture(b1, uv).rgb * .55 + texture(b2, uv).rgb * .75 + texture(b3, uv).rgb * .9);
-  vec3 haze = vec3(.16, .08, .3) * blob(uv, vec2(.32, .62), .32) + vec3(.03, .14, .22) * blob(uv, vec2(.74, .38), .28);
-  vec3 c = vec3(.004, .005, .008) + haze * .09 * nebula + (1. - exp(-light * exposure));
+  vec3 haze = hazeViolet * blob(uv, vec2(.32, .62), .32) + hazeCyan * blob(uv, vec2(.74, .38), .28);
+  vec3 c = canvasInk + haze * .09 * nebula + (1. - exp(-light * exposure));
   o = vec4(pow(c, vec3(.92)), 1); }`;
 
 interface Target { tex: WebGLTexture; fb: WebGLFramebuffer; w: number; h: number }
@@ -109,7 +111,7 @@ export class LightRenderer {
     gl.enableVertexAttribArray(at); gl.vertexAttribPointer(at, size, gl.FLOAT, false, stride, offset);
   }
 
-  private pass(prog: WebGLProgram, to: Target | null, uniforms: Record<string, number | [number, number] | Target>) {
+  private pass(prog: WebGLProgram, to: Target | null, uniforms: Record<string, number | [number, number] | [number, number, number] | Target>) {
     const gl = this.gl;
     gl.useProgram(prog); gl.bindFramebuffer(gl.FRAMEBUFFER, to ? to.fb : null); gl.viewport(0, 0, to ? to.w : this.size.w, to ? to.h : this.size.h);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.quad); this.attrib(prog, 'p', 2, 8, 0);
@@ -117,7 +119,7 @@ export class LightRenderer {
     for (const [key, value] of Object.entries(uniforms)) {
       const at = gl.getUniformLocation(prog, key);
       if (typeof value === 'number') gl.uniform1f(at, value);
-      else if (Array.isArray(value)) gl.uniform2fv(at, value);
+      else if (Array.isArray(value)) { if(value.length===3)gl.uniform3fv(at,value);else gl.uniform2fv(at,value); }
       else { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, value.tex); gl.uniform1i(at, unit++); }
     }
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
@@ -150,7 +152,7 @@ export class LightRenderer {
       this.pass(blur, h3, { src: v2, step: [1 / h3.w, 0] }); this.pass(blur, v3, { src: h3, step: [0, 1 / v3.h] });
     }
     const m = Math.max(W, H);
-    this.pass(this.programs.final, null, { sharp, b1: v1, b2: v2, b3: v3, bloom: frame.bloom, exposure: frame.exposure, nebula: frame.nebula ? 1 : 0, aspect: [W / m, H / m] });
+    this.pass(this.programs.final, null, { hazeViolet:paletteRGB('--git-haze-violet'),hazeCyan:paletteRGB('--git-haze-cyan'),canvasInk:paletteRGB('--git-canvas'),sharp, b1: v1, b2: v2, b3: v3, bloom: frame.bloom, exposure: frame.exposure, nebula: frame.nebula ? 1 : 0, aspect: [W / m, H / m] });
   }
 
   dispose() { (this.gl.getExtension('WEBGL_lose_context'))?.loseContext(); }

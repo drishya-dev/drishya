@@ -1,36 +1,9 @@
 /* Modern materials. Release 1 ships three palettes (SHIP-17, Opus decision 10 Nov): Jet Black (jet, default), Daylight (paper) and Midnight.
    Ink floors on every surface (--bg, --s1..--s3): primary 13:1, secondary 7:1, metadata 4.5:1; dark syntax, path, number, diff and outcome inks 7:1 at OKLCH chroma 0.09 or more.
    apps/ui/test/palette-contrast.test.ts asserts them. Legacy keeps its own palettes. */
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
-  --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
-  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
-  --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#8b92ec;
-  --palette-active:#5e6ad2; --syntax-keyword:#fe9996; --syntax-string:#6dc972; --syntax-function:#cda2ff;
-  --syntax-number:#fd9f48; --syntax-type:#4ac1f7; --syntax-property:#32c8c4;
-  --source:#80b8ff; --external:#f197de; --edited:#d5b238;
-  --pass:#84f8d2; --fail:#ff998c; --graph-node:#e8edf5; --graph-edge:#b4bfce;
-  color-scheme:dark;
-}
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper] {
-  --bg:#f6f9fb; --s1:#fcffff; --s2:#eef3f6; --s3:#e3eaef;
-  --line:#d7e0e6; --line-2:#c2ced6; --line-3:#8796a1; --t1:#14202a;
-  --t2:#3c4a55; --t3:#55636e; --t4:#59656f; --focus:#036a8f;
-  --palette-active:#0593c6; --syntax-keyword:#a62a78; --syntax-string:#1d6b3f; --syntax-function:#0a6a94;
-  --syntax-number:#a14a00; --syntax-type:#60448b; --syntax-property:#06635f;
-  --source:#0a6a94; --external:#8a2fa0; --edited:#a14a00;
-  --pass:#006150; --fail:#b02a2d; --graph-node:#2d4452; --graph-edge:#6d8593;
-  color-scheme:light;
-}
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight] {
-  --bg:#02070a; --s1:#0a1116; --s2:#111a21; --s3:#18232c;
-  --line:#1d2a33; --line-2:#2a3a45; --line-3:#4a5d6a; --t1:#f0f7fb;
-  --t2:#c9d7e0; --t3:#9fb0bc; --t4:#8396a3; --focus:#29a9f0;
-  --palette-active:#0297de; --syntax-keyword:#ff9693; --syntax-string:#6bc770; --syntax-function:#cca0fe;
-  --syntax-number:#fb9d46; --syntax-type:#48bff5; --syntax-property:#2fc7c2;
-  --source:#7eb6fe; --external:#ef95dc; --edited:#d3b035;
-  --pass:#84f8d2; --fail:#ff9789; --graph-node:#e6f2fa; --graph-edge:#8fb3c9;
-  color-scheme:dark;
-}
+
+
+
 /* State washes derive from the same semantic ink, rather than inherited sage. */
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette] {
   --pass-wash:color-mix(in srgb,var(--pass) 12%,transparent);
@@ -58,9 +31,9 @@
 :root[data-ui-version=modern] .theme-option>i>b:nth-child(2) {background:var(--swatch-raised);}
 :root[data-ui-version=modern] .theme-option>i>b:last-child {background:var(--swatch-accent);border:0;}
 
-:root[data-ui-version=modern] .theme-dark {--swatch-bg:#0a0a0a;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#8b92ec;--swatch-border:#27272a;}
-:root[data-ui-version=modern] .theme-light {--swatch-bg:#f6f9fb;--swatch-node:#fcffff;--swatch-raised:#eef3f6;--swatch-accent:#0593c6;--swatch-border:#d7e0e6;}
-:root[data-ui-version=modern] .theme-midnight {--swatch-bg:#02070a;--swatch-node:#0a1116;--swatch-raised:#111a21;--swatch-accent:#0297de;--swatch-border:#1d2a33;}
+
+
+
  :root:where(:not([data-ui-skin=clarity]))[data-ui-version=modern][data-theme=light] .modern-native-composer.open { box-shadow:0 12px 30px #30271e14!important; }
 /* UI-8: on Midnight, controls take the palette's own accent; --source keeps its meaning (a file read). Jet Black's accent is already indigo,
    and Daylight's --source is already in its accent's family. */

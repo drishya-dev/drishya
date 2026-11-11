@@ -1,3 +1,4 @@
+import {palettePaint,usePaletteKey} from '../lib/palette-paint.ts';
 import { useEffect, useState } from 'react';
 import type { NowFacts } from '../../../../packages/scene/src/now.ts';
 import { useApp } from '../state.ts';
@@ -5,7 +6,7 @@ import { nowView } from '../lib/now-state.ts';
 import { publishNow, useNow } from '../lib/now-store.ts';
 
 const HARNESS: Record<string, string> = { codex: 'Codex', 'claude-code': 'Claude' };
-const MARK_COLOR = { running: '#4fc38a', asking: '#e6b98a', working: '#8b9bff' } as const;
+const MARK_COLOR = { running: '--pass', asking: '--edited', working: '--focus' } as const;
 const BASE_TITLE = 'Drishya';
 
 /**
@@ -14,6 +15,7 @@ const BASE_TITLE = 'Drishya';
  * ticks once a second for elapsed time, and mirrors the state in the tab title and favicon.
  */
 export function NowWatcher() {
+  const theme=usePaletteKey();
   const source = useApp((s) => s.source);
   const id = useApp((s) => s.recordingId);
   const recording = useApp((s) => s.recording);
@@ -66,14 +68,14 @@ export function NowWatcher() {
       const context = canvas.getContext('2d');
       if (!context) return;
       context.drawImage(image, 0, 0, 64, 64);
-      context.fillStyle = '#0b0b0c'; context.beginPath(); context.arc(48, 48, 15, 0, Math.PI * 2); context.fill();
-      context.fillStyle = MARK_COLOR[mark]; context.beginPath(); context.arc(48, 48, 11, 0, Math.PI * 2); context.fill();
+      context.fillStyle = palettePaint('--bg'); context.beginPath(); context.arc(48, 48, 15, 0, Math.PI * 2); context.fill();
+      context.fillStyle = palettePaint(MARK_COLOR[mark]); context.beginPath(); context.arc(48, 48, 11, 0, Math.PI * 2); context.fill();
       const url = canvas.toDataURL('image/png');
       for (const link of links) link.href = url;
     };
     image.src = originals[0] ?? '/brand/drishya-32.png';
     return () => { disposed = true; links.forEach((link, index) => { link.href = originals[index]!; }); };
-  }, [mark]);
+  }, [mark,theme]);
 
   return null;
 }
