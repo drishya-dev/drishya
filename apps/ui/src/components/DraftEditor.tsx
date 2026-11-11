@@ -23,9 +23,11 @@ function language(path:string) {
 }
 const syncedDraft = Annotation.define<boolean>();
 const colors=HighlightStyle.define([
-  {tag:[tags.keyword,tags.typeName],color:'var(--syntax-keyword,var(--external))'},
+  {tag:tags.keyword,color:'var(--syntax-keyword,var(--external))'},
+  {tag:tags.typeName,color:'var(--syntax-type,var(--source))'},
   {tag:[tags.string,tags.special(tags.string)],color:'var(--syntax-string,var(--pass))'},
-  {tag:[tags.function(tags.variableName),tags.propertyName],color:'var(--syntax-function,var(--source))'},
+  {tag:tags.function(tags.variableName),color:'var(--syntax-function,var(--source))'},
+  {tag:tags.propertyName,color:'var(--syntax-property,var(--source))'},
   {tag:[tags.number,tags.bool,tags.null],color:'var(--syntax-number,var(--edited))'},
   {tag:tags.comment,color:'var(--t3)'},
 ]);
