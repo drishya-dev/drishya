@@ -137,11 +137,14 @@ it('summarises which agents wrote a path from captured edits only',()=>{
   const projection={operations:[
     op('o1','main','edit','ok','a.ts',{startTime:'2026-01-01T00:00:00Z'}),op('o2','main','edit','ok','a.ts'),op('o3','sub','write','unknown','a.ts'),
     op('o4','main','edit','error','b.ts'),op('o5','main','read','ok','c.ts'),op('o6','main','edit','ok','b.ts',{declined:true}),
+    op('o7','main','edit','ok','worktree-97c8a64485/d.ts'),op('o8','sub','edit','ok','worktree-97c8a64485/a.ts'),
   ]} as never;
-  const evidence=compareEvidence(projection,['a.ts','b.ts','c.ts','/abs/x']);
-  expect(Object.keys(evidence)).toEqual(['a.ts']);
+  const evidence=compareEvidence(projection,['a.ts','b.ts','c.ts','d.ts','/abs/x']);
+  expect(Object.keys(evidence).sort()).toEqual(['a.ts','d.ts']);
+  // An edit made in another checkout of the repository is the same repository path, and says so.
+  expect(evidence['d.ts']!.agents).toEqual([{agentId:'main',edits:1,firstOperationId:'o7',lastOperationId:'o7',elsewhere:true}]);
   expect(evidence['a.ts']!.agents).toEqual([
     {agentId:'main',edits:2,firstOperationId:'o1',lastOperationId:'o2',firstTime:'2026-01-01T00:00:00Z'},
-    {agentId:'sub',edits:1,firstOperationId:'o3',lastOperationId:'o3'},
+    {agentId:'sub',edits:2,firstOperationId:'o3',lastOperationId:'o8'},
   ]);
 });

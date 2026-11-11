@@ -85,6 +85,7 @@ function CompareContent({id}:{id:string}) {
   const [sessionOnly,setSessionOnly]=useWorkspaceState('compare/session-only',true);
   const [sideChoice,setSideChoice]=useState<'head'|'base'>();
   const [result,setResult]=useState<GitCompareResult>(),[snapshot,setSnapshot]=useState<GitSnapshot>();
+  const loaded=useRef('');
   const [loading,setLoading]=useState(false),[error,setError]=useState<string>(),[refresh,setRefresh]=useState(0);
   const [evidence,setEvidence]=useState<CompareEvidence>(),[evidenceFor,setEvidenceFor]=useState('');
   const [patch,setPatch]=useState<{key:string;file:GitFile}>(),[patchError,setPatchError]=useState<{key:string;message:string}>();
@@ -107,17 +108,17 @@ function CompareContent({id}:{id:string}) {
   const pull=preset==='pr'?pulls?.pulls.find(item=>item.number===prNumber):undefined;
   // The two sides this preset reads. `remote` means GitHub's compare: the pull request's head is not on this machine.
   const recorded=projection?.recordedBranch?.name;
+  // The session's own branch is the one its journal recorded, when it still exists here; else the branch checked out now; else a detached HEAD.
+  const ownHead=refs?(recorded?refs.refs.find(ref=>ref.ref===`refs/heads/${recorded}`)?.ref:undefined)??refs.current?.ref??refs.head:undefined;
   const sides=useMemo(()=>{
     if(!refs)return undefined;
     if(preset==='session'||preset==='branch'){
-      // The session's own branch is the one its journal recorded, when it still exists here; else the branch checked out now.
-      const own=recorded?refs.refs.find(ref=>ref.ref===`refs/heads/${recorded}`)?.ref:undefined;
-      const base=preset==='branch'&&baseRef?baseRef:refs.defaultBase?.ref,head=preset==='branch'?headRef??own??refs.current?.ref:own??refs.current?.ref??refs.head;
+      const base=preset==='branch'&&baseRef?baseRef:refs.defaultBase?.ref,head=preset==='branch'?headRef??ownHead:ownHead;
       return base&&head?{base,head}:undefined;
     }
     if(preset==='pr'&&pull)return pull.local&&pull.baseRef?{base:pull.baseRef.ref,head:pull.headOid}:{base:'',head:'',remote:pull.number};
     return undefined;
-  },[refs,preset,baseRef,headRef,pull,recorded]);
+  },[refs,preset,baseRef,headRef,pull,ownHead]);
   const sidesKey=sides?JSON.stringify(sides):'';
 
   // Load the comparison (or the working tree) for the chosen sides. A newer choice discards an older answer.
@@ -125,13 +126,16 @@ function CompareContent({id}:{id:string}) {
     if(!ready)return;
     let active=true;
     setError(undefined);setSideChoice(undefined);
+    // A refresh keeps what is shown while it reads; a different preset or side never shows the previous answer.
+    const key=`${preset}|${sidesKey}`;
+    if(loaded.current!==key){setResult(undefined);setSnapshot(undefined);}
     if(preset==='uncommitted'){
       setLoading(true);
-      void workspaceApi.gitSnapshot(id,0).then(value=>{if(active){setSnapshot(value);setResult(undefined);}}).catch(e=>{if(active){setSnapshot(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+      void workspaceApi.gitSnapshot(id,0).then(value=>{if(active){loaded.current=key;setSnapshot(value);setResult(undefined);}}).catch(e=>{if(active){setSnapshot(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
     }else if(sides){
       setLoading(true);
       const request='remote' in sides&&sides.remote?workspaceApi.compareRemote(id,sides.remote as number):workspaceApi.compare(id,sides.base,sides.head);
-      void request.then(value=>{if(active){setResult(value);setSnapshot(undefined);}}).catch(e=>{if(active){setResult(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+      void request.then(value=>{if(active){loaded.current=key;setResult(value);setSnapshot(undefined);}}).catch(e=>{if(active){setResult(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
     }else{setResult(undefined);setSnapshot(undefined);}
     return()=>{active=false;};
   },[id,ready,preset,sidesKey,refresh]);
@@ -216,9 +220,9 @@ function CompareContent({id}:{id:string}) {
         {preset==='uncommitted'?<span className="compare-line"><b>{snapshot?.branch??'Working tree'}</b>{snapshot&&<span>{snapshot.head.slice(0,10)}</span>}<span>{identity} · uncommitted changes</span></span>
         :preset==='pr'?<PullPicker pulls={pulls} value={prNumber} pick={number=>{setPrNumber(number);setSelected('');}} enable={()=>{void workspaceApi.githubOptIn(true).then(()=>setRefresh(n=>n+1));}}/>
         :<span className="compare-line">
-          {preset==='branch'&&refs?<SidePicker label="Base" value={baseRef??refs.defaultBase?.ref} refs={refs.refs} pick={ref=>{setBaseRef(ref);setSelected('');}}/>:<b title={result?.base.ref}>{nameOf(result?.base)||nameOf(refs?.defaultBase)}</b>}
+          {preset==='branch'&&refs?<SidePicker label="Base" value={baseRef??refs.defaultBase?.ref} refs={refs.refs} pick={ref=>{setBaseRef(ref);setSelected('');}}/>:<b title={result?.base.ref}>{(result&&baseName)||nameOf(refs?.defaultBase)}</b>}
           <span className="compare-arrow" aria-hidden="true">←</span>
-          {preset==='branch'&&refs?<SidePicker label="Compare" value={headRef??refs.current?.ref} refs={refs.refs} pick={ref=>{setHeadRef(ref);setSelected('');}}/>:<b title={result?.head.ref}>{nameOf(result?.head)||nameOf(refs?.current)}</b>}
+          {preset==='branch'&&refs?<SidePicker label="Compare" value={headRef??ownHead} refs={refs.refs} pick={ref=>{setHeadRef(ref);setSelected('');}}/>:<b title={result?.head.ref}>{(result&&headName)||(ownHead&&isOid(ownHead)?'Detached HEAD':nameOf(refs?.current))}</b>}
         </span>}
         {result&&<span className="compare-counts" role="status">{result.state==='unrelated'?'No shared history':result.state==='shallow'?'History is shallow here':ahead===undefined?'':<><b>{ahead}</b> ahead · <b>{behind}</b> behind</>}{result.source==='github'&&<span className="compare-source" title="Read from GitHub through your signed-in gh; only this branch’s changes are known">from GitHub</span>}</span>}
         {result&&result.commitTotal>0&&<Commits result={result} jump={jump}/>}
@@ -239,7 +243,7 @@ function CompareContent({id}:{id:string}) {
                 {list.map(item=><FileRow key={item.path} row={item} active={item.path===row?.path} entry={evidence?.[item.path]} name={agentByName} jump={jump} choose={()=>{setSelected(item.path);setSideChoice(undefined);}}/>)}
               </div>;
             })}
-            {!loading&&!error&&!rows.length&&(preset==='pr'&&pull||preset!=='pr')&&<p className="compare-note">{preset==='uncommitted'?'No uncommitted changes.':result?.state==='remote'||result?'These two sides have no differing files.':preset==='session'&&refs&&refs.current?.ref===refs.defaultBase?.ref?`This session’s branch is ${nameOf(refs.current)}, the branch it is compared with. Its work in progress is under Uncommitted.`:''}</p>}
+            {!loading&&!error&&!rows.length&&(preset==='pr'&&pull||preset!=='pr')&&<p className="compare-note">{preset==='uncommitted'?'No uncommitted changes.':preset==='session'&&result&&result.head.tip===result.base.tip?`${headName==='Detached HEAD'?'This session’s checkout':`This session’s branch ${headName}`} is at the same commit as ${baseName}. Its work in progress is under Uncommitted.`:result?'These two sides have no differing files.':''}</p>}
             {result&&result.omitted>0&&<p className="compare-note">{result.omitted} more files are not listed.</p>}
             {result&&result.protectedCount>0&&<p className="compare-note">{result.protectedCount} protected {result.protectedCount===1?'path is':'paths are'} left out.</p>}
           </>}
@@ -286,7 +290,7 @@ function Evidence({entry,name,jump,detailed=false}:{entry?:CompareEvidence[strin
   return <p className="compare-evidence">
     {entry.agents.slice(0,3).map((agent,index)=><span key={agent.agentId}>{index>0&&<i aria-hidden="true">, </i>}
       <button className="compare-link" title={`Open ${name(agent.agentId)}’s latest edit of this file in History`} onClick={event=>{event.stopPropagation();jump(agent.lastOperationId);}}>{name(agent.agentId)}</button>
-      <small>{agent.edits} {agent.edits===1?'edit':'edits'}</small></span>)}
+      <small>{agent.edits} {agent.edits===1?'edit':'edits'}{agent.elsewhere?' · other checkout':''}</small></span>)}
     {entry.agents.length>3&&<small> +{entry.agents.length-3} more</small>}
   </p>;
 }

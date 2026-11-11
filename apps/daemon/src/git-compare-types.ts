@@ -54,5 +54,6 @@ export interface ComparePull {
 export interface ComparePulls {status:ComparePullsStatus;repo?:string;pulls:ComparePull[];signedIn?:boolean}
 
 /** What agents edited a path in the session being read. Names come from the projection's agents. */
-export interface CompareEvidenceAgent {agentId:string;edits:number;firstOperationId:string;lastOperationId:string;firstTime?:string}
+/** `elsewhere`: every one of this agent's edits was in another checkout of the repository (a `worktree-…` root), not the one this session started in. */
+export interface CompareEvidenceAgent {agentId:string;edits:number;firstOperationId:string;lastOperationId:string;firstTime?:string;elsewhere?:boolean}
 export interface CompareEvidence {[path:string]:{agents:CompareEvidenceAgent[]}}

@@ -119,7 +119,7 @@ for(const theme of ['dark','midnight','light'])for(const width of [1440,600])tes
     // The surface is the first opaque background up the tree; the ink is the file name's own colour.
     let surface=element as Element|null,background='rgba(0, 0, 0, 0)';
     while(surface){const value=getComputedStyle(surface).backgroundColor;if(!/rgba\(.*, 0\)$/.test(value)&&value!=='transparent'){background=value;break;}surface=surface.parentElement;}
-    const ink=getComputedStyle(element.querySelector('.compare-file-name strong')!).color,muted=getComputedStyle(element.querySelector('.compare-file-name small')!).color;
+    const ink=getComputedStyle(element.querySelector('.compare-file-name strong')!).color,muted=getComputedStyle(element.querySelector('.compare-group h3')!).color;
     const ratio=(a:string,b:string)=>{const [x,y]=[luminance(a),luminance(b)].sort((p,q)=>q-p);return (x!+0.05)/(y!+0.05);};
     return {ink:ratio(ink,background),muted:ratio(muted,background),fits:document.documentElement.scrollWidth<=innerWidth,theme:document.documentElement.dataset.theme};
   });
