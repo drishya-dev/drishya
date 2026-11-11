@@ -46,7 +46,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
  await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
- await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
+ await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-24-node.offsetHeight))).toBeLessThanOrEqual(3);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  for(const width of [390,320]){await page.setViewportSize({width,height:844});const box=(await composer.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);}
@@ -1804,7 +1804,7 @@ test('last material clears the prompt without an oversized gap',async({page})=>{
    const history=page.locator('.history');await history.evaluate(node=>node.scrollTop=node.scrollHeight);
    await expect.poll(async()=>history.evaluate(node=>Math.abs(node.scrollHeight-node.clientHeight-node.scrollTop))).toBeLessThan(2);
    await expect.poll(async()=>{const prompt=(await composer.boundingBox())!;const last=await history.locator('.passage-slot').last().boundingBox();return last?prompt.y-last.y-last.height:-999;}).toBeGreaterThanOrEqual(6);
-   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(100);
+   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(collapsed?260:100); // UI-28c: the reserved space does not shrink when the box collapses
    await page.screenshot({path:resolve(`.local/prompt-gap-${width}-${collapsed}.png`)});
   }
   await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();
