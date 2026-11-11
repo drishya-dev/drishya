@@ -29,7 +29,7 @@ const inputs = JSON.parse(readFileSync(config, 'utf8')).cases as Input[];
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.DRISHYA_BROWSER_CHANNEL || undefined });
 const closers: (() => Promise<void>)[] = [];
-// Each variant gets its own daemon and scratch home: the app keeps per-recording state (open Workspace, Git review, consent) between
+// Each variant gets its own daemon and scratch home: the app keeps per-recording state (open Workspace, Changes, consent) between
 // page loads, so variants must not share it. Every variant then replays the same sequence from the same empty state.
 async function openVariant(v: string, uiDir: string) {
   const app = new App(join(out, 'home-' + v));

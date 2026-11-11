@@ -126,3 +126,10 @@
 .compare-handoff>p { margin:0; color:var(--t3); font:var(--text-xs)/1.6 var(--sans); }
 .compare-handoff textarea { flex:1; min-height:0; resize:none; font-family:var(--mono); }
 .compare-handoff>footer { display:flex; justify-content:flex-end; flex:none; }
+.compare-pages { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 8px; margin:6px 10px 0; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
+.compare-pages .btn { min-height:26px; padding:2px 8px; font-size:var(--text-2xs); }
+.compare-pages span { font-variant-numeric:tabular-nums; }
+.compare-omission { display:grid; gap:4px; margin:6px 14px; padding-top:8px; border-top:1px solid var(--line); font:var(--text-2xs)/1.5 var(--sans); overflow-wrap:anywhere; }
+.compare-omission strong { font:var(--text-2xs) var(--mono); color:var(--t2); }
+.compare-omission span { color:var(--t3); }
+.compare-omission .btn { justify-self:start; }

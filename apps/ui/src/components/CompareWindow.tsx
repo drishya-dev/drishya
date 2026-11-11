@@ -9,6 +9,7 @@ import {useWorkspaceMemory,useWorkspaceState} from '../lib/workspace-memory-reac
 import {useSessionWorkspace} from './SessionWorkspace.tsx';
 import {GitAccess,grantGit} from './GitAccess.tsx';
 import {WorkspaceOptions} from './WorkspaceOptions.tsx';
+import {FileReadingActions} from './FileReadingActions.tsx';
 import {openChanges,type ChangesPreset} from '../lib/open-changes.ts';
 import {loadReviewMarks,previousReviewNote,reviewMarkId,saveReviewMarks,updateReviewMark,type ReviewMark} from '../lib/git-review-marks.ts';
 import {buildHandoff,type HandoffFile} from '../lib/changes-handoff.ts';
@@ -87,6 +88,8 @@ function CompareContent({id}:{id:string}) {
   const [headRef,setHeadRef]=useWorkspaceState<string|undefined>('compare/head',undefined);
   const [prNumber,setPrNumber]=useWorkspaceState<number|undefined>('compare/pr',undefined);
   const [selected,setSelected]=useWorkspaceState('compare/file','');
+  // Uncommitted lists 50 eligible paths a page, as Git review did.
+  const [pageStart,setPageStart]=useWorkspaceState('compare/page',0);
   const [sessionOnly,setSessionOnly]=useWorkspaceState('compare/session-only',true);
   const [sideChoice,setSideChoice]=useState<'head'|'base'>();
   const [result,setResult]=useState<GitCompareResult>(),[snapshot,setSnapshot]=useState<GitSnapshot>();
@@ -137,17 +140,17 @@ function CompareContent({id}:{id:string}) {
     let active=true;
     setError(undefined);setSideChoice(undefined);
     // A refresh keeps what is shown while it reads; a different preset or side never shows the previous answer.
-    const key=`${preset}|${sidesKey}`;
+    const key=`${preset}|${sidesKey}|${preset==='uncommitted'?pageStart:''}`;
     if(loaded.current!==key){setResult(undefined);setSnapshot(undefined);}
     if(preset==='uncommitted'){
       setLoading(true);
-      void workspaceApi.gitSnapshot(id,0).then(value=>{if(active){loaded.current=key;setSnapshot(value);setResult(undefined);}}).catch(e=>{if(active){setSnapshot(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+      void workspaceApi.gitSnapshot(id,pageStart).then(value=>{if(active){loaded.current=key;setSnapshot(value);setResult(undefined);if(value.pageStart!==undefined&&value.pageStart!==pageStart)setPageStart(value.pageStart);}}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});
     }else if(sides){
       setLoading(true);
-      void readComparison(sides).then(value=>{if(active){loaded.current=key;setResult(value);setSnapshot(undefined);}}).catch(e=>{if(active){setResult(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+      void readComparison(sides).then(value=>{if(active){loaded.current=key;setResult(value);setSnapshot(undefined);}}).catch(e=>{if(active)setError(e.message);}).finally(()=>{if(active)setLoading(false);});
     }else{setResult(undefined);setSnapshot(undefined);}
     return()=>{active=false;};
-  },[id,ready,preset,sidesKey,refresh]);
+  },[id,ready,preset,sidesKey,pageStart,refresh]);
 
   const rows=useMemo<Row[]>(()=>{
     if(preset==='uncommitted')return (snapshot?.files??[]).map(file=>({path:file.path,group:'tree',git:file,note:gitWord(file.status),...(file.status.trim()==='??'?{}:patchCounts(file.patch))}));
@@ -211,8 +214,8 @@ function CompareContent({id}:{id:string}) {
     const next=Object.fromEntries(Object.entries({...marks,[markId]:updateReviewMark(mark,shown.fingerprint,change)}).slice(-100));
     setMarks(next);setSaveError(saveReviewMarks(id,next)?undefined:'Review progress could not be saved in this browser.');
   };
-  // A file that already has a note for this exact patch opens with it showing; otherwise the note stays folded away.
-  useEffect(()=>{setNoteOpen(!!(shown&&mark&&mark.fingerprint===shown.fingerprint&&mark.note));},[patchKey,shown?.fingerprint]);
+  // A file that already has a note (for this patch, or for an earlier one) opens with it showing; otherwise the note stays folded away.
+  useEffect(()=>{setNoteOpen(!!(mark?.note||mark?.previous?.note));},[patchKey,shown?.fingerprint]);
   useEffect(()=>{setPacket(undefined);},[preset,sidesKey,refresh,row?.path,side]);
 
   // The handoff packet: the reviewed patches and their notes, after the repository has been read again. Saving reads it again too.
@@ -223,7 +226,7 @@ function CompareContent({id}:{id:string}) {
       const changedMessage='Repository changed. Inspect the refreshed changes before making a new handoff.';
       let lines:string[],sampledAt:string,omitted:number,patchOf:(item:Row,which:'head'|'base')=>Promise<string>;
       if(preset==='uncommitted'){
-        const next=await workspaceApi.gitSnapshot(id,0);
+        const next=await workspaceApi.gitSnapshot(id,pageStart);
         if(!alive.current)return;
         setSnapshot(next);
         if(next.fingerprint!==snapshot?.fingerprint){setPacket(undefined);setError(changedMessage);return;}
@@ -293,10 +296,10 @@ function CompareContent({id}:{id:string}) {
       <nav className="compare-presets" aria-label="What to compare">{PRESETS.map(([key,label,hint])=><button key={key} title={hint} aria-pressed={preset===key} onClick={()=>{setPreset(key);setSelected('');}}>{label}</button>)}</nav>
       <span className="compare-header-end">
         {ready&&<WorkspaceOptions label="Changes actions">
-          <button className="btn ghost" disabled={!reviewedPatches.length||loading||checking} onClick={()=>void handoff()}>Preview handoff{reviewedPatches.length>0&&<small> · {reviewedPatches.length} reviewed</small>}</button>
+          <button className="btn ghost" disabled={!reviewedPatches.length||loading||checking} onClick={()=>void handoff()}>Preview handoff{reviewedPatches.length>0&&<small aria-hidden="true"> · {reviewedPatches.length} reviewed</small>}</button>
           <p className="compare-menu-note">Reviewed marks apply to this exact patch and stay on this machine. Preview and save read the repository again.</p>
         </WorkspaceOptions>}
-        <button className="btn ghost compare-refresh" aria-label="Refresh changes" title="Read the repository again" disabled={loading} aria-busy={loading} onClick={()=>setRefresh(n=>n+1)}><InterfaceGlyph name="refresh"/></button>
+        {ready&&<button className="btn ghost compare-refresh" aria-label="Refresh changes" title="Read the repository again" disabled={loading||checking} aria-busy={loading} onClick={()=>setRefresh(n=>n+1)}><InterfaceGlyph name="refresh"/></button>}
         <button className="btn ghost" title="Return to the agent’s work, exactly where you left it" onClick={requestClose}>Back to agent</button>
       </span>
     </header>
@@ -322,6 +325,11 @@ function CompareContent({id}:{id:string}) {
           {preset==='pr'&&!pull?<p className="compare-note">{pulls?.status==='ready'&&!pulls.pulls.length?'No open pull requests.':'Choose a pull request.'}</p>
           :loading&&!rows.length?<p className="compare-note" role="status">Reading…</p>
           :<>
+            {preset==='uncommitted'&&snapshot?.totalAllowed!==undefined&&snapshot.totalAllowed>snapshot.limit&&<nav className="compare-pages" aria-label="Changed file pages">
+              <button className="btn ghost" disabled={loading||checking||!snapshot.pageStart} onClick={()=>{setPageStart(Math.max(0,(snapshot.pageStart??0)-snapshot.limit));setSelected('');}}>Previous files</button>
+              <span>{(snapshot.pageStart??0)+1}–{Math.min((snapshot.pageStart??0)+snapshot.limit,snapshot.totalAllowed)} of {snapshot.totalAllowed} eligible paths</span>
+              <button className="btn ghost" disabled={loading||checking||(snapshot.pageStart??0)+snapshot.limit>=snapshot.totalAllowed} onClick={()=>{setPageStart((snapshot.pageStart??0)+snapshot.limit);setSelected('');}}>Next files</button>
+            </nav>}
             {filtering&&evidenceReady&&visible.length<rows.length&&<p className="compare-scope">{visible.length?`The ${visible.length} ${visible.length===1?'file':'files'} this session edited`:'This session recorded no edit to these files'} · <button className="compare-link" onClick={()=>setSessionOnly(false)}>Show all {rows.length}</button></p>}
             {preset==='session'&&!sessionOnly&&rows.length>0&&<p className="compare-scope">All {rows.length} files on this branch · <button className="compare-link" onClick={()=>setSessionOnly(true)}>Only this session’s</button></p>}
             {groups.map(group=>{
@@ -333,24 +341,22 @@ function CompareContent({id}:{id:string}) {
               </div>;
             })}
             {!loading&&!error&&!rows.length&&(preset==='pr'&&pull||preset!=='pr')&&<p className="compare-note">{preset==='uncommitted'?'No uncommitted changes.':preset==='session'&&result&&result.head.tip===result.base.tip?`${headName==='Detached HEAD'?'This session’s checkout':`This session’s branch ${headName}`} is at the same commit as ${baseName}. Its work in progress is under Uncommitted.`:result?'These two sides have no differing files.':''}</p>}
+            {preset==='uncommitted'&&snapshot?.omissions?.map(item=><div className="compare-omission" key={item.path}><strong>{item.path}</strong><span>{item.reason==='content-limit'?'Patch exceeds the remaining 1 MiB response budget':'Patch exceeds the Git process output limit'}</span><button className="btn ghost" onClick={()=>{useApp.setState({compareOpen:false});useApp.getState().set({currentFile:item.path});}}>Open current file instead</button></div>)}
+            {preset==='uncommitted'&&snapshot&&snapshot.totalAllowed===undefined&&snapshot.omitted>0&&<p className="compare-note">{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
+            {preset==='uncommitted'&&!!snapshot?.protectedCount&&<p className="compare-note">{snapshot.protectedCount} protected paths excluded.</p>}
             {result&&result.omitted>0&&<p className="compare-note">{result.omitted} more files are not listed.</p>}
             {result&&result.protectedCount>0&&<p className="compare-note">{result.protectedCount} protected {result.protectedCount===1?'path is':'paths are'} left out.</p>}
           </>}
         </aside>
         <div className="compare-reader">
-          {packet?<section className="compare-handoff" aria-label="Handoff preview">
-            <header><strong>Review this text before sharing</strong><button className="btn ghost" onClick={()=>setPacket(undefined)}>Close preview</button></header>
-            <p>Only the patches you marked reviewed, with your notes, are included. Saving reads the repository again. Pattern redaction is best effort.</p>
-            <textarea aria-label="Handoff preview" value={packet} readOnly/>
-            <footer><button className="btn" disabled={checking} onClick={()=>void handoff(true)}>Save handoff</button></footer>
-          </section>
-          :row?<>
+          {row?<>
             <header className="compare-file-header">
               <span className="compare-file-title"><strong title={row.path}>{fileName(row.path)}</strong>{fileFolder(row.path)&&<small title={row.path}>{fileFolder(row.path)}</small>}</span>
               {row.group==='both'&&result&&<span className="compare-side-switch" role="group" aria-label="Which side’s change to read">
                 <button aria-pressed={side==='head'} onClick={()=>setSideChoice('head')} title={`${headName}’s change since the merge-base`}>{headName}</button>
                 <button aria-pressed={side==='base'} onClick={()=>setSideChoice('base')} title={`${baseName}’s change since the merge-base`}>{baseName}</button>
               </span>}
+              <FileReadingActions path={row.path} compact onNavigate={()=>{memory.set('compare/return',true);useApp.setState({compareOpen:false});}}/>
               {markable(row)&&<>
                 <label className="compare-reviewed" title="You have read this exact patch. Kept on this machine, not part of the session."><input type="checkbox" disabled={!canMark} checked={exact&&!!mark?.reviewed} onChange={event=>update({reviewed:event.target.checked})}/>Reviewed</label>
                 <button className="btn ghost compare-note-toggle" aria-expanded={noteOpen} disabled={!canMark} title="A note for this patch, kept on this machine" onClick={()=>setNoteOpen(open=>!open)}>{exact&&mark?.note?'Note ·':'Note'}</button>
@@ -367,13 +373,19 @@ function CompareContent({id}:{id:string}) {
                 <button className="btn ghost" disabled={!canMark} onClick={()=>update({note:previous.note,reviewed:false})}>Use previous note as draft</button>
               </details>}
             </div>}
-            <div className="compare-patch">
-              {patch?.key===patchKey?<GitPatchReader key={`${patch.file.path}:${patch.file.fingerprint}`} file={patch.file} hideScope openRecorded={(path,key)=>{useApp.setState({compareOpen:false});useApp.getState().set({filePanel:path,filePanelFocus:'change',filePanelEvidence:key});}}/>
+            {packet?<section className="compare-handoff" aria-label="Handoff preview">
+              <header><strong>Review this text before sharing</strong><button className="btn ghost" onClick={()=>setPacket(undefined)}>Close preview</button></header>
+              <p>Only the patches you marked reviewed, with your notes, are included. Saving reads the repository again. Pattern redaction is best effort.</p>
+              <textarea aria-label="Handoff preview" value={packet} readOnly/>
+              <footer><button className="btn" disabled={checking} onClick={()=>void handoff(true)}>Save handoff</button></footer>
+            </section>
+            :<div className="compare-patch">
+              {patch?.key===patchKey?<GitPatchReader key={`${patch.file.path}:${patch.file.fingerprint}`} file={patch.file} hideScope={preset!=='uncommitted'} openRecorded={(path,key)=>{useApp.setState({compareOpen:false});useApp.getState().set({filePanel:path,filePanelFocus:'change',filePanelEvidence:key});}}/>
                 :patchError?.key===patchKey?<p className="compare-note" role="alert">{patchError.message}</p>
                 :row.file?.binary&&result?.source==='github'?<p className="compare-note">GitHub did not send a text patch for this file.</p>
                 :row.git?.status.trim()==='??'?<p className="compare-note">Git does not track this file yet, so there is no patch. Open it on disk to read it.</p>
                 :<p className="compare-note" role="status">Reading the change…</p>}
-            </div>
+            </div>}
           </>:<p className="compare-note compare-empty">{visible.length||loading?'':'Nothing to read here.'}</p>}
         </div>
       </div>

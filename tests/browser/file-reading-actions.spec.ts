@@ -5,7 +5,7 @@ import {execFileSync} from 'node:child_process';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
-import {openGitDestination} from './git-navigation.ts';
+import {openChanges} from './git-navigation.ts';
 import {openSessionReview} from './session-review.ts';
 let dir:string,app:App,server:RunningServer;
 const samples=new Map<string,{id:string;ops:{id:string;path:string;kind:string;location:string}[]}>();
@@ -40,7 +40,7 @@ async function open(page:Page,id:string,entries:[string,unknown][]){
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[{id,entries}]}}):route.continue());
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
 }
-for(const width of [600,1440])test(`Workspace, Changes and Git review find files outside the resident file list at ${width}`,async({page})=>{
+for(const width of [600,1440])test(`Workspace, Session review and Changes find files outside the resident file list at ${width}`,async({page})=>{
   await page.setViewportSize({width,height:950});const sample=samples.get('claude-code')!,op=sample.ops.find(op=>op.location==='inside'&&op.kind==='write')!;
   // A paged History projection is not the whole recording's file index. Changes
   // owns a global path receipt; current-file/Git actions must check the bounded trail.
@@ -63,11 +63,11 @@ for(const width of [600,1440])test(`Workspace, Changes and Git review find files
   await openSessionReview(page);const changes=page.locator('.evidence-review');await expect(changes).toBeVisible();await changes.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await changes.getByRole('button',{name:'View what the agent saw',exact:true}).click();
   await expect(changes).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');await captured.getByRole('button',{name:/^Close Work on/}).click();
   const statusResponse=page.waitForResponse(response=>response.request().method()==='GET'&&response.url().endsWith(`/recordings/${sample.id}/git`));
-  await openGitDestination(page,'Git review');const git=page.getByRole('dialog',{name:'Git review',exact:true}),consent=git.getByRole('button',{name:'Approve read-only Git',exact:true}),refresh=git.getByRole('button',{name:'Refresh changes',exact:true});
+  const git=await openChanges(page,'Uncommitted'),consent=git.getByRole('button',{name:'Approve read-only Git',exact:true}),refresh=git.getByRole('button',{name:'Refresh changes',exact:true});
   // Consent is shared by the daemon across these viewport cases. Wait for its
   // actual receipt, not the reader's provisional unapproved first frame.
   const status=await (await statusResponse).json();if(status.approved)await expect(refresh).toBeVisible();else await consent.click();
-  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title',op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View what the agent saw',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
+  await expect(git.locator('.compare-file-title strong')).toHaveAttribute('title',op.path);await git.getByLabel(`File reading actions for ${op.path}`,{exact:true}).press('Enter');await git.getByRole('button',{name:'View what the agent saw',exact:true}).click();await expect(git).toHaveCount(0);await expect(captured.locator('.file-evidence-material')).toContainText('CAPTURED_inside_write');
 });
 
 test('an off-page version is selected exactly and cached later bytes do not leak across replay',async({page})=>{

@@ -5,7 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges } from './git-navigation.ts';
 
 let dir: string, root: string, id: string, app: App, server: RunningServer;
 test.beforeAll(async () => {
@@ -54,35 +54,20 @@ for (const width of [600, 1440]) test(`reader ownership and history clearance at
   await history.evaluate(el => { el.scrollTop = 0; el.dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true })); });
   const latest = page.getByRole('button', { name: /Back to latest/ });
   await expect(latest).toBeVisible();
-  await openGitDestination(page, 'Git review');
-  const git = page.getByRole('dialog', { name: 'Git review', exact: true });
+  // GIT-9: Changes covers the stage like the Workspace; reading a file from it leaves a way back in the file reader.
+  const git = await openChanges(page, 'Uncommitted');
   await expect(git).toBeVisible(); await expect(latest).toBeHidden();
-  if (width === 600) {
-    const browse = git.getByRole('button', { name: 'Browse files', exact: true });
-    const search = page.getByRole('textbox', { name: 'Find repository files', exact: true });
-    await browse.click();
-    await expect(git).toHaveCount(0);
-    await expect(search).toBeFocused();
-    await page.getByRole('button', { name: 'Return to Git review', exact: true }).click();
-    await expect(git).toBeVisible();
-    await expect(search).toHaveCount(0);
-    await browse.click();
-  } else {
-    const files = page.getByRole('button', { name: 'Show files', exact: true });
-    if (await files.getAttribute('aria-pressed') !== 'true') await files.click();
-  }
-  await page.locator('[data-spine-path="README.md"]').click();
+  const consent = git.getByRole('button', { name: 'Approve read-only Git', exact: true });
+  await expect(consent.or(git.locator('.compare-body'))).toBeVisible(); if (await consent.isVisible()) await consent.click();
+  await expect(git.locator('.compare-file-main').first()).toBeVisible();
+  await git.getByRole('button', { name: 'Open on disk', exact: true }).click();
   const peek = page.locator('.file-peek-reader');
   await expect(peek).toBeVisible(); await expect(git).toHaveCount(0);
-  const returnToGit = peek.getByRole('button', { name: 'Return to Git review' });
-  await expect(returnToGit).toBeVisible();
-  expect(await returnToGit.evaluate(button => { const r = button.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button') === button; })).toBe(true);
-  await returnToGit.click();
+  const returnToChanges = peek.getByRole('button', { name: 'Return to Changes' });
+  await expect(returnToChanges).toBeVisible();
+  expect(await returnToChanges.evaluate(button => { const r = button.getBoundingClientRect(); return document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2)?.closest('button') === button; })).toBe(true);
+  await returnToChanges.click();
   await expect(git).toBeVisible(); await expect(peek).toHaveCount(0);
-  await git.getByRole('button', { name: 'Return to file' }).click();
-  await expect(peek).toBeVisible(); await expect(git).toHaveCount(0);
-  await peek.getByRole('button', { name: 'Close README.md' }).click();
-  await expect(git).toBeVisible();
-  await git.getByRole('button', { name: 'Close Git review' }).click();
+  await git.getByRole('button', { name: 'Back to agent', exact: true }).click();
   await workspace.click(); await expect(desk).toBeVisible(); await expect(latest).toBeHidden();
 });

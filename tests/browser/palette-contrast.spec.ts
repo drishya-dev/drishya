@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges } from './git-navigation.ts';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -96,7 +96,7 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   expect(found).toEqual([]);
 });
 
-// UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Git review dialog and the header over the map.
+// UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Changes window and the header over the map.
 const ALL_PALETTES = ['jet', 'paper', 'midnight'];
 // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
 const settled = (page: Page) => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
@@ -113,7 +113,7 @@ async function everyPalette(page: Page, state: string, found: string[], scope = 
 // Keyboard, not a resting pointer: hover reading can move the cards under it.
 async function press(page: Page, target: Locator) { await target.focus(); await page.keyboard.press('Enter'); }
 
-// A workspace the native harness stub and the Git review can read: a repository with one committed file that has an unstaged change.
+// A workspace the native harness stub and Changes can read: a repository with one committed file that has an unstaged change.
 let fresh: { dir: string; root: string; id: string; app: App; server: RunningServer } | undefined;
 test.afterEach(async () => {
   if (!fresh) return; const { dir, app, server } = fresh; fresh = undefined;
@@ -204,7 +204,7 @@ test('the toolbox and its menus keep 4.5:1 on every palette', async ({ page }) =
   expect(found).toEqual([]);
 });
 
-test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette', async ({ page }) => {
+test('the Workspace editor and the Changes window keep 4.5:1 on every palette', async ({ page }) => {
   await openSession(page, await freshWorkspace());
   await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.continue());
   const found: string[] = [];
@@ -231,23 +231,22 @@ test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette
   await page.keyboard.press('Escape');
   // The review dialog belongs to the session view; the desk covers its button.
   await page.reload(); await expect(page.getByRole('region', { name: 'Harness prompt' })).toBeVisible();
-  // Git review: grants, then the working-tree patch, side by side, the raw patch and the file list.
-  await openGitDestination(page, 'Git review');
-  const reader = page.getByRole('dialog', { name: 'Git review', exact: true }), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
+  // Changes: grants, then the working-tree patch, side by side, the raw patch and the file list.
+  const reader = await openChanges(page, 'Uncommitted'), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
   await reader.evaluate(el => el.setAttribute('data-contrast-scope', 'git'));
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git', exact: true }), refresh = reader.getByRole('button', { name: 'Refresh changes', exact: true });
   await expect(gitConsent.or(refresh)).toBeVisible();
-  await git('Git review before consent');
+  await git('Changes before consent');
   if (await gitConsent.isVisible()) await gitConsent.click();
-  await expect(reader.getByRole('complementary', { name: 'Git changed files', exact: true })).toBeVisible();
+  await expect(reader.getByRole('complementary', { name: 'Changed files', exact: true })).toBeVisible();
   await expect(reader.locator('.unified-change').first()).toBeVisible();
-  await git('Git review patch (unified)');
+  await git('Changes patch (unified)');
   await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
   await expect(reader.getByRole('region', { name: 'Current Git patch side by side' })).toBeVisible();
-  await git('Git review patch (side by side)');
+  await git('Changes patch (side by side)');
   await reader.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(reader.locator('.code .ln').first()).toBeVisible();
-  await git('Git review raw patch');
+  await git('Changes raw patch');
   expect(found).toEqual([]);
 });
 

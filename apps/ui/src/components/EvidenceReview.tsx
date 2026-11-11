@@ -12,8 +12,8 @@ import {fileName, fileFolder} from '../lib/file-identity.ts';
 import './review-changes.css';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
-/** Modern calls this the Changes view everywhere (UI-8); the older experiences keep "Review work". */
-const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Changes' : 'Review work';
+/** Modern calls this the Session review (GIT-9: Changes is the header window that compares branches and reviews the working tree); the older experiences keep "Review work". */
+const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Session review' : 'Review work';
 
 /** `trigger={false}`: Modern's header carries Compare (GIT-8) instead; this dialog (failures, recorded checks, gaps, each file's edits) stays one palette step away and opens on the `drishya-session-review` event. */
 export function EvidenceReview({ projection, label = reviewName(), after=-1, trigger=true }: { projection: Projection; label?: string;after?:number;trigger?:boolean }) {

@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges, openGitDestination } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,10 +26,11 @@ test.afterEach(async () => { await server?.close(); await app?.close(); if (dir)
 // session-typography.spec.ts); SVG glyphs are not text; icon-only buttons hide their label at 0 px.
 const EXEMPT = '.turn-fold, svg *';
 // Rules this slice raised: their text must also keep 4.5:1 on the composited background on every palette.
-const RAISED = '.modern-git-context small, .git-file-name small, .git-review-layout aside small, .desk-header small';
+const RAISED = '.compare-file-name small, .compare-evidence, .compare-group h3, .desk-header small';
 
 async function press(page: Page, name: string | RegExp) {
-  if (name === 'Git review' || name === 'Git graph') { await openGitDestination(page, name); return; }
+  if (name === 'Changes') { await openChanges(page, 'Uncommitted'); return; }
+  if (name === 'Git graph') { await openGitDestination(page); return; }
   const direct = page.getByRole('button', { name, exact: typeof name === 'string' }).first();
   if (await direct.isVisible().catch(() => false)) { await direct.click(); return; }
   await page.getByLabel('More workspace options', { exact: true }).click();
@@ -75,15 +76,15 @@ async function openSession(page: Page, width: number, height: number) {
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`); await expect(page.locator('.workspace-header')).toBeVisible();
 }
 
-for (const [width, height] of [[1440, 900], [390, 844]] as const) {
-  test(`Git review and Workspace keep metadata at 11 px, controls at 12 px and the raised text at 4.5:1 at ${width}px`, async ({ page }) => {
+for (const [width, height] of [[1440, 900], [600, 844]] as const) {
+  test(`Changes and Workspace keep metadata at 11 px, controls at 12 px and the raised text at 4.5:1 at ${width}px`, async ({ page }) => {
     await openSession(page, width, height);
-    await press(page, 'Git review');
+    await press(page, 'Changes');
     await expect(page.getByRole('button', { name: /Approve read-only Git|Refresh changes/ }).first()).toBeVisible();
-    await everyPalette(page, `${width} Git review (consent)`);
+    await everyPalette(page, `${width} Changes (consent)`);
     await approve(page, /Approve read-only Git/);
-    await expect(page.locator('.git-review-layout')).toBeVisible();
-    await everyPalette(page, `${width} Git review (changes)`);
+    await expect(page.locator('.compare-body')).toBeVisible();
+    await everyPalette(page, `${width} Changes (working tree)`);
     await page.keyboard.press('Escape');
     await press(page, /Open developer workspace|^Workspace$/);
     await approve(page, /Approve workspace reading/);

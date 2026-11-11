@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges, openGitDestination } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -589,9 +589,10 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await openGitDestination(page, 'Git review');
-  const git=page.getByRole('dialog',{name:'Git review',exact:true});
-  const height=git.getByRole('separator',{name:'Resize Git review window height'});
+  // GIT-9: Git review is gone; Git graph carries the same generic reading-window controls (windowId "Git history").
+  await openGitDestination(page);
+  const git=page.getByRole('dialog',{name:'Git graph',exact:true});
+  const height=git.getByRole('separator',{name:'Resize Git history window height'});
   await height.focus();await page.keyboard.press('Home');
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(220);
   await page.keyboard.press('ArrowDown');
@@ -600,7 +601,7 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   expect(grip.y).toBeGreaterThanOrEqual(box.y);expect(grip.y+grip.height).toBeLessThanOrEqual(box.y+box.height+1);
   await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2+64,{steps:5});await page.mouse.up();
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(316);
-  const move=git.getByRole('button',{name:'Move Git review window'});
+  const move=git.getByRole('button',{name:'Move Git history window'});
   await move.focus();await page.keyboard.press('ArrowLeft');await page.keyboard.press('ArrowDown');
   const moved=(await git.boundingBox())!;
   expect(moved.x).toBeLessThan(box.x);expect(moved.y).toBeGreaterThan(box.y);
@@ -608,61 +609,47 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   await page.mouse.move(button.x+button.width/2,button.y+button.height/2);await page.mouse.down();
   await page.mouse.move(20,400,{steps:8});await page.mouse.up();
   const dragged=(await git.boundingBox())!;expect(dragged.x).toBeGreaterThanOrEqual(12);
-  await git.getByRole('button',{name:'Close Git review'}).click();
-  await openGitDestination(page, 'Git review');
+  await git.getByRole('button',{name:'Close Git graph'}).click();
+  await openGitDestination(page);
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
-  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('surface/Git review');
-  await page.reload();await expect(git).toBeVisible();
+  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('surface/Git history');
+  // Git graph does not reopen by itself after a reload (Git review did); its layout is what is remembered.
+  await page.reload();await openGitDestination(page);await expect(git).toBeVisible();
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
   await page.setViewportSize({width:900,height:600});
   await expect.poll(()=>git.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})).toBe(true);
-  await page.setViewportSize({width:390,height:844});
+  // Below 820 px the window controls give way (the supported minimum is 600).
+  await page.setViewportSize({width:800,height:844});
   await expect(move).toHaveCount(0);await expect(height).toHaveCount(0);
   await expect.poll(()=>git.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})).toBe(true);
   await page.setViewportSize({width:1440,height:900});
-  await git.getByRole('button',{name:'Reset Git review window layout'}).click();
-  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(680);
-  expect((await git.boundingBox())!.x).toBeGreaterThan(700);
+  await git.getByRole('button',{name:'Reset Git history window layout'}).click();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(1180);
+  expect((await git.boundingBox())!.x).toBeGreaterThan(100);
 });
 
-test('Modern Git review opens on the right and reads actual staged/worktree patches', async ({ page }) => {
+test('Modern Changes opens over the stage and reads actual staged/worktree patches', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await openGitDestination(page, 'Git review');
-  const git=page.getByRole('dialog',{name:'Git review',exact:true});
+  const git=await openChanges(page,'Uncommitted');
   await expect(git).toBeVisible();
+  // GIT-9: Changes is a working window like the Workspace (no right-hand drawer to resize or fold), so its geometry is the Workspace's.
   const bounds=(await git.boundingBox())!;
-  expect(bounds.x).toBeGreaterThan(700); expect(bounds.x+bounds.width).toBeGreaterThan(1400);
-  expect(bounds.width).toBeLessThanOrEqual(680);
-  expect((await git.locator(':scope > header').boundingBox())!.height).toBeLessThanOrEqual(48);
-  await expect(git.locator(':scope > header .git-branch-glyph')).toBeVisible();
+  expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x+bounds.width).toBeLessThanOrEqual(1440);
+  expect((await git.locator(':scope > header').boundingBox())!.height).toBeLessThanOrEqual(56);
   await expect(page.getByRole('complementary',{name:'Tools and agents'}).getByRole('button',{name:'Git review',exact:true})).toHaveCount(0);
   await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
   if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
-  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
-  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title','src/cart/total.ts');
-  await expect(git.locator('.git-patch-reader')).toContainText('42');
-  const resize=git.getByRole('separator',{name:'Resize Git review window left',exact:true});
-  const grip=(await resize.boundingBox())!,edge=(await git.boundingBox())!;
-  await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();
-  await page.mouse.move(edge.x+edge.width-1000,grip.y+grip.height/2,{steps:5});await page.mouse.up();
-  await expect.poll(()=>git.evaluate(node=>Math.abs(node.getBoundingClientRect().width-1000))).toBeLessThanOrEqual(8);
-  const draggedWidth=Math.round((await git.boundingBox())!.width);
-  const patchWidth=(await git.locator('.git-patch').boundingBox())!.width;
-  await git.getByRole('button',{name:/^Files/}).click();
-  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeHidden();
-  expect((await git.locator('.git-patch').boundingBox())!.width).toBeGreaterThan(patchWidth+100);
+  await expect(git.getByRole('complementary',{name:'Changed files'})).toBeVisible();
+  await expect(git.locator('.compare-file-title strong')).toHaveAttribute('title','src/cart/total.ts');
   await expect(git.locator('.git-patch-reader')).toContainText('42');
   await page.screenshot({path:resolve('.local/modern-compact-git-test.png')});
-  await git.getByRole('button',{name:'Close Git review'}).click();
+  await git.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(git).toHaveCount(0);
-  await openGitDestination(page, 'Git review');
-  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(draggedWidth);
-  await expect(git.getByRole('button',{name:/^Files/})).toHaveAttribute('aria-expanded','false');
-  await git.getByRole('button',{name:/^Files/}).click();
-  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
-  await git.getByRole('button',{name:'Close Git review'}).click();
+  await openChanges(page,'Uncommitted');
+  await expect(git.getByRole('complementary',{name:'Changed files'})).toBeVisible();
+  await git.getByRole('button',{name:'Back to agent',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
   const utilities=page.locator('.workspace-menu[open]');
   // The menu no longer repeats Changes (the header has it); the reading entries that are not in the header stay.
@@ -670,20 +657,19 @@ test('Modern Git review opens on the right and reads actual staged/worktree patc
   await expect(utilities.getByRole('button',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
   await openSessionReview(page);
-  await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Close Changes',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'Session review',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close Session review',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
   await utilities.getByRole('button',{name:'Notes',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Notes',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Notes',exact:true}).click();
-  await page.setViewportSize({width:390,height:844});
-  await openGitDestination(page, 'Git review');
+  await page.setViewportSize({width:600,height:844});
+  await openChanges(page,'Uncommitted');
   await expect(git).toBeVisible();
-  const mobileBounds=(await git.boundingBox())!;
-  expect(mobileBounds.x).toBeGreaterThanOrEqual(0);
-  expect(mobileBounds.x+mobileBounds.width).toBeLessThanOrEqual(390);
-  await expect(git.getByRole('separator',{name:'Resize Git reading space',exact:true})).toBeHidden();
-  await git.getByRole('button',{name:'Close Git review'}).click();
+  const narrowBounds=(await git.boundingBox())!;
+  expect(narrowBounds.x).toBeGreaterThanOrEqual(0);
+  expect(narrowBounds.x+narrowBounds.width).toBeLessThanOrEqual(600);
+  await git.getByRole('button',{name:'Back to agent',exact:true}).click();
 });
 
 for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} composer forwards text, attachments and native options with explicit consent`, async ({ page }) => {
@@ -745,20 +731,19 @@ test('Modern keeps file evidence, search controls and reading position across se
 });
 
 
-test('Modern retains Git scope and find controls after closing and reopening a reader', async ({page}) => {
+test('Modern retains Git scope and find controls after closing and reopening Changes', async ({page}) => {
   const snapshot={root,branch:'synthetic',head:'abc123',fingerprint:'page1',sampledAt:'2026-10-16T00:00:00Z',omitted:0,limit:50,pageStart:0,totalAllowed:1,protectedCount:0,files:[{path:'sample.ts',status:' M',fingerprint:'exact-patch',patch:'Working tree changes\ndiff --git a/sample.ts b/sample.ts\n--- a/sample.ts\n+++ b/sample.ts\n@@ -1 +1 @@\n-old\n+new',staged:false}]};
   await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
   await page.route('**/git',route=>route.fulfill({json:{approved:true,scope:'current-git'}}));
   await page.route('**/git/snapshot**',route=>route.fulfill({json:snapshot}));
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await openGitDestination(page, 'Git review');
-  const reader=page.getByRole('dialog',{name:'Git review',exact:true});
+  const reader=await openChanges(page,'Uncommitted');
   await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toBeVisible();
   await reader.getByRole('searchbox',{name:'Find in patch'}).fill('new');
   await reader.getByRole('button',{name:'Side by side',exact:true}).click();
-  await reader.getByRole('button',{name:'Close Git review'}).click();
-  await openGitDestination(page, 'Git review');
+  await reader.getByRole('button',{name:'Back to agent',exact:true}).click();
+  await openChanges(page,'Uncommitted');
   await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toHaveValue('new');
   await expect(reader.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
 });
@@ -874,7 +859,7 @@ test('Modern Changes reaches every check as one list and returns to the row that
   const commands=page.getByRole('dialog',{name:'Navigate workspace'});
   await commands.getByRole('combobox').fill('Review changes');
   await commands.getByRole('option',{name:/Review changes and checks/}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});
+  const review=page.getByRole('dialog',{name:'Session review',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
   await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toHaveCount(0);
@@ -1473,7 +1458,7 @@ test('completed native turns open chronological review without implying attribut
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button',{name:'Review new activity',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Since this turn began');
+  const review=page.getByRole('dialog',{name:'Session review',exact:true});await expect(review).toContainText('Since this turn began');
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
 });
 
@@ -1548,7 +1533,7 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
   await cards.first().getByRole('button',{name:'Open activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
   await page.keyboard.press('Escape');await openSessionReview(page);
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
+  const review=page.getByRole('dialog',{name:'Session review',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
 });
 
@@ -1569,7 +1554,7 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.insights-intro p')).toHaveText('The work recorded between each prompt and the next, with its latest outcomes.');await expect(dialog.locator('.insights-intro p')).not.toContainText(/led to|started/);await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
   await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
-  await openSessionReview(page);const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
+  await openSessionReview(page);const review=page.getByRole('dialog',{name:'Session review',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 test runs');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
   await dialog.getByRole('button',{name:'Copy packet',exact:true}).click();expect(await page.evaluate(()=>(window as unknown as {packetCopy:string}).packetCopy)).toBe(text);
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown',exact:true}).click();const file=await download;expect(readFileSync((await file.path())!,'utf8')).toBe(text);
@@ -1582,7 +1567,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
   await openSessionReview(page);
-  const review=page.getByRole('dialog',{name:'Changes',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
+  const review=page.getByRole('dialog',{name:'Session review',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
   const approve=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await approve.isVisible())await approve.click();
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
   await expect(connections).toContainText('static relationships');await connections.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/}).click();
