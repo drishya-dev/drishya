@@ -37,6 +37,7 @@ import { readCheckpointFile } from './checkpoint-file.ts';
 import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
+import { GithubLinks, type GhRun } from './github-links.ts';
 import { repositoryRoots } from './repository-root.ts';
 import { sessionLinks } from './git-session-links.ts';
 import { HarnessController } from './controller.ts';
@@ -62,6 +63,8 @@ export interface ServerOptions {
   uiDir?: string;
   token?: string;
   app?: App;
+  /** LINK-1: tests inject a fake `gh`; the default runs the person's installed GitHub CLI. */
+  gh?: GhRun;
   model?: ModelConfig;
   /** The model transport. Tests inject one; the default speaks HTTP to `model.baseUrl`. */
   complete?: Complete;
@@ -127,6 +130,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const readStorageUsage = storageUsageReader(app.store.dataDir);
   const workspace = new WorkspaceAccess(app);
   const gitReview = new GitReview(workspace,undefined,app.history);
+  const github = new GithubLinks(app, opts.gh);
   const repositoryRoot = repositoryRoots();
   const imports = new Map<string, { recordingId: string; total: number }>();
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
@@ -255,6 +259,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if(!/^[a-f0-9]{64}$/.test(id))throw new HttpError(400,'Invalid checkout grant identity.');
       workspace.revokeRemembered(id);return json(res,{revoked:true});
     }
+    if (a === 'github' && id === 'status' && m === 'GET') return json(res, await github.status());
+    if (a === 'github' && id === 'optin' && m === 'POST') { const body = await readJson(req, 1024) as { enabled?: unknown }; if (typeof body.enabled !== 'boolean') throw new HttpError(400, 'Send enabled: true or false.'); return json(res, await github.set(body.enabled)); }
+    if (a === 'github' && id === 'item' && m === 'GET') return json(res, await github.item(url.searchParams.get('url') ?? ''));
     if (a === 'storage' && m === 'GET') return json(res, await readStorageUsage());
     if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
     if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
@@ -351,6 +358,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
       if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
+      if(sub==='git'&&subId==='ref'&&m==='GET')return json(res,await gitReview.ref(id,url.searchParams.get('rev')??''));
       if(sub==='git'&&subId==='commit'&&m==='GET')return json(res,await gitReview.commit(id,url.searchParams.get('hash')??'',intParam(url,'parent',0,0,1023),intParam(url,'start',0,0,10_000_000),url.searchParams.get('generation')??undefined));
       if (sub === 'workspace' && subId === 'approve' && m === 'POST') {
         const body=await readJson(req);
