@@ -79,3 +79,11 @@
 
 /* The status is the one thing the first line says when something needs the person ("Approval needed"): it keeps its words and the folder name gives way. */
 :root[data-ui-version=modern] .modern-native-composer .modern-composer-state { flex:none; max-width:min(260px,70%); }
+
+/* UI-28c: the open box is never shorter than this, and this is the height every other surface reserves for it (--composer-gap), so opening,
+   closing or growing the box moves nothing else. */
+:root[data-ui-version=modern] { --composer-rest:134px; --composer-setup-h:56px; }
+@media (max-width:760px) { :root[data-ui-version=modern] { --composer-setup-h:92px; } }
+:root[data-ui-version=modern] .modern-native-composer .composer-setup { height:var(--composer-setup-h); box-sizing:border-box; overflow:auto; }
+:root[data-ui-version=modern] .modern-native-composer .composer-setup:has(.cli-setup) { --composer-setup-h:176px; }
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer:not(.composer-minimized) { min-height:var(--composer-rest); box-sizing:border-box; }

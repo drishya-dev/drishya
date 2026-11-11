@@ -5,6 +5,8 @@ import type { Operation } from '@drishya/contracts';
 import { isScreenOperation } from '@drishya/scene';
 import { browserStep, safeWebUrl } from '../lib/browser-evidence.ts';
 import { useApp } from '../state.ts';
+import { LinkCard } from './LinkCard.tsx';
+import { githubTarget } from '../lib/link-kinds.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ToolInput } from './ToolInput.tsx';
 import { WebResults } from './WebResults.tsx';
@@ -15,7 +17,7 @@ import { fetchFacts } from './CommandRun.tsx';
 import './browser-evidence.css';
 
 export function RecordedUrl({ url }: { url: string }) {
-  return safeWebUrl(url) ? <a className="browser-url" href={url} target="_blank" rel="noopener noreferrer" onClick={event => event.stopPropagation()}>{url}</a> : <span className="browser-url">{url}</span>;
+  return safeWebUrl(url) ? <LinkCard target={{ kind: githubTarget(url) ? 'github' : 'url', value: url }}><a className="browser-url" href={url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" onClick={event => event.stopPropagation()}>{url}</a></LinkCard> : <span className="browser-url">{url}</span>;
 }
 
 /** Captured page material. The result is an excerpt, never a generated page summary. */

@@ -27,12 +27,15 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
       const bounds=node.getBoundingClientRect();let top=16,bottom=48;
       for(const control of controls) {
         const r=control.getBoundingClientRect();
-        if(!r.width||!r.height||r.right<=bounds.left||r.left>=bounds.right) continue;
+        // The composer is judged by its open width, whether it is open or collapsed to the pill, so the rail never moves when it toggles.
+        const openWidth=Math.min(590,innerWidth-28),openLeft=(innerWidth-openWidth)/2;
+        const overlaps=control.matches('.prompt-composer')?bounds.left<openLeft+openWidth&&bounds.right>openLeft:!(r.right<=bounds.left||r.left>=bounds.right);
+        if(!r.width||!r.height||!overlaps) continue;
         if(control.matches('.prompt-composer')) {
-          // UI-28b: the rail clears the composer at rest; a long prompt grows the box over it instead of moving the rail.
-          const field=control.querySelector('textarea');
-          const grown=field?Math.max(0,field.offsetHeight-(parseFloat(getComputedStyle(field).minHeight)||0)):0;
-          if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-(r.top+grown)+12);
+          // UI-28b/28c: the rail clears the composer at rest (its fixed --composer-rest above its bottom edge), whether the box is open,
+          // collapsed to the pill or grown by a long prompt, so the rail never moves with it.
+          const rest=(parseFloat(getComputedStyle(viewer??document.documentElement).getPropertyValue('--composer-gap'))||158)-24; // the gap is written in px by SessionWorkspace
+          if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-r.bottom+rest+12);
         }
         else if(control.matches('.catalog-toggle,.workspace-follow,.follow-pill')) bottom=Math.max(bottom,innerHeight-r.top+12);
         else top=Math.max(top,r.bottom+14);
@@ -42,7 +45,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
       setViewport(old=>old.top===node.scrollTop&&old.height===node.clientHeight?old:{top:node.scrollTop,height:node.clientHeight});
     };
     observer = new ResizeObserver(measure);observer.observe(node);measure();
-    const changes=new MutationObserver(measure);if(viewer)changes.observe(viewer,{childList:true,attributes:true,attributeFilter:['class']});
+    const changes=new MutationObserver(measure);if(viewer)changes.observe(viewer,{childList:true,attributes:true,attributeFilter:['class','style']});
     window.addEventListener('resize',measure);
     return () => {observer.disconnect();changes.disconnect();window.removeEventListener('resize',measure);};
   }, []);

@@ -68,3 +68,26 @@ for(const width of [600,1440]) test(`only the composer grows while a long prompt
   expect(reachedMax,'the box reached its maximum height and stopped growing').toBe(true);
   expect(await textbox.evaluate(node=>node.scrollHeight>node.clientHeight),'past the maximum the text scrolls inside the box').toBe(true);
 });
+
+// UI-28c: opening and closing the composer moves nothing else; only the composer itself changes.
+for(const [width,height] of [[600,900],[1440,900],[2560,1440]] as const) test(`collapsing and opening the composer moves nothing else at ${width}px`,async({page})=>{
+  await page.setViewportSize({width,height});
+  await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
+  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  const composer=page.getByRole('region',{name:'Harness prompt'});
+  const minimize=composer.locator('.composer-minimize');await expect(minimize).toBeVisible();
+  const setOpen=async(open:boolean)=>{if((await minimize.getAttribute('aria-expanded'))!==String(open))await minimize.click();await expect(minimize).toHaveAttribute('aria-expanded',String(open));await page.waitForTimeout(350);};
+  await setOpen(false);await expect(page.locator('.history')).toBeVisible();
+  const before=await snapshot(page);
+  expect(Object.values(before.rects).flat().length,'surfaces were measured').toBeGreaterThan(3);
+  const sizes=new Set<string>();
+  for(const open of [true,false,true,false,true,false]){
+    await setOpen(open);sizes.add(String(Math.round((await composer.boundingBox())!.height)));
+    const after=await snapshot(page);
+    expect(after.rects,`${open?'open':'collapsed'}: the Files panel, Toolbox, rails and controls stay`).toEqual(before.rects);
+    expect(after.scrollTop,`${open?'open':'collapsed'}: the history does not jump`).toBe(before.scrollTop);
+    expect(after.scrollHeight,`${open?'open':'collapsed'}: the history is not reflowed`).toBe(before.scrollHeight);
+  }
+  expect(sizes.size,'the composer itself did change size between its states').toBeGreaterThan(1);
+});

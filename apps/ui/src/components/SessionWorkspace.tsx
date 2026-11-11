@@ -29,6 +29,7 @@ import { promptDrafts } from '../lib/prompt-drafts.ts';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNowText } from './NowWatcher.tsx';
 import { ComposerMenu } from './ComposerMenu.tsx';
+import { RememberCheckbox } from './RememberCheckbox.tsx';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
@@ -377,7 +378,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         <div className="tree-evidence-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Activity in this session. Badges describe tool calls, not current Git status.</small></div>
       </details>
     </div>
-    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<label><input type="checkbox" checked={remember} disabled={approving} onChange={event=>setRemember(event.target.checked)} /> Remember for this checkout</label>}</>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <div className="workspace-grant-card"><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<RememberCheckbox checked={remember} disabled={approving} onChange={setRemember} />}</div>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -660,11 +661,21 @@ export function PromptComposer() {
     // composer's own size constraints or changing the user's follow preference.
     const observed = new Set<Element>();
     const measure = () => {
-      // UI-28b: the gap other surfaces reserve is the box at rest. A long prompt grows the box upward over the history instead of moving
-      // the history, the Follow switch, the rails and the Toolbox, so the textarea's growth past one line is not part of it.
-      const field = node.querySelector('textarea');
-      const grown = field ? Math.max(0, field.offsetHeight - (parseFloat(getComputedStyle(field).minHeight) || 0)) : 0;
-      viewer.style.setProperty('--composer-gap', `${node.offsetHeight - grown + 24}px`);
+      // UI-28b/28c: the gap other surfaces reserve is a fixed token, the box at rest (composer.css gives the open box that minimum height).
+      // It does not depend on whether the box is open, how long the prompt is, or what else sits in the box: a long prompt, the setup row,
+      // an attachment strip or a confirmation grow the box over the history, and collapsing to the pill or opening again moves nothing
+      // else. Only the composer animates.
+      const tokens = getComputedStyle(viewer);
+      // The build writes lengths in rem (the interface scales with the viewport), so tokens are read with their unit.
+      const rootSize = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const length = (value: string) => parseFloat(value) * (value.trim().endsWith('rem') ? rootSize : 1);
+      const rest = length(tokens.getPropertyValue('--composer-rest')) || 134;
+      // The setup content (enable, connect the CLI) has a fixed height (composer.css; it scrolls inside) and is part of the box's resting
+      // height while it is there, open or collapsed, so collapsing and opening never changes the reserved space. The extras that come and
+      // go with typing (growth, attachments, confirmation) are not.
+      const part = node.querySelector<HTMLElement>('.composer-setup');
+      const setupHeight = part ? (parseFloat(getComputedStyle(part).height) || 0) + 8 : 0;
+      viewer.style.setProperty('--composer-gap', `${rest + setupHeight + 24}px`);
       // Layout offsets, not bounding rectangles: useSurfaceReflow scales this node (and so the approval inside it) for 200 ms,
       // and a scaled rectangle would store only a fraction of the real raised extent with nothing to remeasure afterwards.
       const top = layoutTop(node);
@@ -711,7 +722,7 @@ export function PromptComposer() {
   const modelId = options.model ?? controller?.settings?.model;
   const modelEfforts = settingsModels.find(model => model.id === modelId)?.efforts ?? [];
   const modelLabel = settingsModels.find(model => model.id === modelId)?.name ?? modelId ?? 'Default model';
-  const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<label><input type="checkbox" checked={remember} disabled={busy} onChange={event=>setRemember(event.target.checked)} /> Remember for this checkout</label>}</>}
+  const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<RememberCheckbox checked={remember} disabled={busy} onChange={setRemember} />}</>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
   const nativeOptions = <>      <details className="permission-policy native-options"><summary>{modern ? <><svg className="native-options-glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg><span>Connection & permissions</span></> : <>{options.model ?? controller?.settings?.model ?? 'Native settings'} · {controller?.settings?.permission ?? 'Native policy'}</>}</summary><div className="native-options-menu">{modern && connectionSetup}<small title={workspace?.root}>Target: {workspace?.root ?? 'Workspace unavailable'} · recording {id.slice(-8)}</small><small>Native settings describe the last reported policy; the harness validates permissions when connecting.</small>
