@@ -64,9 +64,9 @@ test('local prose links open exact source without current-file IO or browser nav
   expect(page.url()).toBe(url);expect(diskRequests).toEqual([]);
   await reader.getByRole('button',{name:'Close Work on src/source.ts',exact:true}).click();await expect(reader).toHaveCount(0);
  }
- for(const title of ['web','outside']){
-  const inert=page.locator('.prose span.md-link').filter({hasText:title});await expect(inert).toHaveCount(1);await inert.click();expect(page.url()).toBe(url);
- }
+ // LINK-1: a web address in prose is a real link that opens in a new tab; an outside path stays inert text.
+ {const web=page.locator('.prose a.md-url').filter({hasText:'web'});await expect(web).toHaveCount(1);await expect(web).toHaveAttribute('target','_blank');await expect(web).toHaveAttribute('rel',/noopener/);}
+ {const inert=page.locator('.prose span.md-link').filter({hasText:'outside'});await expect(inert).toHaveCount(1);await inert.click();expect(page.url()).toBe(url);}
  const card=page.locator('article.op-read');await card.locator('header button.captured-file-path').focus();await page.keyboard.press('Enter');
  let reader=page.getByRole('dialog',{name:'Work on src/source.ts',exact:true});await expect(reader.getByRole('combobox',{name:'First step',exact:true})).toHaveValue(/\/read$/);
  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
