@@ -61,6 +61,7 @@ async function appendLongRead() {
 type Anchor = { id?: string; offset?: number };
 
 test('live history keeps the reader anchored across bursts, sizes, reconnect and map-off', async ({ page }) => {
+  const initialObservations = app.store.getRecording(recordingId)!.observationCount;
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(server.launchUrl);
   await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
@@ -135,7 +136,9 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await expect(steps).toContainText('924 recorded steps');
   await expect(page.locator('.map')).toHaveCount(0);
   await expect(page.locator('.viewer')).toHaveClass(/still/);
-  expect(app.store.getRecording(recordingId)?.observationCount).toBe(926);
+  // The fixture has 28 observations, not the old 26; three verified bursts add
+  // 300 each. Timeline entries and observation counts are different domains.
+  expect(app.store.getRecording(recordingId)?.observationCount).toBe(initialObservations + 3 * 300);
   expect((await app.ingest.sync(recordingId)).added).toBe(0);
 });
 

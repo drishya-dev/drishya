@@ -191,7 +191,12 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
       measure();
       // Composer clearance changes padding after the first layout. It changes the
       // scroll destination without changing any passage's measured content height.
-      if (entries.some(entry => entry.target === inner) && useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) followLatest();
+      if (entries.some(entry => entry.target === inner)) {
+        if (useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) followLatest();
+        // Floating controls can change only padding, without resizing a passage.
+        // Detached reading needs the same compensation as measured slot growth.
+        else restoreReading(true);
+      }
     });
     if (inner) observer.observe(inner, { box: 'border-box' });
     for (const card of history.querySelectorAll('article[data-op-id]')) observer.observe(card);

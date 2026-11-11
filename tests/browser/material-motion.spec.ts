@@ -193,10 +193,18 @@ test('hover result boundaries scroll history without dismissing the same reading
       const x = Math.max(r.left, c.left) + Math.min(r.right - Math.max(r.left, c.left), c.right - Math.max(r.left, c.left)) / 2;
       const y = edge === 'composer' ? c.top + 10 : c.bottom - 10;
       const hit = document.elementFromPoint(x, y);
-      return { overlaps: y > r.top && y < r.bottom, chromeOwnsHit: !!hit && chrome.contains(hit), blur: getComputedStyle(chrome, '::after').backdropFilter };
+      const brand = chrome.querySelector('.brand'), b = brand?.getBoundingClientRect();
+      const brandHit = b && document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+      return { overlaps: y > r.top && y < r.bottom, chromeOwnsHit: !!hit && chrome.contains(hit), worldOwnsHit: !!hit && el.contains(hit), brandOwnsHit: !!brandHit && !!brand?.contains(brandHit), blur: getComputedStyle(chrome, '::after').backdropFilter };
     }, edge);
     expect(overlap.overlaps).toBe(true);
-    expect(overlap.chromeOwnsHit).toBe(true);
+    // The removed centre capsule leaves the header gap click-through.
+    // Its actual brand control still owns its hit; the composer owns its panel.
+    if (edge === 'composer') expect(overlap.chromeOwnsHit).toBe(true);
+    else {
+      expect(overlap.worldOwnsHit).toBe(true);
+      expect(overlap.brandOwnsHit).toBe(true);
+    }
     expect(overlap.blur).toBe('blur(8px)');
     if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: `.local/hover-under-${edge}.png` });
   }
