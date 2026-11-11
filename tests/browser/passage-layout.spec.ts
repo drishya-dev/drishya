@@ -99,16 +99,15 @@ async function open(page: Page, recording: Recording, width: number) {
 }
 
 // Cards per visual row, per passage, per recording (the 'wrap' recording ends with the checkout-fix passages).
-// LAYOUT-1b: at 1920×6000 the root factor is 4/3, so the logical composition
-// matches 1440. Wire/order assertions and all reference-width goldens are retained.
+// Updated only for the delegated READ-4 wide-patch row contract; other row goldens are retained.
 const GOLDEN: Record<Recording, Record<number, string[]>> = {
-  claude: { 1024: ['1/1/1', '1/1', '1/1/1', '1/1/1/1'], 1280: ['1/2', '2', '2/1', '2/2'], 1440: ['2/1', '2', '2/1', '2/2'], 1920: ['2/1', '2', '2/1', '2/2'] },
-  codex: { 1024: ['1/1', '1/1/1'], 1280: ['1/1', '2/1'], 1440: ['2', '2/1'], 1920: ['2', '2/1'] },
+  claude: { 1024: ['1/1/1', '1/1', '1/1/1', '1/1/1/1'], 1280: ['1/2', '2', '2/1', '2/2'], 1440: ['2/1', '2', '2/1', '2/2'], 1920: ['3', '2', '3', '3/1'] },
+  codex: { 1024: ['1/1', '1/1/1'], 1280: ['1/1', '2/1'], 1440: ['2', '2/1'], 1920: ['2', '3'] },
   wrap: {
     1024: ['1/1/1', '1/1', '1/1/1/1', '1/1/1/1/1/1/1/2/2/1'],
     1280: ['1/2', '2', '2/2', '1/1/2/2/2/3/1'],
     1440: ['2/1', '2', '2/2', '1/1/2/2/3/2/1'],
-    1920: ['2/1', '2', '2/2', '1/1/2/2/3/2/1'],
+    1920: ['3', '2', '3/1', '1/1/4/4/1/1'],
   },
 };
 
