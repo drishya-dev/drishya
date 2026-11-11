@@ -88,7 +88,11 @@ for (const width of [1440, 1920, 2149, 2560, 3840]) {
     const file = page.locator('[data-spine-path]').filter({ has: page.getByText('main.ts', { exact: true }) });
     await file.click();
     await expect(page.locator('.file-peek-reader[open]')).toBeVisible();
-    inside(await span(page, '.file-peek-reader'), 'file peek');
+    const peek = (await span(page, '.file-peek-reader'))!;
+    inside(peek, 'file peek');
+    // The build writes --stage-max in rem; the peek must still resolve it to 1920 px, not collapse to a sliver.
+    expect(peek.right - peek.left, 'file peek keeps its reading width').toBeGreaterThanOrEqual(360);
+    expect(Math.abs(peek.right - (Math.min(width, STAGE_MAX) + edge - 48)), 'file peek docks 48 px inside the stage edge').toBeLessThan(1.5);
 
     await open(page, width); // the peek and the Workspace are two modes: start again for the second
     await page.getByRole('button', { name: 'Open developer workspace', exact: true }).click();
