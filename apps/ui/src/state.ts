@@ -68,6 +68,8 @@ interface State {
   foldersHidden?: boolean;
   currentFile?: string;
   developerWorkspace: boolean;
+  /** GIT-8: the Compare window, a working window like the Workspace. */
+  compareOpen: boolean;
   theme: ThemePreference;
   settingsOpen: boolean;
   selectedOp?: string;
@@ -138,6 +140,7 @@ export const useApp = create<State>((set, get) => ({
   reconnectAttempt: 0,
   mode: 'history',
   developerWorkspace: false,
+  compareOpen: false,
   replayDiagnostics: false,
   step: 0,
   playing: false,
@@ -179,7 +182,7 @@ export const useApp = create<State>((set, get) => ({
     const memory = workspaceMemory(src);
     if (opts.at !== undefined || opts.play) memory.clear(id);
     const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
+    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, compareOpen: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     let opened = () => {};
     const mine = { id, done: new Promise<void>(resolve => { opened = resolve; }) };
@@ -263,7 +266,7 @@ export const useApp = create<State>((set, get) => ({
     if (!p) return;
     if (get().mode === 'history' && get().source && get().recordingId) workspaceMemory(get().source!).clear(get().recordingId!);
     const s = Math.max(0, Math.min(get().historyPage?.scene.total ?? p.timeline.length, Math.round(step)));
-    set({ mode: 'replay', developerWorkspace: false, step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
+    set({ mode: 'replay', developerWorkspace: false, compareOpen: false, step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
     if (get().historyPage) void get().loadHistoryWindow({ step: s, ...(!get().follow && get().readingPassageId ? { pinnedPassageIds: [get().readingPassageId!] } : {}) }).catch((error) => set({ error: error.message }));
   },
 

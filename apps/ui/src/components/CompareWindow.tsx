@@ -1,0 +1,345 @@
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {workspaceApi} from '../api.ts';
+import type {CompareEvidence,CompareFile,CompareGroup,CompareRef,CompareRefs,ComparePull,ComparePulls,GitCompareResult} from '../../../daemon/src/git-compare-types.ts';
+import type {GitFile,GitSnapshot} from '../../../daemon/src/git-types.ts';
+import {useApp} from '../state.ts';
+import {agentName} from '../lib/identity.ts';
+import {fileName,fileFolder} from '../lib/file-identity.ts';
+import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
+import {useSessionWorkspace} from './SessionWorkspace.tsx';
+import {GitAccess,grantGit} from './GitAccess.tsx';
+import {GitPatchReader} from './GitPatchReader.tsx';
+import {FileIcon} from './FileIcon.tsx';
+import {InterfaceGlyph} from './InterfaceGlyph.tsx';
+import './compare-window.css';
+
+// GIT-8. Compare replaces the header's Changes: two branches (or a pull request against its base) from their merge-base, with
+// the files changed on both sides first, and under each file the agents of this session that wrote it. Strictly a reader:
+// the daemon never fetches, checks out or moves anything. The diff itself is the shared patch reader.
+
+type Preset='uncommitted'|'session'|'branch'|'pr';
+const PRESETS:[Preset,string,string][]=[
+  ['uncommitted','Uncommitted','What is changed in the working tree right now'],
+  ['session','This session','This session’s branch against the branch it started from'],
+  ['branch','Branch','Two branches, remote branches or tags from their merge-base'],
+  ['pr','Pull request','An open pull request against its base'],
+];
+
+interface Row {path:string;group:CompareGroup|'tree';added?:number;removed?:number;binary?:boolean;note?:string;file?:CompareFile;git?:GitFile}
+
+/** Lines the patch adds and removes, counted from hunks only (not the `+++`/`---` headers). */
+function patchCounts(patch:string){
+  let added=0,removed=0,inHunk=false;
+  for(const line of patch.split('\n')){
+    if(line.startsWith('diff --git'))inHunk=false;
+    else if(line.startsWith('@@'))inHunk=true;
+    else if(inHunk&&line[0]==='+')added++;
+    else if(inHunk&&line[0]==='-')removed++;
+  }
+  return {added,removed};
+}
+const word=(status:string|undefined)=>status==='A'?'new':status==='D'?'deleted':undefined;
+const gitWord=(status:string)=>{const code=status.trim();return code==='??'?'untracked':code.includes('U')?'conflict':code.includes('D')?'deleted':code.includes('A')?'new':undefined;};
+const ago=(time:string|undefined)=>{
+  const then=Date.parse(time??'');if(!Number.isFinite(then))return '';
+  const days=Math.floor((Date.now()-then)/86_400_000);
+  return days<1?'today':days<2?'yesterday':days<60?`${days} days ago`:days<700?`${Math.round(days/30)} months ago`:`${Math.round(days/365)} years ago`;
+};
+const nameOf=(ref:{name:string}|undefined)=>ref?.name??'';
+
+/** Opens Compare from anywhere (header button, palette). Workspace and the file readers step aside. */
+export const openCompare=()=>useApp.setState({compareOpen:true,developerWorkspace:false,currentFile:undefined,explore:false});
+
+export function CompareButton() {
+  const open=useApp(s=>s.compareOpen),mode=useApp(s=>s.mode),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
+  const unavailable=source?.kind==='daemon'&&!!id?.includes('+');
+  const unsupported=source?.kind!=='daemon';
+  return <button className="btn ghost compare-open" data-compare-open aria-expanded={open} disabled={mode==='replay'||unavailable||unsupported}
+    title={mode==='replay'?'Return to history to compare':unavailable?'Choose one native recording to compare':unsupported?'Compare reads a repository on this machine':'Compare two branches or a pull request, with the agent work behind each file'}
+    onClick={()=>{if(open)useApp.setState({compareOpen:false});else openCompare();}}>Compare</button>;
+}
+
+/** Mounted once in the viewer, beside the Workspace. Remembers its sides and file for the session so closing returns to the same place. */
+export function CompareWindow() {
+  const open=useApp(s=>s.compareOpen),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),workspaceOpen=useApp(s=>s.developerWorkspace);
+  useEffect(()=>{if(open&&workspaceOpen)useApp.setState({compareOpen:false});},[open,workspaceOpen]);
+  if(!open||mode!=='history'||source?.kind!=='daemon'||!id||id.includes('+'))return null;
+  return <CompareContent key={id} id={id}/>;
+}
+
+function CompareContent({id}:{id:string}) {
+  const {workspace,approve}=useSessionWorkspace();
+  const projection=useApp(s=>s.projection);
+  const section=useRef<HTMLElement>(null);
+  const alive=useRef(true);
+  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
+  const [consent,setConsent]=useState<boolean>(),[granting,setGranting]=useState(false);
+  const [refs,setRefs]=useState<CompareRefs>(),[pulls,setPulls]=useState<ComparePulls>();
+  const [preset,setPreset]=useWorkspaceState<Preset>('compare/preset','session');
+  const [baseRef,setBaseRef]=useWorkspaceState<string|undefined>('compare/base',undefined);
+  const [headRef,setHeadRef]=useWorkspaceState<string|undefined>('compare/head',undefined);
+  const [prNumber,setPrNumber]=useWorkspaceState<number|undefined>('compare/pr',undefined);
+  const [selected,setSelected]=useWorkspaceState('compare/file','');
+  const [sessionOnly,setSessionOnly]=useWorkspaceState('compare/session-only',true);
+  const [sideChoice,setSideChoice]=useState<'head'|'base'>();
+  const [result,setResult]=useState<GitCompareResult>(),[snapshot,setSnapshot]=useState<GitSnapshot>();
+  const [loading,setLoading]=useState(false),[error,setError]=useState<string>(),[refresh,setRefresh]=useState(0);
+  const [evidence,setEvidence]=useState<CompareEvidence>(),[evidenceFor,setEvidenceFor]=useState('');
+  const [patch,setPatch]=useState<{key:string;file:GitFile}>(),[patchError,setPatchError]=useState<{key:string;message:string}>();
+
+  useEffect(()=>{let active=true;void workspaceApi.gitStatus(id).then(s=>{if(active)setConsent(s.approved);}).catch(e=>{if(active){setConsent(false);setError(e.message);}});return()=>{active=false;};},[id]);
+  const ready=!!workspace?.approved&&!!consent;
+  useEffect(()=>{
+    if(!ready)return;
+    let active=true;
+    void workspaceApi.compareRefs(id).then(value=>{if(active)setRefs(value);}).catch(e=>{if(active)setError(e.message);});
+    return()=>{active=false;};
+  },[id,ready,refresh]);
+  useEffect(()=>{
+    if(!ready||preset!=='pr')return;
+    let active=true;setPulls(undefined);
+    void workspaceApi.comparePulls(id).then(value=>{if(active)setPulls(value);}).catch(e=>{if(active)setPulls({status:'failed',pulls:[]});});
+    return()=>{active=false;};
+  },[id,ready,preset,refresh]);
+
+  const pull=preset==='pr'?pulls?.pulls.find(item=>item.number===prNumber):undefined;
+  // The two sides this preset reads. `remote` means GitHub's compare: the pull request's head is not on this machine.
+  const recorded=projection?.recordedBranch?.name;
+  const sides=useMemo(()=>{
+    if(!refs)return undefined;
+    if(preset==='session'||preset==='branch'){
+      // The session's own branch is the one its journal recorded, when it still exists here; else the branch checked out now.
+      const own=recorded?refs.refs.find(ref=>ref.ref===`refs/heads/${recorded}`)?.ref:undefined;
+      const base=preset==='branch'&&baseRef?baseRef:refs.defaultBase?.ref,head=preset==='branch'?headRef??own??refs.current?.ref:own??refs.current?.ref;
+      return base&&head?{base,head}:undefined;
+    }
+    if(preset==='pr'&&pull)return pull.local&&pull.baseRef?{base:pull.baseRef.ref,head:pull.headOid}:{base:'',head:'',remote:pull.number};
+    return undefined;
+  },[refs,preset,baseRef,headRef,pull,recorded]);
+  const sidesKey=sides?JSON.stringify(sides):'';
+
+  // Load the comparison (or the working tree) for the chosen sides. A newer choice discards an older answer.
+  useEffect(()=>{
+    if(!ready)return;
+    let active=true;
+    setError(undefined);setSideChoice(undefined);
+    if(preset==='uncommitted'){
+      setLoading(true);
+      void workspaceApi.gitSnapshot(id,0).then(value=>{if(active){setSnapshot(value);setResult(undefined);}}).catch(e=>{if(active){setSnapshot(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+    }else if(sides){
+      setLoading(true);
+      const request='remote' in sides&&sides.remote?workspaceApi.compareRemote(id,sides.remote as number):workspaceApi.compare(id,sides.base,sides.head);
+      void request.then(value=>{if(active){setResult(value);setSnapshot(undefined);}}).catch(e=>{if(active){setResult(undefined);setError(e.message);}}).finally(()=>{if(active)setLoading(false);});
+    }else{setResult(undefined);setSnapshot(undefined);}
+    return()=>{active=false;};
+  },[id,ready,preset,sidesKey,refresh]);
+
+  const rows=useMemo<Row[]>(()=>{
+    if(preset==='uncommitted')return (snapshot?.files??[]).map(file=>({path:file.path,group:'tree',git:file,note:gitWord(file.status),...(file.status.trim()==='??'?{}:patchCounts(file.patch))}));
+    return (result?.files??[]).map(file=>({path:file.path,group:file.group,file,added:file.added,removed:file.removed,binary:file.binary,note:word(file.group==='base'?file.baseStatus:file.headStatus)}));
+  },[preset,snapshot,result]);
+  const rowKey=rows.map(row=>row.path).join('\0');
+
+  // What this session's agents wrote, for every file in the list (the daemon answers 200 paths at a time).
+  useEffect(()=>{
+    setEvidence(undefined);setEvidenceFor('');
+    if(!rows.length){setEvidenceFor(rowKey);return;}
+    let active=true;
+    const paths=rows.map(row=>row.path),chunks:string[][]=[];
+    for(let n=0;n<paths.length;n+=200)chunks.push(paths.slice(n,n+200));
+    void Promise.all(chunks.map(chunk=>workspaceApi.compareEvidence(id,chunk))).then(all=>{if(active){setEvidence(Object.assign({},...all));setEvidenceFor(rowKey);}}).catch(()=>{if(active){setEvidence({});setEvidenceFor(rowKey);}});
+    return()=>{active=false;};
+  },[id,rowKey]);
+  const evidenceReady=evidenceFor===rowKey&&!!evidence||!rows.length;
+  const agentByName=useCallback((agentId:string)=>agentName(projection?.agents.find(agent=>agent.id===agentId)),[projection]);
+
+  const filtering=preset==='session'&&sessionOnly&&rows.length>0;
+  const visible=filtering?(evidenceReady?rows.filter(row=>evidence?.[row.path]):[]):rows;
+  const row=visible.find(item=>item.path===selected)??visible[0];
+  useEffect(()=>{if(row&&row.path!==selected)setSelected(row.path);},[row?.path]);
+
+  // The patch of the selected file, on the side being read.
+  const side:'head'|'base'=sideChoice??(row?.group==='base'?'base':'head');
+  const patchKey=row?`${result?.generation??snapshot?.fingerprint??''}/${row.path}/${side}/${preset}`:'';
+  useEffect(()=>{
+    setPatchError(undefined);
+    if(!row||!patchKey)return;
+    if(row.git){setPatch({key:patchKey,file:row.git});return;}
+    if(row.file?.patch!==undefined){setPatch({key:patchKey,file:{path:row.path,status:'M',fingerprint:`${patchKey}`,patch:row.file.patch}});return;}
+    if(!result||result.source==='github'){setPatch(undefined);return;}
+    let active=true;
+    void workspaceApi.compareFile(id,result.base.ref,result.head.ref,row.path,side).then(value=>{if(active)setPatch({key:patchKey,file:{path:value.path,status:'M',fingerprint:value.fingerprint,patch:value.patch}});}).catch(e=>{if(active){setPatch(undefined);setPatchError({key:patchKey,message:e.message});}});
+    return()=>{active=false;};
+  },[patchKey]);
+
+  const jump=(operationId:string)=>{useApp.getState().select(operationId);useApp.setState({compareOpen:false});};
+  const requestClose=()=>{
+    const element=section.current,state=useApp.getState();
+    const animate=element&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const done=()=>{useApp.setState({compareOpen:false});requestAnimationFrame(()=>document.querySelector<HTMLElement>('[data-compare-open]')?.focus({preventScroll:true}));};
+    if(!animate){done();return;}
+    // MOTION-1: a window beside the work leaves faster (120 ms) than it arrives (200 ms).
+    const easing=getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim()||'cubic-bezier(.16,1,.3,1)';
+    const exit=element.animate([{opacity:1,transform:'translateY(0)'},{opacity:0,transform:'translateY(4px)'}],{duration:120,easing,fill:'forwards'});
+    void exit.finished.then(done,()=>{});
+  };
+  const identity=workspace?.root?.replace(/\\/g,'/').split('/').at(-1)??'Repository';
+  const ahead=result?.ahead,behind=result?.behind;
+
+  const groups:{key:CompareGroup|'tree';title?:string;hint?:string}[]=preset==='uncommitted'?[{key:'tree'}]:[
+    {key:'both',title:'Changed on both',hint:`Edited on ${nameOf(result?.head)} and on ${nameOf(result?.base)} since they diverged. A merge can conflict here.`},
+    {key:'head',title:`Only on ${nameOf(result?.head)}`},
+    {key:'base',title:`Only on ${nameOf(result?.base)}`},
+  ];
+
+  return <section ref={section} className="developer-workspace compare-window" aria-label="Compare" onKeyDown={e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();e.stopPropagation();useApp.setState({compareOpen:false});requestAnimationFrame(()=>document.querySelector<HTMLElement>('[data-compare-open]')?.focus({preventScroll:true}));}}}>
+    <header className="compare-header">
+      <strong>Compare</strong>
+      <nav className="compare-presets" aria-label="What to compare">{PRESETS.map(([key,label,hint])=><button key={key} title={hint} aria-pressed={preset===key} onClick={()=>{setPreset(key);setSelected('');}}>{label}</button>)}</nav>
+      <span className="compare-header-end">
+        <button className="btn ghost compare-refresh" aria-label="Refresh comparison" title="Read the repository again" disabled={loading} aria-busy={loading} onClick={()=>setRefresh(n=>n+1)}><InterfaceGlyph name="refresh"/></button>
+        <button className="btn ghost" title="Return to the agent’s work, exactly where you left it" onClick={requestClose}>Back to agent</button>
+      </span>
+    </header>
+    {consent===undefined&&!error?<p className="compare-note" role="status">Checking Git access…</p>
+      :!ready?<GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);void grantGit(id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>
+      :<>
+      <div className="compare-sides" aria-label="Sides compared">
+        {preset==='uncommitted'?<span className="compare-line"><b>{snapshot?.branch??'Working tree'}</b>{snapshot&&<span>{snapshot.head.slice(0,10)}</span>}<span>{identity} · uncommitted changes</span></span>
+        :preset==='pr'?<PullPicker pulls={pulls} value={prNumber} pick={number=>{setPrNumber(number);setSelected('');}} enable={()=>{void workspaceApi.githubOptIn(true).then(()=>setRefresh(n=>n+1));}}/>
+        :<span className="compare-line">
+          {preset==='branch'&&refs?<SidePicker label="Base" value={baseRef??refs.defaultBase?.ref} refs={refs.refs} pick={ref=>{setBaseRef(ref);setSelected('');}}/>:<b title={result?.base.ref}>{nameOf(result?.base)||nameOf(refs?.defaultBase)}</b>}
+          <span className="compare-arrow" aria-hidden="true">←</span>
+          {preset==='branch'&&refs?<SidePicker label="Compare" value={headRef??refs.current?.ref} refs={refs.refs} pick={ref=>{setHeadRef(ref);setSelected('');}}/>:<b title={result?.head.ref}>{nameOf(result?.head)||nameOf(refs?.current)}</b>}
+        </span>}
+        {result&&<span className="compare-counts" role="status">{result.state==='unrelated'?'No shared history':result.state==='shallow'?'History is shallow here':ahead===undefined?'':<><b>{ahead}</b> ahead · <b>{behind}</b> behind</>}{result.source==='github'&&<span className="compare-source" title="Read from GitHub through your signed-in gh; only this branch’s changes are known">from GitHub</span>}</span>}
+        {result&&result.commitTotal>0&&<Commits result={result} jump={jump}/>}
+      </div>
+      {error&&<p className="compare-note" role="alert">{error}</p>}
+      <div className="compare-body">
+        <aside className="compare-files" aria-label="Changed files" aria-busy={loading||filtering&&!evidenceReady}>
+          {preset==='pr'&&!pull?<p className="compare-note">{pulls?.status==='ready'&&!pulls.pulls.length?'No open pull requests.':'Choose a pull request.'}</p>
+          :loading&&!rows.length?<p className="compare-note" role="status">Reading…</p>
+          :<>
+            {filtering&&evidenceReady&&visible.length<rows.length&&<p className="compare-scope">{visible.length?`The ${visible.length} ${visible.length===1?'file':'files'} this session edited`:'This session recorded no edit to these files'} · <button className="compare-link" onClick={()=>setSessionOnly(false)}>Show all {rows.length}</button></p>}
+            {preset==='session'&&!sessionOnly&&rows.length>0&&<p className="compare-scope">All {rows.length} files on this branch · <button className="compare-link" onClick={()=>setSessionOnly(true)}>Only this session’s</button></p>}
+            {groups.map(group=>{
+              const list=visible.filter(item=>item.group===group.key);
+              if(!list.length)return null;
+              return <div className="compare-group" key={group.key} role="group" aria-label={group.title}>
+                {group.title&&<h3 title={group.hint}>{group.title}<span>{list.length}</span></h3>}
+                {list.map(item=><FileRow key={item.path} row={item} active={item.path===row?.path} entry={evidence?.[item.path]} name={agentByName} jump={jump} choose={()=>{setSelected(item.path);setSideChoice(undefined);}}/>)}
+              </div>;
+            })}
+            {!loading&&!error&&!rows.length&&(preset==='pr'&&pull||preset!=='pr')&&<p className="compare-note">{preset==='uncommitted'?'No uncommitted changes.':result?.state==='remote'||result?'These two sides have no differing files.':preset==='session'&&refs&&refs.current?.ref===refs.defaultBase?.ref?`This session’s branch is ${nameOf(refs.current)}, the branch it is compared with. Its work in progress is under Uncommitted.`:''}</p>}
+            {result&&result.omitted>0&&<p className="compare-note">{result.omitted} more files are not listed.</p>}
+            {result&&result.protectedCount>0&&<p className="compare-note">{result.protectedCount} protected {result.protectedCount===1?'path is':'paths are'} left out.</p>}
+          </>}
+        </aside>
+        <div className="compare-reader">
+          {row?<>
+            <header className="compare-file-header">
+              <span className="compare-file-title"><strong title={row.path}>{fileName(row.path)}</strong>{fileFolder(row.path)&&<small title={row.path}>{fileFolder(row.path)}</small>}</span>
+              {row.group==='both'&&result&&<span className="compare-side-switch" role="group" aria-label="Which side’s change to read">
+                <button aria-pressed={side==='head'} onClick={()=>setSideChoice('head')} title={`${nameOf(result.head)}’s change since the merge-base`}>{nameOf(result.head)}</button>
+                <button aria-pressed={side==='base'} onClick={()=>setSideChoice('base')} title={`${nameOf(result.base)}’s change since the merge-base`}>{nameOf(result.base)}</button>
+              </span>}
+              <button className="btn ghost" title="Read the file as it is on disk" onClick={()=>{useApp.setState({compareOpen:false});useApp.getState().set({currentFile:row.path});}}>Open on disk</button>
+            </header>
+            <Evidence entry={evidence?.[row.path]} name={agentByName} jump={jump} detailed/>
+            <div className="compare-patch">
+              {patch?.key===patchKey?<GitPatchReader key={`${patch.file.path}:${patch.file.fingerprint}`} file={patch.file} hideScope openRecorded={(path,key)=>{useApp.setState({compareOpen:false});useApp.getState().set({filePanel:path,filePanelFocus:'change',filePanelEvidence:key});}}/>
+                :patchError?.key===patchKey?<p className="compare-note" role="alert">{patchError.message}</p>
+                :row.file?.binary&&result?.source==='github'?<p className="compare-note">GitHub did not send a text patch for this file.</p>
+                :row.git?.status.trim()==='??'?<p className="compare-note">Git does not track this file yet, so there is no patch. Open it on disk to read it.</p>
+                :<p className="compare-note" role="status">Reading the change…</p>}
+            </div>
+          </>:<p className="compare-note compare-empty">{visible.length||loading?'':'Nothing to read here.'}</p>}
+        </div>
+      </div>
+    </>}
+  </section>;
+}
+
+function FileRow({row,active,entry,name,jump,choose}:{row:Row;active:boolean;entry?:CompareEvidence[string];name:(id:string)=>string;jump:(operationId:string)=>void;choose:()=>void}) {
+  return <div className="compare-file" data-active={active||undefined}>
+    <button className="compare-file-main" aria-current={active||undefined} title={row.path} onClick={choose}>
+      <FileIcon path={row.path}/>
+      <span className="compare-file-name"><strong>{fileName(row.path)}</strong>{fileFolder(row.path)&&<small>{fileFolder(row.path)}</small>}</span>
+      <span className="compare-file-stat">{row.note&&<i>{row.note}</i>}{row.binary?<i>binary</i>:row.added!==undefined&&<><b className="add">+{row.added}</b>{!!row.removed&&<b className="del">−{row.removed}</b>}</>}</span>
+    </button>
+    <Evidence entry={entry} name={name} jump={jump}/>
+  </div>;
+}
+
+/** One quiet line: the agents of this session that wrote the file, each a jump to that agent’s latest edit in History. */
+function Evidence({entry,name,jump,detailed=false}:{entry?:CompareEvidence[string];name:(id:string)=>string;jump:(operationId:string)=>void;detailed?:boolean}) {
+  if(!entry?.agents.length)return detailed?<p className="compare-evidence none">No edit to this file is recorded in this session.</p>:null;
+  return <p className="compare-evidence">
+    {entry.agents.slice(0,3).map((agent,index)=><span key={agent.agentId}>{index>0&&<i aria-hidden="true">, </i>}
+      <button className="compare-link" title={`Open ${name(agent.agentId)}’s latest edit of this file in History`} onClick={event=>{event.stopPropagation();jump(agent.lastOperationId);}}>{name(agent.agentId)}</button>
+      <small>{agent.edits} {agent.edits===1?'edit':'edits'}</small></span>)}
+    {entry.agents.length>3&&<small> +{entry.agents.length-3} more</small>}
+  </p>;
+}
+
+function Commits({result,jump}:{result:GitCompareResult;jump:(operationId:string)=>void}) {
+  const linked=result.commits.filter(commit=>commit.session).length;
+  return <details className="compare-commits"><summary>{result.commitTotal} {result.commitTotal===1?'commit':'commits'}{linked>0&&<> · {linked} in this session</>}</summary>
+    <ol>{result.commits.map(commit=><li key={commit.hash}>
+      <code>{commit.hash.slice(0,7)}</code><span title={commit.subject}>{commit.subject}</span>
+      {commit.session&&<button className="compare-link" title="This session printed this commit; it does not prove the session made it" onClick={()=>commit.session!.operationId?jump(commit.session!.operationId):undefined} disabled={!commit.session.operationId}>this session</button>}
+    </li>)}{result.commitTotal>result.commits.length&&<li className="muted">{result.commitTotal-result.commits.length} older</li>}</ol></details>;
+}
+
+/** A small combobox: search by name, newest first. Its Escape closes the list, not the window. */
+function SidePicker({label,value,refs,pick}:{label:string;value?:string;refs:CompareRef[];pick:(ref:string)=>void}) {
+  const [open,setOpen]=useState(false),[query,setQuery]=useState('');
+  const box=useRef<HTMLSpanElement>(null);
+  useEffect(()=>{
+    if(!open)return;
+    const outside=(event:PointerEvent)=>{if(!box.current?.contains(event.target as Node))setOpen(false);};
+    document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside);
+  },[open]);
+  const current=refs.find(ref=>ref.ref===value);
+  const list=useMemo(()=>{
+    const q=query.trim().toLowerCase();
+    return [...refs].filter(ref=>!q||ref.name.toLowerCase().includes(q)).sort((a,b)=>(Date.parse(b.lastCommit??'')||0)-(Date.parse(a.lastCommit??'')||0)||a.name.localeCompare(b.name)).slice(0,80);
+  },[refs,query]);
+  return <span className="compare-picker" ref={box}>
+    <button className="compare-side" aria-label={`${label} side: ${current?.name??'choose'}`} aria-haspopup="listbox" aria-expanded={open} title={current?.ref} onClick={()=>{setOpen(!open);setQuery('');}}>{current?.name??'Choose'}<svg viewBox="0 0 10 6" aria-hidden="true"><path d="m1 1 4 4 4-4"/></svg></button>
+    {open&&<div className="compare-menu" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setOpen(false);}}}>
+      <input autoFocus aria-label={`Find a ${label.toLowerCase()} branch or tag`} placeholder="Find a branch or tag" value={query} onChange={event=>setQuery(event.target.value)}/>
+      <ul role="listbox" aria-label={`${label} side`}>{list.map(ref=><li key={ref.ref} role="option" aria-selected={ref.ref===value}>
+        <button onClick={()=>{pick(ref.ref);setOpen(false);}}><span>{ref.name}</span><small>{ref.kind==='branch'?'':ref.kind==='remote'?'remote':'tag'}{ref.lastCommit?` ${ref.kind==='branch'?'':'· '}${ago(ref.lastCommit)}`:''}</small></button></li>)}
+        {!list.length&&<li className="compare-note">Nothing matches.</li>}</ul>
+    </div>}
+  </span>;
+}
+
+function PullPicker({pulls,value,pick,enable}:{pulls?:ComparePulls;value?:number;pick:(number:number)=>void;enable:()=>void}) {
+  const [open,setOpen]=useState(false);
+  const box=useRef<HTMLSpanElement>(null);
+  useEffect(()=>{
+    if(!open)return;
+    const outside=(event:PointerEvent)=>{if(!box.current?.contains(event.target as Node))setOpen(false);};
+    document.addEventListener('pointerdown',outside);return()=>document.removeEventListener('pointerdown',outside);
+  },[open]);
+  if(!pulls)return <span className="compare-line"><span>Reading pull requests…</span></span>;
+  if(pulls.status!=='ready'){
+    const message={disabled:'Pull requests are read through your own GitHub CLI (gh), which is off. Nothing is sent to GitHub until you allow it.','gh-missing':'Reading pull requests needs the GitHub CLI (gh), which is not installed.','gh-unauthenticated':'Sign in with the GitHub CLI (gh auth login) to read pull requests.','no-remote':'This repository has no GitHub remote.',failed:'GitHub could not be reached.'}[pulls.status];
+    return <span className="compare-line compare-gh"><span>{message}</span>{pulls.status==='disabled'&&<button className="btn ghost" onClick={enable}>Allow GitHub lookups</button>}</span>;
+  }
+  const current=pulls.pulls.find(item=>item.number===value);
+  return <span className="compare-line">
+    <span className="compare-picker" ref={box}>
+      <button className="compare-side" aria-haspopup="listbox" aria-expanded={open} onClick={()=>setOpen(!open)}>{current?`#${current.number} ${current.title}`:'Choose a pull request'}<svg viewBox="0 0 10 6" aria-hidden="true"><path d="m1 1 4 4 4-4"/></svg></button>
+      {open&&<div className="compare-menu" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setOpen(false);}}}>
+        <ul role="listbox" aria-label="Open pull requests">{pulls.pulls.map((item:ComparePull)=><li key={item.number} role="option" aria-selected={item.number===value}>
+          <button onClick={()=>{pick(item.number);setOpen(false);}}><span>#{item.number} {item.title}</span><small>{item.headName} → {item.baseName}{item.draft?' · draft':''}{item.local?'':' · not on this machine'}</small></button></li>)}
+          {!pulls.pulls.length&&<li className="compare-note">No open pull requests.</li>}</ul>
+      </div>}
+    </span>
+    {current&&<><span className="compare-arrow" aria-hidden="true">→</span><b>{current.baseName}</b><span className="compare-pr-meta">{current.local?current.headName:`${current.headName} · not on this machine`}</span></>}
+  </span>;
+}

@@ -1,0 +1,101 @@
+/* GIT-8 Compare: a focused working window that docks exactly where the Workspace does (it shares .developer-workspace for geometry and
+   entrance). Hierarchy is ink and weight; no labelled boxes, hairlines only between the three regions. */
+.compare-window button:focus-visible,.compare-window input:focus-visible,.compare-window summary:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+.compare-header { display:flex; align-items:center; gap:18px; padding:9px 14px; border-bottom:1px solid var(--line); flex:none; min-width:0; }
+.compare-header>strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); }
+.compare-presets { display:flex; gap:2px; min-width:0; overflow-x:auto; scrollbar-width:none; }
+.compare-presets button { padding:5px 9px; border:0; border-radius:var(--round-sm); background:none; color:var(--t3); font:var(--text-xs)/1.5 var(--sans); white-space:nowrap; cursor:pointer; }
+.compare-presets button[aria-pressed=true] { color:var(--t1); font-weight:var(--weight-medium); background:var(--s2); }
+.compare-header-end { margin-left:auto; display:flex; align-items:center; gap:6px; flex:none; }
+.compare-refresh { display:grid; place-items:center; width:32px; padding:6px; }
+.compare-refresh[aria-busy=true] svg { opacity:.5; }
+
+.compare-sides { display:flex; flex-wrap:wrap; align-items:center; gap:6px 16px; padding:9px 14px; border-bottom:1px solid var(--line); flex:none; font:var(--text-xs)/1.5 var(--sans); color:var(--t2); min-width:0; }
+.compare-line { display:inline-flex; align-items:center; gap:8px; min-width:0; flex-wrap:wrap; }
+.compare-line b { color:var(--t1); font-weight:var(--weight-medium); font-family:var(--mono); font-size:var(--text-xs); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:36ch; }
+.compare-line>span:not(.compare-picker) { color:var(--t3); }
+.compare-arrow { color:var(--t3); }
+.compare-counts { color:var(--t3); font-size:var(--text-2xs); }
+.compare-counts b { color:var(--t2); font-weight:var(--weight-medium); font-variant-numeric:tabular-nums; }
+.compare-source { margin-left:8px; color:var(--t3); }
+.compare-gh { gap:12px; }
+
+.compare-picker { position:relative; display:inline-block; }
+.compare-side { display:inline-flex; align-items:center; gap:7px; max-width:36ch; padding:3px 6px; margin:-3px -6px; border:0; border-radius:var(--round-sm); background:none; color:var(--t1); font:var(--weight-medium) var(--text-xs)/1.5 var(--mono); cursor:pointer; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compare-side svg { width:9px; height:6px; flex:none; fill:none; stroke:var(--t3); stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round; }
+.compare-menu { position:absolute; z-index:30; top:calc(100% + 8px); left:-8px; width:min(380px,calc(100vw - 48px)); max-height:min(360px,60vh); display:flex; flex-direction:column; border:1px solid var(--line-2); border-radius:var(--round-md); background:var(--s1); box-shadow:0 10px 32px #0004; overflow:hidden; }
+.compare-menu input { flex:none; padding:9px 12px; border:0; border-bottom:1px solid var(--line); background:none; color:var(--t1); font:var(--text-xs)/1.5 var(--sans); outline-offset:-2px; }
+.compare-menu ul { margin:0; padding:4px; list-style:none; overflow:auto; }
+.compare-menu li button { display:flex; justify-content:space-between; align-items:baseline; gap:12px; width:100%; padding:6px 8px; border:0; border-radius:var(--round-sm); background:none; color:var(--t2); font:var(--text-xs)/1.5 var(--mono); text-align:left; cursor:pointer; }
+.compare-menu li button span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compare-menu li[aria-selected=true] button { color:var(--t1); }
+.compare-menu li small { flex:none; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
+.compare-pr-meta { color:var(--t3); font-size:var(--text-2xs); }
+
+.compare-commits { margin-left:auto; position:relative; }
+.compare-commits summary { list-style:none; cursor:pointer; color:var(--t3); font-size:var(--text-2xs); border-radius:var(--round-sm); padding:2px 4px; }
+.compare-commits summary::-webkit-details-marker { display:none; }
+.compare-commits[open] summary { color:var(--t1); }
+.compare-commits ol { position:absolute; z-index:25; right:0; top:calc(100% + 6px); width:min(480px,calc(100vw - 48px)); max-height:300px; overflow:auto; margin:0; padding:6px; list-style:none; border:1px solid var(--line-2); border-radius:var(--round-md); background:var(--s1); box-shadow:0 10px 32px #0004; }
+.compare-commits li { display:flex; align-items:baseline; gap:10px; padding:4px 6px; color:var(--t2); font-size:var(--text-xs); min-width:0; }
+.compare-commits li code { flex:none; color:var(--t3); font:var(--text-2xs)/1.5 var(--mono); }
+.compare-commits li span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.compare-body { flex:1; min-height:0; display:grid; grid-template-columns:minmax(230px,320px) minmax(0,1fr); }
+.compare-files { overflow:auto; overscroll-behavior:contain; border-right:1px solid var(--line); padding:4px 0 12px; min-width:0; }
+.compare-group h3 { display:flex; gap:8px; margin:14px 14px 4px; color:var(--t3); font:var(--weight-medium) var(--text-2xs)/1.5 var(--sans); }
+.compare-group:first-of-type h3 { margin-top:8px; }
+.compare-group h3 span { color:var(--t3); font-weight:var(--weight-regular); font-variant-numeric:tabular-nums; }
+.compare-scope { margin:6px 14px 2px; color:var(--t3); font-size:var(--text-2xs); }
+.compare-note { margin:0; padding:12px 14px; color:var(--t3); font-size:var(--text-xs); }
+.compare-empty { padding:24px; }
+.compare-link { padding:0; border:0; background:none; color:var(--t2); font:inherit; text-decoration:underline; text-decoration-color:var(--line-2); text-underline-offset:2px; cursor:pointer; }
+.compare-link:disabled { cursor:default; text-decoration:none; color:var(--t3); }
+
+.compare-file { padding:0 6px; }
+.compare-file-main { display:flex; align-items:center; gap:9px; width:100%; padding:6px 8px 2px; border:0; border-radius:var(--round-sm); background:none; color:var(--t2); text-align:left; cursor:pointer; min-width:0; }
+.compare-file[data-active] .compare-file-main { color:var(--t1); }
+.compare-file[data-active] { background:var(--s2); border-radius:var(--round-sm); }
+.compare-file-name { flex:1; min-width:0; display:flex; flex-direction:column; }
+.compare-file-name strong { font:var(--weight-medium) var(--text-xs)/1.5 var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compare-file-name small { color:var(--t3); font:var(--text-2xs)/1.4 var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; direction:rtl; text-align:left; }
+.compare-file-stat { flex:none; display:inline-flex; gap:6px; font:var(--text-2xs)/1.5 var(--mono); font-variant-numeric:tabular-nums; }
+.compare-file-stat i { font-style:normal; color:var(--t3); font-family:var(--sans); }
+.compare-file-stat .add { color:var(--pass); font-weight:var(--weight-regular); }
+.compare-file-stat .del { color:var(--fail); font-weight:var(--weight-regular); }
+.compare-evidence { margin:0; padding:0 8px 6px 35px; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); min-width:0; }
+.compare-evidence small { margin-left:5px; font-size:var(--text-2xs); }
+.compare-evidence.none { padding:2px 14px 6px; }
+.compare-file .compare-evidence { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compare-reader>.compare-evidence { padding:0 14px 8px; border-bottom:1px solid var(--line); }
+.compare-reader>.compare-evidence.none { padding:0 14px 8px; }
+
+.compare-reader { display:flex; flex-direction:column; min-width:0; min-height:0; }
+.compare-file-header { display:flex; align-items:center; gap:12px; padding:9px 14px 4px; flex:none; min-width:0; }
+.compare-file-title { flex:1; min-width:0; display:flex; align-items:baseline; gap:10px; }
+.compare-file-title strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compare-file-title small { color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.compare-side-switch { display:inline-flex; gap:2px; flex:none; }
+.compare-side-switch button { max-width:18ch; padding:4px 8px; border:0; border-radius:var(--round-sm); background:none; color:var(--t3); font:var(--text-2xs)/1.5 var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; cursor:pointer; }
+.compare-side-switch button[aria-pressed=true] { color:var(--t1); background:var(--s2); font-weight:var(--weight-medium); }
+.compare-patch { flex:1; min-height:0; display:flex; flex-direction:column; overflow:hidden; }
+.compare-patch .git-patch-reader { display:flex; flex-direction:column; flex:1; min-height:0; }
+.compare-patch .git-patch-reader>.diff-reader { display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden; padding:6px 12px 10px; }
+.compare-patch .diff-scroll { flex:1; min-height:0; max-height:none; overflow:auto; }
+.compare-patch .git-raw-scroll { flex:1; min-height:0; overflow:auto; }
+
+@media(hover:hover) and (pointer:fine) {
+  .compare-presets button:hover:not([aria-pressed=true]),.compare-side:hover,.compare-menu li button:hover,.compare-side-switch button:hover:not([aria-pressed=true]) { background:var(--s2); color:var(--t1); }
+  .compare-file-main:hover { color:var(--t1); }
+  .compare-link:hover { color:var(--t1); text-decoration-color:var(--t3); }
+  .compare-commits summary:hover { color:var(--t1); }
+}
+@media(max-width:820px) {
+  .compare-header { flex-wrap:wrap; gap:6px 12px; }
+  .compare-presets { order:3; flex-basis:100%; }
+  .compare-body { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(0,34%) minmax(0,1fr); }
+  .compare-files { border-right:0; border-bottom:1px solid var(--line); }
+}
+
+/* The header button is a word, not an icon (the Changes entry it replaces kept its label the same way). */
+:root[data-ui-version=modern][data-experience] .modern-session-header .studio-actions>.compare-open {width:auto;min-width:34px;padding:0 9px;}
