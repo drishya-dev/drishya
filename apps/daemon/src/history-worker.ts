@@ -4,6 +4,7 @@ import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
 import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
+import { compareEvidence } from './git-compare-evidence.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
 import {toolInventory,toolTrail} from '../../../packages/scene/src/tools.ts';
@@ -356,6 +357,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
     else if (message.method === 'reading-target') value = readingTarget(current(a.id).projection, a.query);
     else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? current(a.id).projection : asOfProjection(current(a.id).projection, a.step), a.paths);
+    else if (message.method === 'compare-evidence') value = compareEvidence(current(a.id).projection, a.paths);
     else if(message.method==='file-roots') value=withFileRootEvidence(a.roots,current(a.id).projection,a.workspaceRoot);
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
     else if (message.method === 'context-report') value = contextReportCandidates(current(a.id).projection.timeline);
