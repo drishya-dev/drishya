@@ -66,9 +66,12 @@ async function assertDockBounds(dock: Locator) {
     const stage = node.closest('.connected-workspace')!;
     const header = stage.querySelector('.workspace-header')!.getBoundingClientRect();
     const composer = stage.querySelector('.prompt-composer')?.getBoundingClientRect();
+    const composerNode = stage.querySelector('.prompt-composer');
+    const inFront = composerNode && Number(getComputedStyle(node.parentElement!).zIndex)>Number(getComputedStyle(composerNode).zIndex);
+    const sharesWidth = composer && composer.right>box.left && composer.left<box.right;
     return Math.max(
       Math.abs((box.top + box.bottom) / 2 - (rail.top + rail.bottom) / 2),
-      header.bottom - box.top, box.bottom - (composer?.top ?? innerHeight),
+      header.bottom - box.top, box.bottom - (sharesWidth&&!inFront?composer!.top:innerHeight),
       rail.top - box.top, box.bottom - rail.bottom,
     );
   })).toBeLessThanOrEqual(1);
@@ -162,18 +165,23 @@ test('pointer disclosure recentres the same dock and reduced motion settles imme
   expect(await dock.evaluate(node => node.getAnimations().length)).toBe(0);
 });
 
-test('tall Toolbox scrolls within the available height when the composer rises', async ({ page }) => {
+test('tall foreground Toolbox stays scrollable and reachable above the open composer', async ({ page }) => {
   await page.setViewportSize({ width: 600, height: 640 });
   const dock = await open(page, 'modern', 'claude-code');
+  // Foreground drawers own this space until closed: open the prompt first.
+  await page.getByRole('button',{name:'Close tools',exact:true}).click();
+  const expand = page.getByRole('button', { name: 'Expand prompt', exact: true });
+  if (await expand.isVisible()) await expand.click();
+  await page.getByRole('button',{name:'Tools',exact:true}).click();
   for (const selector of ['.md-agents>summary', 'summary[data-mcp-server="synthetic"]', 'summary:has-text("Run tools")']) {
     await dock.locator(selector).press('Enter');
   }
   await expect.poll(() => dock.evaluate(el => el.scrollHeight - el.clientHeight)).toBeGreaterThan(0);
-  const expand = page.getByRole('button', { name: 'Expand prompt', exact: true });
-  if (await expand.isVisible()) await expand.click();
   await assertDockBounds(dock);
-  const last = dock.locator('.tool-row').last();
+  // The runtime inventory is rendered here; the legacy ToolList rows are hidden.
+  const last = dock.locator('.md-runtime-tool').last();
   await last.scrollIntoViewIfNeeded();
   await expect(last).toBeInViewport();
+  expect(await last.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);
   expect(await dock.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
 });
