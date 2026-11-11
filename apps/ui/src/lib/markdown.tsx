@@ -8,6 +8,8 @@ import { prosePath } from './prose-path.ts';
 import {fileName} from './file-identity.ts';
 import {ProseFiles} from '../components/ProseFiles.tsx';
 import {ProseFileLink,ProseFileText} from '../components/ProseFileLink.tsx';
+import {ExternalLink,LinkCard,LinksOpen} from '../components/LinkCard.tsx';
+import {branchCandidate,commitCandidate,webUrl} from './link-kinds.ts';
 import {OriginalToggle,OriginalOwned} from '../components/OriginalToggle.tsx';
 import {tableCells, tableHeader} from './markdown-table.ts';
 import './markdown-table.css';
@@ -15,7 +17,7 @@ import './markdown-table.css';
 type PathAction = (path: string, line?: number) => void;
 export function Markdown({ text, onPath, document = false, workspaceRoot }: { text: string; onPath?: PathAction; document?: boolean; workspaceRoot?:string }) {
   const rendered=renderMarkdown(text, onPath, document, 0, workspaceRoot);
-  return document?<ProseFiles.Provider value={undefined}>{rendered}</ProseFiles.Provider>:rendered;
+  return document?<ProseFiles.Provider value={undefined}><LinksOpen.Provider value={false}>{rendered}</LinksOpen.Provider></ProseFiles.Provider>:rendered;
 }
 
 const listMarker = (line: string) => /^( *)([-+*]|\d{1,9}[.)])([ \t]+)(.*)$/.exec(line);
@@ -155,19 +157,22 @@ function inline(s: string, onPath?: PathAction, workspaceRoot?:string, tableLink
     } else if (m[1]) {
       const code = m[1].slice(1, -1);
       const reference = prosePath(code,workspaceRoot);
+      // LINK-1: an address, a commit id or a branch name in a code span gets its link or hover card; a file path keeps its button.
+      const plain=webUrl(code)?<ExternalLink url={code} bare><code>{code}</code></ExternalLink>
+        :commitCandidate(code)?<LinkCard target={{kind:'commit',value:code}} focusable><code>{code}</code></LinkCard>
+        :branchCandidate(code)?<LinkCard target={{kind:'branch',value:code}} focusable><code>{code}</code></LinkCard>
+        :<code>{code}</code>;
       const fallback=(
         reference && onPath ? (
           <button type="button" key={k++} className="md-path" aria-label={`Open work on ${reference.path}${reference.line ? ` at line ${reference.line}` : ''}`} onClick={() => onPath(reference.path, reference.line)}><code>{code}</code></button>
-        ) : (
-          <code key={k++}>{code}</code>
-        )
+        ) : plain
       );
-      out.push(<ProseFileLink key={k++} value={code} fallback={fallback}><code>{code}</code></ProseFileLink>);
+      out.push(<ProseFileLink key={k++} value={code} fallback={fallback}>{plain}</ProseFileLink>);
     } else if (m[2]) out.push(<strong key={k++}>{inline(m[2].slice(2, -2), onPath, workspaceRoot,tableLinks)}</strong>);
     else if (m[6]) out.push(<em key={k++}>{inline(m[6].slice(1,-1), onPath, workspaceRoot,tableLinks)}</em>);
     else if (m[3]) {
       const reference=prosePath(m[5]!,workspaceRoot);
-      const fallback=reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open work on ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:tableLinks&&/^https?:\/\/[^\s\x00-\x1f]+$/i.test(m[5]!)?<a key={k++} className="md-link" href={m[5]} target="_blank" rel="noopener noreferrer">{inline(m[4]!)}</a>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>;
+      const fallback=reference&&onPath?<button type="button" key={k++} className="md-path md-link" title={m[5]} aria-label={`Open work on ${reference.path}${reference.line?` at line ${reference.line}`:''}`} onClick={()=>onPath(reference.path,reference.line)}>{inline(m[4]!)}</button>:webUrl(m[5]!)?<ExternalLink key={k++} url={m[5]!}>{inline(m[4]!)}</ExternalLink>:<span key={k++} className="md-link" title={m[5]}>{m[4]}</span>;
       out.push(<ProseFileLink key={k++} value={m[5]!} fallback={fallback}><span className="md-link" title={m[5]}>{inline(m[4]!)}</span></ProseFileLink>);
     }
     last = i + m[0].length;
