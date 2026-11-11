@@ -58,7 +58,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Claude Sonnet 5.5 - 11 Nov: LINK-1 clickable links and hover cards (taken over from Codex), PR #LINKPR
+### Yash with Claude Sonnet 5.5 - 11 Nov: LINK-1 clickable links and hover cards (taken over from Codex), PR #405
 
 - Whole item: `link-kinds.ts` classifies addresses, GitHub items, commit candidates and conventional branch names from text alone; `LinkCard` shows the card on hover or focus after a short delay and closes with a short fade (off for reduced motion and low resource); daemon `GET /v1/recordings/:id/git/ref` (read-only, behind the session's Git approval) and `GET /v1/github/item`, `GET/POST /v1/github/status|optin` (opt-in stored in the daemon, `gh` run with fixed argv and no shell, only exact github.com pull/issue addresses, answers cached, `gh` is not even started before the opt-in). Settings gets a Links tab with the opt-in. Captured documents stay inert; file cards reuse the evidence index.
 - Decisions: the opt-in lives in the daemon (not the browser) so nothing can run `gh` without it; an unverified hex word only becomes a card after the repository confirms it, otherwise it stays plain text; the recorded session branch is not yet a candidate (only conventional prefixes such as feature/ and codex/), a known limit.
