@@ -23,22 +23,23 @@ afterAll(async()=>{vi.restoreAllMocks();await app.close();if(!resolve(dir).start
 it('never substitutes main-root evidence for explicit current-reading consent',async()=>{
   await app.approveGraphRoot(id);await expect(access.read(id,'main.ts')).rejects.toMatchObject({status:403});
 });
-it('opens an indexable main alias from a captured multi-root graph after consent',async()=>{
-  await access.approve(id);const graph=await app.graph(id);expect(graph.temporal).toBe('recording-files-only');expect(graph.nodes.some(n=>n.path==='main.ts')).toBe(false);
+it('indexes the approved main checkout without rewriting captured multi-root identities',async()=>{
+  await access.approve(id);const graph=await app.graph(id);expect(graph.temporal).toBe('current');expect(graph.nodes.some(n=>n.path==='main.ts')).toBe(true);
   const before=app.projection(id).files.map(f=>f.path);expect(before.some(p=>/^worktree-[a-f0-9]{10}\/main.ts$/.test(p))).toBe(true);
   expect(await access.read(id,'main.ts')).toMatchObject({path:'main.ts',scope:'current-workspace',text:'// current main.ts'});
   expect(app.projection(id).files.map(f=>f.path)).toEqual(before);const projection=app.projection(id);const excerpt=projection.artifacts.find(a=>a.kind==='excerpt'&&a.path?.endsWith('/main.ts'))!;expect(app.artifactText(projection,excerpt.id).text).toContain('captured historical source');
 });
-it.each(['outside-only.ts','unrecorded.ts','ignored.ts','.env','nested/file.ts','linked/secret.ts','../other/secret.ts'])('refuses non-main, uncaptured or excluded current path %s',async path=>{
+it.each(['ignored.ts','.env','nested/file.ts','linked/secret.ts','../other/secret.ts'])('refuses excluded or outside current path %s',async path=>{
   await expect(access.read(id,path)).rejects.toMatchObject({status:403});
 });
+it.each(['outside-only.ts','unrecorded.ts'])('reads indexable current checkout file %s after explicit consent',async path=>{expect(await access.read(id,path)).toMatchObject({path,scope:'current-workspace',text:`// current ${path}`});});
 it('does not turn a captured identity into a filesystem namespace',async()=>{
   const roots=await recordedFileRoots(app.store,[id]);const prefix=recordedMainRootPrefixes(roots.roots,app.recording(id).workspaceRoot)[0]!;
   await expect(access.read(id,`${prefix}/main.ts`)).rejects.toThrow();
 });
 it('refuses a file that disappeared since capture',async()=>{unlinkSync(join(root,'missing.ts'));await expect(access.read(id,'missing.ts')).rejects.toThrow();});
 it('never applies the alias exception to a complete current graph',async()=>{
-  const graph=await app.graph(id);const spy=vi.spyOn(app,'graph').mockResolvedValue({...graph,temporal:'current'});
+  const graph=await app.graph(id);const spy=vi.spyOn(app,'graph').mockResolvedValue({...graph,temporal:'current',nodes:graph.nodes.filter(node=>node.path!=='main.ts')});
   try{await expect(access.read(id,'main.ts')).rejects.toMatchObject({status:403});}finally{spy.mockRestore();}
 });
 it('retains root identity and volatile revocation checks',async()=>{

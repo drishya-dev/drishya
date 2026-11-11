@@ -133,6 +133,8 @@ export class App {
     const rec = this.recording(idOrIds.includes('+')?ids[0]!:idOrIds);
     const large = this.paged(idOrIds);
     const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
+    // An explicitly combined export is evidence from several sessions, not one current checkout.
+    if(idOrIds.includes('+'))return graphFromPaths(projection.files.map(file=>file.path));
     const roots=rec.workspaceRoot?await recordedFileRoots(this.store,ids):undefined;
     const primary=new Set(recordedMainRootPrefixes(roots?.roots??[],rec.workspaceRoot));
     const namespaces=new Set(roots?.roots.map(root=>root.prefix)??[]);
