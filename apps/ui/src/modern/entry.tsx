@@ -23,6 +23,8 @@ import './conversation.css';
 import './history-ink.css';
 // SHIP-19: Home, shell and overlay hierarchy by ink and weight.
 import './shell-ink.css';
+// SHIP-20: captured material and current-file readers share the semantic ink roles.
+import './reader-ink.css';
 // LAYOUT-1: after the sheets whose edge offsets it extends.
 import './large-screens.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
