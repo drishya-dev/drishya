@@ -1,3 +1,4 @@
+import {withFileRootEvidence} from './file-roots.ts';
 import {createQueueEvidenceCache} from './queued-inputs.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
@@ -355,6 +356,7 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
     else if (message.method === 'reading-target') value = readingTarget(current(a.id).projection, a.query);
     else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? current(a.id).projection : asOfProjection(current(a.id).projection, a.step), a.paths);
+    else if(message.method==='file-roots') value=withFileRootEvidence(a.roots,current(a.id).projection,a.workspaceRoot);
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
     else if (message.method === 'context-report') value = contextReportCandidates(current(a.id).projection.timeline);
     else if (message.method === 'turns') value = turnLedgers(current(a.id).projection).slice(-2000);

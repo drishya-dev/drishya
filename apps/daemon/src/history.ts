@@ -1,3 +1,4 @@
+import type {RecordedRoot} from './file-roots.ts';
 import type {QueueQuery, QueuePage} from '@drishya/contracts';
 import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import type { ReadingQuery, ReadingTarget } from '../../../packages/scene/src/reading-target.ts';
@@ -93,6 +94,7 @@ export class HistoryService {
   summary(id: string, from = 0) { return this.request<HistorySummary>('summary', { id, from }); }
   readingTarget(id: string, query: ReadingQuery) { return this.request<ReadingTarget | null>('reading-target', { id, query }); }
   fileEvidence(id: string, paths: string[], step?: number) { return this.request<FileEvidence[]>('file-evidence', { id, paths, step }); }
+  fileRoots(id:string,roots:RecordedRoot[],workspaceRoot:string|undefined) {return this.request<RecordedRoot[]>('file-roots',{id,roots,workspaceRoot});}
   now(id: string) { return this.request<NowFacts>('now', { id }); }
   contextReport(id: string) { return this.request<{ time?: string; prompt: string }[]>('context-report', { id }); }
   turns(id: string) { return this.request<TurnLedger[]>('turns', { id }); }

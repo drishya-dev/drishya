@@ -1,3 +1,4 @@
+import {ToolOutput} from './ToolOutput.tsx';
 import {interfaceRem,useInterfaceScale} from '../lib/interface-scale.ts';
 import {currentReadingTarget} from '../lib/file-reading.ts';
 import {FileReadingActions} from './FileReadingActions.tsx';
@@ -248,10 +249,10 @@ function stepName(op: Operation): string {
 
 function EvidenceColumn({ choices, value, choose, label, path, requestedLine, diskRefused = false }: { choices: FileEvidence[]; value?: FileEvidence; choose: (key: string) => void; label: string; path: string; requestedLine?: number; diskRefused?: boolean }) {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
-  return <section className="file-evidence-column"><div className="file-evidence-choice"><label><span className="muted small">{label}</span><select aria-label={label} value={value?.key ?? ''} onChange={(e) => choose(e.target.value)}>{choices.map((item) => <option key={item.key} value={item.key}>{modern?`${KIND_LABEL[item.operation.kind]} · ${item.operation.startTime?new Date(item.operation.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):stepName(item.operation)} · ${item.label.replace('-state reference','')}`:`${item.operation.title} · ${item.label}`}</option>)}</select></label>{modern && value && !diskRefused && <CapturedSourceComparison compact evidence={value} path={path}/>}</div>
+  return <section className="file-evidence-column"><div className="file-evidence-choice"><label><span className="muted small">{label}</span><select aria-label={label} value={value?.key ?? ''} onChange={(e) => choose(e.target.value)}>{choices.map((item) => <option key={item.key} value={item.key}>{modern?`${KIND_LABEL[item.operation.kind]} · ${item.operation.startTime?new Date(item.operation.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):stepName(item.operation)} · ${item.label.replace('-state reference','')}`:`${item.operation.title} · ${item.label}`}</option>)}</select></label>{modern && value && value.commandOutput===undefined && !diskRefused && <CapturedSourceComparison compact evidence={value} path={path}/>}</div>
     {value && <div key={value.key} className="file-evidence-material">
-      {!modern && <><p className="small">{value.label}</p><CapturedSourceComparison evidence={value} path={path}/></>}
-      {value.snippet !== undefined ? <>
+      {!modern && <><p className="small">{value.label}</p>{value.commandOutput===undefined&&<CapturedSourceComparison evidence={value} path={path}/>}</>}
+      {value.commandOutput!==undefined?<><p className="muted small">Captured command output · includes anything printed by this command</p>{value.artifactId?<ArtifactReader id={value.artifactId} kind="output" fallback={value.commandOutput}/>:<ToolOutput text={value.commandOutput}/>}</>:value.snippet !== undefined ? <>
         <p className="muted small">Exact search result · surrounding file was not recorded by this result{value.startLine === undefined ? ' · line number not reported' : ''}</p>
         {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} activeLine={requestedLine} />}
       </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} navigationKey={`${label}/${value.key}`} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} navigationSlot={label} requestedLine={requestedLine} provenance />}
