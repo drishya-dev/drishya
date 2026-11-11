@@ -3,6 +3,11 @@ name: ci
 on:
   # Run once for a finished candidate, after local checks; commits do not spend hosted minutes.
   workflow_dispatch:
+    inputs:
+      checks_only:
+        description: 'Only platform type/unit/package checks (targeted verification, not a full gate)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -35,6 +40,9 @@ jobs:
         shell: bash
 
   browser:
+    if: ${{ !inputs.checks_only }}
+    env:
+      DRISHYA_WORKERS: 2
     strategy:
       fail-fast: false
       matrix:
