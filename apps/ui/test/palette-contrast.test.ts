@@ -73,7 +73,7 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
   expect(contrast(channels('#000000'), channels('#ffffff'))).toBe(21);
   expect(contrast(channels('#ffffff'), channels('#ffffff'))).toBe(1);
 
-  const presets = readFileSync(new URL('../src/modern/theme-presets.css', import.meta.url), 'utf8');
+  const presets = readFileSync(new URL('../src/tokens.css', import.meta.url), 'utf8');
   const contract = readFileSync(new URL('../src/tokens.css', import.meta.url), 'utf8');
   const shared = declarations(/\[data-theme\]\[data-palette\]\s*\{([^}]+)\}/.exec(contract)?.[1] ?? '');
   const light = declarations(/\[data-theme=light\]\[data-palette\]\s*\{([^}]+)\}/.exec(contract)?.[1] ?? '');
@@ -86,8 +86,8 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
     palettes.push(palette!);
     const isLight = /color-scheme:\s*light\s*;/.test(body!);
     const tokens = { ...preset, ...shared, ...(isLight ? light : {}) };
-    // Dark palettes: meaning inks 7:1 and visibly chromatic. Daylight keeps its 4.5:1 floor for them.
-    const meaningFloor = isLight ? 4.5 : 7;
+    // Yash, 11 Nov: the same meaning-ink floor applies to every shipped palette.
+    const meaningFloor = 7;
 
     for (const background of surfaces) {
       const surface = channels(ink(tokens, background));
@@ -121,7 +121,7 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
       }
     }
 
-    if (!isLight) {
+    {
       for (const name of [...syntaxInks, ...pathAndOutcomeInks, ...agentInks, ...diffInks]) {
         const value = chroma(channels(ink(tokens, name)));
         if (value < .09) failures.push(`${palette}: ${name} OKLCH chroma ${value.toFixed(3)} (< 0.09)`);

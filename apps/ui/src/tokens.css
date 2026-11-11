@@ -39,22 +39,57 @@ small { font-size: var(--text-2xs); }
   --diff-added-wash: color-mix(in srgb, var(--diff-added) 10%, transparent);
   --diff-removed-wash: color-mix(in srgb, var(--diff-removed) 10%, transparent);
 
-  --agent-claude-ink: #fe9c6f;
-  --agent-codex-ink: #39c9ba;
-  --agent-violet-ink: #cda2ff;
-  --agent-gold-ink: #d0b337;
-  --agent-blue-ink: #75baff;
-  --agent-rose-ink: #ff94bf;
+  --agent-claude-ink: #ffa175;
+  --agent-codex-ink: #33ccbc;
+  --agent-violet-ink: #cfa6ff;
+  --agent-gold-ink: #d4b637;
+  --agent-blue-ink: #7ebdfc;
+  --agent-rose-ink: #fa9bc1;
 }
 
 :root[data-ui-version=modern][data-experience=classic][data-theme=light][data-palette] {
-  --diff-added: #145931;
-  --diff-removed: #8c1d30;
+  --diff-added: #015729;
+  --diff-removed: #8c1c2f;
 
-  --agent-claude-ink: #974625;
-  --agent-codex-ink: #14675d;
-  --agent-violet-ink: #66408b;
-  --agent-gold-ink: #76560c;
-  --agent-blue-ink: #295f9a;
-  --agent-rose-ink: #8e3864;
+  --agent-claude-ink: #823110;
+  --agent-codex-ink: #01572a;
+  --agent-violet-ink: #603787;
+  --agent-gold-ink: #703e01;
+  --agent-blue-ink: #184a8c;
+  --agent-rose-ink: #802a5a;
 }
+
+/* SHIP-21: the three shipped palettes and their Settings previews own all paint here. */
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
+  --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
+  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
+  --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#8b92ec;
+  --palette-active:#5e6ad2; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
+  --syntax-number:#fc9e47; --syntax-type:#48c1f7; --syntax-property:#30c9c5;
+  --source:#80b8ff; --external:#f296df; --edited:#d4b137;
+  --pass:#83f7d1; --fail:#ff9b8f; --graph-node:#e8edf5; --graph-edge:#b4bfce;
+  color-scheme:dark;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper] {
+  --bg:#f6f9fb; --s1:#fcffff; --s2:#eef3f6; --s3:#e3eaef;
+  --line:#d7e0e6; --line-2:#c2ced6; --line-3:#8796a1; --t1:#14202a;
+  --t2:#3c4a55; --t3:#55636e; --t4:#59656f; --focus:#036a8f;
+  --palette-active:#0593c6; --syntax-keyword:#8f0a64; --syntax-string:#00572a; --syntax-function:#004f7a;
+  --syntax-number:#872c03; --syntax-type:#593b87; --syntax-property:#003db0;
+  --source:#004f7a; --external:#800c94; --edited:#872c03;
+  --pass:#003f00; --fail:#990812; --graph-node:#2d4452; --graph-edge:#6d8593;
+  color-scheme:light;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight] {
+  --bg:#070d1b; --s1:#0d1628; --s2:#14213a; --s3:#1a2a43;
+  --line:#253753; --line-2:#344c6c; --line-3:#5c7398; --t1:#f4f8ff;
+  --t2:#cbdcf6; --t3:#a0b4d3; --t4:#8c9ec0; --focus:#8db8ff;
+  --palette-active:#8db8ff; --syntax-keyword:#fc9f9d; --syntax-string:#6ccc71; --syntax-function:#d0a6ff;
+  --syntax-number:#ffa24d; --syntax-type:#56c3f5; --syntax-property:#23ccc6;
+  --source:#7ebcfc; --external:#f09cde; --edited:#d6b542;
+  --pass:#83f7d1; --fail:#ff9e96; --graph-node:#edf5ff; --graph-edge:#9db9e2;
+  color-scheme:dark;
+}
+:root[data-ui-version=modern] .theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#5e6ad2;--swatch-border:#27272a;}
+:root[data-ui-version=modern] .theme-light {--swatch-bg:#f6f9fb;--swatch-node:#fcffff;--swatch-raised:#eef3f6;--swatch-accent:#0593c6;--swatch-border:#d7e0e6;}
+:root[data-ui-version=modern] .theme-midnight {--swatch-bg:#070d1b;--swatch-node:#0d1628;--swatch-raised:#14213a;--swatch-accent:#8db8ff;--swatch-border:#253753;}
