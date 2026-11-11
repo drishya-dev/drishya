@@ -1,3 +1,4 @@
+import {paletteRGB} from './palette-paint.ts';
 /** Presentation coordinates only; depth never claims dependency strength. */
 export interface SpatialPoint { x: number; y: number; z: number }
 export function fileDepth(id: string): number {
@@ -32,7 +33,7 @@ export function createSpatialRenderer(canvas: HTMLCanvasElement) {
   const buffer = gl.createBuffer()!;
   const position = gl.getAttribLocation(program, 'position'), size = gl.getAttribLocation(program, 'size'), alpha = gl.getAttribLocation(program, 'alpha');
   const colour = gl.getUniformLocation(program, 'colour'), points = gl.getUniformLocation(program, 'points');
-  const rgb = (hex: string) => /^#[0-9a-f]{6}$/i.test(hex) ? [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16) / 255) : [0.94, 0.95, 0.98];
+  const rgb = (hex: string) => /^#[0-9a-f]{6}$/i.test(hex) ? [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16) / 255) : paletteRGB('--graph-node');
   const paint = (vertices: MapVertex[], mode: number, ink: string, width: number, height: number, dpr: number) => {
     const data = new Float32Array(vertices.length * 5);
     for (let i = 0; i < vertices.length; i++) { const v = vertices[i]!; data.set([v.x / width * 2 - 1, 1 - v.y / height * 2, v.z, v.size * dpr, v.alpha], i * 5); }
