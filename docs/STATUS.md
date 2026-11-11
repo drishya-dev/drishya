@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| SHIP-16 | @yash + Codex | main (docs-only verification) | 2026-11-11 | Verify existing phase-B workflow #388 against the updated order; record its implementation status and the phase-E candidate/WSL acceptance dependency in TASKS/STATUS. No CI dispatch, workflow duplication or platform-readiness claim. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-2a | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: SHIP-17 to SHIP-21 merging. |
 | SHIP-2b | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
