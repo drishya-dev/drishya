@@ -1,5 +1,5 @@
-export interface RecordedFileRoot { root: string; prefix: string; recordedRoot?:string }
-export interface FileTreeRow { path: string; folder: boolean; depth: number; name: string; parent: string; location?: string; worktree?: boolean; unplaced?: boolean }
+export interface RecordedFileRoot { root: string; prefix: string; recordedRoot?:string;branch?:string;fileCount?:number;lastFileSequence?:number;agents?:{id:string;label:string}[];onDisk?:'present'|'removed'|'unavailable' }
+export interface FileTreeRow { path: string; folder: boolean; depth: number; name: string; parent: string; location?: string; worktree?: boolean; unplaced?: boolean; count?:number; description?:string; metadata?:string }
 export const WORKTREE_GROUP = '\u0000recorded-worktrees';
 export const UNPLACED_GROUP = '\u0000unplaced-paths';
 export interface FilePlacement { indexed: ReadonlySet<string>; direct: ReadonlySet<string> }
@@ -58,7 +58,8 @@ export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], wor
   const byPrefix = new Map(roots.map(root => [root.prefix, root]));
   // A separately captured descendant is not ordinary primary inventory. Keep only
   // its projection leaf identity; never rebase an indexed alias into captured evidence.
-  const nestedRoots = workspaceRoot ? roots.filter(root => normalize(root.root).startsWith(normalize(workspaceRoot) + '/')) : [];
+  const evidencedRoots=roots.filter(root=>root.fileCount===undefined||root.fileCount>0);
+  const nestedRoots = workspaceRoot ? evidencedRoots.filter(root => normalize(root.root).startsWith(normalize(workspaceRoot) + '/')) : [];
   const located = paths.filter(path => {
     const root = byPrefix.get(path.split('/')[0]!);
     if (root && (!workspaceRoot || normalize(root.root) !== normalize(workspaceRoot))) return true;
@@ -90,13 +91,16 @@ export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], wor
   };
   const mainNamespaced = new Set(located.filter(item => item.root && !item.other && !item.unplaced).map(item => item.path.slice(item.root!.prefix.length + 1)));
   for (const item of located.filter(item => !item.other && !item.unplaced && !(placement && !item.root && mainNamespaced.has(item.path)))) append(item.path, item.root, '', 0);
-  const others = located.filter(item => item.other && !item.unplaced);
+  const others = located.filter(item => item.other && !item.unplaced && item.root && (item.root.fileCount===undefined||item.root.fileCount>0));
   if (others.length) {
-    rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Other working directories',parent:'',worktree:true});
-    if (opened.has(WORKTREE_GROUP)) for (const root of roots) {
+    rows.push({path:WORKTREE_GROUP,folder:true,depth:0,name:'Other working directories',parent:'',worktree:true,count:new Set(others.map(item=>item.root!.prefix)).size,description:'Captured file evidence only; Files, Git and the map stay on this session’s checkout.'});
+    if (opened.has(WORKTREE_GROUP)) for (const root of [...evidencedRoots].sort((a,b)=>(b.lastFileSequence??0)-(a.lastFileSequence??0))) {
       const entries = others.filter(item => item.root === root);
       if (!entries.length) continue;
-      rows.push({path:root.prefix,folder:true,depth:1,name:workingDirectoryName(root.root,roots),parent:WORKTREE_GROUP,location:root.root,worktree:true});
+      const disk=root.onDisk==='present'?'On disk':root.onDisk==='removed'?'Removed':root.onDisk==='unavailable'?'Disk unavailable':'';
+      const names=root.agents?.map(agent=>agent.label)??[],agents=names.join(', ');
+      const compactAgent=names.length>1?names[0]+' +'+(names.length-1):names[0];
+      rows.push({path:root.prefix,folder:true,depth:1,name:root.branch??workingDirectoryName(root.root,roots),parent:WORKTREE_GROUP,location:root.root,worktree:true,count:root.fileCount,metadata:[disk,compactAgent].filter(Boolean).join(' · '),description:[root.root,root.branch?'Recorded branch '+root.branch:undefined,disk,agents?'Recorded agents: '+agents:undefined].filter(Boolean).join(' · ')});
       for (const item of entries) append(item.path, root, root.prefix, 2);
     }
   }

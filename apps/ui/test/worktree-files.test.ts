@@ -169,3 +169,11 @@ it('keeps sibling collisions, nested root names and primary URL aliases separate
  expect(rows.filter(row=>!row.folder).map(row=>row.path)).toEqual(['alias/docs/TASKS.md','nested/docs/TASKS.md','sibling/docs/TASKS.md']);
  expect(new Set(rows.filter(row=>row.parent===WORKTREE_GROUP).map(row=>row.name)).size).toBe(2);
 });
+
+describe('FILES-15 evidence-only worktree groups',()=>{
+ it('starts collapsed, counts only file roots, sorts recent first and keeps removed evidence',()=>{
+  const roots=[{root:'C:/repo',prefix:'main',fileCount:1},{root:'C:/cwd-only',prefix:'cwd',fileCount:0,lastFileSequence:99},{root:'C:/old',prefix:'old',fileCount:1,lastFileSequence:5,onDisk:'removed' as const,agents:[{id:'worker',label:'Reviewer'}]},{root:'C:/new',prefix:'new',fileCount:2,lastFileSequence:20,branch:'feature',onDisk:'present' as const}];const paths=['main/a.ts','old/kept.ts','new/a.ts','new/b.ts','cwd/search-only.ts'];const closed=worktreeFileRows(paths,roots,'C:/repo',new Set(['']));expect(closed.find(r=>r.path===WORKTREE_GROUP)?.count).toBe(2);expect(closed.some(r=>r.path==='old'||r.path==='new'||r.path==='cwd')).toBe(false);
+  const opened=worktreeFileRows(paths,roots,'C:/repo',new Set(['',WORKTREE_GROUP,'old','new']));expect(opened.filter(r=>r.parent===WORKTREE_GROUP).map(r=>r.path)).toEqual(['new','old']);expect(opened.find(r=>r.path==='new')).toMatchObject({name:'feature',metadata:'On disk',count:2});expect(opened.find(r=>r.path==='old')).toMatchObject({metadata:'Removed · Reviewer'});expect(opened.some(r=>r.path==='old/kept.ts')).toBe(true);expect(currentWorkspacePath('old/kept.ts',roots,'C:/repo')).toBeUndefined();
+ });
+ it('does not suppress ordinary primary inventory for an unrelated cwd-only descendant',()=>{const roots=[{root:'C:/repo/nested',prefix:'cwd',fileCount:0}];const rows=worktreeFileRows(['nested/a.ts'],roots,'C:/repo',new Set(['','nested']));expect(rows.some(r=>r.path==='nested/a.ts')).toBe(true);});
+});

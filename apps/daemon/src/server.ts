@@ -1,5 +1,5 @@
 import {queuedInputChunk} from './queued-inputs.ts';
-import {recordedFileRoots} from './file-roots.ts';
+import {recordedFileRoots,withFileRootDiskState} from './file-roots.ts';
 import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
 // strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
@@ -474,7 +474,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       if (sub === 'file-roots' && m === 'GET') {
         const ids=app.readingId(id).split('+'); for(const key of ids) app.recording(key);
-        return json(res,await recordedFileRoots(app.store,ids));
+        const metadata=await recordedFileRoots(app.store,ids);
+        const roots=await app.history.fileRoots(app.readingId(id),metadata.roots,app.recording(ids[0]!).workspaceRoot);
+        return json(res,await withFileRootDiskState({...metadata,roots}));
       }
       if (sub === 'lineage' && m === 'GET') { app.recording(id); return json(res, { lineage: app.store.lineageView(id) ?? null }); }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));

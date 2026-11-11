@@ -132,8 +132,13 @@ export class App {
     const large = this.paged(idOrIds);
     const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
     const filesOnly = () => graphFromPaths(projection.files.map((f) => f.path));
-    if (!projection.workspaceRoot) return filesOnly();
-    const root = rec.graphRoot || undefined;
+    // Multiple recorded roots namespace evidence; they do not replace this session's checkout.
+    if (!rec.workspaceRoot) return filesOnly();
+    let root = rec.graphRoot || undefined;
+    if(root){
+      try{if(realpathSync(root)!==realpathSync(rec.workspaceRoot))root=undefined;}
+      catch{root=undefined;}
+    }
     if (!root || this.unscannable(root)) {
       const captured = rec.workspaceRoot;
       return captured && !this.unscannable(captured) ? { ...filesOnly(), approvalNeeded: { root: captured } } : filesOnly();
