@@ -9,7 +9,7 @@ import type { GithubReply } from './link-types.ts';
 // with fixed argv and no shell. Only URLs of the exact shape https://github.com/<owner>/<repo>/(pull|issues)/<n> are accepted,
 // so this never fetches an arbitrary URL. Replies are cached for the daemon's lifetime.
 
-export type GhRun = (args: string[], signal: AbortSignal) => Promise<string>;
+export type GhRun = (args: string[], signal: AbortSignal, maxBuffer?: number) => Promise<string>;
 
 export type { GithubItem, GithubReply } from './link-types.ts';
 
@@ -22,8 +22,8 @@ export function parseGithubUrl(value: string): { owner: string; repo: string; ki
   return { owner: m[1]!, repo: m[2]!, kind: m[3] === 'pull' ? 'pull' : 'issue', number: Number(m[4]) };
 }
 
-const defaultRun: GhRun = (args, signal) => new Promise((yes, no) => {
-  execFile('gh', args, { signal, timeout: 15_000, maxBuffer: 256 * 1024, windowsHide: true, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } }, (error, stdout, stderr) => {
+const defaultRun: GhRun = (args, signal, maxBuffer = 256 * 1024) => new Promise((yes, no) => {
+  execFile('gh', args, { signal, timeout: 15_000, maxBuffer, windowsHide: true, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } }, (error, stdout, stderr) => {
     if (error) { const e = error as NodeJS.ErrnoException & { stderr?: string }; e.stderr = String(stderr).slice(0, 400); no(e); } else yes(stdout);
   });
 });
@@ -52,6 +52,39 @@ export class GithubLinks {
     if (!this.enabled) return { enabled: false };
     if (this.available === undefined) this.available = await this.run(['--version'], AbortSignal.timeout(5_000)).then(() => true, () => false);
     return { enabled: true, available: this.available };
+  }
+  /** GIT-8: why `gh` could not answer, in the words Compare shows. Never a guess about the network. */
+  private failure(error: unknown): 'gh-missing' | 'gh-unauthenticated' | 'failed' {
+    const stderr = String((error as { stderr?: string }).stderr ?? '');
+    return (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'gh-missing' : /not logged in|authentication|auth login|GH_TOKEN|HTTP 401/i.test(stderr) ? 'gh-unauthenticated' : 'failed';
+  }
+  /** Open pull requests of one repository, through the same opt-in, read-only `gh` as the hover cards. */
+  async pulls(repo: string): Promise<{ status: 'ready' | 'disabled' | 'gh-missing' | 'gh-unauthenticated' | 'failed'; pulls: { number: number; title: string; author?: string; draft?: boolean; url: string; baseName: string; headName: string; headOid: string }[] }> {
+    if (!this.enabled) return { status: 'disabled', pulls: [] };
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/.test(repo)) return { status: 'failed', pulls: [] };
+    if (!(await this.status()).available) return { status: 'gh-missing', pulls: [] };
+    try {
+      const out = await this.run(['pr', 'list', '--repo', repo, '--state', 'open', '--limit', '40', '--json', 'number,title,author,isDraft,baseRefName,headRefName,headRefOid,url'], AbortSignal.timeout(15_000), 1024 * 1024);
+      const rows = JSON.parse(out) as Record<string, unknown>[];
+      const pulls = rows.flatMap(row => {
+        const number = count(row.number), headOid = typeof row.headRefOid === 'string' && /^[a-f0-9]{40,64}$/.test(row.headRefOid) ? row.headRefOid : undefined;
+        const baseName = text(row.baseRefName, 200), headName = text(row.headRefName, 200);
+        if (!number || !headOid || !baseName || !headName) return [];
+        const author = row.author && typeof row.author === 'object' ? text((row.author as { login?: unknown }).login, 80) : undefined;
+        return [{ number, title: text(row.title, 300) ?? '', ...(author ? { author } : {}), ...(row.isDraft === true ? { draft: true } : {}), url: `https://github.com/${repo}/pull/${number}`, baseName, headName, headOid }];
+      });
+      return { status: 'ready', pulls };
+    } catch (error) { return { status: this.failure(error), pulls: [] }; }
+  }
+  /** GitHub's compare of a base branch and a head commit that is not on this machine. Read-only (`gh api` GET). */
+  async compare(repo: string, baseName: string, headOid: string): Promise<{ status: 'ready'; value: unknown } | { status: 'disabled' | 'gh-missing' | 'gh-unauthenticated' | 'failed' }> {
+    if (!this.enabled) return { status: 'disabled' };
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/.test(repo) || !/^[a-f0-9]{40,64}$/.test(headOid) || !baseName || baseName.length > 200) return { status: 'failed' };
+    if (!(await this.status()).available) return { status: 'gh-missing' };
+    try {
+      const out = await this.run(['api', `repos/${repo}/compare/${encodeURIComponent(baseName)}...${headOid}`], AbortSignal.timeout(15_000), 8 * 1024 * 1024);
+      return { status: 'ready', value: JSON.parse(out) };
+    } catch (error) { return { status: this.failure(error) }; }
   }
   async item(url: string): Promise<GithubReply> {
     if (!this.enabled) return { status: 'disabled' };
