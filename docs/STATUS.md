@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-6d | @yash + Claude Sonnet 5.5 | `claude/ship-6d-remember` | 2026-11-11 | The Remember checkbox in `components/SessionWorkspace.tsx` (Files card and composer setup row), new `RememberCheckbox.tsx` and `modern/remember.css`. No colour tokens; not SHIP-6a-c files. |
 | UI-28c | @yash + Claude Sonnet 5.5 | `claude/ui-28c-composer-toggle` | 2026-11-08 | Composer collapse/expand in `components/SessionWorkspace.tsx` (`--composer-gap` consumers), `modern/toolbox-dock.css`, `modern/composer.css`; `composer-grows.spec.ts`. Not UI-27's prose and prompt files, Queued inputs, Usage, `clarity/`. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | SHIP-20 | @yash + Codex | `codex/ship-20` | 2026-11-11 | Whole approved reader/Workspace semantic-colour adoption, while MOTION-4 waits for UI-28c. Own modern/reader-ink.css and its entry import; bounded reader/editor/source/syntax/diff/Screen/search colour and weight declarations only, focused contrast/browser checks, STATUS/TASKS and docs/review/ship-20-reader-colour.md. Initial ceiling 15 paths; agree any larger footprint first. Use the settled SHIP-17 palette roles/floors; no new palette, typography family, layout, spacing, layers, motion or renderer-data changes. No LINK-1 source files, composer gap/PromptRail/SessionWorkspace/composer.css, lineage or protected files. Two browser workers, one suite at a time, no full gate; Opus reviews/merges. |
@@ -59,6 +58,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Claude Sonnet 5.5 — 11 Nov: SHIP-6d the Remember checkbox
+
+- New `RememberCheckbox` + `modern/remember.css`: one compact Modern checkbox inside the Files "Enable workspace reading" card and in the composer's setup row, in the card's own type size and colour, checked by default, keyboard and focus ring working. Real unapproved Claude Code session `rec_b45458d5` at 600 and 1440 (before/after in `.local/`). No colour tokens changed.
 
 ### Yash with Claude Sonnet 5.5 - 10 Nov: CONTENT-21 continued sessions join their earlier journal
 
