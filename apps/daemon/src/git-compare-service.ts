@@ -26,7 +26,7 @@ export class GitCompareService {
     return this.review.inspect(id,async git=>{
       const result=await gitCompare(git,query);
       // The same hash-in-captured-output rule the Git graph uses; a link says the session printed this commit, not that it wrote it.
-      const links=sessionLinks(this.app.store,id,result.commits.map(commit=>commit.hash));
+      const links=sessionLinks(this.app.store,this.app.checkoutOwner(id),result.commits.map(commit=>commit.hash));
       return {...result,commits:result.commits.map(commit=>links[commit.hash]?{...commit,session:links[commit.hash]}:commit)};
     });
   }
@@ -54,5 +54,9 @@ export class GitCompareService {
       return githubCompareResult(reply.value,base,{ref:pull.headOid,name:pull.headName,tip:pull.headOid});
     });
   }
-  evidence(id:string,paths:string[]):Promise<CompareEvidence>{return this.app.history.compareEvidence(this.app.readingId(id),paths);}
+  async evidence(id:string,paths:string[]):Promise<CompareEvidence>{
+    const prefix=this.app.checkoutPrefix(id);
+    const evidence=await this.app.history.compareEvidence(this.app.readingId(id),prefix?paths.map(path=>`${prefix}/${path}`):paths);
+    return prefix?Object.fromEntries(paths.flatMap(path=>evidence[`${prefix}/${path}`]?[[path,evidence[`${prefix}/${path}`]!]]:[])):evidence;
+  }
 }

@@ -328,6 +328,17 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     }
 
     if (a === 'recordings' && id) {
+      // Checkout keys are read contexts only. In particular they never reach controller,
+      // journal import/delete/export, or mutation of the captured session's metadata.
+      if (id.includes('~')) {
+        app.checkoutOwner(id);
+        if (!['workspace', 'git', 'graph', 'compare-evidence'].includes(sub ?? '') || sub === 'workspace' && ['setup', 'image', 'image-grant'].includes(subId ?? '')) throw new HttpError(400, 'A checkout view supports Files, Git and the map only.');
+      }
+      if (sub === 'checkout' && m === 'POST') {
+        const body=await readJson(req,256);
+        if(Object.keys(body).some(key=>key!=='prefix') || body.prefix!==undefined && typeof body.prefix!=='string')throw new HttpError(400,'Choose a recorded checkout.');
+        return json(res,await app.chooseCheckout(id,body.prefix));
+      }
       const firstId = id.split('+')[0]!;
       if(sub==='segments'&&m==='GET') {
         const recording=app.recording(firstId);
@@ -395,7 +406,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
-        await controller.forget(firstId); workspace.revoke(firstId); gitReview.revoke(firstId);
+        await controller.forget(firstId); workspace.revokeRecording(firstId); gitReview.revoke(firstId);
         const removed = await app.forget(firstId);
         return json(res, { ok: true, ...removed });
       }

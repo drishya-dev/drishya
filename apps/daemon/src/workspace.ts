@@ -39,11 +39,19 @@ export class WorkspaceAccess {
   readonly remembered:CheckoutGrants;
   private rememberedSessions=new Set<string>();
   private rootEpoch=new Map<string,number>();
+  private contextIdentity=new Map<string,CheckoutIdentity>();
   constructor(app: App) { this.app = app; this.remembered=new CheckoutGrants(app.store); }
+
+  private knownRecordingRoot(id:string) {
+    try { return this.app.workspaceRecording(id).workspaceRoot; } catch { return undefined; }
+  }
+  evidenceId(id:string) { return this.app.readingId(id); }
+  evidencePath(id:string,path:string) { const prefix=this.app.checkoutPrefix(id);return prefix?`${prefix}/${path}`:path; }
+  currentPath(id:string,path:string) { const prefix=this.app.checkoutPrefix(id);return prefix&&path.startsWith(prefix+'/')?path.slice(prefix.length+1):path; }
 
   async approve(id: string, remember=false) {
     if (id.includes('+')) throw new HttpError(400, 'choose one session workspace');
-    const rec = this.app.recording(id);
+    const rec = this.app.workspaceRecording(id);
     if (!rec.workspaceRoot) throw new HttpError(400, 'no captured workspace on this machine');
     const key=checkoutGrantKey(rec.workspaceRoot);
     // Changing this session's choice must not revoke another session's temporary grant.
@@ -52,38 +60,43 @@ export class WorkspaceAccess {
     this.accessEpoch.set(id,(this.accessEpoch.get(id)??0)+1);this.grants.delete(id);this.rememberedSessions.delete(id);
     for(const image of this.imageGrants.keys())if(image.startsWith(id+'\0'))this.imageGrants.delete(image);
     const epoch=this.rootEpoch.get(key)??0;
-    const identity=remember?await checkoutIdentity(rec.workspaceRoot):undefined;
+    const identity=remember||id.includes('~')?await checkoutIdentity(rec.workspaceRoot):undefined;
     // Uses the existing drive/home checks; the API cannot select an arbitrary root.
     await this.app.approveGraphRoot(id);
     const root = await realpath(rec.workspaceRoot);
     if((this.rootEpoch.get(key)??0)!==epoch)throw new HttpError(409,'Workspace access changed during approval.');
-    if(identity) {await this.remembered.remember(rec.workspaceRoot,identity,()=>(this.rootEpoch.get(key)??0)===epoch);this.rememberedSessions.add(id);}
+    if(remember&&identity) {await this.remembered.remember(rec.workspaceRoot,identity,()=>(this.rootEpoch.get(key)??0)===epoch);this.rememberedSessions.add(id);}
     if((this.rootEpoch.get(key)??0)!==epoch)throw new HttpError(409,'Workspace access changed during approval.');
+    if(id.includes('~')&&identity)this.contextIdentity.set(id,identity);
     this.grants.set(id, root);
     return this.status(id);
   }
 
   status(id: string) {
-    const rec = this.app.recording(id);
+    const rec = this.app.workspaceRecording(id);
     return { approved: this.grants.has(id), root: rec.workspaceRoot, scope: 'current-workspace' as const, remembered:this.rememberedSessions.has(id) };
   }
 
+  revokeRecording(owner:string) {
+    for(const id of new Set([owner,...this.grants.keys()]))if(id===owner||id.startsWith(owner+'~'))this.revoke(id);
+  }
+
   revoke(id:string) {
-    const root=this.app.recording(id).workspaceRoot,keys=new Set<string>();
+    const root=this.app.workspaceRecording(id).workspaceRoot,keys=new Set<string>();
     if(root)keys.add(checkoutGrantKey(root));
     const previous=this.grants.get(id);if(previous)keys.add(checkoutGrantKey(previous));
     for(const key of keys){this.rootEpoch.set(key,(this.rootEpoch.get(key)??0)+1);this.remembered.remove(key);}
     const affected=new Set([id,...this.grants.keys(),...[...this.imageGrants.keys()].map(key=>key.split('\0')[0]!)]);
     for(const session of affected) {
-      const path=this.app.store.getRecording(session)?.workspaceRoot;
+      const path=this.knownRecordingRoot(session);
       if(session!==id&&(!path||!keys.has(checkoutGrantKey(path))))continue;
-      this.accessEpoch.set(session,(this.accessEpoch.get(session)??0)+1);this.grants.delete(session);this.rememberedSessions.delete(session);
+      this.accessEpoch.set(session,(this.accessEpoch.get(session)??0)+1);this.grants.delete(session);this.rememberedSessions.delete(session);this.contextIdentity.delete(session);
       for(const key of this.imageGrants.keys())if(key.startsWith(session+'\0'))this.imageGrants.delete(key);
     }
   }
 
   async restoreStatus(id:string) {
-    const rec=this.app.recording(id),root=rec.workspaceRoot;
+    const rec=this.app.workspaceRecording(id),root=rec.workspaceRoot;
     if(!root||id.includes('+'))return this.status(id);
     if(this.grants.has(id)&&!this.rememberedSessions.has(id))return this.status(id);
     const key=checkoutGrantKey(root),epoch=this.rootEpoch.get(key)??0;
@@ -108,7 +121,7 @@ export class WorkspaceAccess {
     this.remembered.remove(key);
     this.rootEpoch.set(key,(this.rootEpoch.get(key)??0)+1);
     for(const id of [...this.grants.keys()]) {
-      const root=this.app.store.getRecording(id)?.workspaceRoot;
+      const root=this.knownRecordingRoot(id);
       if(root&&checkoutGrantKey(root)===key)this.revoke(id);
     }
   }
@@ -120,10 +133,15 @@ export class WorkspaceAccess {
   }
 
   async root(id: string): Promise<string> {
-    const rec = this.app.recording(id);
+    const rec = this.app.workspaceRecording(id);
     await this.restoreStatus(id);
     const root = this.grants.get(id);
     if (!root || !rec.workspaceRoot || await realpath(rec.workspaceRoot) !== root) throw new HttpError(403, 'approve this session workspace first');
+    const identity=this.contextIdentity.get(id);
+    if(identity&&JSON.stringify(identity)!==JSON.stringify(await checkoutIdentity(rec.workspaceRoot))){
+      this.grants.delete(id);this.contextIdentity.delete(id);this.accessEpoch.set(id,(this.accessEpoch.get(id)??0)+1);
+      throw new HttpError(403,'This checkout changed identity. Approve it again.');
+    }
     return root;
   }
 
@@ -231,11 +249,11 @@ export class WorkspaceAccess {
     const graph = await this.app.graph(id);
     // A bounded or explicitly stale map is not a complete list of eligible current files.
     // Check only this path under the same index rules; content permission stays separate.
-    if (!graph.nodes.some(n => n.path === path)) {
+    if (!graph.nodes.some(n => n.path === path || n.path === this.evidencePath(id,path))) {
       let recordedMainFile = false;
       if (graph.temporal === 'recording-files-only') {
-        const { roots } = await recordedFileRoots(this.app.store, [id]);
-        const prefixes = recordedMainRootPrefixes(roots, this.app.recording(id).workspaceRoot);
+        const { roots } = await recordedFileRoots(this.app.store, this.app.readingId(id).split('+'));
+        const prefixes = recordedMainRootPrefixes(roots, this.app.workspaceRecording(id).workspaceRoot);
         // A historical namespaced node can identify a main file, never grant its bytes.
         // The approved-root, link and index rules still decide every current read.
         recordedMainFile = prefixes.some(prefix => graph.nodes.some(node => node.path === `${prefix}/${path}`));
