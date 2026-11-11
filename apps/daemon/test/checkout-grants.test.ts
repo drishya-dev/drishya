@@ -61,7 +61,24 @@ it('does not transfer a remembered grant when an alias is retargeted',async()=>{
   await rm(alias);await symlink(other,alias,process.platform==='win32'?'junction':'dir');
   expect(await f.access.remembered.restore(alias)).toBeUndefined();
   expect(await f.access.remembered.restore(other)).toBeUndefined();
-  expect(await f.access.remembered.restore(canonical)).toEqual(await checkoutIdentity(canonical));
+  expect(await f.access.remembered.restore(canonical)).toBeUndefined();
+});
+it('revokes a missing checkout beneath an aliased parent and never resurrects it on return',async()=>{
+  const f=await fixture(),parent=join(f.dir,'aliased-parent'),child=join(f.root,'child');await mkdir(child);
+  await symlink(await realpath(f.root),parent,process.platform==='win32'?'junction':'dir');
+  const spelling=join(parent,'child');await f.access.remembered.remember(spelling,await checkoutIdentity(spelling));
+  await rename(child,child+'-away');expect(await f.access.remembered.restore(spelling)).toBeUndefined();
+  await rename(child+'-away',child);expect(await f.access.remembered.restore(spelling)).toBeUndefined();
+  expect(await f.access.remembered.restore(child)).toBeUndefined();
+});
+it('a fresh explicit approval after retargeting leaves only the latest spelling receipt',async()=>{
+  const f=await fixture(),alias=join(f.dir,'alias'),other=join(f.dir,'new-checkout');await mkdir(other);
+  await symlink(await realpath(f.root),alias,process.platform==='win32'?'junction':'dir');await f.access.remembered.remember(alias,await checkoutIdentity(alias));
+  await rm(alias);await symlink(other,alias,process.platform==='win32'?'junction':'dir');await f.access.remembered.remember(alias,await checkoutIdentity(alias));
+  expect(await f.access.remembered.list()).toHaveLength(1);
+  await rm(alias);expect(await f.access.remembered.restore(alias)).toBeUndefined();
+  await symlink(other,alias,process.platform==='win32'?'junction':'dir');expect(await f.access.remembered.restore(alias)).toBeUndefined();
+  expect(await f.access.remembered.list()).toEqual([]);
 });
 it.runIf(process.platform==='win32')('restores a real Windows 8.3 path as the same checkout',async context=>{
   const f=await fixture(),long=join(f.dir,'Long Checkout Name');await mkdir(long);
@@ -76,6 +93,9 @@ it.runIf(process.platform==='win32')('restores a real Windows 8.3 path as the sa
   expect(await f.access.remembered.restore(short)).toEqual(await checkoutIdentity(long));
   await rename(long,long+'-moved');
   expect(await f.access.remembered.restore(long+'-moved')).toBeUndefined();
+  expect(await f.access.remembered.restore(short)).toBeUndefined();
+  await rename(long+'-moved',long);
+  expect(await f.access.remembered.restore(long)).toBeUndefined();
 });
 it('canonicalises a worktree administration pointer through an aliased ancestor, not a redirected metadata directory',async()=>{
   const f=await fixture();execFileSync('git',['init','--quiet',f.root]);execFileSync('git',['-C',f.root,'-c','user.name=Synthetic','-c','user.email=synthetic@example.invalid','commit','--allow-empty','-qm','Synthetic']);

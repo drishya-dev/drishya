@@ -11,13 +11,13 @@ export interface CheckoutIdentity {
   checkout:{root:string;directory:string;gitDirectory?:{root:string;directory:string}};
   repository:{kind:'git';root:string;directory:string}|{kind:'directory'};
 }
-interface SavedGrant {version:1;identity:CheckoutIdentity;createdAt:string;revision:string}
+interface SavedGrant {version:1;identity:CheckoutIdentity;requestedRoot?:string;createdAt:string;revision:string}
 export interface CheckoutGrant {id:string;root:string;identity:CheckoutIdentity;createdAt:string}
 const PREFIX='checkout-read-grant-v1:',LIMIT=128;
 const normalize=(path:string)=>process.platform==='win32'?resolve(path).toLowerCase():resolve(path);
 export const checkoutGrantKey=(path:string)=>{
-  // A spelling alias is the same capability. Keep a missing path's old key so
-  // revocation can still remove its grant after the checkout disappears.
+  // A spelling alias is the same capability. A vanished alias is found through
+  // its saved approval spelling when a canonical lookup is no longer possible.
   let canonical=path;try{canonical=realpathSync.native(path);}catch{}
   return createHash('sha256').update(normalize(canonical)).digest('hex');
 };
@@ -95,7 +95,7 @@ export class CheckoutGrants {
     try {
       if(row.value.length>8192)throw Error();
       const value=JSON.parse(row.value) as SavedGrant;
-      if(value.version!==1||typeof value.createdAt!=='string'||typeof value.revision!=='string'||!value.identity?.root||checkoutGrantKey(value.identity.root)!==id||!safe(value))throw Error();
+      if(value.version!==1||typeof value.createdAt!=='string'||typeof value.revision!=='string'||value.requestedRoot!==undefined&&(typeof value.requestedRoot!=='string'||value.requestedRoot.length>4096)||!value.identity?.root||checkoutGrantKey(value.identity.root)!==id||!safe(value))throw Error();
       return value;
     } catch {this.remove(id);return;}
   }
@@ -103,19 +103,29 @@ export class CheckoutGrants {
     if(!/^[a-f0-9]{64}$/.test(id))throw new CheckoutIdentityError('Invalid checkout grant identity.');
     this.store.db.prepare('DELETE FROM meta WHERE key=?').run(PREFIX+id);
   }
-  forget(root:string){this.remove(checkoutGrantKey(root));}
+  private forRoot(root:string):{id:string;saved:SavedGrant}|undefined {
+    const id=checkoutGrantKey(root),saved=this.saved(id);
+    if(saved)return {id,saved};
+    // Missing or retargeted approval spellings must revoke the old receipt too.
+    // Looking up an exact recorded spelling is never proof of current access.
+    const rows=this.store.db.prepare('SELECT key FROM meta WHERE key LIKE ? LIMIT ?').all(PREFIX+'%',LIMIT) as {key:string}[];
+    for(const row of rows){const key=row.key.slice(PREFIX.length);if(!/^[a-f0-9]{64}$/.test(key))continue;const value=this.saved(key);if(value&&[value.identity.root,value.requestedRoot].some(path=>path!==undefined&&normalize(path)===normalize(root)))return {id:key,saved:value};}
+  }
+  forget(root:string){this.remove(this.forRoot(root)?.id??checkoutGrantKey(root));}
   async remember(root:string,identity:CheckoutIdentity,allowed:()=>boolean=()=>true) {
     if(!same(await checkoutIdentity(root),identity))throw new CheckoutIdentityError('Checkout identity changed during approval.');
-    const id=checkoutGrantKey(root),record:SavedGrant={version:1,identity,createdAt:new Date().toISOString(),revision:randomUUID()};
+    const id=checkoutGrantKey(identity.root),record:SavedGrant={version:1,identity,requestedRoot:resolve(root),createdAt:new Date().toISOString(),revision:randomUUID()};
     if(!safe(record))throw new CheckoutIdentityError('Redaction prevents remembering this checkout.');
     const count=this.store.db.prepare('SELECT count(*) AS n FROM meta WHERE key LIKE ?').get(PREFIX+'%') as {n:number};
     if(count.n>=LIMIT&&!this.saved(id))throw new CheckoutIdentityError('Remembered checkout limit reached; revoke an old grant first.');
     if(!allowed())throw new CheckoutIdentityError('Workspace access changed during approval.');
+    const rows=this.store.db.prepare('SELECT key FROM meta WHERE key LIKE ? LIMIT ?').all(PREFIX+'%',LIMIT) as {key:string}[];
+    for(const row of rows){const key=row.key.slice(PREFIX.length);if(key===id||!/^[a-f0-9]{64}$/.test(key))continue;const value=this.saved(key);if(value&&normalize(value.requestedRoot??value.identity.root)===normalize(root))this.remove(key);}
     this.store.db.prepare('INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(PREFIX+id,JSON.stringify(record));
   }
   async restore(root:string):Promise<CheckoutIdentity|undefined> {
-    const id=checkoutGrantKey(root),saved=this.saved(id);
-    if(!saved)return;
+    const found=this.forRoot(root);if(!found)return;
+    const {id,saved}=found;
     let current:CheckoutIdentity|undefined;
     try {current=await checkoutIdentity(root);} catch {/* A failed proof revokes; it never grants. */}
     if(this.saved(id)?.revision!==saved.revision)return;
