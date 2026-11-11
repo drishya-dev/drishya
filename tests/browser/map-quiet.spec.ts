@@ -73,7 +73,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 600, height: 800 
     for (const name of ['Zoom into repository', 'Zoom into repository', 'Zoom into repository', 'Zoom into repository', 'Zoom out of repository', 'Zoom out of repository', 'Zoom out of repository', 'Zoom out of repository', 'Zoom out of repository', 'Zoom out of repository']) {
       await page.getByRole('button', { name, exact: true }).click(); await check();
     }
-    expect(sawLabels).toBeGreaterThan(10);
+    expect(sawLabels).toBeGreaterThan(viewport.width < 700 ? 2 : 10); // UI-28c: the controls keep the composer's rest height reserved, so the 600 px window shows fewer labels
     // The selected file's import neighbourhood is placed first and still collides with nothing.
     await fit.click();
     await page.getByRole('switch', { name: /Import paths/ }).click();
