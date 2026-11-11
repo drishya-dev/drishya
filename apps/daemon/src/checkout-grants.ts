@@ -1,5 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {lstat,open,realpath} from 'node:fs/promises';
+import {realpathSync} from 'node:fs';
 import {dirname,join,parse,resolve} from 'node:path';
 import {homedir} from 'node:os';
 import {sanitize} from '@drishya/privacy';
@@ -14,7 +15,12 @@ interface SavedGrant {version:1;identity:CheckoutIdentity;createdAt:string;revis
 export interface CheckoutGrant {id:string;root:string;identity:CheckoutIdentity;createdAt:string}
 const PREFIX='checkout-read-grant-v1:',LIMIT=128;
 const normalize=(path:string)=>process.platform==='win32'?resolve(path).toLowerCase():resolve(path);
-export const checkoutGrantKey=(path:string)=>createHash('sha256').update(normalize(path)).digest('hex');
+export const checkoutGrantKey=(path:string)=>{
+  // A spelling alias is the same capability. Keep a missing path's old key so
+  // revocation can still remove its grant after the checkout disappears.
+  let canonical=path;try{canonical=realpathSync.native(path);}catch{}
+  return createHash('sha256').update(normalize(canonical)).digest('hex');
+};
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 const safe=(value:unknown)=>same(value,sanitize(value).value);
 export class CheckoutIdentityError extends Error {
@@ -41,8 +47,8 @@ async function marker(path:string):Promise<string> {
 }
 export async function checkoutIdentity(given:string):Promise<CheckoutIdentity> {
   const requested=resolve(given),root=await realpath(requested);
-  if(normalize(root)!==normalize(requested))throw new CheckoutIdentityError('Redirected checkouts cannot restore remembered access.');
-  if(normalize(root)===normalize(parse(root).root)||normalize(root)===normalize(homedir()))throw new CheckoutIdentityError('This folder is too broad to remember.');
+  const home=await realpath(homedir()).catch(()=>homedir());
+  if(normalize(root)===normalize(parse(root).root)||normalize(root)===normalize(home))throw new CheckoutIdentityError('This folder is too broad to remember.');
   const identity:CheckoutIdentity={root,directory:await directory(root),checkout:{root,directory:await directory(root)},repository:{kind:'directory'}};
   let cursor=root;
   for(let depth=0;depth<64;depth++) {
@@ -54,15 +60,16 @@ export async function checkoutIdentity(given:string):Promise<CheckoutIdentity> {
       else {
         const pointer=/^gitdir: ([^\r\n]+)\r?\n?$/.exec(await marker(path));
         if(!pointer)throw new CheckoutIdentityError('Repository identity is unavailable.');
-        gitdir=resolve(cursor,pointer[1]!);
-        if(normalize(await realpath(gitdir))!==normalize(gitdir))throw new CheckoutIdentityError('Redirected repository metadata cannot restore access.');
+        const givenGitdir=resolve(cursor,pointer[1]!);
+        if((await lstat(givenGitdir)).isSymbolicLink())throw new CheckoutIdentityError('Redirected repository metadata cannot restore access.');
+        gitdir=await realpath(givenGitdir);
         await directory(gitdir);
         const relative=(await marker(join(gitdir,'commondir'))).trim();
         if(!relative||/[\x00-\x1f]/.test(relative))throw new CheckoutIdentityError('Repository identity is unavailable.');
         common=resolve(gitdir,relative);
       }
       const canonical=await realpath(common);
-      if(normalize(canonical)!==normalize(common))throw new CheckoutIdentityError('Repository identity changed.');
+      if((await lstat(common)).isSymbolicLink())throw new CheckoutIdentityError('Redirected repository metadata cannot restore access.');
       // HEAD identifies a repository layout without reading remotes or user configuration.
       await marker(join(canonical,'HEAD'));
       identity.checkout={root:cursor,directory:await directory(cursor),gitDirectory:{root:gitdir,directory:await directory(gitdir)}};

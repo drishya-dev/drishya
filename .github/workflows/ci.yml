@@ -35,6 +35,8 @@ jobs:
         shell: bash
 
   browser:
+    env:
+      DRISHYA_WORKERS: 2
     strategy:
       fail-fast: false
       matrix:

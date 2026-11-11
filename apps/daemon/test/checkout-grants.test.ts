@@ -1,4 +1,4 @@
-import {mkdtemp,mkdir,writeFile,rename,rm,symlink} from 'node:fs/promises';
+import {mkdtemp,mkdir,writeFile,rename,rm,symlink,realpath,open} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
 import {spawn,execFileSync} from 'node:child_process';
@@ -35,6 +35,56 @@ it('changing remembered to temporary approval removes the saved grant',async()=>
   const f=await fixture();await f.access.approve(f.id,true);await f.access.approve(f.id,false);
   expect(f.access.status(f.id)).toMatchObject({approved:true,remembered:false});
   expect((await new WorkspaceAccess(f.app).restoreStatus(f.id)).approved).toBe(false);
+});
+it('restores one exact checkout through a directory alias and its canonical spelling, including revocation',async()=>{
+  const f=await fixture(),canonical=await realpath(f.root),alias=join(f.dir,'checkout-alias');
+  await symlink(canonical,alias,process.platform==='win32'?'junction':'dir');
+  expect(await checkoutIdentity(alias)).toEqual(await checkoutIdentity(canonical));
+  expect(checkoutGrantKey(alias)).toBe(checkoutGrantKey(canonical));
+  const journal=join(f.dir,'alias-source.jsonl');
+  await writeFile(journal,JSON.stringify({type:'user',uuid:'alias-user',sessionId:'33333333-3333-4333-8333-333333333333',cwd:alias,message:{role:'user',content:'Synthetic aliased checkout'}})+'\n');
+  const aliasId=(await f.app.ingest.importSource('claude-code',journal)).recordingId;
+  await f.access.approve(aliasId,true);
+  const restarted=new WorkspaceAccess(f.app);
+  expect(await restarted.restoreStatus(aliasId)).toMatchObject({approved:true,remembered:true});
+  expect(await restarted.restoreStatus(f.id)).toMatchObject({approved:true,remembered:true});
+  expect((await restarted.read(aliasId,'file.ts')).text).toContain('export const a');
+  expect(await restarted.remembered.list()).toHaveLength(1);
+  restarted.revoke(aliasId);
+  expect((await restarted.restoreStatus(f.id)).approved).toBe(false);
+  expect(await restarted.remembered.list()).toEqual([]);
+});
+it('does not transfer a remembered grant when an alias is retargeted',async()=>{
+  const f=await fixture(),canonical=await realpath(f.root),alias=join(f.dir,'alias'),other=join(f.dir,'other');
+  await mkdir(other);await symlink(canonical,alias,process.platform==='win32'?'junction':'dir');
+  await f.access.remembered.remember(alias,await checkoutIdentity(alias));
+  await rm(alias);await symlink(other,alias,process.platform==='win32'?'junction':'dir');
+  expect(await f.access.remembered.restore(alias)).toBeUndefined();
+  expect(await f.access.remembered.restore(other)).toBeUndefined();
+  expect(await f.access.remembered.restore(canonical)).toEqual(await checkoutIdentity(canonical));
+});
+it.runIf(process.platform==='win32')('restores a real Windows 8.3 path as the same checkout',async context=>{
+  const f=await fixture(),long=join(f.dir,'Long Checkout Name');await mkdir(long);
+  // A fixed read-only command, with no interpolated filesystem or prompt text.
+  const short=execFileSync('cmd.exe',['/d','/s','/c','for %I in ("Long Checkout Name") do @echo %~fsI'],{cwd:f.dir,encoding:'utf8',windowsHide:true,windowsVerbatimArguments:true}).trim();
+  if(!short.includes('~')||short.toLowerCase()===long.toLowerCase()){context.skip();return;}
+  expect(await realpath(short)).toBe(await realpath(long));
+  expect(checkoutGrantKey(short)).toBe(checkoutGrantKey(long));
+  await f.access.remembered.remember(short,await checkoutIdentity(short));
+  expect(await f.access.remembered.restore(long)).toEqual(await checkoutIdentity(long));
+  expect(await f.access.remembered.restore(short)).toEqual(await checkoutIdentity(long));
+  await rename(long,long+'-moved');
+  expect(await f.access.remembered.restore(long+'-moved')).toBeUndefined();
+});
+it('canonicalises a worktree administration pointer through an aliased ancestor, not a redirected metadata directory',async()=>{
+  const f=await fixture();execFileSync('git',['init','--quiet',f.root]);execFileSync('git',['-C',f.root,'-c','user.name=Synthetic','-c','user.email=synthetic@example.invalid','commit','--allow-empty','-qm','Synthetic']);
+  const sibling=join(f.dir,'linked'),alias=join(f.dir,'repo-alias');execFileSync('git',['-C',f.root,'worktree','add','--quiet','-b','alias-check',sibling]);
+  const original=await checkoutIdentity(sibling);await symlink(await realpath(f.root),alias,process.platform==='win32'?'junction':'dir');
+  // Git marks this file hidden on Windows; opening it with 'w' fails there.
+  const handle=await open(join(sibling,'.git'),'r+');try{await handle.truncate(0);await handle.writeFile('gitdir: '+join(alias,'.git','worktrees','linked')+'\n');}finally{await handle.close();}
+  expect(await checkoutIdentity(sibling)).toEqual(original);
+  await f.access.remembered.remember(sibling,original);
+  expect(await f.access.remembered.restore(sibling)).toEqual(original);
 });
 it('approving another session of the same checkout preserves existing temporary readers',async()=>{
   const f=await fixture();await f.access.approve(f.id);

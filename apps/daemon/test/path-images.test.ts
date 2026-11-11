@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync,realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -9,8 +9,8 @@ import { WorkspaceAccess } from '../src/workspace.ts';
 
 const PNG_1x1 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 let dir: string, root: string, app: App;
-beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'drishya-path-images-')); root = join(dir, 'repo'); mkdirSync(join(root, 'docs'), { recursive: true }); app = new App(join(dir, 'store')); });
-afterEach(async () => { await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
+beforeEach(() => { dir = realpathSync.native(mkdtempSync(join(tmpdir(), 'drishya-path-images-'))); root = join(dir, 'repo'); mkdirSync(join(root, 'docs'), { recursive: true }); app = new App(join(dir, 'store')); });
+afterEach(async () => { await app.close(); if (!resolve(dir).startsWith(resolve(realpathSync.native(tmpdir())) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
 
 // CONTENT-1 slice 3: an image known only by its path opens as today's file, only with approval,
 // only at a path one of the recording's own actions referenced, and only if it is an image.
