@@ -168,13 +168,14 @@ The launch date is decided at the 18 November review, from where the list stands
 
 ### P0 — Release 1: a finished, packaged product (ship by 18 November)
 
-**34 of 50 done**
+**34 of 55 done**
 
 Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it presents what the agent is doing, faithfully and beautifully, at runtime. Release 1 ships Modern only, and its polish lands in Modern. Feature freeze at the end of 13 November; after that, only fixes from SHIP-10 and the gate. Done items are no longer listed in these tables; their details stay below. Where a detail line names another priority, this table wins.
 
 **Execution order (Opus, 11 Nov).** Rows are in the order to build them; done items follow. Each phase starts only when the one before it allows, and items inside a phase never share files.
 - **A · building now, in parallel:** UI-28c (Claude: `PromptRail.tsx`, `SessionWorkspace.tsx`, `composer.css`) · LINK-1 (Claude: prose links and hover cards, `ProseFileLink.tsx`, `markdown.tsx`, `BrowserEvidence.tsx`, `git-review.ts`, `server.ts`, `api.ts`) · LAYOUT-1b redo (Claude: `interface-scale.ts`, `ReadingWindow.tsx`, `large-screens.css`, the large-screen and passage specs) · SHIP-20 (Codex: colour and weight only, its own `reader-ink.css`).
 - **B · next, independent of A:** SHIP-16 (CI workflow only; the release-candidate run and the WSL2 walk come again in E) · SHIP-21 (after SHIP-20, same pattern; Opus decides Midnight) · SHIP-3 (**deferred by Yash, 11 Nov; draft #411 only**). · FILES-15 (Files tree and Git root choice: `file-roots.ts`, `worktree-files.ts`, the Files part of `SessionWorkspace.tsx`; already active, finish independently; SHIP-16a next, before LAYOUT-1c/MOTION-4). · LAYOUT-1c (`large-screens.css` stage variables, the `ReadingWindow.tsx` stage read and one small script hook; after FILES-15, before MOTION-4). · SHIP-2e (Claude, after Codex's limit: `FencedCode.tsx`, its CSS and `highlight.tsx` only). · SHIP-16a (Codex, right after SHIP-21: daemon grant and path code, their tests, CI only; no UI files).
+- **B2 · added to P0 by Yash, 11 Nov (requested, never marked later):** FILES-16 (Codex, right after FILES-15: the same `file-roots.ts`, `worktree-files.ts` and Files part of `SessionWorkspace.tsx`) · CONNECT-4b (after FILES-16, the first-open setup sheet and the Settings list in Modern; before MOTION-4) · LIVE-7 (daemon live path and page timing instrumentation only; no UI files; any builder now) · STORE-1 (store accounting, clearing and WAL in the daemon, one Settings section; any builder now). Codex queue: SHIP-16a → FILES-15 → FILES-16 → LAYOUT-1c → CONNECT-4b → MOTION-4. LIVE-7 and STORE-1 run beside it. If one is not merged by the freeze, Yash decides whether the freeze moves.
 - **C · after UI-28c, LINK-1 and LAYOUT-1b merge:** MOTION-4 (after FILES-15 and LAYOUT-1c too, since both touch the Files tree). It touches every opened surface, including the composer, the hover cards and the peek, so it starts after those three. Its draft #403 may keep the inventory and baseline meanwhile.
 - **D · reviews, not builds (Opus):** SHIP-2a closes when SHIP-17 to SHIP-21 merge; SHIP-2b, 2c and 2d close by a frame review on top of SHIP-18 to SHIP-21, and any gap becomes a new item; SHIP-6 closes when its eleven COMP-1 rows have genuine evidence.
 - **Freeze at the end of 13 November.** After it, only fixes from E.
@@ -192,94 +193,94 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☐ | 7 | SHIP-16a | CI green on Windows, Linux and macOS: fix the portability failures the first three-system run found | `rel` `bug` |
 | ☐ | 8 | SHIP-3 | Home hero above the session list, in LAND-1's visual language, saying what Drishya does | `ui` `home` |
 | ☐ | 9 | FILES-15 | One session, many worktrees: Files and Git show the session's own checkout; other worktrees are named, collapsed evidence groups | `files` `git` |
-| ☐ | 10 | LAYOUT-1c | The stage limit follows the physical screen, not CSS pixels: zooming out fills the window with more, smaller content | `ui` |
-| ☐ | 11 | SHIP-2e | Code and text blocks in agent prose look better than Claude Desktop's: quiet header, honest highlighting, Wrap and Copy | `ui` `content` |
-| ☐ | 12 | MOTION-4 | Smooth motion on every click that looks better with it, with both an opening and a closing animation | `motion` |
-| ☑ | 13 | SHIP-2a | Palettes and semantic colour tokens for the whole product: every palette as finished as the light one, rich colour for content | `ui` |
-| ☐ | 14 | SHIP-2b | History readable at a glance: prose, prompts, cards, outcomes, compaction and notices each distinct from one another and from chrome | `ui` `content` |
-| ☐ | 15 | SHIP-2c | Everything a click opens (menus, session menu, Usage, settings, dialogs, popovers, Queued inputs) has clear hierarchy, not content after content | `ui` |
-| ☐ | 16 | SHIP-2d | Readers and tools (Files, peek, Workspace, Git, search, Screen) with the same hierarchy and colour | `ui` `files` `git` |
-| ☐ | 17 | SHIP-6 | Reading and overlap defects from the COMP-1 presentation review | `ui` `bug` |
-| ☐ | 18 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
-| ☐ | 19 | MAC-1 | macOS acceptance run (a separate task so it is not forgotten) | `rel` |
-| ☐ | 20 | SHIP-10 | Release-candidate review by a fresh agent, plus Yash's human ten-minute pass | `rel` |
-| ☐ | 21 | VIDEO-1 | Product videos: real-session demos and a comparison, made with an open-source video skill | `rel` |
-| ☐ | 22 | SHIP-11 | Launch posts written and scheduled (builders, not agents) | `rel` |
-| ☑ | 23 | TOOLS-3 | The Toolbox stays in the right panel, centred on it vertically by its own height; no centred window | `ui` `motion` |
-| ☑ | 24 | SHIP-1 | Modern only: remove the UI-version chooser and Clarity from the packaged product | `ui` `rel` |
-| ☑ | 25 | LAND-1 | Drishya landing page design and motion plan | `rel` `docs` |
-| ☑ | 26 | SHIP-17 | Draft the release palette brief and define the shared Modern colour contract | `ui` |
-| ☑ | 27 | SHIP-18 | Adopt semantic colours in shared styles and History | `ui` `content` |
-| ☑ | 28 | SHIP-19 | Adopt semantic colours in Home, shell and overlays | `ui` |
-| ☑ | 29 | UI-27 | Conversation reads like a chat: agent prose at full reading width, the prompt in a themed capsule on the right | `ui` |
-| ☑ | 30 | SHIP-15 | Agent prose is never cut to a preview: no "Preview · read full text" limit | `content` `ui` |
-| ☑ | 31 | SHIP-12 | Plans, plan updates and task lists are shown open by default; no Show plan toggle | `content` `ui` |
-| ☑ | 32 | UI-28 | Composer to the premium bar: grows with the prompt, room for images, product menus, no wasted facts | `ui` `controller` |
-| ☑ | 33 | UI-28b | Only the composer grows: nothing else on screen moves while a long prompt is typed | `ui` |
-| ☑ | 34 | UI-29 | Session menu and Usage: product menus with only what people read | `ui` `live` |
-| ☑ | 35 | USAGE-1 | Usage: context like Claude Code's context panel and limits like its plan-limit bars, from recorded data only | `live` `data` `ui` |
-| ☑ | 36 | SHIP-13 | Workspace: the open file is revealed and highlighted in the Explorer, inside its expanded folders | `files` `ui` |
-| ☑ | 37 | FILES-14 | Worktrees in the Files tree: each worktree's edits show under that worktree, never merged into the main repository's folders | `files` |
-| ☑ | 38 | SHIP-14 | Queued inputs shows only what is still queued; delivered and old receipts move out of the list | `live` `controller` `ui` |
-| ☑ | 39 | SHIP-7 | Trust bugs: search result that doesn't move the reading position, Screen black held frame, Workspace return collapses the open read | `bug` `read` |
-| ☑ | 40 | SHIP-8 | Map: a quiet zone under reading material and labels that do not collide | `map` `ui` |
-| ☑ | 41 | LAYOUT-1 | Large screens and browser zoom: space is used deliberately, not left as empty gaps | `ui` |
-| ☑ | 42 | SHIP-6a | Keep fixed chrome clear of History and foreground the requested reader | `ui` `bug` |
-| ☑ | 43 | SHIP-6b | Keep Workspace patch search readable and mark the receiving split pane | `ui` `bug` |
-| ☑ | 44 | SHIP-6c | Clarify search, review checkboxes, Browser evidence, Notes, prose file links and Playback | `ui` `bug` |
-| ☑ | 45 | SHIP-6d | The Remember-for-this-checkout checkbox looks like the product: one compact control, inside its card | `ui` |
-| ☑ | 46 | SEC-1 | Clear the 19 Dependabot alerts in dev dependencies (Vite, Vitest, tinypool, launch-editor, source-map-js) | `rel` |
-| ☑ | 47 | LAND-2 | Build Harsh's proposed static landing site and public synthetic replay, without publication | `rel` `ui` |
-| ☑ | 48 | CONTENT-19 | Blob-backed diff lines must not crash the captured reader | `content` `bug` |
-| ☑ | 49 | CONTENT-20 | Messages a person sends while the agent is working count as prompts and appear where they were delivered | `content` `bug` |
-| ☑ | 50 | CONTENT-21 | A Claude Code session continued into a new journal shows its whole history from the true start | `content` `data` |
+| ☐ | 10 | FILES-16 | Choose a worktree: switch Files, Git status and the map to another checkout the session worked in | `files` `git` |
+| ☐ | 11 | CONNECT-4b | The one-click setup sheet on first open and the remembered-checkouts list in Settings (in Modern) | `ui` `controller` |
+| ☐ | 12 | CONNECT-4 | A repository's permissions are set up once, before its session opens (split: 4a logic, 4b the Modern sheet; close when both merge) | `controller` `files` `ui` |
+| ☐ | 13 | LAYOUT-1c | The stage limit follows the physical screen, not CSS pixels: zooming out fills the window with more, smaller content | `ui` |
+| ☐ | 14 | SHIP-2e | Code and text blocks in agent prose look better than Claude Desktop's: quiet header, honest highlighting, Wrap and Copy | `ui` `content` |
+| ☐ | 15 | LIVE-7 | Live latency: measure and shorten the delay between the agent doing something and Drishya showing it, at every step | `live` `perf` |
+| ☐ | 16 | STORE-1 | Manage Drishya's local storage: see what each session uses and clear chosen sessions' data | `data` `ui` |
+| ☐ | 17 | MOTION-4 | Smooth motion on every click that looks better with it, with both an opening and a closing animation | `motion` |
+| ☑ | 18 | SHIP-2a | Palettes and semantic colour tokens for the whole product: every palette as finished as the light one, rich colour for content | `ui` |
+| ☐ | 19 | SHIP-2b | History readable at a glance: prose, prompts, cards, outcomes, compaction and notices each distinct from one another and from chrome | `ui` `content` |
+| ☐ | 20 | SHIP-2c | Everything a click opens (menus, session menu, Usage, settings, dialogs, popovers, Queued inputs) has clear hierarchy, not content after content | `ui` |
+| ☐ | 21 | SHIP-2d | Readers and tools (Files, peek, Workspace, Git, search, Screen) with the same hierarchy and colour | `ui` `files` `git` |
+| ☐ | 22 | SHIP-6 | Reading and overlap defects from the COMP-1 presentation review | `ui` `bug` |
+| ☐ | 23 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
+| ☐ | 24 | MAC-1 | macOS acceptance run (a separate task so it is not forgotten) | `rel` |
+| ☐ | 25 | SHIP-10 | Release-candidate review by a fresh agent, plus Yash's human ten-minute pass | `rel` |
+| ☐ | 26 | VIDEO-1 | Product videos: real-session demos and a comparison, made with an open-source video skill | `rel` |
+| ☐ | 27 | SHIP-11 | Launch posts written and scheduled (builders, not agents) | `rel` |
+| ☑ | 28 | TOOLS-3 | The Toolbox stays in the right panel, centred on it vertically by its own height; no centred window | `ui` `motion` |
+| ☑ | 29 | SHIP-1 | Modern only: remove the UI-version chooser and Clarity from the packaged product | `ui` `rel` |
+| ☑ | 30 | LAND-1 | Drishya landing page design and motion plan | `rel` `docs` |
+| ☑ | 31 | SHIP-17 | Draft the release palette brief and define the shared Modern colour contract | `ui` |
+| ☑ | 32 | SHIP-18 | Adopt semantic colours in shared styles and History | `ui` `content` |
+| ☑ | 33 | SHIP-19 | Adopt semantic colours in Home, shell and overlays | `ui` |
+| ☑ | 34 | UI-27 | Conversation reads like a chat: agent prose at full reading width, the prompt in a themed capsule on the right | `ui` |
+| ☑ | 35 | SHIP-15 | Agent prose is never cut to a preview: no "Preview · read full text" limit | `content` `ui` |
+| ☑ | 36 | SHIP-12 | Plans, plan updates and task lists are shown open by default; no Show plan toggle | `content` `ui` |
+| ☑ | 37 | UI-28 | Composer to the premium bar: grows with the prompt, room for images, product menus, no wasted facts | `ui` `controller` |
+| ☑ | 38 | UI-28b | Only the composer grows: nothing else on screen moves while a long prompt is typed | `ui` |
+| ☑ | 39 | UI-29 | Session menu and Usage: product menus with only what people read | `ui` `live` |
+| ☑ | 40 | USAGE-1 | Usage: context like Claude Code's context panel and limits like its plan-limit bars, from recorded data only | `live` `data` `ui` |
+| ☑ | 41 | SHIP-13 | Workspace: the open file is revealed and highlighted in the Explorer, inside its expanded folders | `files` `ui` |
+| ☑ | 42 | FILES-14 | Worktrees in the Files tree: each worktree's edits show under that worktree, never merged into the main repository's folders | `files` |
+| ☑ | 43 | SHIP-14 | Queued inputs shows only what is still queued; delivered and old receipts move out of the list | `live` `controller` `ui` |
+| ☑ | 44 | SHIP-7 | Trust bugs: search result that doesn't move the reading position, Screen black held frame, Workspace return collapses the open read | `bug` `read` |
+| ☑ | 45 | SHIP-8 | Map: a quiet zone under reading material and labels that do not collide | `map` `ui` |
+| ☑ | 46 | LAYOUT-1 | Large screens and browser zoom: space is used deliberately, not left as empty gaps | `ui` |
+| ☑ | 47 | SHIP-6a | Keep fixed chrome clear of History and foreground the requested reader | `ui` `bug` |
+| ☑ | 48 | SHIP-6b | Keep Workspace patch search readable and mark the receiving split pane | `ui` `bug` |
+| ☑ | 49 | SHIP-6c | Clarify search, review checkboxes, Browser evidence, Notes, prose file links and Playback | `ui` `bug` |
+| ☑ | 50 | SHIP-6d | The Remember-for-this-checkout checkbox looks like the product: one compact control, inside its card | `ui` |
+| ☑ | 51 | SEC-1 | Clear the 19 Dependabot alerts in dev dependencies (Vite, Vitest, tinypool, launch-editor, source-map-js) | `rel` |
+| ☑ | 52 | LAND-2 | Build Harsh's proposed static landing site and public synthetic replay, without publication | `rel` `ui` |
+| ☑ | 53 | CONTENT-19 | Blob-backed diff lines must not crash the captured reader | `content` `bug` |
+| ☑ | 54 | CONTENT-20 | Messages a person sends while the agent is working count as prompts and appear where they were delivered | `content` `bug` |
+| ☑ | 55 | CONTENT-21 | A Claude Code session continued into a new journal shows its whole history from the true start | `content` `data` |
 
 ### P1 — next, after Release 1
 
-**1 of 40 done**
+**1 of 35 done**
 
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
-| ☐ | 1 | STORE-1 | Manage Drishya's local storage: see what each session uses and clear chosen sessions' data | `data` `ui` |
-| ☐ | 2 | SHIP-5 | "Needs you": one active decision surface, plain state words, native questions answerable wherever Drishya can answer them | `controller` `live` `ui` |
-| ☐ | 3 | CONNECT-4b | The one-click setup sheet on first open and the remembered-checkouts list in Settings (Clarity) | `ui` `controller` |
-| ☐ | 4 | CONNECT-4 | A repository's permissions are set up once, before its session opens (split: 4a logic, 4b Clarity sheet; close when both merge) | `controller` `files` `ui` |
-| ☐ | 5 | MOTION-3 | Live/replay motion evaluation (ten-minute calm) | `motion` |
-| ☑ | 6 | LIVE-4b | Context gauge leftovers (secondary rate-limit window; Claude context fill) | `live` `data` |
-| ☐ | 7 | FINISH-0a | Foundations: spacing, layer, elevation and motion tokens; one button system, switch and input (split from FINISH-0) | `ui` `motion` |
-| ☐ | 8 | FINISH-0b | Foundations: one popover, menu, select, tooltip and dialog system with paired open and close; no native select | `ui` `motion` |
-| ☐ | 9 | FINISH-0c | Foundations: loading, empty and error states (no black "Loading history…") | `ui` `motion` |
-| ☐ | 10 | FINISH-1 | Home: a first screen that says what Drishya does and shows the user's repositories, Running now and sessions | `ui` `home` `motion` |
-| ☐ | 11 | FINISH-2 | Header, session menu and Usage | `ui` `live` `motion` |
-| ☐ | 12 | FINISH-3 | Conversation: prompts in a capsule, agent prose, tables and file links, Codex app envelopes | `ui` `content` `motion` |
-| ☐ | 13 | FINISH-4 | Composer, attachments, model and effort menus, approvals and native questions | `ui` `controller` `motion` |
-| ☐ | 14 | FINISH-5 | Action cards: every action type's card, Expand and Inspector | `ui` `content` `motion` |
-| ☐ | 15 | FINISH-6 | History flow and live motion: passages, the five moves, connectors, Follow | `ui` `live` `motion` |
-| ☐ | 16 | FINISH-7 | Toolbox: dock, instruments, MCP drawers and the window (after TOOLS-2) | `ui` `motion` |
-| ☐ | 17 | FINISH-8 | Files rail, peek and Inspector | `ui` `files` `motion` |
-| ☐ | 18 | FINISH-9 | Workspace: file-work window, editor, drafts, compare and Original | `ui` `files` `motion` |
-| ☐ | 19 | FINISH-10 | Git review and Git history | `ui` `git` `motion` |
-| ☐ | 20 | FINISH-11 | Search, command palette and review tools | `ui` `review` `motion` |
-| ☐ | 21 | FINISH-12 | Replay transport, settings, themes, Screen view and the map's chrome | `ui` `motion` |
-| ☐ | 22 | FINISH-13 | The whole product together: every size and zoom, cross-surface motion, then MOTION-3 and AUDIT-1's close | `ui` `motion` |
-| ☐ | 23 | AUDIT-1 | Feature-by-feature product audit before the UI passes (UI, backend, content, navigation) | `ui` `data` `content` `read` `git` `files` `review` |
-| ☐ | 24 | UI-26 | One Modern stylesheet layer behind a pixel-diff guard (split from UI-8) | `ui` |
-| ☐ | 25 | REL-1 | Managed-runtime update versus the antivirus conflict | `rel` |
-| ☐ | 26 | REL-2 | Physical lower-resource and platform acceptance | `rel` `perf` |
-| ☐ | 27 | REL-3 | Keyboard, zoom, assistive technology and human freeze/truth/ten-minute acceptance | `rel` |
-| ☐ | 28 | REL-4 | Publishing preparation (on request only) | `rel` |
-| ☐ | 29 | REVIEW-4 | Joined investigation route, end to end | `review` `native` |
-| ☐ | 30 | NATIVE-1 | Real signed-in Codex journey | `native` |
-| ☐ | 31 | NATIVE-2 | Real signed-in Claude Code journey | `native` |
-| ☐ | 32 | NATIVE-3 | Genuine multi-agent sessions | `native` |
-| ☐ | 33 | NATIVE-4 | Joined native edit/create conflict path | `native` |
-| ☐ | 34 | NATIVE-5 | Genuine desktop computer-use sessions (Codex and Claude Code) | `native` `content` |
-| ☐ | 35 | DATA-11 | "Waiting for you" hook signal (opt-in; after CONTENT-3) | `data` `content` |
-| ☐ | 36 | PERF-3 | Page-side latency on 166 MB+ journals: opt-in setting or bring it down (decision pending) | `perf` `ui` |
-| ☐ | 37 | COMP-1 | Whole-component usefulness pass (Git review/graph branches and ahead/behind, Workspace, Files, Search…) | `ui` `git` `read` `files` |
-| ☐ | 38 | FILES-5 | Opt-in draft recovery | `files` |
-| ☐ | 39 | FILES-16 | Choose a worktree: switch Files, Git status and the map to another checkout the session worked in | `files` `git` |
-| ☐ | 40 | LIVE-7 | Live latency: measure and shorten the delay between the agent doing something and Drishya showing it, at every step | `live` `perf` |
+| ☐ | 1 | SHIP-5 | "Needs you": one active decision surface, plain state words, native questions answerable wherever Drishya can answer them | `controller` `live` `ui` |
+| ☐ | 2 | MOTION-3 | Live/replay motion evaluation (ten-minute calm) | `motion` |
+| ☑ | 3 | LIVE-4b | Context gauge leftovers (secondary rate-limit window; Claude context fill) | `live` `data` |
+| ☐ | 4 | FINISH-0a | Foundations: spacing, layer, elevation and motion tokens; one button system, switch and input (split from FINISH-0) | `ui` `motion` |
+| ☐ | 5 | FINISH-0b | Foundations: one popover, menu, select, tooltip and dialog system with paired open and close; no native select | `ui` `motion` |
+| ☐ | 6 | FINISH-0c | Foundations: loading, empty and error states (no black "Loading history…") | `ui` `motion` |
+| ☐ | 7 | FINISH-1 | Home: a first screen that says what Drishya does and shows the user's repositories, Running now and sessions | `ui` `home` `motion` |
+| ☐ | 8 | FINISH-2 | Header, session menu and Usage | `ui` `live` `motion` |
+| ☐ | 9 | FINISH-3 | Conversation: prompts in a capsule, agent prose, tables and file links, Codex app envelopes | `ui` `content` `motion` |
+| ☐ | 10 | FINISH-4 | Composer, attachments, model and effort menus, approvals and native questions | `ui` `controller` `motion` |
+| ☐ | 11 | FINISH-5 | Action cards: every action type's card, Expand and Inspector | `ui` `content` `motion` |
+| ☐ | 12 | FINISH-6 | History flow and live motion: passages, the five moves, connectors, Follow | `ui` `live` `motion` |
+| ☐ | 13 | FINISH-7 | Toolbox: dock, instruments, MCP drawers and the window (after TOOLS-2) | `ui` `motion` |
+| ☐ | 14 | FINISH-8 | Files rail, peek and Inspector | `ui` `files` `motion` |
+| ☐ | 15 | FINISH-9 | Workspace: file-work window, editor, drafts, compare and Original | `ui` `files` `motion` |
+| ☐ | 16 | FINISH-10 | Git review and Git history | `ui` `git` `motion` |
+| ☐ | 17 | FINISH-11 | Search, command palette and review tools | `ui` `review` `motion` |
+| ☐ | 18 | FINISH-12 | Replay transport, settings, themes, Screen view and the map's chrome | `ui` `motion` |
+| ☐ | 19 | FINISH-13 | The whole product together: every size and zoom, cross-surface motion, then MOTION-3 and AUDIT-1's close | `ui` `motion` |
+| ☐ | 20 | AUDIT-1 | Feature-by-feature product audit before the UI passes (UI, backend, content, navigation) | `ui` `data` `content` `read` `git` `files` `review` |
+| ☐ | 21 | UI-26 | One Modern stylesheet layer behind a pixel-diff guard (split from UI-8) | `ui` |
+| ☐ | 22 | REL-1 | Managed-runtime update versus the antivirus conflict | `rel` |
+| ☐ | 23 | REL-2 | Physical lower-resource and platform acceptance | `rel` `perf` |
+| ☐ | 24 | REL-3 | Keyboard, zoom, assistive technology and human freeze/truth/ten-minute acceptance | `rel` |
+| ☐ | 25 | REL-4 | Publishing preparation (on request only) | `rel` |
+| ☐ | 26 | REVIEW-4 | Joined investigation route, end to end | `review` `native` |
+| ☐ | 27 | NATIVE-1 | Real signed-in Codex journey | `native` |
+| ☐ | 28 | NATIVE-2 | Real signed-in Claude Code journey | `native` |
+| ☐ | 29 | NATIVE-3 | Genuine multi-agent sessions | `native` |
+| ☐ | 30 | NATIVE-4 | Joined native edit/create conflict path | `native` |
+| ☐ | 31 | NATIVE-5 | Genuine desktop computer-use sessions (Codex and Claude Code) | `native` `content` |
+| ☐ | 32 | DATA-11 | "Waiting for you" hook signal (opt-in; after CONTENT-3) | `data` `content` |
+| ☐ | 33 | PERF-3 | Page-side latency on 166 MB+ journals: opt-in setting or bring it down (decision pending) | `perf` `ui` |
+| ☐ | 34 | COMP-1 | Whole-component usefulness pass (Git review/graph branches and ahead/behind, Workspace, Files, Search…) | `ui` `git` `read` `files` |
+| ☐ | 35 | FILES-5 | Opt-in draft recovery | `files` |
 
 **Native (grouped, 28 Oct, Yash):** the six rows tagged `native` below (REVIEW-4, NATIVE-1…5) all need a person's real signed-in Codex or Claude Code session, not a fixture or a scan. They are one lane, done together when a native session is set up, and they stay here until then. Features that can be proven by deliberately recording a real harness session (a plan, a question, a literal commit, a browser call) are not native work and do not wait here: record that session and finish the feature.
 
@@ -455,8 +456,10 @@ Decided by Yash with Claude, 8 November: [release-1-scope.md](review/release-1-s
     3. Captured files under a worktree open as captured evidence. Current bytes only where that root already has consent. No Git actions on other worktrees.
   - **Not in Release 1 (FILES-16):** switching Files, Git status and the map to another worktree.
   - **Accept:** on the three genuine sessions at 600 and 1440: the main tree holds only main-checkout files; Other working directories holds exactly the worktrees with file evidence (count matches the journal), with correct branch and on-disk state; removed worktrees' files still open captured; Git review shows the main checkout. Units cover root selection, the cwd-only exclusion and the removed state; one browser spec covers the collapsed group.
-- [ ] **FILES-16 · Choose a worktree** · P1 · `files` `git` — after FILES-15 (Release 1 keeps the session's own checkout). A picker on Other working directories makes one worktree the active checkout: Files browses it, Git review shows its status and branch, the map indexes it, each with that root's own consent. Returning to the main checkout keeps the reading place.
-- [ ] **LIVE-7 · Live latency at every step** · P1 · `live` `perf` — Yash, 11 Nov: measure the delay between the agent's work and Drishya showing it, across every path. The last measurement was about 2 s on a 1,100-operation Codex session.
+- [ ] **FILES-16 · Choose a worktree** · P0 · `files` `git` — after FILES-15 (Release 1 keeps the session's own checkout). A picker on Other working directories makes one worktree the active checkout: Files browses it, Git review shows its status and branch, the map indexes it, each with that root's own consent. Returning to the main checkout keeps the reading place.
+  - **Yash, 11 Nov: P0.** Every item Yash asked for without saying it was for later is Release 1. Codex builds it right after FILES-15 (same files), before LAYOUT-1c.
+- [ ] **LIVE-7 · Live latency at every step** · P0 · `live` `perf` — Yash, 11 Nov: measure the delay between the agent's work and Drishya showing it, across every path. The last measurement was about 2 s on a 1,100-operation Codex session.
+  - **Yash, 11 Nov: P0.** Every item Yash asked for without saying it was for later is Release 1. Independent of the UI queue: daemon live path and page instrumentation only. PERF-3 stays separate; LIVE-7 measures large journals but does not take on PERF-3's decision.
   - **Do:** instrument, on the daemon and the page, the time from the harness writing a record to Drishya painting it, using the journal's own timestamps and file-append times (no telemetry; local only, behind a developer switch). Measure each step separately: a new session appearing on Home and opening; the prompt after it is sent (from the terminal and from Drishya's composer); a tool call starting; its result; agent prose; a plan or question; the turn ending; a sub-agent starting. Do this for Claude Code and Codex, passive observation and the connected controller, small and 150 MB+ journals. Then shorten the slowest steps (watch intervals, batching, projection work, render scheduling) without changing pixels or motion.
   - **Accept:** a table in `docs/review/` with p50 and p95 per step, harness, path and journal size, before and after; a target agreed with Yash (for example under 500 ms p95 for live steps on ordinary journals); a unit or bench that guards it; capture never waits on presentation.
 - [x] **LINK-1 · Hover cards for links in agent prose** · P0 · `content` `git` — Yash, 8 Nov, with a screenshot of Claude Desktop's PR hover card (state, repository, number, title, author, +/− and files). Release 1 if it fits before the freeze; otherwise first after the release.
@@ -1190,7 +1193,8 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
   - **Accept:** real Claude Code and Codex sessions with few and with many tools, MCP servers and sub-agents, at 600 and 1440: the Toolbox is vertically centred in its panel, never under the header or the composer, scrolls inside itself when taller than the panel, and moves smoothly (MOTION-1 curve, reduced-motion fallback) when it re-centres; no window opens. Modern and Clarity both get it (it is a correction to Modern, not a new look).
   - **Verification (7 Nov):** [PR #359](https://github.com/drishya-dev/drishya/pull/359) passed the full gate and 12 genuine screen checks across Modern and Clarity at 600 and 1440 px. Codex covered both inventory sizes. Claude covered a long inventory and the short collapsed layout. The genuine few-tool Claude case is still open pending a signed-in harness.
   - **8 Nov, completed (Yash with Claude, taken over from Harsh):** the genuine few-tool Claude Code session `7183f6de` (353,060 bytes, one Read call, imported as `rec_b8e137fc`) was checked in Modern on `e00febd1` at 1440 and 600 px: the open Toolbox (447 px at 1440, 431 px at 600) and the minimized one (42 px) are centred on the dock's vertical middle by their own height, expanding Agents grows it in place (447 → 504 px, still centred), and there is no centred window. `scripts/clarity-capture.ts` captures the dock again. Merged with main; `check:affected` and the toolbox specs: see the PR.
-- [ ] **CONNECT-4 · A repository's permissions are set up once, before its session opens** · P2 · `controller` `files` `ui` — Yash, 7 Nov: "a central setting for each repo or session that for the first time all permissions are taken than only it proceeds and opens, so no permission inside, all settings like these are done before." Depends on FILES-13's finding: build it if the wrong tree comes from evidence shown before approval, or if the in-session consent prompts are the problem anyway. Today workspace consent and the connected-session acknowledgement are asked inside the session.
+- [ ] **CONNECT-4 · A repository's permissions are set up once, before its session opens** · P0 · `controller` `files` `ui` — Yash, 7 Nov: "a central setting for each repo or session that for the first time all permissions are taken than only it proceeds and opens, so no permission inside, all settings like these are done before." Depends on FILES-13's finding: build it if the wrong tree comes from evidence shown before approval, or if the in-session consent prompts are the problem anyway. Today workspace consent and the connected-session acknowledgement are asked inside the session.
+  - **Yash, 11 Nov: P0.** Every item Yash asked for without saying it was for later is Release 1. Closes when CONNECT-4b merges (4a is done).
   - **Do (to be specified with Yash first):** the first time a repository (or a session in one) is opened, one setup step takes every permission Drishya needs for it (read the workspace, connect the native harness, the idle-other-clients acknowledgement), remembered per repository and changeable in Settings; then the session opens with nothing to grant inside it. AGENTS constraint 1 stands: consent stays explicit and nothing weakens harness policy.
   - **7 Nov, proposal delivered (Codex), awaiting builder decision:** [repository setup proposal](review/connect-4-repository-setup-proposal.md). FILES-13 shows that consent was not the root-placement fix. Proposed first-open setup keeps a recorded-only route, remembers an exact-checkout read grant only by explicit choice, and preserves explicit native submission / idle-client acknowledgement / per-request approvals. No permission, storage, controller or UI implementation is included; this item remains unchecked. Decide the proposal's three questions before reserving implementation files. The assigned queue stops here before NATIVE-1.
   - **Decision (Yash with Claude, 7 Nov):** approved with adjustments: one-click entry, "Remember for this checkout" ticked by default, a pre-filled sheet for a new worktree of an approved repository, native harness checked at setup, and the idle-other-clients acknowledgement asked once per connection instead of per send. Split into CONNECT-4a and CONNECT-4b below; CONNECT-4 closes when both merge. [Decision](review/connect-4-repository-setup-proposal.md#decision-yash-with-claude-7-november).
@@ -1212,7 +1216,8 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
     - A missing, signed-out or unsupported CLI is reported without submitting anything.
     - Recorded-only viewing works throughout.
     - Units cover identity validation and grant lifetime; `package:verify` passes, since the store changes.
-- [ ] **CONNECT-4b · The setup sheet and remembered checkouts in Clarity** · P2 · `ui` `controller` — presentation half of CONNECT-4, built by Claude in Clarity after CONNECT-4a and FINISH-0b, alongside FINISH-1. The first open of a repository shows a compact sheet with Allow and open (primary) and Open without. "Remember for this checkout" is ticked by default, the sheet is pre-filled for a sibling worktree, and it states the CLI's state in plain words. Settings lists remembered checkouts with revoke.
+- [ ] **CONNECT-4b · The setup sheet and remembered checkouts in Clarity** · P0 · `ui` `controller` — presentation half of CONNECT-4, built by Claude in Clarity after CONNECT-4a and FINISH-0b, alongside FINISH-1. The first open of a repository shows a compact sheet with Allow and open (primary) and Open without. "Remember for this checkout" is ticked by default, the sheet is pre-filled for a sibling worktree, and it states the CLI's state in plain words. Settings lists remembered checkouts with revoke.
+  - **Yash, 11 Nov: P0.** Every item Yash asked for without saying it was for later is Release 1. Clarity is not shipped (SHIP-1), so build the sheet and the remembered-checkouts list in Modern, reusing SHIP-6d's `RememberCheckbox`. After FILES-16 merges (same Files consent area), before MOTION-4 so MOTION-4 covers the sheet.
   - **Accept:** the proposal's implementation acceptance items 1 and 3 to 5, in Clarity, on genuine sessions of both harnesses at 600 and 1440. Home to an approved session takes one click. Modern is unchanged.
 
 - [x] **SEC-1 · Clear the Dependabot alerts** · P2 · `rel` — Yash, 7 Nov: the repository was made public briefly and GitHub opened **19 Dependabot alerts** on `pnpm-lock.yaml`, `package.json` and `fixtures/synthetic/workspace/shop/package.json`: 2 critical (tinypool, prototype pollution to RCE, #5/#6), 3 high (source-map-js DoS #7; launch-editor `fs.existsSync` bypass on Windows #10/#11), 12 moderate (Vite `server.fs.allow`/`?vite-wasm-instance` exposure #14–#16; launch-editor CLI flag and `%` escaping #8/#9/#12/#13; Vitest `@vitest/mocker` path traversal and mock code injection #1–#4, #19), 2 low (Vite middleware cross-origin #17/#18). All are development or transitive (Vite, Vitest and their dependencies); the daemon has zero runtime dependencies, so the shipped package is likely unaffected, but confirm that.
@@ -1403,7 +1408,8 @@ Rules: opt-in per call or per session; preview the exact payload; content redact
 - [x] **HOME-3 · A journal being written shows in Running now before it is opened** · P2 · `home` `live` — AUDIT-1, 5 Nov (W3): a genuine live run's row reaches the top of Home within about 19 s, but `Running now` lists only journals Drishya already follows, so the run is not marked until it is opened (L1's second half). **Do:** a discovered journal whose file changed within the last minute shows in `Running now` too, said as what is known (`writing now`, from the file's change time; Drishya cannot see the agent process), and opens live from there. **Accept:** on genuine Claude Code and Codex runs, the session appears in `Running now` within one discovery tick of its first write without being opened, leaves it a minute after the last write, and opens live; at 600 and 1440 px.
   - **5 November, completed (Codex):** discovered journal writes enter the existing strip before opening, open with live observation, and expire on unchanged discovery ticks. Genuine Claude `rec_73399b45` (241,754 bytes, 23 observations) and Codex `rec_2be6ea63` (229,580 bytes, 48 observations), both at 600 and 1440 px; expiry 64.1–70.1 seconds after final write. [Acceptance and limits](review/home-3-writing.md); gate results in the PR.
 
-- [ ] **STORE-1 · Manage Drishya's local storage** · P1 · `data` `ui` — Yash, 10 Nov: Drishya keeps redacted copies, blobs and indexes of imported sessions locally, and people should be able to clean that up. Settings shows the total local storage and each imported session's size, and lets a person clear chosen sessions' data (with a clear confirmation, and never touching the harness's own journals, which Drishya never edits). Clearing removes the session's observations, blobs and search entries, and a cleared session can be imported again. **Accept:** sizes match disk; clearing one session frees its space and leaves the others intact; units cover the deletion.
+- [ ] **STORE-1 · Manage Drishya's local storage** · P0 · `data` `ui` — Yash, 10 Nov: Drishya keeps redacted copies, blobs and indexes of imported sessions locally, and people should be able to clean that up. Settings shows the total local storage and each imported session's size, and lets a person clear chosen sessions' data (with a clear confirmation, and never touching the harness's own journals, which Drishya never edits). Clearing removes the session's observations, blobs and search entries, and a cleared session can be imported again. **Accept:** sizes match disk; clearing one session frees its space and leaves the others intact; units cover the deletion.
+  - **Yash, 11 Nov: P0.** Every item Yash asked for without saying it was for later is Release 1. Independent of the UI queue: the store's size accounting, per-session clearing and WAL limit/checkpoint in the daemon, plus one Settings section. Measured 10 Nov: 1.2 GB for 21 recordings, no cleanup and an unbounded WAL.
 
 ### REVIEW — Review work, search and packets
 
