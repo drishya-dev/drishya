@@ -1,6 +1,6 @@
 # FILES-16 — choose a recorded checkout
 
-Whole task in progress, Yash with Codex, 11 November. Claimed before code; Yash approved 24 paths and isolated API sections, then requested waiting for GIT-8. Work resumes from merged #414 and #415. No merge by Codex, no hosted CI dispatch.
+Whole task complete for Opus review, Yash with Codex, 11 November. Claimed before code; Yash approved 24 paths and isolated API sections, then requested waiting for GIT-8. Built from merged #414 and #415. No merge by Codex, no hosted CI dispatch.
 
 ## Behaviour and boundaries
 
@@ -30,11 +30,21 @@ The older Codex samples' secondary roots were removed or cwd-only, so a fresh na
 
 All four journeys: approve the original root, open a current file, choose a distinct actual recorded worktree, prove access is not inherited, approve that root, read its actual current material, inspect its Git and qualified map, return to the original file/search. All preserve the recorded identity; zero page errors and zero controller prompts. Sixteen private choice/current/Git/return frames plus count-only results are retained (four frames per journey).
 
-## Checks and current status
+## Final verification
 
-- Backend consent/security units: six pass, including root qualification, cwd-only/unmatched rejection, separate Git/current-file access, protected files, restart/remembered isolation, replacement identity, removed roots and native-route rejection.
-- Related checkout/workspace/Git units: 67 pass before the two added security cases; final broader verification follows.
-- Initial FILES-15 browser baseline: two pass. New four-case picker journeys plus FILES-15: six pass. Expanded picker/captured-current/read-action checks: 21 pass at both widths, zero retries. The new narrow checks explicitly open the existing Reading options menu and respect the drawer closing when a peek returns.
-- Both project typechecks pass. Broad affected/all-unit/package/gate results are still pending; do not call the task or PR ready from these focused results alone.
+Final runtime `0924fe2a`. Seven checkout security/identity units cover evidenced-root selection, separate consent, remembered restart, replacement identity, protected files, removed/cwd-only/unknown roots and native-route refusal. The paged-map regression sends history queries to the proven physical recording/lineage, never a browsing key.
 
-Implementation and final acceptance are not yet marked complete; the TASKS tick/claim removal belong in the final completion commit. The pre-existing TEST-2 failures reopened by #415 remain recorded and are not waived.
+- Both project typechecks and final package verification pass: isolated offline install, both native imports, authenticated API and persisted restart.
+- Full final units with two workers: **1,403 passed, one skipped, zero failures** across 230 files.
+- `check:affected` ran both types, related units, fresh UI build and the whole Edge suite. Browsers: **766 parallel + 32 serial passed, 28 skipped, zero failures/retries**, two parallel workers/one serial worker. The command itself was red because two related units exceeded their unchanged 5-second limit (file-roots and Git Compare); both pass in the final low-concurrency full unit run. No clean-main comparison or hosted dispatch.
+- A final pinned-tab regression intentionally failed on the prior build: pinning a relative reference retained a second unqualified tab. Paths now normalize before saving tabs. Final focused reader/checkout/Git/Compare browsers: **36 passed**, two workers, no retries, on the final rebuilt runtime. The whole browser pass above precedes this isolated correction; it is not falsely reported as a second whole-suite pass on the later source.
+- The genuine four harness/width UI journeys were rerun on that final build: all pass, zero page errors/controller prompts; the 16 private frames were refreshed. This is the acceptance case, not the demo.
+- `check:real worktree-roots --max-mb 12 --pick 1`: Codex `rec_73cbf2eb`, 0.2 MB, 10 operations, two qualified files/two prefixes; Claude `rec_5ee6b391`, 8.5 MB, 344 operations, 206 qualified files/seven prefixes. These bounded scans supplement the actual four UI journeys above.
+
+Earlier full units had 1,400 pass/one skip/two failures. Git Compare exceeded 5 seconds under contention; the unchanged test passes isolated and in the final two-worker full run. The unchanged recovery tampering test also passes in both: its mutation replaces the first random cipher character with fixed `A`, which does not guarantee changed input. This is a test-construction defect, not evidence that changed ciphertext decrypts. Neither unrelated test was edited; their initial results remain in `.local/final-units.log`. `check:affected`'s initial related-unit results remain in `.local/final-affected.log`. TEST-2's separate strict clean streak and hosted release checks are not cleared by this task.
+
+## Merge coordination and lifetime
+
+The 24-path reservation covers 20 source/test paths and this report plus TASKS, STATUS and CONTINUITY. GIT-9 is separately claimed after this branch started. Its replacement of Git review must retain `useReadingWorkspace`, selected checkout arguments and qualified captured-file evidence in Compare/Git history; the native session controller must retain its physical recording ID. No GIT-9 styling or menu consolidation is attempted here.
+
+The browsing choice lasts within the open session; opening a session resets to its own checkout. Returning through the picker restores per-checkout in-memory tree/query/peek state. This item does not promise crash recovery of a browsing choice or cross-checkout native editing. Workspace editing returns to the original session checkout, explicitly; its approval and native connection are unchanged.
