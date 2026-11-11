@@ -41,6 +41,38 @@ The initial real-session run hit an empty early Codex edit; acceptance explicitl
 - Six focused `reader-ink.spec.ts` checks pass: all palettes at both widths, real rendered source syntax roles, line-number ink, paths, editor gutter and retained local editing. This synthetic regression guard is separate from genuine-session acceptance.
 - `palette-contrast.test.ts` passes the settled SHIP-17 role floors. The adoption sheet adds no colour literals or palette declarations.
 - `check:real -- workspace-files` checks both harnesses; `image-only-prompt` checks Claude; `multi-image-prompts --harness codex` confirms both captured Codex images; `computer-frames` checks the genuine Claude Screen run.
-- `pnpm check:affected` is running with `DRISHYA_BROWSER_CHANNEL=msedge`, `DRISHYA_WORKERS=2`. The new shared Modern sheet maps it to the complete browser suite, with its normal serial pass. No separate full gate, all-unit sweep or packaging run was added.
+- `pnpm check:affected` completed with Edge, two parallel workers and the normal one-worker serial pass: parallel **733 passed / 27 skipped / 16 failed**, serial **25 passed / 1 skipped / 7 failed**. Both typechecks and build passed; no related unit files were found. Shared Modern CSS selected the complete browser suite. No separate full gate, all-unit sweep or packaging run was added.
+- Clean-main comparison at `9f643c76`, with its own frozen install/build: **all 23 failures reproduced at the identical test-code frame**. All five assertion failures had identical expected/received values; the other 18 had the same waiting locator. Diagnostic caps were 30 seconds rather than the broad run's normal 90 seconds; two workers for parallel, one for serial, zero retries. These are baseline failures, not a green gate or a claim that every failure is a timing flake.
+- Final member-function ink correction: the editor now maps callable properties to function ink while ordinary properties keep property ink. Final-head typechecks, UI build and all six focused browser checks pass, including type, property and member-function assertions. The broad run precedes this final one-role correction; it was not repeated. Private logs: `.local/affected.log`, `.local/final-reader-tests.log`; clean-main logs in the sibling `ship20-control-nov11/drishya/.local/`.
 - A pre-existing overlap blocked the Screen menu entry from pointer input on the real 1440 px Claude scene; keyboard focus + Enter opened it. No geometry, menu or phase A fix is hidden in this colour task. Opus should recheck it after the phase A merges.
 - No `SessionWorkspace.tsx`, composer, PromptRail, LINK-1, scale/ReadingWindow, History arrival or protected file was changed. Opus reviews/merges; the look of the surrounding geometry remains owned by its existing tasks.
+
+## Baseline comparison by check
+
+All rows below failed at the same code frame on this branch and clean main. The shortened diagnostic stopped at the same waiting locator or assertion, not at an earlier part of the workflow.
+
+| Check | Same test frame | Same waiting locator / assertion values |
+| --- | --- | --- |
+| `parallel/tests/browser/adaptive-content.spec.ts:41` | Yes | Yes |
+| `parallel/tests/browser/b4-history.spec.ts:9` | Yes | Yes |
+| `parallel/tests/browser/classic-refinement.spec.ts:50` | Yes | Yes |
+| `parallel/tests/browser/composer-access.spec.ts:19` | Yes | Yes |
+| `parallel/tests/browser/investigation-finishing.spec.ts:47` | Yes | Yes |
+| `parallel/tests/browser/modern-replay.spec.ts:24` | Yes | Yes |
+| `parallel/tests/browser/modern-replay.spec.ts:39` | Yes | Yes |
+| `parallel/tests/browser/product-workspace.spec.ts:252` | Yes | Yes |
+| `parallel/tests/browser/product-workspace.spec.ts:627` | Yes | Yes |
+| `parallel/tests/browser/product-workspace.spec.ts:686` | Yes | Yes |
+| `parallel/tests/browser/product-workspace.spec.ts:725` | Yes | Yes |
+| `parallel/tests/browser/product-workspace.spec.ts:983` | Yes | Yes |
+| `parallel/tests/browser/recorded-usage.spec.ts:29` | Yes | Yes |
+| `parallel/tests/browser/review-questions.spec.ts:19` | Yes | Yes |
+| `parallel/tests/browser/screen-view.spec.ts:112` | Yes | Yes |
+| `parallel/tests/browser/session-menu.spec.ts:58` | Yes | Yes |
+| `serial/tests/browser/b2-live.spec.ts:63` | Yes | Yes |
+| `serial/tests/browser/material-motion.spec.ts:132` | Yes | Yes |
+| `serial/tests/browser/p1-pacing.spec.ts:40` | Yes | Yes |
+| `serial/tests/browser/p1-pacing.spec.ts:266` | Yes | Yes |
+| `serial/tests/browser/p1-pacing.spec.ts:428` | Yes | Yes |
+| `serial/tests/browser/p1-pacing.spec.ts:461` | Yes | Yes |
+| `serial/tests/browser/p1-pacing.spec.ts:708` | Yes | Yes |

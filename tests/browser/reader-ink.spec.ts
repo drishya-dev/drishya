@@ -31,6 +31,7 @@ for(const theme of ['dark','light','midnight'])for(const width of [600,1440])tes
  await expect(desk.locator('.cm-content')).toContainText('RecordValue');await ink(desk.locator('.cm-gutters'),'--text-muted');
  await ink(desk.locator('.cm-content').getByText('RecordValue',{exact:true}),'--syntax-type');
  await ink(desk.locator('.cm-content').getByText('count',{exact:true}),'--syntax-property');
+ await ink(desk.locator('.cm-content').getByText('log',{exact:true}),'--syntax-function');
  // Editing remains the same retained local draft; changing a palette must not replace its material.
  await desk.locator('.cm-content').press('Control+End');await desk.locator('.cm-content').press('Enter');await desk.locator('.cm-content').pressSequentially('// retained draft');
  await expect(desk.locator('.cm-content')).toContainText('retained draft');await expect(desk.getByRole('button',{name:'Compare draft',exact:true})).toBeVisible();
