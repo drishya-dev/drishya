@@ -18,6 +18,33 @@ Normal redacting imports into a disposable Drishya home, genuine Claude Code `re
 
 Session and context menus; native popovers/selects/tooltips; ReadingDialog surfaces (Settings, Usage/details readers, Queued inputs, file evidence/peek, Git, search, Screen); Workspace; Toolbox and MCP drawers; Home filters; native and persisted disclosures/expanders. Mark browser-owned controls and frequent keyboard actions explicitly rather than inventing decorative transitions. LINK-1 hover cards stay excluded until its merge.
 
+### Source-owner map (not a claim of runtime acceptance)
+
+| Surface family | Current owner | Integration needed |
+| --- | --- | --- |
+| Session/utility menus, workspace actions | `dismiss-menus.ts`, native details, Modern motion rules | Preserve light dismissal/focus; pair first pointer entrance and exit, cancel stale closes on reopening. |
+| Card/file context menu | `ProductMenu.tsx`, conditional portal | Retain the same portal through exit; keyboard actions remain immediate. |
+| Settings and shared readers | `ProductShell.tsx` / `ReadingDialog` | Retune the shared timing; preserve modal/modeless focus, close ownership and interruption. |
+| Usage and Session details | `RecordedUsage` / session utility disclosures | Pair the deliberate disclosure only; no replay on data refresh or remount. |
+| Queued inputs, notes, review insights, resource/data/source readers, captured commands/outcomes | Shared ReadingDialog callers | Verify central coverage and each dismissal route rather than editing every caller. |
+| Git entry and composer model/effort/attachment menus | Native persistent popovers | Existing allow-discrete CSS; check both directions and global gates. Leave composer.css untouched. |
+| Search | `Viewer.tsx`, native persistent popover | Pointer feedback only; keyboard opening stays immediate. |
+| Command palette | `WorkspaceNavigation`, ReadingDialog explicitly excludes its animation | Frequent/keyboard navigation remains immediate; do not add latency for decoration. |
+| Files peek | Shared ReadingDialog plus `CurrentFileReader` | Header close already retains the dialog; final-tab close/reopen needs the UI-28c-owned file after merge. |
+| Workspace | `DeveloperWorkspace.tsx`, conditional section | Retain the real section through pointer exit; reverse re-entry without dropping its state. |
+| Toolbox/minimise, MCP and agent drawers | `ModernToolStation`, `Disclosure`, `useSurfaceReflow` | Existing whole-surface reflow; pair deliberate disclosure exits without replaying arrivals. |
+| Screen | `ScreenView.tsx`, separately owned native dialog and conditional host | Its native close/onClose path needs its own retained exit; not a ReadingDialog caller. |
+| Home filters | Native select controls in `modern/SessionHome.tsx` | Keep browser-owned popup behaviour; verify field feedback and document native ownership. No replacement design in this item. |
+| Native title tooltips | Browser-owned `title` | Do not create decorative duplicate tooltips or claim a DOM exit that is not owned by the app. |
+| Prompt minimise/expand | UI-28c, existing surface-reflow hook | Wait for UI-28c; preserve its reserved-gap/scroll invariance. Retune shared timing only after integration. |
+| History content expanders | Deliberate details / existing card reading | Animate only explicit toggles; do not touch History arrivals/hover or animate paging remounts. |
+
+The shared ReadingDialog has callers in 19 component files: CapturedCommands, CapturedOutcomes, CapturedResources, DelimitedDataReader, DraftRecovery, EvidenceReview, FileHistory, GitHistory, GitReview, LibrarySearch, ProductShell, ProseFiles, QueuedInputs, ReviewInsights, SessionWorkspace, SourceVersions, StepNotes, StructuredDataReader and WorkspaceNavigation. This source map avoids a cross-product sweep of unrelated content/layout changes.
+
+## Dependency decision — 11 November
+
+Yash chose **leave UI-28c with the actively working Claude session; resume MOTION-4 after its merge**. The local `claude/ui-28c-composer-toggle` branch had fresh commits at 09:31 and uncommitted PromptRail/SessionWorkspace/composer.css edits at 09:36 when checked. No takeover, copying of its uncommitted work or overlapping source edit was made. Draft #403 and the main claim record this wait. This task remains open; no UI behaviour is marked complete by the inventory.
+
 ## File boundaries
 
 FINISH-0a/0b reserve shared tokens and overlay owners. Before implementation, reserve only the motion lifecycles in ProductShell's ReadingDialog, ProductMenu, Disclosure, dismiss-menus and Modern motion rules; preserve their contents, layout, focus and selection contracts. Workspace needs its existing mount/return lifecycle. The peek tab close/reopen section of SessionWorkspace needs a separate explicit reservation or the UI-28c merge. Composer gap, composer.css, PromptRail, History arrivals/hover, LINK-1 and ingest lineage remain untouched.
