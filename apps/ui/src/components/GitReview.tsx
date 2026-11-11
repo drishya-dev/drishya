@@ -1,3 +1,4 @@
+import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {FileReadingActions} from './FileReadingActions.tsx';
 import {collectionBounds} from '../lib/collection-bounds.ts';
 import './collection-surfaces.css';
@@ -131,12 +132,13 @@ function GitReader({ close, suspended, returnFile, browseFiles }: { close: () =>
   const [checking, setChecking] = useState(false);
   const [selected, setSelected] = useWorkspaceState('git/selected', '');
   const [pageStart, setPageStart] = useWorkspaceState('git/page', 0);
+  const interfaceScale=useInterfaceScale();
   const [width, setWidth] = useWorkspaceState('git/width', 680);
   const [filesHidden, setFilesHidden] = useWorkspaceState('git/filesHidden', false);
   const [viewport, setViewport] = useState(() => innerWidth);
   useEffect(() => { const resized = () => setViewport(innerWidth); window.addEventListener('resize', resized); return () => window.removeEventListener('resize', resized); }, []);
-  const maximumWidth = Math.max(420, Math.min(1200, viewport - 32));
-  const readingWidth = Math.max(420, Math.min(maximumWidth, width));
+  const maximumWidth = Math.max(420*interfaceScale, Math.min(1200*interfaceScale, viewport - 32*interfaceScale));
+  const readingWidth = Math.max(420*interfaceScale, Math.min(maximumWidth, width*interfaceScale));
   const key = `drishya-git-review-v1:${id}`;
   const [marks, setMarks] = useState(() => readMarks(key));
   const [packet, setPacket] = useState<string>();
@@ -194,7 +196,7 @@ function GitReader({ close, suspended, returnFile, browseFiles }: { close: () =>
   const workspaceName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected workspace';
   const canHandoff = !busy && !checking && !!snapshot?.files.some(f => marks[f.path]?.reviewed && marks[f.path]?.fingerprint === f.fingerprint);
   if (suspended) return null;
-  return <ReadingDialog title="Git review" headerActions={<>{browseFiles && <button type="button" className="btn ghost" aria-label="Browse files" onClick={browseFiles}>Files</button>}{returnFile && <button className="btn ghost" aria-label="Return to file" title="Return to file" onClick={() => useApp.getState().set({currentFile: returnFile, explore: false})}>← File</button>}</>} windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420} maximum={maximumWidth} change={setWidth} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
+  return <ReadingDialog title="Git review" headerActions={<>{browseFiles && <button type="button" className="btn ghost" aria-label="Browse files" onClick={browseFiles}>Files</button>}{returnFile && <button className="btn ghost" aria-label="Return to file" title="Return to file" onClick={() => useApp.getState().set({currentFile: returnFile, explore: false})}>← File</button>}</>} windowId="Git review" resetWindow={()=>{setWidth(680);setFilesHidden(false);}} close={close} modeless={modern} headerIcon={modern ? <GitBranchGlyph /> : undefined} style={modern ? {'--git-reader-width': `${readingWidth}px`} as CSSProperties : undefined} resizeControl={modern ? <ReadingResize value={readingWidth} minimum={420*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(680)} label="Resize Git reading space" fromRight /> : undefined} className={`git-review-dialog${modern ? ' modern-git-drawer' : ''}`}>
     {!modern && <div className="git-history-entry"><button className="btn ghost" disabled={busy||checking} onClick={()=>{close();requestAnimationFrame(openGitHistory);}}>Branches &amp; commits ↗</button></div>}
     {modern && (!workspace?.approved || !consent) && <div className="modern-git-context"><strong>{workspaceName}</strong><small>Read-only · current changes</small></div>}
     {consent === undefined && !error ? <section aria-busy="true"><p>Checking Git access…</p></section> : !workspace?.approved || !consent ? <GitAccess workspaceApproved={!!workspace?.approved} busy={busy} disabled={busy || checking} grant={() => { setBusy(true); void grantGit(id, !!workspace?.approved, approve).then(() => { setConsent(true); return refresh(); }).catch(e => setError(e.message)).finally(() => setBusy(false)); }} /> : <>

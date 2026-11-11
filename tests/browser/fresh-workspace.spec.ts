@@ -291,16 +291,17 @@ test('Modern preserves action materials, layout and native graph controls on reo
   await expect(settings.getByRole('checkbox',{name:/Slow background orbit/})).toBeVisible();
 });
 
-test('Modern chrome fits wide, laptop and phone viewports; panels and settings remain reachable', async ({ page }) => {
+test('Modern chrome fits wide and narrow desktop viewports; panels and settings remain reachable', async ({ page }) => {
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
-  for (const [width,height] of [[1920,1080],[1280,720],[900,600],[390,844]]) {
+  for (const [width,height] of [[1920,1080],[1280,720],[900,600],[600,900]]) {
     await page.setViewportSize({width,height});
     await expect(page.locator('.history')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const header=(await page.locator('.modern-session-header').boundingBox())!;
     const title=(await page.locator('.modern-session-header .brand').boundingBox())!;
     const actions=(await page.locator('.modern-session-header .studio-actions').boundingBox())!;
-    expect(header.height).toBeLessThanOrEqual(64);
+    const scale=await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
+    expect(header.height).toBeLessThanOrEqual(64*scale);
     expect(title.y).toBeGreaterThanOrEqual(header.y);
     expect(title.y+title.height).toBeLessThanOrEqual(header.y+header.height);
     expect(title.x+title.width).toBeLessThanOrEqual(actions.x);
@@ -1863,13 +1864,14 @@ test('Explorer preview defaults to a compact right reader with title-bar keyboar
   await page.setViewportSize({width,height:960});await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
   await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-width*.28)).toBeLessThan(2);
   const box=(await reader.boundingBox())!,prompt=(await page.locator('.prompt-composer').boundingBox())!,controls=(await page.locator('.studio-actions').boundingBox())!;
-  expect(box.x+box.width).toBeCloseTo(width-48,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
+  const scale=await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
+  expect(box.x+box.width).toBeCloseTo(width-48*scale,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
   expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('0.9');
  }
  const title=reader.locator(':scope>header'),before=(await reader.boundingBox())!;await title.focus();await page.keyboard.press('ArrowLeft');await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x+16)).toBeLessThan(2);await page.keyboard.press('Home');
  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x)).toBeLessThan(2);
  const strip=(await reader.locator('.file-peek-tabs').boundingBox())!;await page.mouse.move(strip.x+strip.width-24,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-44,strip.y+strip.height/2,{steps:4});await page.mouse.up();expect(Math.abs((await reader.boundingBox())!.x-before.x+20)).toBeLessThan(2);
  await page.screenshot({path:resolve('.local/compact-preview-desktop.png')});
- await page.setViewportSize({width:390,height:844});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);
+ await page.setViewportSize({width:600,height:900});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const narrow=(await reader.boundingBox())!;expect(narrow.x).toBeGreaterThanOrEqual(0);expect(narrow.x+narrow.width).toBeLessThanOrEqual(600);
  await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');
 });

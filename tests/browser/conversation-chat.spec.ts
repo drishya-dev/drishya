@@ -62,7 +62,8 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     const cBox = (await capsule.boundingBox())!, tBox = (await first.boundingBox())!;
     expect(Math.abs(cBox.x + cBox.width - (tBox.x + tBox.width))).toBeLessThan(2);
     expect(cBox.width).toBeLessThan(tBox.width);
-    await expect(capsule).toHaveCSS('border-top-left-radius', '20px');
+    // LAYOUT-1b keeps the 20 design-pixel corner proportional above the reference viewport.
+    expect(await capsule.evaluate(el=>parseFloat(getComputedStyle(el).borderTopLeftRadius)/parseFloat(getComputedStyle(document.documentElement).fontSize))).toBeCloseTo(1.25,3);
     expect(await capsule.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
     await expect(first.locator('.turn-who')).toHaveText('You');
     expect(await first.locator('.turn-who').evaluate((el) => el.getBoundingClientRect().width)).toBeLessThanOrEqual(1);

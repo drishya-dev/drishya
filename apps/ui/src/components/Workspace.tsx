@@ -1,3 +1,4 @@
+import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {openGitHistory} from './GitHistory.tsx';
 import { GitReviewEntry } from './GitReview.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
@@ -16,16 +17,17 @@ export function WorkspaceBar() {
   const experience = useExperience();
   const narrow = useNarrowWorkspace();
   const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const interfaceScale = useInterfaceScale();
   useLayoutEffect(() => {
     const element = bar.current;
     const viewer = element?.closest<HTMLElement>('.viewer');
     if (!element || !viewer) return;
     // Demo controls and focus controls can wrap; the explorer must start below them.
-    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); const leading=element.querySelector('.workspace-leading');if(leading)viewer.style.setProperty('--workspace-leading-bottom',`${leading.getBoundingClientRect().bottom-viewer.getBoundingClientRect().top+12}px`); };
+    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12*interfaceScale}px`); const leading=element.querySelector('.workspace-leading');if(leading)viewer.style.setProperty('--workspace-leading-bottom',`${leading.getBoundingClientRect().bottom-viewer.getBoundingClientRect().top+12*interfaceScale}px`); };
     const observer = new ResizeObserver(measure);
     observer.observe(element); for(const group of element.querySelectorAll('.workspace-leading,.workspace-secondary'))observer.observe(group);observer.observe(viewer);const header=viewer.querySelector('.workspace-header');if(header)observer.observe(header);measure();
     return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom');viewer.style.removeProperty('--workspace-leading-bottom'); };
-  }, [experience]);
+  }, [experience, interfaceScale]);
   const developerWorkspace = useApp(s => s.developerWorkspace);
   const mode = useApp(s => s.mode);
   const explore = useApp((s) => s.explore);
