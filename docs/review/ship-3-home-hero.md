@@ -30,3 +30,7 @@ Genuine acceptance: 36 private frames across zero, one and many-session inventor
 | codex | `rec_aca34202` | 325,664 | 11 |
 
 The recent Claude writing case was created with the real native harness on an isolated throwaway repository, no tools and no policy changes. Native session prefix `8171c2de`; its captured recording is `rec_6f4e5cf3`. The Home matrix includes actual discovery metadata; the current very large Codex journal was not fully imported for Home presentation checks. Existing real captures supply the list. `check:affected` selected the whole browser suite because any Modern CSS is classified wide; it is running once in the background, log `.local/affected.log`. This checkpoint does not claim a completed broad gate or completed SHIP-3. Screenshots remain `.local/ship-3/`.
+
+## Deferred broad-check result
+
+The background `check:affected` completed: both types/build and related units pass; Edge two workers **752 parallel passed /27 skipped /7 failed**, then one worker **28 serial passed /1 skipped /4 failed**. No clean-main comparison was run. Besides the previously reported inventory/tooltip/reading-position and serial failures, the Home draft needs follow-up on `fresh-workspace:391`, `fresh-workspace:1178` and `home-floor-typography:83`. These stay visible for the later Home pass; no tests or presentation were changed after Yash deferred it. Draft #411 is not ready to merge, and SHIP-3 remains open.
