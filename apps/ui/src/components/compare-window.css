@@ -98,4 +98,4 @@
 }
 
 /* The header button is a word, not an icon (the Changes entry it replaces kept its label the same way). */
-:root[data-ui-version=modern][data-experience] .modern-session-header .studio-actions>.compare-open {width:auto;min-width:34px;padding:0 9px;}
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.btn.compare-open {width:auto;min-width:34px;padding:0 9px;}

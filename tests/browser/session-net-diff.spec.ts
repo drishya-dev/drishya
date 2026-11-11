@@ -13,7 +13,7 @@ for(const width of [600,1440]) test(`captured net lines expose edit provenance w
  const facts=sinceSnapshot(app.projection(id),-1);const entry=Object.entries(facts.fileStats??{}).find(([,stat])=>stat.netDiff?.status==='complete'&&stat.netDiff.lines.length);
  expect(entry).toBeDefined();
  await page.setViewportSize({width,height:1000});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
- const changes=page.locator('button.review-open:visible').first();if(!await changes.isVisible())await page.getByLabel('More workspace options',{exact:true}).click();await changes.first().click();
+ await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
  const dialog=page.getByRole('dialog',{name:'Changes',exact:true});const file=dialog.locator(`.review-file[data-review-row="${entry![0]}"]`);await file.locator('.review-file-more>summary').click();
  const toggle=file.getByRole('button',{name:/Net diff/});await toggle.click();const lines=file.getByLabel('Net changed lines, each linked to its edit');await expect(lines.locator('.review-net-line')).toHaveCount(entry![1].netDiff!.lines.length);
  expect(await lines.evaluate(el=>el.scrollWidth-el.clientWidth)).toBeLessThanOrEqual(1);

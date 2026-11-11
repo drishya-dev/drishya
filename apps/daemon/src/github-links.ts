@@ -64,14 +64,16 @@ export class GithubLinks {
     if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/.test(repo)) return { status: 'failed', pulls: [] };
     if (!(await this.status()).available) return { status: 'gh-missing', pulls: [] };
     try {
-      const out = await this.run(['pr', 'list', '--repo', repo, '--state', 'open', '--limit', '40', '--json', 'number,title,author,isDraft,baseRefName,headRefName,headRefOid,url'], AbortSignal.timeout(15_000), 1024 * 1024);
+      // REST (`gh api`), not `gh pr list`: it is read-only too, and it draws on GitHub's core budget rather than the smaller GraphQL one.
+      const out = await this.run(['api', `repos/${repo}/pulls?state=open&per_page=40&sort=updated&direction=desc`], AbortSignal.timeout(15_000), 4 * 1024 * 1024);
       const rows = JSON.parse(out) as Record<string, unknown>[];
       const pulls = rows.flatMap(row => {
-        const number = count(row.number), headOid = typeof row.headRefOid === 'string' && /^[a-f0-9]{40,64}$/.test(row.headRefOid) ? row.headRefOid : undefined;
-        const baseName = text(row.baseRefName, 200), headName = text(row.headRefName, 200);
+        const head = row.head as { sha?: unknown; ref?: unknown } | undefined, base = row.base as { ref?: unknown } | undefined;
+        const number = count(row.number), headOid = typeof head?.sha === 'string' && /^[a-f0-9]{40,64}$/.test(head.sha) ? head.sha : undefined;
+        const baseName = text(base?.ref, 200), headName = text(head?.ref, 200);
         if (!number || !headOid || !baseName || !headName) return [];
-        const author = row.author && typeof row.author === 'object' ? text((row.author as { login?: unknown }).login, 80) : undefined;
-        return [{ number, title: text(row.title, 300) ?? '', ...(author ? { author } : {}), ...(row.isDraft === true ? { draft: true } : {}), url: `https://github.com/${repo}/pull/${number}`, baseName, headName, headOid }];
+        const author = row.user && typeof row.user === 'object' ? text((row.user as { login?: unknown }).login, 80) : undefined;
+        return [{ number, title: text(row.title, 300) ?? '', ...(author ? { author } : {}), ...(row.draft === true ? { draft: true } : {}), url: `https://github.com/${repo}/pull/${number}`, baseName, headName, headOid }];
       });
       return { status: 'ready', pulls };
     } catch (error) { return { status: this.failure(error), pulls: [] }; }

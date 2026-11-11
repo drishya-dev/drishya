@@ -186,10 +186,12 @@ function CompareContent({id}:{id:string}) {
   const identity=workspace?.root?.replace(/\\/g,'/').split('/').at(-1)??'Repository';
   const ahead=result?.ahead,behind=result?.behind;
 
+  // A pull request's head is a commit id to Git; the person knows it by its branch name.
+  const headName=pull?.headName??nameOf(result?.head),baseName=pull?.baseName??nameOf(result?.base);
   const groups:{key:CompareGroup|'tree';title?:string;hint?:string}[]=preset==='uncommitted'?[{key:'tree'}]:[
-    {key:'both',title:'Changed on both',hint:`Edited on ${nameOf(result?.head)} and on ${nameOf(result?.base)} since they diverged. A merge can conflict here.`},
-    {key:'head',title:`Only on ${nameOf(result?.head)}`},
-    {key:'base',title:`Only on ${nameOf(result?.base)}`},
+    {key:'both',title:'Changed on both',hint:`Edited on ${headName} and on ${baseName} since they diverged. A merge can conflict here.`},
+    {key:'head',title:`Only on ${headName}`},
+    {key:'base',title:`Only on ${baseName}`},
   ];
 
   return <section ref={section} className="developer-workspace compare-window" aria-label="Compare" onKeyDown={e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();e.stopPropagation();useApp.setState({compareOpen:false});requestAnimationFrame(()=>document.querySelector<HTMLElement>('[data-compare-open]')?.focus({preventScroll:true}));}}}>
@@ -241,8 +243,8 @@ function CompareContent({id}:{id:string}) {
             <header className="compare-file-header">
               <span className="compare-file-title"><strong title={row.path}>{fileName(row.path)}</strong>{fileFolder(row.path)&&<small title={row.path}>{fileFolder(row.path)}</small>}</span>
               {row.group==='both'&&result&&<span className="compare-side-switch" role="group" aria-label="Which side’s change to read">
-                <button aria-pressed={side==='head'} onClick={()=>setSideChoice('head')} title={`${nameOf(result.head)}’s change since the merge-base`}>{nameOf(result.head)}</button>
-                <button aria-pressed={side==='base'} onClick={()=>setSideChoice('base')} title={`${nameOf(result.base)}’s change since the merge-base`}>{nameOf(result.base)}</button>
+                <button aria-pressed={side==='head'} onClick={()=>setSideChoice('head')} title={`${headName}’s change since the merge-base`}>{headName}</button>
+                <button aria-pressed={side==='base'} onClick={()=>setSideChoice('base')} title={`${baseName}’s change since the merge-base`}>{baseName}</button>
               </span>}
               <button className="btn ghost" title="Read the file as it is on disk" onClick={()=>{useApp.setState({compareOpen:false});useApp.getState().set({currentFile:row.path});}}>Open on disk</button>
             </header>

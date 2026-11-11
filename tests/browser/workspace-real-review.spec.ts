@@ -63,8 +63,7 @@ test('actual product surfaces keep evidence, current source, review and map navi
     const back=page.getByRole('button',{name:'Back to work',exact:true});if(await back.isVisible())await back.click();
     const current=page.locator('.current-file-reader');if(await current.isVisible())await current.locator(':scope>header button[aria-label^="Close "]').click();
     await expect(page.locator('.history')).toBeVisible();
-    await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();
+    await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
     const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
     await frame(`review-${width}`);
     const changes=review.getByRole('region',{name:'Files with changes',exact:true}).getByRole('button');
@@ -331,7 +330,7 @@ test('actual changes open import neighborhoods and current source without crowde
   for(const id of [ids[0]!,ids.at(-1)!]){
     await page.setViewportSize({width:1440,height:960});
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-    await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Changes',exact:true}).click();
+    await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
     const review=page.getByRole('dialog',{name:'Changes',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();
     const consent=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await consent.isVisible())await consent.click();
     const drawer=page.getByRole('region',{name:'Direct import connections',exact:true});

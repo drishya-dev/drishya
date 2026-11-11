@@ -31,9 +31,7 @@ test('the Changes view lists each edit with its turn, +/- and next test run, and
  const id=(await app.ingest.importSource('claude-code',file)).recordingId;
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  await expect(page.locator('article.op-edit').first()).toBeVisible();
- const changes=page.getByRole('button',{name:'Changes',exact:true});
- if(!await changes.isVisible())await page.getByLabel('More workspace options',{exact:true}).click();
- await changes.first().click();
+ await page.evaluate(()=>window.dispatchEvent(new Event('drishya-session-review')));
  const dialog=page.getByRole('dialog',{name:'Changes',exact:true});
  await dialog.locator('.review-file-more>summary').first().click();
  const edits=dialog.getByRole('list',{name:'Edits of this file'}).getByRole('listitem');
