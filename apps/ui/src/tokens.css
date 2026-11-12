@@ -68,7 +68,7 @@ small { font-size: var(--text-2xs); }
   --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
   --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
   --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#4f9cff;
-  --palette-active:#4f9cff; --accent-partner:#34d6e6; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
+  --palette-active:#4f9cff; --accent-partner:#34d6e6; --brand-ink:#f1eee4; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
   --syntax-number:#fc9e47; --syntax-type:#48c1f7; --syntax-property:#30c9c5;
   --source:#80b8ff; --external:#f296df; --edited:#d4b137;
   --pass:#83f7d1; --fail:#ff9b8f; --graph-node:#e8edf5; --graph-edge:#b4bfce;
