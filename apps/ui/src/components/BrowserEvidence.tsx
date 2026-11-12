@@ -1,4 +1,4 @@
-import {StoredToolResult} from './StoredToolResult.tsx';
+import {StoredToolResult} from './StoredToolResult.tsx'; import {plural} from '../lib/plural.ts';
 import {OriginalToggle} from './OriginalToggle.tsx';
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Operation } from '@drishya/contracts';
@@ -63,7 +63,7 @@ function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['d
   return <div className="web-evidence" aria-busy={canRead&&!page&&!error}>
     {d.url && <RecordedUrl url={d.url}/>}
     {d.query && <div className="query">{d.query}</div>}
-    {full&&<div className="web-reading-meta"><OriginalToggle original={original} onToggle={()=>setOriginal(value=>!value)}/><span>{displayed?`${displayed.total} result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
+    {full&&<div className="web-reading-meta"><OriginalToggle original={original} onToggle={()=>setOriginal(value=>!value)}/><span>{displayed?plural(displayed.total,'result'):`${plural(preview.results.length,'result')} in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
     {d.fetch && fetchFacts(d.fetch) && <div className="browser-action">{fetchFacts(d.fetch)}</div>}
     {full&&original?<div className="web-original"><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text recorded'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Original preview · text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</div>:<>
     {full&&canRead&&(knownTotal??preview.results.length)>50&&<label className="web-result-filter">Find result<input type="search" value={query} placeholder="Title, address or snippet" onChange={event=>{setQuery(event.target.value);setStart(0);}}/></label>}

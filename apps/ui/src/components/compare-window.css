@@ -47,6 +47,11 @@
 .compare-group h3 span { color:var(--t3); font-weight:var(--weight-regular); font-variant-numeric:tabular-nums; }
 .compare-scope { margin:6px 14px 2px; color:var(--t3); font-size:var(--text-2xs); }
 .compare-note { margin:0; padding:12px 14px; color:var(--t3); font-size:var(--text-xs); }
+.compare-body.compare-body-empty { grid-template-columns:minmax(0,1fr); }
+.compare-body.compare-body-empty .compare-files { border-right:0; display:flex; align-items:flex-start; justify-content:center; padding-top:42px; }
+.compare-no-changes { max-width:46ch; }
+.compare-no-changes p { margin:0; line-height:1.6; color:var(--t2); }
+.compare-uncommitted-jump { margin-top:12px; background:var(--s2); border:1px solid var(--line-2); color:var(--t1); }
 .compare-empty { padding:24px; }
 .compare-link { padding:0; border:0; background:none; color:var(--t2); font:inherit; text-decoration:underline; text-decoration-color:var(--line-2); text-underline-offset:2px; cursor:pointer; }
 .compare-link:disabled { cursor:default; text-decoration:none; color:var(--t3); }

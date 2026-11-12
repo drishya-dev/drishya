@@ -2,11 +2,11 @@
 @font-face { font-family:Inter; src:url('/fonts/InterVariable.woff2') format('woff2'); font-weight:100 900; font-style:normal; font-display:swap; }
 :root[data-ui-version=modern][data-experience=classic] { --sans:Inter,'Segoe UI Variable Text','Segoe UI',ui-sans-serif,system-ui,sans-serif; }
 :root[data-ui-version=modern][data-experience=classic] body { font-family:var(--sans); letter-spacing:0; }
-:root[data-ui-version=modern] .settings-dialog { width:min(900px,calc(100vw - 40px)); height:min(650px,calc(100dvh - 48px)); max-height:calc(100dvh - 48px); padding:0; overflow:hidden; }
+:root[data-ui-version=modern] .settings-dialog { width:min(900px,calc(100vw - 40px)); height:fit-content; max-height:min(650px,calc(100dvh - 48px)); padding:0; overflow:hidden; } :root[data-ui-version=modern] .settings-dialog[open] { display:flex; flex-direction:column; }
 :root[data-ui-version=modern] .settings-dialog>header { padding:20px 26px; min-height:70px; align-items:center; flex:none; }
 :root[data-ui-version=modern] .settings-dialog>header h2 { margin:0; font-size:var(--text-xl); font-weight:var(--weight-strong); letter-spacing:-.025em; }
 :root[data-ui-version=modern] .settings-dialog>header .icon-btn { width:32px; height:32px; display:grid; place-items:center; border-radius:var(--round-md); background:var(--s2); color:var(--t2); }
-.modern-settings-layout { display:grid; grid-template-columns:180px minmax(0,1fr); min-height:0; flex:1; height:calc(100% - 70px); }
+.modern-settings-layout { display:grid; grid-template-columns:180px minmax(0,1fr); min-height:0; flex:1; height:auto; }
 .modern-settings-nav { padding:23px 12px; border-right:1px solid var(--line); background:color-mix(in srgb,var(--bg) 55%,var(--s1)); display:flex; flex-direction:column; gap:5px; overflow:auto; }
 .modern-settings-nav>span { padding:2px 12px 14px; color:var(--t3); font-size:var(--text-2xs); font-weight:var(--weight-strong); letter-spacing:.08em; text-transform:uppercase; }
 .modern-settings-nav>button { display:flex; align-items:center; gap:12px; min-height:38px; padding:9px 12px; border:0; border-radius:var(--round-md); background:none; color:var(--t2); font:var(--text-sm)/1.4 var(--sans); text-align:left; }
@@ -37,7 +37,7 @@
 :root[data-ui-version=modern] .modern-settings-content .btn { font-size:var(--text-xs); }
 @media(hover:hover) and (pointer:fine) { .modern-settings-nav>button:hover { background:var(--s2); } }
 @media(max-width:600px) {
- :root[data-ui-version=modern] .settings-dialog { width:calc(100vw - 20px); height:calc(100dvh - 32px); max-height:calc(100dvh - 32px); }
+ :root[data-ui-version=modern] .settings-dialog { width:calc(100vw - 20px); height:fit-content; max-height:calc(100dvh - 32px); }
  .modern-settings-layout { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); }
  .modern-settings-nav { flex-direction:row; padding:10px 14px; gap:6px; border-right:0; border-bottom:1px solid var(--line); }
  .modern-settings-nav>span,.modern-settings-nav>small,.modern-settings-nav svg { display:none; }.modern-settings-nav>button { flex:none; font-size:var(--text-xs); padding:7px 10px; min-height:36px; }

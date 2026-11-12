@@ -1,4 +1,4 @@
-export type TimeSection = 'Today' | 'Yesterday' | 'Previous 7 days' | 'Older' | 'Future date' | 'Time unavailable';
+import { plural } from './plural.ts'; export type TimeSection = 'Today' | 'Yesterday' | 'Previous 7 days' | 'Older' | 'Future date' | 'Time unavailable';
 export interface WorkspaceGroup<T> { key: string; root?: string; name: string; detail?: string; items: T[] }
 
 export function timestamp(value?: string): number | undefined {
@@ -26,7 +26,7 @@ const TEMPORARY = /[\\/](?:AppData[\\/]Local[\\/]Temp|tmp|var[\\/]folders)(?:[\\
 export function foldTemporary<T>(groups: WorkspaceGroup<T>[]): WorkspaceGroup<T>[] {
   const temporary = groups.filter(group => group.root && TEMPORARY.test(group.root));
   if (temporary.length < 2) return groups;
-  return [...groups.filter(group => !temporary.includes(group)), { key: 'temporary', name: 'Temporary folders', detail: `${temporary.length} folders`, items: temporary.flatMap(group => group.items) }];
+  return [...groups.filter(group => !temporary.includes(group)), { key: 'temporary', name: 'Temporary folders', detail: plural(temporary.length, 'folder'), items: temporary.flatMap(group => group.items) }];
 }
 
 /** The folder a workspace lives in, for a row whose name already says the workspace: the end of the path is what differs. */

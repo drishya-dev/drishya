@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'; import { plural } from '../lib/plural.ts';
 import { createPortal } from 'react-dom';
 import {useTurns} from '../lib/turns-store.ts';
 import {ledgerBasis,ledgerParts} from '../lib/turn-ledger.ts';
@@ -88,11 +88,11 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
         {chapters.slice(first, end).map((chapter, offset) => {
           const ordinal = first + offset;
           const ledger=chapter.turnStep===undefined?undefined:ledgers.get(chapter.turnStep);
-          const description=ledger?`${ledger.operations} operations${ledger.open?`, ${ledger.open} awaiting results`:''}. ${ledgerParts(ledger).map(p=>p.text).join(', ')}`:undefined;
+          const description=ledger?`${plural(ledger.operations,'operation')}${ledger.open?`, ${ledger.open} awaiting results`:''}. ${ledgerParts(ledger).map(p=>p.text).join(', ')}`:undefined;
           return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW } as CSSProperties} data-turn-step={chapter.turnStep} data-operation-count={ledger?.operations} aria-description={description} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(p => p?.ordinal === ordinal ? undefined : p)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" /></button>;
         })}
       </div>
     </nav>
-    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview prompt-evidence-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span>{previewLedger&&<div className="prompt-rail-ledger" title={ledgerBasis(previewLedger)}><small>{previewLedger.operations} captured operations{previewLedger.open?` · ${previewLedger.open} awaiting results`:null}</small>{ledgerParts(previewLedger).map((part,index)=><span key={index} className={part.tone}>{part.text}</span>)}</div>}</div>, document.body)}
+    {preview && chapters[preview.ordinal] && createPortal(<div className="prompt-rail-preview prompt-evidence-preview" style={{ position: 'fixed', top: preview.top, left: preview.left, right: 'auto', opacity: 1, visibility: 'visible', transform: 'none', zIndex: 80 }}><small>Prompt {preview.ordinal + 1} of {chapters.length}</small>{chapters[preview.ordinal]!.time&&<time dateTime={chapters[preview.ordinal]!.time}>{new Date(chapters[preview.ordinal]!.time!).toLocaleString()}</time>}<span>{chapters[preview.ordinal]!.label}</span>{previewLedger&&<div className="prompt-rail-ledger" title={ledgerBasis(previewLedger)}><small>{plural(previewLedger.operations,'captured operation')}{previewLedger.open?` · ${previewLedger.open} awaiting results`:null}</small>{ledgerParts(previewLedger).map((part,index)=><span key={index} className={part.tone}>{part.text}</span>)}</div>}</div>, document.body)}
   </>;
 }

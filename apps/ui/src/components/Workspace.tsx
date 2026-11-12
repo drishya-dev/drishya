@@ -1,4 +1,4 @@
-import {useInterfaceScale} from '../lib/interface-scale.ts';
+import {useInterfaceScale} from '../lib/interface-scale.ts'; import {plural} from '../lib/plural.ts';
 import {openGitHistory} from './GitHistory.tsx';
 import { GitEntry } from './GitEntry.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
@@ -85,8 +85,8 @@ export function AgentOverview({ scene, projection }: { scene: Scene; projection:
       const parent = projection.agents.find((item) => item.id === state.parentId);
       return <button key={state.id} className="agent-work" aria-pressed={filter?.agentId === state.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}>
         <strong><i />{agentName(agent)}<small>{state.state}</small></strong><span className="agent-family">{parent ? `Child of ${agentName(parent)}` : `${agent?.harness ?? 'Harness'} session`}</span>
-        <div className="agent-work-counts"><span>{ops.length} shown actions</span><span>{ops.filter((op) => op.kind === 'edit' || op.kind === 'write').length} changes</span><span>{ops.filter((op) => op.status === 'error').length} failures</span></div>
-        <div className="agent-work-files">{files.slice(0, 3).map((path) => <code key={path}>{path}</code>)}{files.length > 3 && <span>+{files.length - 3} more files</span>}{files.length === 0 && <span>No file locations in shown work</span>}</div>
+        <div className="agent-work-counts"><span>{plural(ops.length, 'shown action')}</span><span>{plural(ops.filter((op) => op.kind === 'edit' || op.kind === 'write').length, 'change')}</span><span>{plural(ops.filter((op) => op.status === 'error').length, 'failure')}</span></div>
+        <div className="agent-work-files">{files.slice(0, 3).map((path) => <code key={path}>{path}</code>)}{files.length > 3 && <span>+{plural(files.length - 3, 'more file', 'more files')}</span>}{files.length === 0 && <span>No file locations in shown work</span>}</div>
       </button>;
     })}</div>
   </section>;

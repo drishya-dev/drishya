@@ -19,7 +19,7 @@ import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -413,7 +413,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
               className={`agent st-${a.state}${on ? ' on' : ''}${a.parentId ? ' child' : ''}`}
               style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}
               onClick={() => setFilter(focusAgent(filter, a.id))}
-              title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${a.activeOperationIds.length} call in flight` : ''}. Click to follow only this agent.`}
+              title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${plural(a.activeOperationIds.length, 'call')} in flight` : ''}. Click to follow only this agent.`}
             >
               <span className="agent-dot" />
               {agentName(agent)}<small className="agent-harness">{[liveMetadata&&agent?.model||agent?.harness,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small>
@@ -449,11 +449,11 @@ function NativeReturnEntry({deferMoments=false}:{deferMoments?:boolean}={}) {
 }
 
 function SessionIdentity() {
-  const recording=useApp(s=>s.recording),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
+  const recording=useApp(s=>s.recording),projection=useApp(s=>s.projection),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
   const [status,setStatus]=useState('');
   const [open]=useDisclosureChoice('session/details',false);
   if(!recording||!id)return null;
-  return <Disclosure surface="session/details" initiallyOpen={false} className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span><RescanEntry menuOpen={open}/></Disclosure>;
+  return <Disclosure surface="session/details" initiallyOpen={false} className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{projection?.title || recording.title || 'Untitled session'}</dd><dt>Harness</dt><dd>{HARNESS_NAME[recording.harness] ?? recording.harness}</dd><dt>Recording</dt><dd className="session-id-value">{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot ? recording.workspaceRoot.split(/([\\/])/).map((part, i) => (part === '/' || part === '\\' ? <Fragment key={i}>{part}<wbr /></Fragment> : part)) : 'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span><RescanEntry menuOpen={open}/></Disclosure>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────
@@ -535,7 +535,7 @@ function Transport({ scene, projection, followSlot }: { scene: Scene; projection
   if (diagnostic && document.documentElement.dataset.uiVersion === 'modern') return <ModernReplayTransport scene={scene} markers={ms}/>;
   if (!diagnostic) return (
     <footer className="transport history-transport">
-      <span className="reading-status sr-only">{scene.total} recorded steps</span>
+      <span className="reading-status sr-only">{plural(scene.total, 'recorded step')}</span>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
       <span className="history-follow-slot" ref={followSlot} />
       {!explore && <LiveWatch />}
@@ -680,7 +680,7 @@ function ActivityTimeline({ scene, projection }: { scene: Scene; projection: Pro
             : <span key={i} className={`activity-mark k-${m.type}`} style={style} title={label} />;
         })}
       </div>
-      {!historyPage && <span className="activity-count">{edits} edits · {failures} failed · {count('pass')} passed</span>}
+      {!historyPage && <span className="activity-count">{plural(edits, 'edit')} · {failures} failed · {count('pass')} passed</span>}
     </div>
   );
 }

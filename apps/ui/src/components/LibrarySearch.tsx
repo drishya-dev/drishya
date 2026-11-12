@@ -1,4 +1,4 @@
-import {Fragment} from 'react';
+import {Fragment} from 'react'; import {plural} from '../lib/plural.ts';
 import {outputPaths} from '../lib/output-paths.ts';
 import type {ProsePath} from '../lib/prose-path.ts';
 import {openCapturedPath} from './CapturedPath.tsx';
@@ -61,6 +61,6 @@ export function LibrarySearch() {
       {!page&&!loading&&!error&&<p>Search across imported conversations without opening each session.</p>}
       {page?.items.map(hit=><Fragment key={`${hit.recordingId}/${hit.observationId}`}><button disabled={opening} onClick={()=>void choose(hit)}><strong>{hit.title||'Untitled session'}</strong><span>{hit.harness==='codex'?'Codex':'Claude Code'}{hit.sourceTime&&<> · <CapturedTime iso={hit.sourceTime}/></>}</span><small title={hit.workspaceRoot}>{hit.workspaceRoot||'Workspace not recorded'}</small><p>{hit.snippet}</p></button>{outputPaths(hit.snippet,hit.workspaceRoot,4).map(ref=><button key={ref.start} className="md-path" disabled={opening} aria-label={`Open work on ${ref.path}${ref.line?` at line ${ref.line}`:''}`} onClick={()=>void choose(hit,ref)}>{hit.snippet.slice(ref.start,ref.end)} ↗</button>)}</Fragment>)}
     </div>
-    <footer><span role="status">{page?`${page.items.length} results${before?' · continued':''}`:'Session search'}</span><button className="btn ghost" disabled={!before||loading} onClick={()=>setBefore(undefined)}>First page</button><button className="btn" disabled={!page?.nextBefore||loading} onClick={()=>setBefore(page!.nextBefore)}>Next results</button></footer>
+    <footer><span role="status">{page?`${plural(page.items.length,'result')}${before?' · continued':''}`:'Session search'}</span><button className="btn ghost" disabled={!before||loading} onClick={()=>setBefore(undefined)}>First page</button><button className="btn" disabled={!page?.nextBefore||loading} onClick={()=>setBefore(page!.nextBefore)}>Next results</button></footer>
     </div></ReadingDialog>;
 }

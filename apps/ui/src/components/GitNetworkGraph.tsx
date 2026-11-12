@@ -1,4 +1,4 @@
-import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'react'; import {plural} from '../lib/plural.ts';
 import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
 import {gitSessionLinkDescription} from '../../../daemon/src/git-types.ts';
 import {gitHistoryStore} from '../lib/git-history-cache.ts';
@@ -64,7 +64,7 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
   const lit=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash),...layout.edges.filter(edge=>edge.squash&&(edge.from===active.hash||edge.to===active.hash)).map(edge=>edge.from===active.hash?edge.to:edge.from)]:targetBranch?[...targetBranch.members,...(targetBranch.fork?[targetBranch.fork]:[]),...(targetBranch.merge?[targetBranch.merge]:[])]:[]);
   const dim=lit.size>0;
   return <div className="thread-graph network-graph">
-    <div className="thread-controls">{focused?<BranchChip branch={focused} byHash={byHash} selected={selected} step={step} clear={()=>setPinnedKey('')}/>:<span className="thread-title">{primary?`${primary.name} · ${commits.length} commits`:`${commits.length} commits`}</span>}
+    <div className="thread-controls">{focused?<BranchChip branch={focused} byHash={byHash} selected={selected} step={step} clear={()=>setPinnedKey('')}/>:<span className="thread-title">{primary?`${primary.name} · ${plural(commits.length,'commit')}`:plural(commits.length,'commit')}</span>}
       <div className="thread-zoom" role="group" aria-label="Git graph view">
         <button type="button" aria-label="Zoom out Git graph" title="Zoom out (−)" onClick={()=>zoom(1/zoomStep)}>−</button>
         <output aria-live="polite">{Math.round(scale*100)}%</output>

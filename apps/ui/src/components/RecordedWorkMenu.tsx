@@ -1,4 +1,4 @@
-import type { Operation } from '@drishya/contracts';
+import type { Operation } from '@drishya/contracts'; import { plural } from '../lib/plural.ts';
 import { useApp } from '../state.ts';
 import { recordedPicks } from '../lib/hunk-evidence.ts';
 import { timeOf } from './common.tsx';
@@ -18,7 +18,7 @@ export function RecordedWorkMenu({ matches, open }: { matches: Operation[]; open
     event.currentTarget.removeAttribute('data-pointer-menu'); event.currentTarget.open = false;
     event.currentTarget.querySelector<HTMLElement>(':scope>summary')?.focus({ preventScroll: true });
   }}>
-    <summary className="btn ghost small hunk-recorded" title={`${picks.length} edits wrote exactly these added lines; choose one to open`}>Agent work · {picks.length} edits</summary>
+    <summary className="btn ghost small hunk-recorded" title={`${plural(picks.length, 'edit')} wrote exactly these added lines; choose one to open`}>Agent work · {plural(picks.length, 'edit')}</summary>
     <div className="desk-options-body" role="group" aria-label="Edits that wrote these lines, newest first">
       {picks.map(pick => {
         const time = pick.twin ? timeOf(pick.op.startTime) : '';

@@ -1,7 +1,7 @@
 // P2-A "Since your last visit": what happened after the reader's own mark, as captured facts
 // with direct links. The mark moves only when the reader says so; opening a recording does not.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; import { pluralWord } from '../lib/plural.ts';
 import { create } from 'zustand';
 import type { Projection } from '@drishya/contracts';
 import { type SinceItem } from '@drishya/scene';
@@ -125,7 +125,7 @@ export function SinceMarkSection({ projection }: { projection: Projection }) {
           : 'Mark what you have seen, and next time this lists only what happened after it.'}
       </p>
       {boundary && !any && <p className="muted small">Nothing new since your mark.</p>}
-      {!!digest.unplacedCount&&<p className="muted small">{digest.unplacedCount} entries have no observation position and cannot be placed after this mark. Inspect whole-recording review.</p>}
+      {!!digest.unplacedCount&&<p className="muted small">{digest.unplacedCount} {pluralWord(digest.unplacedCount,'entry has','entries have')} no observation position and cannot be placed after this mark. Inspect whole-recording review.</p>}
       {boundary &&
         GROUPS.filter((g) => digest[g.key].length).map((g) => (
           <div key={g.key} className={`since-group since-${g.key}`}>

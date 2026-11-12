@@ -1078,7 +1078,7 @@ export class Store {
     const capturedTitle = titled ? ((JSON.parse(titled.body) as Observation).payload as { title: string }).title : undefined;
     const prompt = user ? (JSON.parse(user.body) as Observation).payload as { text?: string | BlobText } : undefined;
     const text = typeof prompt?.text === 'string' ? prompt.text : prompt?.text?.preview;
-    return { title: capturedTitle ?? text?.replace(/\s+/g, ' ').trim().slice(0, 120), workspaceRoot: observation?.workspaceRoot ?? payload?.cwd };
+    const normalized = text?.replace(/\s+/g, ' ').trim(); const fallbackTitle = normalized ? (normalized.length > 120 ? `${normalized.slice(0, 119).trimEnd()}…` : normalized) : undefined; return { title: capturedTitle ?? fallbackTitle, workspaceRoot: observation?.workspaceRoot ?? payload?.cwd };
   }
 
   /** Moves long strings into blobs, leaving a small reference with a preview. */
