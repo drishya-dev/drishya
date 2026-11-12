@@ -1,0 +1,12 @@
+/* SHIP-3: the field of the person's own sessions behind Home's opening. The canvas draws points only; every word is DOM. */
+.home-field { position:absolute; inset:0; --field-claude:var(--agent-claude-ink,#e8956a); --field-codex:var(--agent-codex-ink,#6fb3ff); --field-line:var(--t1); }
+.home-field.pointing { cursor:pointer; }
+.home-field canvas { display:block; }
+.home-field-label { position:absolute; transform:translateX(-50%); display:inline-flex; align-items:baseline; gap:8px; max-width:190px; padding:3px 10px; border:1px solid var(--line); border-radius:var(--round-full); background:color-mix(in srgb,var(--s1) 84%,transparent); color:var(--t3); font:var(--text-2xs)/1.6 var(--mono); white-space:nowrap; }
+.home-field-label span { overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.home-field-label b { font-weight:var(--weight-regular); color:var(--t4); font-variant-numeric:tabular-nums; }
+.home-field-tip { position:absolute; z-index:3; transform:translate(-50%,calc(-100% - 14px)); display:grid; gap:1px; max-width:min(320px,70vw); padding:7px 11px; border:1px solid var(--line-2); border-radius:var(--round-md); background:var(--s2); text-align:left; pointer-events:none; }
+.home-field-tip strong { font:var(--weight-medium) var(--text-xs)/1.5 var(--sans); color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.home-field-tip span { font:var(--text-2xs)/1.5 var(--sans); color:var(--t3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+@media(hover:hover) and (pointer:fine) { .home-field-label { transition:color 150ms ease,border-color 150ms ease; } .home-field-label:hover { color:var(--t1); border-color:var(--line-2); } }
+@media(prefers-reduced-motion:reduce) { .home-field-label { transition:none; } }
