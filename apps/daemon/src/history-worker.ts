@@ -31,7 +31,7 @@ import { nowFacts } from '../../../packages/scene/src/now.ts';
 import { turnLedgers } from '../../../packages/scene/src/turns.ts';
 import { contextReportCandidates } from './context-report-turns.ts';
 import { SqliteBlobStore, Store } from '@drishya/store';
-import { sanitize } from '@drishya/privacy';
+import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
 
 const source = new Store(workerData.dir, { readOnly: true });
@@ -73,7 +73,7 @@ const io = {
   },
 };
 const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
-const HISTORY_VERSION = 'h3-lineage-4096';
+const HISTORY_VERSION = `h3-lineage-4096-${PRIVACY_POLICY_VERSION}`;
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 let cached: { id: string; revision: string; projection: Projection; revisions: Record<string, number> } | undefined;
 const queueEvidenceFor = createQueueEvidenceCache(source);
