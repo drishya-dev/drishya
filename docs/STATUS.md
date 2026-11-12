@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| SHIP-6f | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6f` | 2026-11-12 | `apps/ui/src/components/` & `apps/ui/src/modern/` (Notes empty route & Earlier reading notes disclosure), `tests/browser/ship-6f-notes.spec.ts`, `docs/review/ship-6f-notes.md`, `docs/STATUS.md`, `docs/TASKS.md`. |
 | SHIP-2g | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2g` | 2026-11-12 | `packages/capture-core/`, `packages/adapter-codex/`, `packages/adapter-claude-code/`, `packages/projection/`, `apps/ui/src/lib/`, `apps/ui/src/components/`, `tests/browser/ship-2g-tool-content.spec.ts`, `docs/review/ship-2g-tool-content.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
