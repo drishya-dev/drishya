@@ -2,6 +2,7 @@ import type {GitCommit,GitCommitDetail,GitHistoryPage} from '../../../daemon/src
 import {gitNetworkLayout,type NetworkLayout} from './git-network-layout.ts';
 import {gitThreadLayout} from './git-thread-layout.ts';
 import type {LightBranch} from './git-light.ts';
+import {resolveSquashJoins,squashEvidenceSignature,type SquashEvidence} from './git-squash.ts';
 
 export interface NetworkLabel {
   hash:string;
@@ -48,6 +49,7 @@ export function buildNetworkGraphBundle(
   seeds=new Set<string>(),
   offset=0,
   scale=1,
+  evidence?:SquashEvidence,
 ):NetworkGraphBundle {
   // The main line starts at the primary branch's tip; when that tip is older than the loaded history (a stale local branch),
   // its remote-tracking ref stands in, then the newest commit.
@@ -55,11 +57,22 @@ export function buildNetworkGraphBundle(
   const mainTip=(tip&&commits.some(commit=>commit.hash===tip))
     ?tip
     :(name?commits.find(commit=>commit.labels.some(label=>label===name||label.endsWith(`/${name}`))):undefined)?.hash??commits[0]?.hash;
-  const layout=gitNetworkLayout(commits,mainTip,{step:44*scale});
+  const baseLayout=gitNetworkLayout(commits,mainTip,{step:44*scale});
   // Paging the main line still follows the first-parent seeds the history reader keeps.
   const mainSeeds=new Set(gitThreadLayout(commits,primary?.tip,seeds,offset).mainSeeds);
-  const main=new Set(layout.nodes.filter(node=>node.main).map(node=>node.hash));
-  const branches=networkBranches(commits,main,new Map(layout.nodes.map(node=>[node.hash,node.lane])));
+  const main=new Set(baseLayout.nodes.filter(node=>node.main).map(node=>node.hash));
+  const branches=networkBranches(commits,main,new Map(baseLayout.nodes.map(node=>[node.hash,node.lane])));
+  const joins=resolveSquashJoins(commits,main,branches,baseLayout.nodes,evidence);
+  const squashMap=joins.size?new Map([...joins.values()].map(join=>[join.head,join.target] as const)):undefined;
+  for(const branch of branches){
+    const join=joins.get(branch.head);
+    if(!join)continue;
+    branch.merge=join.target;
+    branch.squash=true;
+    branch.squashBasis=join.basis;
+    if(join.pr!==undefined)branch.squashPr=join.pr;
+  }
+  const layout=squashMap?gitNetworkLayout(commits,mainTip,{step:44*scale,squash:squashMap}):baseLayout;
   const branchOf=new Map(branches.flatMap(branch=>branch.members.map(hash=>[hash,branch] as const)));
   const byHash=new Map(commits.map(commit=>[commit.hash,commit]));
   // Head labels never overlap: newest first, a label that would cover one already placed on its lane is left to the commit's peek.
@@ -95,8 +108,9 @@ export class GitNetworkLayoutCache {
     seeds=new Set<string>(),
     offset=0,
     scale=1,
+    evidence?:SquashEvidence,
   ):{bundle:NetworkGraphBundle;cached:boolean} {
-    const key=JSON.stringify([this.commitSignature(commits),primary?.tip??'',primary?.name??'',offset,scale]);
+    const key=JSON.stringify([this.commitSignature(commits),primary?.tip??'',primary?.name??'',offset,scale,squashEvidenceSignature(evidence)]);
     const hit=this.entries.get(key);
     if(hit){
       this.hits++;
@@ -104,7 +118,7 @@ export class GitNetworkLayoutCache {
       return {bundle:hit,cached:true};
     }
     this.misses++;
-    const bundle=buildNetworkGraphBundle(commits,primary,seeds,offset,scale);
+    const bundle=buildNetworkGraphBundle(commits,primary,seeds,offset,scale,evidence);
     while(this.entries.size>=this.maxEntries){
       const oldest=this.entries.keys().next().value;
       if(oldest===undefined)break;
@@ -201,8 +215,9 @@ export class GitHistoryCacheStore {
     seeds=new Set<string>(),
     offset=0,
     scale=1,
+    evidence?:SquashEvidence,
   ) {
-    return this.layouts.resolve(commits,primary,seeds,offset,scale);
+    return this.layouts.resolve(commits,primary,seeds,offset,scale,evidence);
   }
 }
 

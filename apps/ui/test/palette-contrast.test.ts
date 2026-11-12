@@ -107,6 +107,7 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
       check(['--text-chrome', '--t4'], 3);
       check([...syntaxInks, ...pathAndOutcomeInks, ...agentInks, ...diffInks], meaningFloor);
       check(['--focus'], 4.5);
+      if (palette === 'jet') check(['--palette-active', '--accent-partner'], 4.5);
 
       for (const foreground of diffInks) {
         const wash = `${foreground}-wash`;
@@ -145,4 +146,29 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
 
   expect(palettes).toEqual(SHIPPED);
   expect(failures).toEqual([]);
+});
+
+it('UI-34: keeps Jet Black on azure (#4f9cff) with partner cyan (#34d6e6), distinct from read (--source) and without indigo', () => {
+  const tokensCss = readFileSync(new URL('../src/tokens.css', import.meta.url), 'utf8');
+  const jetBody = /\[data-palette=jet\]\s*\{([^}]+)\}/.exec(tokensCss)?.[1] ?? '';
+  const jet = declarations(jetBody);
+  expect(jet['--focus']).toBe('#4f9cff');
+  expect(jet['--palette-active']).toBe('#4f9cff');
+  expect(jet['--accent-partner']).toBe('#34d6e6');
+  expect(tokensCss).toContain('.theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#4f9cff;');
+  expect(tokensCss).not.toMatch(/#5e6ad2|#8b92ec|\bindigo\b/i);
+
+  const shellTsx = readFileSync(new URL('../src/components/ProductShell.tsx', import.meta.url), 'utf8');
+  expect(shellTsx).not.toMatch(/#5e6ad2|#8b92ec|\bindigo\b/i);
+
+  const mix = (a: number[], b: number[], weightA: number) => a.map((v, i) => Math.round(v * weightA + b[i]! * (1 - weightA)));
+  const bg = channels(jet['--bg']!), t1 = channels(jet['--t1']!), t2 = channels(jet['--t2']!), accent = channels(jet['--focus']!);
+  const accentHover = mix(accent, t1, 0.86);
+  const accentPressed = mix(accent, [0, 0, 0], 0.84);
+  expect(contrast(bg, accent)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(bg, accentHover)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(bg, accentPressed)).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(accent, channels(jet['--s3']!))).toBeGreaterThanOrEqual(4.5);
+  expect(contrast(mix(t2, bg, 0.82), channels(jet['--s3']!))).toBeGreaterThanOrEqual(3);
+  expect(distance(accent, channels(jet['--source']!))).toBeGreaterThanOrEqual(0.06);
 });

@@ -107,6 +107,7 @@
 @media(max-width:820px) {
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:calc(var(--composer-gap,12px) + 4px);}
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .catalog-toggle {left:14px;right:auto;bottom:calc(var(--composer-gap,12px) + 4px);}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-replay-transport) .catalog-toggle {left:14px;right:auto;bottom:92px;}
 }
 :root[data-ui-version=modern] .modern-native-composer #prompt-size-status:not(.sr-only) { padding:2px 15px 4px; }
 :root[data-ui-version=modern] .modern-native-composer.composer-minimized>.queued-input-receipts { display:block!important; }
@@ -137,9 +138,7 @@
 }
 :root[data-ui-version=modern] .verification-basis.bad {color:var(--fail);}
 
-/* AUDIT-1, live: past queue receipts wait for the composer; an input still waiting always shows. */
-:root[data-ui-version=modern] .modern-native-composer>.queued-input-receipts:not([data-waiting]) { opacity:0;transition:opacity 120ms ease-out; }
-:root[data-ui-version=modern] .modern-native-composer:is(:hover,:focus-within)>.queued-input-receipts { opacity:1; }
+:root[data-ui-version=modern]:has(.connected-workspace .modern-replay-transport):has(.connected-workspace .follow-pill) .queued-input-receipts[data-floating] { bottom:134px; }
 :root[data-ui-version=modern] .history .notice-line { padding-inline:6px; }
 .command-cd { color:var(--t3); }
 :root[data-ui-version=modern] .connected-workspace .follow-pill>small { font:var(--text-2xs)/1 var(--mono);color:var(--t2); }

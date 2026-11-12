@@ -97,7 +97,7 @@ for (const width of [600, 1440]) {
       await expect(page.locator('html')).toHaveAttribute('data-input-modality', 'pointer');
       expect(await history.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
 
-      // Keyboard Tab restores unified 1px neutral ring from --focus-ring (not lavender --focus).
+      // Keyboard Tab restores unified 1px neutral ring from --focus-ring (not azure/accent --focus).
       await ensureFilesOpen(page);
       await page.keyboard.press('Tab');
       await expect(page.locator('html')).toHaveAttribute('data-input-modality', 'keyboard');

@@ -10,6 +10,7 @@ import {useApp} from '../state.ts';
 import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
 import {useNarrowWorkspace} from '../lib/responsive-workspace.ts';
 import {GitNetworkGraph} from './GitNetworkGraph.tsx';
+import {collectSquashEvidence} from '../lib/git-squash.ts';
 import {CommitRows} from './CommitRows.tsx';
 import {refsInWindow} from '../lib/git-commit-rows.ts';
 import {ReadingDialog} from './ProductShell.tsx';
@@ -103,7 +104,7 @@ function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
   useEffect(()=>()=>snapshotRef.current(),[]);
   const history=useMemo(()=>[...pages.entries()].sort((a,b)=>a[0]-b[0]).flatMap(([,page])=>page.commits),[pages]);
   // Squash-merge evidence joins across loaded pages: a squash commit is usually newer than its branch.
-  const evidence=useMemo(()=>({changes:new Map([...pages.values()].flatMap(page=>Object.entries(page.changeSignatures??{}))),branches:new Map([...pages.values()].flatMap(page=>Object.entries(page.branchSignatures??{})))}),[pages]);
+  const evidence=useMemo(()=>collectSquashEvidence(pages.values()),[pages]);
   const links=useMemo(()=>new Map([...pages.values()].flatMap(page=>Object.entries(page.sessionLinks??{}))),[pages]);
   const bounds=[...pages.keys()].sort((a,b)=>a-b),newest=bounds[0]??0,oldest=bounds.at(-1)??0;
   const moreOlder=!!pages.get(oldest)?.more,moreNewer=newest>0;
