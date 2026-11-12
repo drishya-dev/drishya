@@ -58,10 +58,14 @@ const heroMap = createMap($<HTMLCanvasElement>('[data-map="hero"]'), null, sampl
 const dottedGlow = $<HTMLCanvasElement>('[data-dotted-glow]');
 const dottedContext = dottedGlow.getContext('2d');
 if (dottedContext) {
-  const gap = 18;
+  const gap = 12;
+  const radius = 2;
+  const glowRadius = 150;
   let dots: { x: number; y: number; phase: number; speed: number }[] = [];
   let width = 0;
   let height = 0;
+  let pointerX = -1;
+  let pointerY = -1;
   const resizeDots = () => {
     const dpr = Math.min(Math.max(1, devicePixelRatio || 1), 2);
     width = innerWidth;
@@ -72,22 +76,33 @@ if (dottedContext) {
     dottedGlow.style.height = `${height}px`;
     dottedContext.setTransform(dpr, 0, 0, dpr, 0, 0);
     dots = [];
-    for (let x = -gap; x < width + gap; x += gap) {
-      for (let y = -gap; y < height + gap; y += gap) dots.push({ x, y, phase: Math.random() * Math.PI * 2, speed: .35 + Math.random() * .8 });
+    const cols = Math.ceil(width / gap) + 2;
+    const rows = Math.ceil(height / gap) + 2;
+    for (let i = -1; i < cols; i++) {
+      for (let j = -1; j < rows; j++) {
+        const x = i * gap + (j % 2 === 0 ? 0 : gap * 0.5);
+        const y = j * gap;
+        dots.push({ x, y, phase: Math.random() * Math.PI * 2, speed: .4 + Math.random() * .9 });
+      }
     }
   };
+  const updatePointer = (event: PointerEvent) => { pointerX = event.clientX; pointerY = event.clientY; };
+  const clearPointer = () => { pointerX = -1; pointerY = -1; };
   const drawDots = (now: number) => {
     dottedContext.clearRect(0, 0, width, height);
     dottedContext.fillStyle = 'rgba(241, 238, 228, .3)';
     const time = now / 1000;
     for (const dot of dots) {
       const wave = (time * dot.speed + dot.phase) % (Math.PI * 2);
-      const brightness = .24 + .56 * ((Math.sin(wave) + 1) / 2);
-      dottedContext.globalAlpha = brightness;
-      dottedContext.shadowColor = 'rgba(79, 156, 255, .85)';
-      dottedContext.shadowBlur = brightness > .62 ? 7 * (brightness - .62) / .38 : 0;
+      const pulse = .25 + .55 * ((Math.sin(wave) + 1) / 2);
+      const distance = pointerX < 0 ? Infinity : Math.hypot(dot.x - pointerX, dot.y - pointerY);
+      const hover = Math.max(0, 1 - distance / glowRadius);
+      const brightness = Math.min(1, pulse + hover * .7);
+      dottedContext.globalAlpha = brightness * .7;
+      dottedContext.shadowColor = 'rgba(0, 170, 255, .85)';
+      dottedContext.shadowBlur = hover > 0 ? 12 * hover : brightness > .62 ? 6 * (brightness - .62) / .38 : 0;
       dottedContext.beginPath();
-      dottedContext.arc(dot.x, dot.y, 1.35, 0, Math.PI * 2);
+      dottedContext.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
       dottedContext.fill();
     }
     dottedContext.globalAlpha = 1;
@@ -96,6 +111,8 @@ if (dottedContext) {
   };
   resizeDots();
   addEventListener('resize', resizeDots);
+  addEventListener('pointermove', updatePointer, { passive: true });
+  addEventListener('pointerleave', clearPointer, { passive: true });
   requestAnimationFrame(drawDots);
 }
 // The why section's stream: the same CLI lines the laptop shows, scrolling past as they do in a terminal.
