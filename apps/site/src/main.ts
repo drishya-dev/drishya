@@ -71,7 +71,9 @@ if (dottedContext) {
   let pointerY = -1;
   let dotsFrame = 0;
   const resizeDots = () => {
-    const dpr = Math.min(Math.max(1, devicePixelRatio || 1), 2);
+    // Soft 4 px dots at 30 % ink do not need device resolution: a 2x canvas is four times the pixels to clear and
+    // composite on every frame, and it alone held a Retina-size window near 27 frames a second.
+    const dpr = 1;
     width = innerWidth;
     height = innerHeight;
     dottedGlow.width = Math.floor(width * dpr);
@@ -90,29 +92,73 @@ if (dottedContext) {
       }
     }
   };
-  const updatePointer = (event: PointerEvent) => { pointerX = event.clientX; pointerY = event.clientY; };
-  const clearPointer = () => { pointerX = -1; pointerY = -1; };
+  const updatePointer = (event: PointerEvent) => { pointerX = event.clientX; pointerY = event.clientY; lastPointer = performance.now(); };
+  const clearPointer = () => { pointerX = -1; pointerY = -1; lastPointer = performance.now(); };
+  // One blurred dot, drawn once. Per-dot canvas shadows cost a blur for each of about 15,000 dots on every frame
+  // and made the whole page lag; stamping this sprite gives the same glow for a fraction of the work.
+  const glowSize = 28;
+  const glow = document.createElement('canvas');
+  const drawGlow = () => {
+    const dpr = 1;
+    glow.width = glow.height = Math.ceil(glowSize * dpr);
+    const g = glow.getContext('2d');
+    if (!g) return;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.shadowColor = 'rgba(0, 170, 255, .85)';
+    g.shadowBlur = 12;
+    g.fillStyle = 'rgba(241, 238, 228, .3)';
+    g.beginPath();
+    g.arc(glowSize / 2, glowSize / 2, radius, 0, Math.PI * 2);
+    g.fill();
+  };
+  drawGlow();
+  addEventListener('resize', drawGlow);
+  const levels = 10;
+  const buckets: number[][] = Array.from({ length: levels + 1 }, () => []);
+  let lastDraw = 0, lastScroll = 0, lastPointer = 0;
+  addEventListener('scroll', () => { lastScroll = performance.now(); }, { passive: true });
   const drawDots = (now: number) => {
+    dotsFrame = 0;
+    if (!reduced && !document.hidden) dotsFrame = requestAnimationFrame(drawDots);
+    // Scrolling gets the whole frame: the grid holds its last frame while the page moves.
+    if (now - lastScroll < 160) return;
+    // The twinkle takes 5 to 15 seconds a cycle, so 12 frames a second is enough at rest;
+    // the glow under the pointer follows it at 30.
+    if (now - lastDraw < (now - lastPointer < 240 ? 30 : 80)) return;
+    lastDraw = now;
     dottedContext.clearRect(0, 0, width, height);
     dottedContext.fillStyle = 'rgba(241, 238, 228, .3)';
     const time = now / 1000;
-    for (const dot of dots) {
-      const wave = (time * dot.speed + dot.phase) % (Math.PI * 2);
-      const pulse = .25 + .55 * ((Math.sin(wave) + 1) / 2);
-      const distance = pointerX < 0 ? Infinity : Math.hypot(dot.x - pointerX, dot.y - pointerY);
-      const hover = Math.max(0, 1 - distance / glowRadius);
+    for (const bucket of buckets) bucket.length = 0;
+    const glows: number[] = [];
+    for (let i = 0; i < dots.length; i++) {
+      const dot = dots[i]!;
+      const pulse = .25 + .55 * ((Math.sin(time * dot.speed + dot.phase) + 1) / 2);
+      let hover = 0;
+      if (pointerX >= 0) {
+        const dx = dot.x - pointerX, dy = dot.y - pointerY;
+        if (dx > -glowRadius && dx < glowRadius && dy > -glowRadius && dy < glowRadius) hover = Math.max(0, 1 - Math.hypot(dx, dy) / glowRadius);
+      }
       const brightness = Math.min(1, pulse + hover * .7);
-      dottedContext.globalAlpha = brightness * .7;
-      dottedContext.shadowColor = 'rgba(0, 170, 255, .85)';
-      dottedContext.shadowBlur = hover > 0 ? 12 * hover : brightness > .62 ? 6 * (brightness - .62) / .38 : 0;
+      buckets[Math.round(brightness * levels)]!.push(i);
+      const blur = hover > 0 ? hover : brightness > .62 ? .5 * (brightness - .62) / .38 : 0;
+      if (blur > .04) glows.push(i, blur * brightness * .7);
+    }
+    // One fill per brightness level instead of one per dot.
+    for (let level = 1; level <= levels; level++) {
+      const bucket = buckets[level]!;
+      if (!bucket.length) continue;
+      dottedContext.globalAlpha = level / levels * .7;
       dottedContext.beginPath();
-      dottedContext.arc(dot.x, dot.y, radius, 0, Math.PI * 2);
+      for (const i of bucket) { const dot = dots[i]!; dottedContext.moveTo(dot.x + radius, dot.y); dottedContext.arc(dot.x, dot.y, radius, 0, Math.PI * 2); }
       dottedContext.fill();
     }
+    for (let k = 0; k < glows.length; k += 2) {
+      const dot = dots[glows[k]!]!;
+      dottedContext.globalAlpha = Math.min(1, glows[k + 1]! * 2.4);
+      dottedContext.drawImage(glow, dot.x - glowSize / 2, dot.y - glowSize / 2, glowSize, glowSize);
+    }
     dottedContext.globalAlpha = 1;
-    dottedContext.shadowBlur = 0;
-    dotsFrame = 0;
-    if (!reduced && !document.hidden) dotsFrame = requestAnimationFrame(drawDots);
   };
   resizeDots();
   addEventListener('resize', resizeDots);
