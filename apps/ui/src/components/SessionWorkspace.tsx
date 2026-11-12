@@ -780,7 +780,7 @@ export function PromptComposer() {
       for (const surface of node.querySelectorAll<HTMLElement>('.native-turn-details, .queued-input-receipts')) {
         if (!observed.has(surface)) { observer.observe(surface); observed.add(surface); }
         if (!surface.getClientRects().length) continue;
-        if (surface.matches('.queued-input-receipts') && surface.querySelector('button')?.checkVisibility({ visibilityProperty: true }) === false) continue;
+        // UI-32b: keep receipt clearance constant across Follow toggles so history padding and Toolbox never shift.
         raised = Math.max(raised, top - layoutTop(surface));
       }
       viewer.style.setProperty('--composer-raised-gap', `${Math.ceil(raised)}px`);
