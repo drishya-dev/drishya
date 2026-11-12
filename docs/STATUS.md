@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| FILES-18 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-18` | 2026-11-12 | `apps/ui/src/components/FileHistory.tsx`, `apps/ui/src/components/FileReadingActions.tsx`, file-history helpers/units, browser specs (`file-timeline-steps.spec.ts`, `file-timeline-pages.spec.ts`, `fresh-workspace.spec.ts`, `product-workspace.spec.ts`), `docs/review/files-18-newest-first.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
