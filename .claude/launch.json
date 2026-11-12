@@ -4,43 +4,20 @@
     {
       "name": "docs-static",
       "runtimeExecutable": "python",
-      "runtimeArgs": [
-        "-m",
-        "http.server",
-        "5178",
-        "--bind",
-        "127.0.0.1",
-        "--directory",
-        "docs"
-      ],
+      "runtimeArgs": ["-m", "http.server", "5178", "--bind", "127.0.0.1", "--directory", "docs"],
       "port": 5178
     },
     {
       "name": "drishya",
       "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "apps/daemon/src/cli.ts",
-        "serve",
-        "--no-open",
-        "--port",
-        "7878"
-      ],
-      "env": {
-        "DRISHYA_TOKEN": "local-preview-token",
-        "DRISHYA_HOME": ".drishya-preview"
-      },
+      "runtimeArgs": ["apps/daemon/src/cli.ts", "serve", "--no-open", "--port", "7878"],
+      "env": { "DRISHYA_TOKEN": "local-preview-token", "DRISHYA_HOME": ".drishya-preview" },
       "port": 7878
     },
     {
       "name": "site",
       "runtimeExecutable": "node",
-      "runtimeArgs": [
-        "apps/site/node_modules/vite/bin/vite.js",
-        "apps/site",
-        "--port",
-        "5180",
-        "--strictPort"
-      ],
+      "runtimeArgs": ["apps/site/node_modules/vite/bin/vite.js", "apps/site", "--port", "5180", "--strictPort"],
       "port": 5180
     }
   ]
