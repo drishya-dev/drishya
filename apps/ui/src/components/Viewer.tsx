@@ -1,4 +1,4 @@
-import { NotesEntry } from './StepNotes.tsx';
+import { HistoryNoteHint, NotesEntry } from './StepNotes.tsx';
 import { ProductMenu } from './ProductMenu.tsx';
 import {Disclosure,useDisclosureChoice} from './Disclosure.tsx';
 import {developerToolsEnabled} from '../lib/local-preview.ts';
@@ -264,6 +264,7 @@ function WorkspaceViewer() {
       <TurnsWatcher key={`turns/${recordingId}`} />
       <ContextReportWatcher key={`context-report/${recordingId}`} />
       <PromptComposer key={`composer/${recordingId}`} />
+      <HistoryNoteHint />
       <DeveloperWorkspace /><CompareWindow />
       <Briefing projection={projection} />
       <Search projection={projection} />
