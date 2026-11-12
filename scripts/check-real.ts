@@ -43,10 +43,11 @@ import { usageContext } from './real-cases/usage-context.ts';
 import {fullProse} from './real-cases/full-prose.ts';
 import {linkProse} from './real-cases/link-prose.ts';
 import {blobDiffLines} from './real-cases/blob-diff-lines.ts';
+import {redaction} from './real-cases/redaction.ts';
 
 
 
-const cases: RealCase[] = [fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, usageContext, linkProse];
+const cases: RealCase[] = [redaction, fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, usageContext, linkProse];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);

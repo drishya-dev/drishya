@@ -9,7 +9,9 @@ export * from './image.ts';
 // matching runs before truncation. Data stored under p1 may hold secrets in those places.
 // p3: protected-file scopes omit every string except paths and short labels, and shell commands
 // or patches that name a protected file make their output protected. p2 data may hold such content.
-export const PRIVACY_POLICY_VERSION = 'p3';
+// p4: added PyPI, GitLab, Docker Hub, DigitalOcean, SendGrid, Twilio (contextual), Shopify,
+// Azure storage AccountKey, Databricks, Linear, Notion and Discord bot token rules; older stores scrub on open.
+export const PRIVACY_POLICY_VERSION = 'p4';
 
 /** Longest single string kept verbatim; beyond this the tail is cut with a marker. */
 export const MAX_STRING_BYTES = 4 * 1024 * 1024;
@@ -28,7 +30,7 @@ interface Rule {
   /** Which capture group holds the secret. 0 = whole match. */
   group?: number;
   /** Extra check on the candidate secret, to avoid redacting placeholders and hashes. */
-  accept?: (secret: string) => boolean;
+  accept?: (secret: string, ctx: { text: string; offset: number; match: string }) => boolean;
 }
 
 const PLACEHOLDER = /^(x+|\*+|\.+|<[^>]*>|\$\{[^}]*\}|\{\{[^}]*\}\}|your[-_ ]?.*|changeme|example.*|test|dummy|placeholder|redacted|none|null|undefined|true|false|process\.env\..*|os\.environ.*)$/i;
@@ -58,6 +60,27 @@ function looksSecret(v: string): boolean {
   return shannon(s) >= 3.0;
 }
 
+function looksDiscordBotToken(secret: string): boolean {
+  const parts = secret.split('.');
+  if (parts.length !== 3) return false;
+  const [p1, p2, p3] = parts;
+  if (!p1 || !p2 || !p3 || p1.startsWith('eyJ')) return false;
+  try {
+    const pad = p1.length % 4 ? '='.repeat(4 - (p1.length % 4)) : '';
+    const id = atob(p1.replace(/-/g, '+').replace(/_/g, '/') + pad);
+    if (!/^\d{17,22}$/.test(id)) return false;
+    if (btoa(id).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') !== p1) return false;
+  } catch { return false; }
+  return looksSecret(p3);
+}
+
+function looksTwilioContext(text: string, offset: number, match: string): boolean {
+  const start = Math.max(0, offset - 80);
+  const end = Math.min(text.length, offset + match.length + 80);
+  const win = text.slice(start, end);
+  return /(?:twilio|api[_-]?key|apikey|key[_-]?sid|account[_-]?sid|auth[_-]?token|\bAC[0-9a-f]{32}\b)/i.test(win);
+}
+
 // Order matters: specific token formats first, generic assignment last.
 const RULES: Rule[] = [
   { id: 'private-key', pattern: /-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)/g },
@@ -71,9 +94,21 @@ const RULES: Rule[] = [
   { id: 'stripe-key', pattern: /\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{16,}/g },
   { id: 'npm-token', pattern: /\bnpm_[A-Za-z0-9]{36}\b/g },
   { id: 'hf-token', pattern: /\bhf_[A-Za-z0-9]{30,}\b/g },
+  { id: 'pypi-token', possible: t => t.includes('pypi-'), pattern: /\bpypi-[A-Za-z0-9_-]{32,}={0,2}(?![A-Za-z0-9_-])/g, accept: (s) => { const b = s.slice(5); return looksSecret(b) && (b.startsWith('AgE') || (/[A-Z]/.test(b) && /[a-z]/.test(b) && /[0-9]/.test(b))); } },
+  { id: 'gitlab-token', possible: t => t.includes('glpat-') || t.includes('gldt-'), pattern: /\b(?:glpat|gldt)-[A-Za-z0-9_-]{20,}(?:\.[A-Za-z0-9_-]{2,})*(?![A-Za-z0-9_-])/g, accept: (s) => looksSecret(s.slice(s.indexOf('-') + 1)) },
+  { id: 'docker-token', possible: t => t.includes('dckr_pat_'), pattern: /\bdckr_pat_[A-Za-z0-9_-]{20,}(?![A-Za-z0-9_-])/g, accept: (s) => looksSecret(s.slice(9)) },
+  { id: 'digitalocean-token', possible: t => t.includes('dop_v1_'), pattern: /\bdop_v1_[0-9a-fA-F]{32,}\b/g, accept: (s) => looksSecret(s.slice(7)) },
+  { id: 'sendgrid-key', possible: t => t.includes('SG.'), pattern: /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}(?![A-Za-z0-9_-])/g, accept: (s) => { const [a, b] = s.slice(3).split('.'); return !!a && !!b && !PLACEHOLDER.test(a) && !PLACEHOLDER.test(b) && shannon(a) >= 2.8 && shannon(b) >= 3.0; } },
+  { id: 'twilio-key', possible: t => t.includes('SK'), pattern: /\bSK[0-9a-fA-F]{32}\b/g, accept: (s, ctx) => looksSecret(s) && looksTwilioContext(ctx.text, ctx.offset, ctx.match) },
+  { id: 'shopify-token', possible: t => t.includes('shpat_') || t.includes('shpss_'), pattern: /\bshp(?:at|ss)_[0-9a-fA-F]{32,}\b/g, accept: (s) => looksSecret(s.slice(6)) },
+  { id: 'azure-storage-key', possible: t => t.includes('=') && /accountkey=/i.test(t), pattern: /\bAccountKey=([A-Za-z0-9+/=]{32,})/gi, group: 1, accept: looksSecret },
+  { id: 'databricks-token', possible: t => t.includes('dapi'), pattern: /\bdapi[0-9a-fA-F]{32}(?:-\d+)?\b/g, accept: (s) => looksSecret(s.slice(4)) },
+  { id: 'linear-token', possible: t => t.includes('lin_api_'), pattern: /\blin_api_[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])/g, accept: (s) => looksSecret(s.slice(8)) },
+  { id: 'notion-token', possible: t => t.includes('secret_') || t.includes('ntn_'), pattern: /\b(?:secret_[A-Za-z0-9]{40,}|ntn_[A-Za-z0-9]{36,})\b/g, accept: (s) => { const b = s.startsWith('ntn_') ? s.slice(4) : s.slice(7); return looksSecret(b) && /[0-9]/.test(b) && /[A-Za-z]/.test(b); } },
   { id: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
+  { id: 'discord-token', possible: t => t.includes('.'), pattern: /(?<![A-Za-z0-9_.-])[A-Za-z0-9_-]{23,30}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{25,45}(?![A-Za-z0-9_-])/g, accept: looksDiscordBotToken },
   { id: 'bearer', pattern: /\b(?:Bearer|Token)\s+([A-Za-z0-9._~+/=-]{16,})/g, group: 1, accept: looksSecret },
-  { id: 'url-credentials', possible: text => text.includes('://'), pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:([^\s@/]{3,})@/gi, group: 1, accept: (s) => !PLACEHOLDER.test(s) },
+  { id: 'url-credentials', possible: text => text.includes('://'), pattern: /\b[a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:([^\s@/]{3,})@/gi, group: 1, accept: (s) => !PLACEHOLDER.test(s) && !s.includes('[REDACTED:') },
   {
     id: 'secret-assignment',
     pattern: /password|passwd|pwd|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|client[_-]?secret|auth/gi,
@@ -165,9 +200,11 @@ export function redactText(input: string): RedactResult {
     if (rule.possible && !rule.possible(text)) continue;
     const replace = (match: string, ...args: unknown[]) => {
       const groups = args.slice(0, -2) as (string | undefined)[];
+      const offset = args.at(-2) as number;
+      const full = args.at(-1) as string;
       const secret = rule.group ? groups[rule.group - 1] : match;
       if (!secret) return match;
-      if (rule.accept && !rule.accept(secret)) return match;
+      if (rule.accept && !rule.accept(secret, { text: full, offset, match })) return match;
       hits.set(rule.id, (hits.get(rule.id) ?? 0) + 1);
       const marker = `[REDACTED:${rule.id}]`;
       if (!rule.group) return marker;

@@ -19,9 +19,10 @@ export function hasFileTimelineEvidence(op: Operation, path: string): boolean {
 
 /** Whole-session counts stay beside the worker's projection; only the requested page and thin navigation cross HTTP. */
 export function fileOperationPage(operations: readonly Operation[], path: string, start: number, count: number, query = '', selectedOperationId?: string): FileOperationPage {
-  const matches = operations.filter(op => op.paths.some(ref => ref.path === path) && (!query || `${op.title} ${op.kind}`.toLowerCase().includes(query.toLowerCase())));
+  const matches = operations.filter(op => op.paths.some(ref => ref.path === path) && (!query || `${op.title} ${op.kind}`.toLowerCase().includes(query.toLowerCase()))).reverse();
   const offset = Math.max(0, start), size = Math.min(200, Math.max(1, count));
-  const steps = matches.flatMap((op, index) => hasFileTimelineEvidence(op, path) ? [{ operationId: op.id, start: Math.floor(index / size) * size, action: index }] : []);
+  // List newest actions first; compute chronological ordinals and Previous/Next in time order.
+  const steps = matches.flatMap((op, index) => hasFileTimelineEvidence(op, path) ? [{ operationId: op.id, start: Math.floor(index / size) * size, action: index }] : []).reverse();
   const selectedIndex = selectedOperationId ? steps.findIndex(item => item.operationId === selectedOperationId) : -1;
   const target = (index: number): FileStepTarget | undefined => { const item = steps[index]; return item && { operationId: item.operationId, start: item.start }; };
   const positions = Object.fromEntries(steps.flatMap((item, index) => item.action >= offset && item.action < offset + size ? [[item.operationId, index + 1]] : []));
