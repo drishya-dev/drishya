@@ -34,7 +34,7 @@
     </div>
   </header>
 
-  <div class="backdrop" aria-hidden="true"><div class="glow"></div><canvas class="hero-map" data-map="hero"></canvas><div class="hero-labels" data-map-labels="hero"></div></div>
+  <div class="backdrop" aria-hidden="true"><div class="glow"></div><div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div><canvas class="hero-map" data-map="hero"></canvas><div class="hero-labels" data-map-labels="hero"></div></div>
   <main>
     <section id="top" class="hero" aria-labelledby="hero-title">
       <div class="wrap hero-inner">
@@ -92,10 +92,10 @@
       <div class="features-pin">
         <div class="wrap features-grid">
           <ol class="feat-steps">
-            <li><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>The explorer stays open beside the session, with every file the agent added or edited marked where it lives.</p></li>
-            <li><span class="step-tag">Explorer</span><h3>Every action on a file, and each earlier edit</h3><p>Open a file to see each read and edit on it, step to an earlier change, and see the test runs that followed it.</p></li>
+            <li><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>Open files from your tree into a reader beside the session, one tab each, while the agent's work stays in view. Files the agent added or edited are marked.</p></li>
+            <li><span class="step-tag">File history</span><h3>Every action on a file, and each earlier edit</h3><p>Every read and edit the agent made to a file. Choose an earlier edit to read exactly that change, and the test runs that followed it.</p></li>
             <li><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Open any file in Workspace with your tree and tabs, and edit it a step away from the agent's work.</p></li>
-            <li><span class="step-tag">Changes</span><h3>This session, a branch, or a pull request</h3><p>Switch between what this session changed, a branch against main, and an open pull request. Each file names the agent that edited it.</p></li>
+            <li><span class="step-tag">Changes</span><h3>This session, a branch, or a pull request</h3><p>What this session changed, any branch against main, or an open pull request, each chosen from a list. Every file names the agent that edited it.</p></li>
             <li><span class="step-tag">Git graph</span><h3>Every branch, and where the agents' work landed</h3><p>Every local branch and commit as a graph, read-only, beside the session. Choose one branch to read only its own commits.</p></li>
             <li><span class="step-tag">Toolbox</span><h3>Step through every use of one tool</h3><p>Pick a tool and step through each time it was used. The rest of the session dims around it.</p></li>
             <li><span class="step-tag">Prompts</span><h3>Every prompt, and what it led to</h3><p>The prompt rail keeps each prompt. Hover one to see what it asked, how many actions followed and what failed, then jump there.</p></li>

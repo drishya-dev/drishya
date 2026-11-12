@@ -114,11 +114,11 @@ function animate() {
 
     const words = new SplitText('[data-words]', { type: 'words' });
     gsap.set(words.words, { opacity: 0.14 });
-    gsap.timeline({ scrollTrigger: { trigger: '.why', start: 'top top', end: '+=140%', pin: '.why-pin', scrub: 0.6 } })
+    gsap.timeline({ scrollTrigger: { trigger: '.why', start: 'top top', end: '+=140%', pin: '.why-pin', scrub: true } })
       .to(words.words, { opacity: 1, stagger: 0.05, ease: 'none' }, 0)
       .to('[data-why-lines]', { yPercent: -55, ease: 'none', duration: words.words.length * 0.05 }, 0);
     gsap.to('.backdrop .hero-map, .backdrop .hero-labels', { opacity: 0.38, ease: 'none', scrollTrigger: { trigger: '.why', start: 'top bottom', end: 'top top', scrub: true } });
-    ScrollTrigger.create({ trigger: '.why', start: 'bottom top', onEnter: () => heroMap.pause(), onLeaveBack: () => heroMap.resume() });
+    ScrollTrigger.create({ trigger: '.why', start: 'bottom top', onEnter: () => { heroMap.pause(); $('.aurora').classList.add('rest'); }, onLeaveBack: () => { heroMap.resume(); $('.aurora').classList.remove('rest'); } });
     gsap.to('.glow', { opacity: 0.45, ease: 'none', scrollTrigger: { trigger: '.why', start: 'top bottom', end: 'top top', scrub: true } });
 
     for (const h of $$('[data-split]').filter(h => h.id !== 'hero-title')) {
@@ -136,26 +136,29 @@ function animate() {
   // Frames are real Drishya on a real Drishya session (scripts/site-footage-real.ts, reviewed before publishing).
   type Frame = { img: string; click?: [number, number]; zoom?: [number, number, number, number] };
   const FEATURES: Frame[][] = [
-    [{ img: 'explorer' }],
-    [{ img: 'file-history', zoom: [0, .12, .5, .6], click: [.04, .52] }, { img: 'file-history' }],
+    // Click positions are where the real control was on screen, measured by the footage script.
+    [{ img: 'explorer', click: [.155, .472] }],
+    [{ img: 'history-a' }, { img: 'history-b', click: [.032, .587] }],
     [{ img: 'workspace' }],
-    [{ img: 'changes-session', click: [.418, .108] }, { img: 'changes-branch', click: [.471, .108] }, { img: 'changes-pr', click: [.524, .108] }],
-    [{ img: 'git-graph' }, { img: 'git-graph-branch', click: [.148, .456] }],
-    [{ img: 'tool', zoom: [.66, .3, .34, .42], click: [.875, .464] }, { img: 'tool-next' }],
-    [{ img: 'prompt', click: [.838, .8] }],
-    [{ img: 'composer', click: [.683, .9] }],
+    [{ img: 'changes-session', click: [.419, .111] }, { img: 'changes-branch', click: [.472, .111] }, { img: 'changes-branch-pick', click: [.369, .161] },
+     { img: 'changes-branch-picked', click: [.446, .31] }, { img: 'changes-pr-pick', click: [.522, .111] }, { img: 'changes-pr', click: [.397, .201] }],
+    [{ img: 'git-graph' }, { img: 'git-graph-branch', click: [.149, .413] }],
+    [{ img: 'tool', click: [.869, .754] }, { img: 'tool-next', click: [.882, .471] }],
+    [{ img: 'prompt', zoom: [.6, .5, .4, .5], click: [.936, .678] }],
+    [{ img: 'composer', click: [.5, .957] }],
   ];
   function featureScenes() {
     const camera = $('[data-feat-camera]'), win = $('[data-feat-window]'), steps = $$('.feat-steps li');
     const cursorEl = $('.feat-cursor', win), ripple = $('.feat-ripple', win);
     const names = [...new Set(FEATURES.flat().map(f => f.img))];
-    camera.innerHTML = names.map(n => `<img src="footage/${n}.jpg" alt="" decoding="async" loading="lazy" data-frame-name="${n}" />`).join('');
+    camera.innerHTML = names.map(n => `<img src="footage/${n}.jpg" alt="" decoding="async" data-frame-name="${n}" />`).join('');
+    new IntersectionObserver((entries, io) => { if (entries.some(e => e.isIntersecting)) { io.disconnect(); for (const im of camera.querySelectorAll('img')) void im.decode().catch(() => {}); } }, { rootMargin: '200% 0px' }).observe(win);
     const img = (n: string) => $(`[data-frame-name="${n}"]`, camera);
     const W = () => win.clientWidth, H = () => win.clientHeight;
     const zoomTo = (z?: [number, number, number, number]) => { if (!z) return { scale: 1, x: 0, y: 0 }; const [zx, zy, zw, zh] = z, sc = 0.94 / Math.max(zw, zh); return { scale: sc, x: () => (0.5 - (zx + zw / 2) * sc) * W(), y: () => (0.5 - (zy + zh / 2) * sc) * H() }; };
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
     gsap.set(img(FEATURES[0]![0]!.img), { opacity: 1 });
-    const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' }, scrollTrigger: { trigger: '.features', start: 'top top', end: () => `+=${innerHeight * FEATURES.length * 0.75}`, pin: '.features-pin', scrub: 0.5, invalidateOnRefresh: true } });
+    const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' }, scrollTrigger: { trigger: '.features', start: 'top top', end: () => `+=${innerHeight * FEATURES.flat().length * 0.55}`, pin: '.features-pin', scrub: true, invalidateOnRefresh: true } });
     let shown = FEATURES[0]![0]!.img, t = 0;
     FEATURES.forEach((frames, i) => {
       if (i > 0) { tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2); }
@@ -170,7 +173,7 @@ function animate() {
           const px = () => (typeof z.x === 'function' ? z.x() : 0) + f.click![0] * W() * sc, py = () => (typeof z.y === 'function' ? z.y() : 0) + f.click![1] * H() * sc;
           tl.fromTo(cursorEl, { left: () => W() * 0.82, top: () => H() * 0.9, opacity: 0 }, { left: px, top: py, opacity: 1, duration: 0.4, ease: 'power2.out' }, t + 0.5);
           tl.fromTo(ripple, { left: px, top: py, scale: 0.4, opacity: 0.9 }, { scale: 1.6, opacity: 0, duration: 0.3, ease: 'power1.out' }, t + 0.92);
-          t += 1.25;
+          t += swapAt > t ? 2.1 : 1.25; // a screen the click changed holds long enough to read
         } else t += 0.9;
       });
       tl.to(camera, { scale: 1, x: 0, y: 0, duration: 0.45 }, t); t += 0.5;
@@ -185,7 +188,7 @@ function animate() {
     gsap.set(lines, { opacity: 0 });
     gsap.set(rows, { opacity: 0, y: 8 });
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
-    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 4}`, pin: '.tour-pin', scrub: 0.5, invalidateOnRefresh: true } });
+    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 7}`, pin: '.tour-pin', scrub: true, invalidateOnRefresh: true } });
     const show = (i: number, t: number) => tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2);
     const replay = (from: number, to: number, t: number, duration: number) => tl.fromTo({ s: from }, { s: from }, { s: to, duration, ease: 'none', onUpdate() { const n = Math.round(this.targets()[0].s); if (n !== wantedStep) seek(n); } }, t);
 

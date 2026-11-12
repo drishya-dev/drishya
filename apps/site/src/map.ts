@@ -3,7 +3,7 @@
 // Text never goes on the canvas: lit files get DOM labels positioned each frame.
 
 export type Tone = 'read' | 'search' | 'edit' | 'fail' | 'pass' | 'focus';
-export const TONES: Record<Tone, string> = { read: '#7aa8ff', search: '#a7adb5', edit: '#e8b04a', fail: '#ff6a5c', pass: '#46c98b', focus: '#f1eee4' };
+export const TONES: Record<Tone, string> = { read: '#6aa9ff', search: '#a7adb5', edit: '#e8b04a', fail: '#ff6a5c', pass: '#46c98b', focus: '#f1eee4' };
 
 interface Graph { nodes: { path: string; dir: string }[]; edges: { from: string; to: string }[] }
 interface Point { id: string; x: number; y: number; z: number; hub: boolean; parent?: string }
