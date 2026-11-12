@@ -10,7 +10,7 @@
 :root[data-ui-version=modern] :is(input,textarea)::placeholder {color:var(--t3);opacity:1;}
 :root[data-ui-version=modern] .ux-search:focus-within input:focus-visible {outline:none;}
 /* Only edge veils blur. Large readers and tool lists stay flat and cheap to repaint. */
-:root[data-ui-version=modern][data-experience=classic] .connected-workspace :is(.folder-explorer,.modern-toolbox) {backdrop-filter:none;background:var(--s1);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace :is(.folder-explorer,.toolbox-rail > .modern-tool-station:not(.toolbox-minimized)) {backdrop-filter:none;background:var(--s1);}
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {max-height:calc(100dvh - var(--workspace-tools-bottom,132px) - var(--composer-gap,150px) - 16px);}
 :root[data-ui-version=modern] .workspace-menu>.workspace-utilities {max-height:calc(100dvh - var(--workspace-header-h,70px) - 24px);overflow-y:auto;overscroll-behavior:contain;}
 :root[data-ui-version=modern] .native-options-menu :is(small,button,label) {overflow-wrap:anywhere;}
