@@ -10,6 +10,7 @@ import {useFileRoots} from '../lib/use-file-roots.ts';
 import { documentFits, documentLimitMessage } from '../lib/document-limit.ts';
 import {FileRowName} from './FileRowName.tsx';
 import {worktreeFileRows, workspaceFileReveal, currentWorkspacePath, UNPLACED_GROUP, canonicalFileFolders} from '../lib/worktree-files.ts';
+import {buildCheckoutPickerModel, filterCheckoutOptions, type CheckoutPickerOption} from '../lib/checkout-picker.ts';
 import {workspaceDrafts} from '../lib/workspace-drafts.ts';
 import {rememberCurrentFileOrigin,currentFileOrigin} from '../lib/current-file-origin.ts';
 import { FileEvidenceMarks, fileEvidenceDescription, useFileEvidence } from './FileEvidenceMarks.tsx';
@@ -197,12 +198,19 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const graph = useApp(s => s.graph);
   const files = useApp(s => s.projection?.files);
   const capturedRoot=useApp(s=>s.checkoutRoot??s.recording?.workspaceRoot);
+  const sessionRoot=useApp(s=>s.recording?.workspaceRoot);
+  const checkoutPrefix=useApp(s=>s.checkoutPrefix);
   const checkoutId=useApp(s=>s.checkoutId),readingId=checkoutId??id;
   const [switching,setSwitching]=useState(false);
+  const [pickerOpen,setPickerOpen]=useState(false);
+  const [pickerQuery,setPickerQuery]=useState('');
+  const pickerRef=useRef<HTMLDetailsElement>(null);
+  const pickerSearchRef=useRef<HTMLInputElement>(null);
+  const pickerListRef=useRef<HTMLDivElement>(null);
   const [touchedOnly, setTouchedOnly] = useState(false);
   const [rootRefresh,setRootRefresh]=useState(0);
   const fileRoots=useFileRoots(projection.observationCount+rootRefresh);
-  useEffect(() => setTouchedOnly(false), [id]);
+  useEffect(() => { setTouchedOnly(false); setPickerOpen(false); setPickerQuery(''); if (pickerRef.current) pickerRef.current.open = false; }, [id]);
   const touched = useMemo(() => touchedFiles(files ?? []), [files]);
   const hidden = useApp(s => s.foldersHidden);
   const narrow = useNarrowWorkspace(), developerWorkspace = useApp(s => s.developerWorkspace);
@@ -354,7 +362,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       closeExplorer();
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.tree-evidence-filter[open]')) return;
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.tree-evidence-filter[open], .checkout-picker[open]') || element.querySelector('.checkout-picker[open]')) return;
       if (!element.contains(event.target as Node) && !(event.target instanceof Element && event.target.closest('[data-workspace-files-trigger]'))) return;
       event.preventDefault(); event.stopPropagation(); closeExplorer(true);
     };
@@ -414,14 +422,44 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     } catch(error){setError((error as Error).message);}
     finally{setSwitching(false);}
   };
+  const pickerModel = useMemo(() => source?.kind === 'daemon' ? buildCheckoutPickerModel({ fileRoots, sessionRoot, checkoutPrefix }) : undefined, [source?.kind, fileRoots, sessionRoot, checkoutPrefix]);
+  const filteredPicker = useMemo(() => pickerModel ? filterCheckoutOptions(pickerModel.options, pickerQuery) : undefined, [pickerModel, pickerQuery]);
+  useEffect(() => { if (!shown) { setPickerOpen(false); setPickerQuery(''); } }, [shown]);
+  useLayoutEffect(() => {
+    const details = pickerRef.current;
+    if (!pickerOpen || !details || !shown) return;
+    const fit = () => {
+      const summary = details.querySelector<HTMLElement>(':scope > summary')?.getBoundingClientRect();
+      if (!summary) return;
+      const deskBottom = details.closest<HTMLElement>('.developer-workspace')?.getBoundingClientRect().bottom;
+      const composer = document.querySelector<HTMLElement>('.prompt-composer');
+      const composerRect = composer && getComputedStyle(composer).visibility !== 'hidden' ? composer.getBoundingClientRect() : undefined;
+      const composerLimit = composerRect && composerRect.height > 0 && composerRect.top > summary.bottom + 84 ? composerRect.top - 12 : undefined;
+      const bottomLimit = Math.min(window.innerHeight - 16, ...(deskBottom !== undefined ? [deskBottom - 12] : []), ...(composerLimit !== undefined ? [composerLimit] : []));
+      const available = Math.max(120, Math.floor(bottomLimit - summary.bottom - 8));
+      details.style.setProperty('--checkout-menu-max', `${Math.min(360, available)}px`);
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    const composerNode = document.querySelector<HTMLElement>('.prompt-composer');
+    const observer = composerNode ? new ResizeObserver(fit) : undefined;
+    if (composerNode) observer?.observe(composerNode);
+    return () => { window.removeEventListener('resize', fit); observer?.disconnect(); };
+  }, [pickerOpen, shown, narrow, developerWorkspace, pickerModel?.showFilter, filteredPicker?.present.length, filteredPicker?.unavailable.length]);
   const rootName = (workspace?.root??capturedRoot)?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
-  const checkoutPicker=(source?.kind==='daemon'&&fileRoots.some(root=>(root.fileCount??0)>0&&currentWorkspacePath(root.prefix+'/file',fileRoots,useApp.getState().recording?.workspaceRoot)===undefined)&&<details className="desk-options checkout-picker">
-      <summary aria-label="Choose browsing checkout">{switching?'Switching…':rootName}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5z"/></svg></summary>
-      <div className="desk-options-body" role="group" aria-label="Recorded checkouts">
-        <button className="btn ghost" aria-pressed={!checkoutId} disabled={switching||developerWorkspace} onClick={event=>{event.currentTarget.closest('details')!.open=false;void choose();}}>Session checkout</button>
-        {fileRoots.filter(root=>(root.fileCount??0)>0&&currentWorkspacePath(root.prefix+'/file',fileRoots,useApp.getState().recording?.workspaceRoot)===undefined).sort((a,b)=>Number(b.onDisk==='present')-Number(a.onDisk==='present')||(b.lastFileSequence??0)-(a.lastFileSequence??0)).map(root=><button className="btn ghost" key={root.prefix} title={root.root} data-checkout={root.prefix} aria-pressed={useApp.getState().checkoutPrefix===root.prefix} disabled={switching||developerWorkspace||root.onDisk!=='present'} onClick={event=>{event.currentTarget.closest('details')!.open=false;void choose(root.prefix);}}>{root.branch??root.root.replace(/\\/g,'/').split('/').at(-1)}{root.onDisk==='removed'?' · removed':root.onDisk!=='present'?' · unavailable':''}</button>)}
+  const renderCheckoutOption = (option: CheckoutPickerOption) => <button type="button" className="btn ghost checkout-option" key={option.key} title={option.root} data-checkout={option.prefix} aria-label={option.accessibleName} aria-description={option.metadata} aria-pressed={pickerModel?.activeKey === option.key} disabled={switching || developerWorkspace || (option.kind === 'worktree' && option.onDisk !== 'present')} onClick={event => { const details = event.currentTarget.closest('details'); if (details) details.open = false; setPickerOpen(false); setPickerQuery(''); void choose(option.prefix); details?.querySelector<HTMLElement>(':scope > summary')?.focus({ preventScroll: true }); }}><span className="checkout-option-head"><span className="checkout-option-name">{option.title}</span>{option.kind === 'session' && <span className="checkout-option-role">Session checkout</span>}</span><small className="checkout-option-meta">{option.metadata}</small></button>;
+  const checkoutPicker = pickerModel && filteredPicker && (<details ref={pickerRef} className="desk-options checkout-picker" onToggle={event => { const open = event.currentTarget.open; setPickerOpen(open); if (!open) setPickerQuery(''); else if (pickerModel.showFilter) requestAnimationFrame(() => pickerSearchRef.current?.focus({ preventScroll: true })); }} onKeyDown={event => { const list = pickerListRef.current; const input = pickerSearchRef.current; if (!list) return; const enabled = [...list.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]; if (event.target === input) { if (event.key === 'ArrowDown' && enabled.length) { event.preventDefault(); event.stopPropagation(); enabled[0]!.focus({ preventScroll: true }); } else if (event.key === 'ArrowUp' && enabled.length) { event.preventDefault(); event.stopPropagation(); enabled.at(-1)!.focus({ preventScroll: true }); } } else if (input && event.key === 'ArrowUp' && event.target === enabled[0]) { event.preventDefault(); event.stopPropagation(); input.focus({ preventScroll: true }); } }}>
+    <summary aria-label="Choose browsing checkout"><span className="checkout-picker-label">{switching ? 'Switching…' : pickerModel.summaryTitle}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5z"/></svg></summary>
+    <div className="desk-options-body" role="group" aria-label="Recorded checkouts">
+      {pickerModel.showFilter && <div className="checkout-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input ref={pickerSearchRef} type="text" aria-label="Filter recorded checkouts" placeholder="Filter checkouts…" maxLength={200} value={pickerQuery} onChange={e => setPickerQuery(e.target.value)} />{pickerQuery && <button type="button" aria-label="Clear checkout filter" onClick={() => { setPickerQuery(''); pickerSearchRef.current?.focus({ preventScroll: true }); }}>×</button>}</div>}
+      <div ref={pickerListRef} className="checkout-picker-list" onFocusCapture={event => { const list = event.currentTarget; const row = (event.target as HTMLElement).closest<HTMLElement>('button'); if (!row || !list.contains(row)) return; if (row.offsetTop < list.scrollTop) list.scrollTop = Math.max(0, row.offsetTop - 4); else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight + 4; }}>
+        {filteredPicker.present.map(renderCheckoutOption)}
+        {filteredPicker.present.length > 0 && filteredPicker.unavailable.length > 0 && <div className="checkout-picker-divider" role="separator" aria-label="Removed and unavailable checkouts"><span>Unavailable on disk</span></div>}
+        {filteredPicker.unavailable.map(renderCheckoutOption)}
+        {!filteredPicker.present.length && !filteredPicker.unavailable.length && <p className="checkout-picker-empty" role="status">No matching checkouts</p>}
       </div>
-    </details>);
+    </div>
+  </details>);
   if (!shown) return null;
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(260)} label="Resize Files reading space" />}
