@@ -410,7 +410,7 @@ function animate() {
     // The laptop is laid out at its full-screen size and shown smaller at rest, so growing never upscales pixels.
     // At rest it sits in the right-hand column; while the three screens play it fills the screen.
     const wide = matchMedia('(min-width: 900px)').matches;
-    const laptop = $('.laptop'), caption = $('.tour-steps'), slot = $('.laptop-slot');
+    const laptop = $('.laptop'), lid = $('.laptop-lid'), screen = $('.laptop-screen'), base = $('.laptop-base'), caption = $('.tour-steps'), slot = $('.laptop-slot');
     // Measured against the pin, not the viewport, so the resting place is the same at any scroll position (and on refresh).
     const pin = $('.tour-pin');
     const rest = () => { const r = slot.getBoundingClientRect(), p = pin.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - (p.left + p.width / 2), y: r.top + r.height / 2 - (p.top + p.height / 2) }; };
@@ -420,12 +420,19 @@ function animate() {
       const full = laptop.offsetWidth;
       const rail = caption.offsetWidth + 40;
       const scale = Math.min(1, Math.max(.62, (pin.clientWidth - rail) / full));
-      return { scale, x: scale < 1 ? rail / 2 : 0, y: 0 };
+      const centeredLeft = (pin.clientWidth - full * scale) / 2;
+      return { scale, x: Math.max(0, rail - centeredLeft), y: 0 };
     };
     // Centred vertically by GSAP's yPercent, so the scroll tweens own only the pixel offsets.
+    gsap.set(lid, { transformOrigin: '50% 100%', rotateX: -78 });
+    gsap.set(screen, { opacity: .18 });
+    gsap.set(base, { y: 8, scaleX: .98, transformOrigin: '50% 0' });
     if (wide) gsap.set(laptop, { yPercent: -50, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
     if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: () => activeLaptop().scale, x: () => activeLaptop().x, y: () => activeLaptop().y, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
     if (wide) tl.to(caption, { x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 50%', duration: 0.6, ease: 'power3.inOut' }, 0);
+    tl.to(lid, { rotateX: 0, duration: .5, ease: 'power4.out' }, 0);
+    tl.to(base, { y: 0, scaleX: 1, duration: .5, ease: 'power3.out' }, .08);
+    tl.to(screen, { opacity: 1, duration: .28, ease: 'power2.out' }, .3);
     // 1: the CLI, one line per action, scrolling past.
     tl.to(lines, { opacity: 1, stagger: 0.07, duration: 0.15, ease: 'none' }, 0.6);
     // 2: the desktop app, the same session as a chat with tools folded into rows.
