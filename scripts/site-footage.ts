@@ -49,7 +49,7 @@ const shots:string[]=[];
 async function shot(name:string,settle=700){
   if(only.length&&!only.includes(name))return;
   await page.mouse.move(-10,-10).catch(()=>{});await page.waitForTimeout(settle);
-  await page.screenshot({path:join(out,`${name}.png`)});shots.push(name);console.log('captured',name);
+  await page.screenshot({path:join(out,`${name}.jpg`),type:'jpeg',quality:86});shots.push(name);console.log('captured',name);
 }
 async function approve(){for(const name of ['Enable workspace reading','Approve workspace reading','Approve read-only Git','Approve current-file reading']){const b=page.getByRole('button',{name,exact:true}).first();if(await b.isVisible().catch(()=>false)){await b.click();await page.waitForTimeout(400);}}}
 async function openRecording(id:string){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern#/r/${id}`);await page.locator('.history').waitFor();await page.waitForTimeout(1500);}
@@ -58,11 +58,21 @@ try{
   await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.waitForTimeout(800);await shot('home');
   await openRecording(claude);await shot('history',1500);
   await page.evaluate(()=>{const h=document.querySelector('.history');if(h)h.scrollTop=0;});await page.waitForTimeout(1000);await shot('history-start');
-  await page.getByRole('button',{name:'Show files',exact:true}).first().click().catch(()=>{});await approve();await page.waitForTimeout(900);await shot('files');
-  for(const dir of ['src','src/checkout']){const row=page.locator(`[data-tree-path="${dir}"]`).first();if(await row.getAttribute('aria-expanded').catch(()=>null)==='false')await row.click();await page.waitForTimeout(300);}
+  await approve();await page.waitForTimeout(900);
+  // Files: reveal the edited file through the tree's own find box, hover it, then open it to read its history.
+  const findFiles=page.getByPlaceholder('Find files…').or(page.getByPlaceholder('Find files...')).first();
+  if(await findFiles.isVisible().catch(()=>false)){await findFiles.fill('guard');await page.waitForTimeout(700);}
   await shot('files');
   const file=page.locator('[data-tree-path="src/checkout/guard.ts"]').first();
-  if(await file.isVisible().catch(()=>false)){await file.hover();await page.waitForTimeout(900);if(!only.length||only.includes('files-hover')){await page.screenshot({path:join(out,'files-hover.png')});shots.push('files-hover');}await file.click();await page.waitForTimeout(1400);await approve();await page.waitForTimeout(600);await shot('peek');}
+  if(await file.isVisible().catch(()=>false)){
+    await file.hover();await page.waitForTimeout(900);
+    if(!only.length||only.includes('files-hover')){await page.screenshot({path:join(out,'files-hover.jpg'),type:'jpeg',quality:86});shots.push('files-hover');}
+    await file.click();await page.waitForTimeout(1400);await approve();await page.waitForTimeout(600);
+    const history=page.getByRole('region',{name:'File history'}).first();
+    if(!(await history.isVisible().catch(()=>false))){const tab=page.getByRole('button',{name:/history/i}).first();if(await tab.isVisible().catch(()=>false))await tab.click();await page.waitForTimeout(900);}
+    await shot('peek',300);
+  }else console.log('files: guard.ts row not visible');
+  await page.keyboard.press('Escape');await page.waitForTimeout(300);
   await page.evaluate(()=>{const h=document.querySelector('.history');if(h)h.scrollTop=0;});await page.waitForTimeout(900);
   await page.keyboard.press('Escape');
   await page.getByRole('button',{name:'Open developer workspace',exact:true}).click().catch(()=>{});await approve();await page.waitForTimeout(800);

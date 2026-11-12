@@ -24,6 +24,7 @@
       </a>
       <nav class="nav-links" aria-label="Sections">
         <a href="#tour">How it works</a>
+        <a href="#features">Features</a>
         <a href="#compare">Compare</a>
         <a href="#privacy">Privacy</a>
         <a data-repo-link href="#">GitHub</a>
@@ -69,15 +70,12 @@
       <div class="tour-pin">
         <div class="wrap tour-grid">
           <ol class="tour-steps" data-tour-steps>
-            <li><h3>In a terminal, the work scrolls past</h3><p>Claude Code and Codex print each action as one line. The source it read, the failing output and the diff are gone a moment later.</p></li>
-            <li><h3>Drishya shows the same session as work you can read</h3><p>The same task, opened in Drishya. Each action arrives in order, left to right, with its real output.</p></li>
-            <li><h3>See the failure and the fix together</h3><p>The test that failed, the edit that answered it and the run that passed sit side by side, as the agent did them.</p></li>
-            <li><h3>Every file the agent touched, in your own tree</h3><p>Files marks what the agent read (R) and edited (E), beside its work, in your repository.</p></li>
-            <li><h3>Hover a file to see its history</h3><p>Every change to that file across sessions, by Claude Code or Codex, with the reason it was made.</p></li>
-            <li><h3>Open it in Workspace</h3><p>Read and edit the current file, with the lines the agents changed marked in place.</p></li>
-            <li><h3>Changes for branches and pull requests</h3><p>Compare two branches or a pull request. Files changed on both come first, each with the agent that wrote it.</p></li>
-            <li><h3>The Git graph, with the agents' commits</h3><p>Every branch and commit, and which session made it.</p></li>
-            <li><h3>Every tool, counted</h3><p>The Toolbox counts built-in tools and MCP servers for the session, so you see how the agent worked.</p></li>
+            <li><span class="step-tag">Claude Code · CLI</span><h3>In the CLI, each action is one line</h3><p>The source it read, the failing output and the diff scroll past and are gone.</p></li>
+            <li><span class="step-tag">Desktop app</span><h3>In the app, the tools fold into a list</h3><p>A chat with the answer. What the agent read and ran sits in collapsed rows you open one at a time.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>In Drishya, you see the work itself</h3><p>The same session. Each action arrives in order with its real output, on a map of your repository.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>Sub-agents keep their own work</h3><p>The Explore sub-agent's reads stay with that agent, so you can tell who did what.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>The failing test, then the fix</h3><p>The test output in full, the edit that answered it, and the run that passed.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>And the answer, beneath the work</h3><p>The agent's own words, under the work that led to them. Scroll back to replay any step.</p></li>
           </ol>
           <div class="laptop" aria-hidden="true">
             <div class="laptop-lid"><div class="laptop-screen" data-viewport></div></div>
@@ -86,6 +84,39 @@
         </div>
       </div>
     </section>
+
+    <div class="features" id="features">
+      <section class="feature" id="feature-files" aria-labelledby="feature-files-title">
+        <div class="feature-pin"><div class="wrap feature-grid">
+          <div class="feature-copy"><span class="step-tag">Files</span><h2 id="feature-files-title">Every file the agent touched, marked in your tree</h2><p>Read, edited, added or deleted: each file carries its mark. Open one to see every action on it, in order, with the source the agent saw.</p></div>
+          <div class="shot" data-zoom=".068,.15,.18,.28" data-swap="footage/peek.jpg"><img class="shot-main" src="footage/files-hover.jpg" alt="" loading="lazy" decoding="async" /><img class="shot-swap" src="footage/peek.jpg" alt="" loading="lazy" decoding="async" /><div class="shot-cursor" data-cursor=".157,.386"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div></div>
+        </div></div>
+      </section>
+      <section class="feature flip" id="feature-workspace" aria-labelledby="feature-workspace-title">
+        <div class="feature-pin"><div class="wrap feature-grid">
+          <div class="feature-copy"><span class="step-tag">Workspace</span><h2 id="feature-workspace-title">Read and edit the current code beside the agent</h2><p>Open any file in Workspace with your tree, tabs and an editor. The agent's edits stay one step away.</p></div>
+          <div class="shot" data-zoom=".27,.2,.62,.45"><img class="shot-main" src="footage/workspace.jpg" alt="" loading="lazy" decoding="async" /></div>
+        </div></div>
+      </section>
+      <section class="feature" id="feature-changes" aria-labelledby="feature-changes-title">
+        <div class="feature-pin"><div class="wrap feature-grid">
+          <div class="feature-copy"><span class="step-tag">Changes</span><h2 id="feature-changes-title">Changes for branches and pull requests</h2><p>Compare a branch with main, or a pull request with its base. Files changed on both come first, and each one names the agent that edited it.</p></div>
+          <div class="shot" data-zoom=".26,.14,.68,.48"><img class="shot-main" src="footage/changes.jpg" alt="" loading="lazy" decoding="async" /></div>
+        </div></div>
+      </section>
+      <section class="feature flip" id="feature-graph" aria-labelledby="feature-graph-title">
+        <div class="feature-pin"><div class="wrap feature-grid">
+          <div class="feature-copy"><span class="step-tag">Git graph</span><h2 id="feature-graph-title">The Git graph, with the session's commits</h2><p>Branches, commits and where the agent's work landed, read-only, without leaving the session.</p></div>
+          <div class="shot" data-zoom=".21,.16,.72,.66"><img class="shot-main" src="footage/git-graph.jpg" alt="" loading="lazy" decoding="async" /></div>
+        </div></div>
+      </section>
+      <section class="feature" id="feature-toolbox" aria-labelledby="feature-toolbox-title">
+        <div class="feature-pin"><div class="wrap feature-grid">
+          <div class="feature-copy"><span class="step-tag">Toolbox</span><h2 id="feature-toolbox-title">Every tool the agent used, counted</h2><p>Built-in tools, MCP servers and sub-agents, and which tools were available but never used.</p></div>
+          <div class="shot" data-zoom=".79,.07,.15,.68"><img class="shot-main" src="footage/history.jpg" alt="" loading="lazy" decoding="async" /></div>
+        </div></div>
+      </section>
+    </div>
 
     <section id="compare" class="compare" aria-labelledby="compare-title">
       <div class="wrap">

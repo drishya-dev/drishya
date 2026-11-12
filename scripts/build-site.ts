@@ -38,7 +38,10 @@ export async function buildSiteSample() {
   await writeFile(resolve(out,'sample.json'),JSON.stringify(sample));
   // Fonts come from the product, so the site and the app share one face; they are copied, never committed twice.
   const fonts=resolve(repo,'apps/site/public/fonts');await mkdir(fonts,{recursive:true});
-  for(const f of ['InterVariable.woff2','Inter-OFL.txt','JetBrainsMono-Regular.woff2','JetBrainsMono-Medium.woff2','JetBrainsMono-OFL.txt'])await cp(resolve(repo,'apps/ui/public/fonts',f),resolve(fonts,f));
+  await cp(resolve(repo,'apps/ui/public/fonts'),fonts,{recursive:true});
+  // The laptop runs the real app on the same synthetic bundle, plus the brand assets it references.
+  await mkdir(resolve(repo,'apps/site/public/demo'),{recursive:true});await cp(resolve(repo,'apps/ui/public/demo/bundle.json'),resolve(repo,'apps/site/public/demo/bundle.json'));
+  await cp(resolve(repo,'apps/ui/public/brand'),resolve(repo,'apps/site/public/brand'),{recursive:true});
   console.log(`Site sample: ${operations.length} operations, ${graph.nodes.length} files, ${chapters.length} chapters (synthetic only).`);
 }
 
