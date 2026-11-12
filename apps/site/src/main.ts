@@ -32,9 +32,11 @@ for (const a of $$<HTMLAnchorElement>('[data-link]')) external(a, SITE.links[a.d
 for (const el of $$('[data-install-command]')) el.textContent = SITE.install;
 for (const b of $$<HTMLButtonElement>('[data-copy]')) {
   const label = b.textContent;
+  const status = b.parentElement?.querySelector<HTMLElement>('[data-copy-status]');
   b.addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(SITE.install); b.textContent = 'Copied'; } catch { b.textContent = 'Select and copy'; }
-    setTimeout(() => (b.textContent = label), 1600);
+    try { await navigator.clipboard.writeText(SITE.install); b.textContent = 'Copied'; if (status) status.textContent = 'Command copied'; }
+    catch { b.textContent = 'Select and copy'; if (status) status.textContent = 'Clipboard unavailable'; }
+    setTimeout(() => { b.textContent = label; if (status) status.textContent = ''; }, 1600);
   });
 }
 
@@ -123,11 +125,32 @@ if (dottedContext) {
 }
 // The why section's stream: the same CLI lines the laptop shows, scrolling past as they do in a terminal.
 $('[data-why-lines]').innerHTML = Array.from({ length: 3 }, () => $$('.tl', $('[data-screen="cli"]')).map(l => `<div class="${l.classList.contains('r') ? 'r' : ''}">${l.innerHTML}</div>`).join('')).join('');
+
+// The page is one replay: keep a quiet chapter marker and backdrop context in sync with the section in view.
+const chapterSections = $$<HTMLElement>('[data-chapter]');
+const chapterLinks = $$<HTMLAnchorElement>('[data-chapter-link]');
+const sectionRatios = new Map<string, number>();
+const setActiveChapter = (id: string) => {
+  document.documentElement.dataset.section = id;
+  for (const link of chapterLinks) {
+    const active = link.dataset.chapterLink === id;
+    if (active) link.setAttribute('aria-current', 'true'); else link.removeAttribute('aria-current');
+  }
+};
+setActiveChapter('top');
+const chapterObserver = new IntersectionObserver(entries => {
+  for (const entry of entries) sectionRatios.set((entry.target as HTMLElement).dataset.chapter!, entry.intersectionRatio);
+  const active = [...sectionRatios.entries()].sort((a, b) => b[1] - a[1])[0];
+  if (active && active[1] > 0) setActiveChapter(active[0]);
+}, { rootMargin: '-35% 0px -35% 0px', threshold: [0, .15, .4, .7, 1] });
+for (const section of chapterSections) chapterObserver.observe(section);
+
 const compareRows = $$<HTMLTableRowElement>('[data-compare-row]');
 const compareWrap = $<HTMLElement>('.compare > .wrap');
 const compareProof = $<HTMLElement>('[data-compare-proof]');
 const proofTitle = $<HTMLElement>('[data-proof-title]');
 const proofSource = $<HTMLElement>('[data-proof-source]');
+const proofState = $<HTMLElement>('[data-proof-state]');
 const proofBody = $<HTMLElement>('[data-proof-body]');
 const proofExpand = $<HTMLButtonElement>('[data-proof-expand]');
 const chapter = (key: string) => sample.chapters.find(c => c.key === key)!;
@@ -145,7 +168,7 @@ const proofs: Record<string, { title: string; source: string; body: string }> = 
   subagents: { title: 'Parallel work stays visible', source: 'Captured operations · agents and tools', body: subagentOps },
   replay: { title: 'Replay the whole session', source: `Captured timeline · ${sample.operations.length} operations`, body: sample.chapters.map(c => `${c.status.padEnd(18)} ${c.title}`).join('\n') },
 };
-let selectedCompareRow = compareRows[0];
+let selectedCompareRow: HTMLTableRowElement | undefined;
 let openCompareRow: HTMLTableRowElement | undefined;
 let hideCompareTimer = 0;
 let showCompareTimer = 0;
@@ -161,6 +184,7 @@ const renderProof = (row: HTMLTableRowElement) => {
   const proof = proofs[row.dataset.proof ?? ''] ?? proofs.files!;
   proofTitle.textContent = proof.title;
   proofSource.textContent = proof.source;
+  proofState.textContent = `Captured evidence · ${row.querySelector('th')?.textContent ?? 'selected row'}`;
   proofBody.textContent = proof.body;
   compareProof.dataset.proof = row.dataset.proof ?? '';
 };
@@ -293,7 +317,6 @@ compareProof.addEventListener('wheel', event => {
 }, { passive: false });
 addEventListener('scroll', () => { if (openCompareRow) positionProof(openCompareRow); }, { passive: true });
 addEventListener('resize', () => { if (openCompareRow) positionProof(openCompareRow); });
-if (selectedCompareRow) selectCompareRow(selectedCompareRow);
 if (reduced) {
   for (const o of sample.operations) heroMap.light(o.path, toneOf(o), false);
   $$('.screen').forEach(el => (el.style.display = 'none'));
@@ -401,11 +424,16 @@ function animate() {
   // The tour: one pinned timeline, scrubbed by scroll, so every step plays forward and rewinds exactly.
   function tourScene() {
     const steps = $$('.tour-steps li'), cli = $('[data-screen="cli"]'), app = $('[data-screen="app"]');
+    const progressDots = $$<HTMLElement>('[data-tour-progress] span');
     const lines = $$('.tl', cli), rows = $$('.ap-tool, .ap-reply', app);
     gsap.set(lines, { opacity: 0 });
     gsap.set(rows, { opacity: 0, y: 8 });
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
     const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 7}`, pin: '.tour-pin', scrub: true, invalidateOnRefresh: true } });
+    tl.eventCallback('onUpdate', () => {
+      const current = Math.min(progressDots.length - 1, Math.floor(tl.progress() * progressDots.length));
+      progressDots.forEach((dot, index) => dot.classList.toggle('is-current', index === current));
+    });
     const show = (i: number, t: number) => tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2);
     const replay = (from: number, to: number, t: number, duration: number) => tl.fromTo({ s: from }, { s: from }, { s: to, duration, ease: 'none', onUpdate() { const n = Math.round(this.targets()[0].s); if (n !== wantedStep) seek(n); } }, t);
 
