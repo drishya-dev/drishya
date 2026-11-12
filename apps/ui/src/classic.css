@@ -251,7 +251,7 @@
 .connected-workspace .search input:focus { outline: none; box-shadow: none; }
 :root[data-experience=classic] .studio-actions .settings-open { display: inline-flex; align-items: center; justify-content: center; padding: 0; line-height: 1; }
 .settings-glyph { display: block; flex: none; }
-.brand-image.brand-mark {display: block;position: relative;flex: none;overflow: hidden;border: 0;border-radius: var(--round-sm);background: #0b0c0f} :where(:root:not([data-ui-skin=clarity])) .brand-image.brand-mark { width: 30px !important; height: 30px !important; }
+.brand-image.brand-mark {display: block;position: relative;flex: none;overflow: hidden;border: 0;border-radius: var(--round-sm);background: var(--s1)} :where(:root:not([data-ui-skin=clarity])) .brand-image.brand-mark { width: 30px !important; height: 30px !important; }
 .brand-image.brand-mark::after { content: none; }
 .brand-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
 
