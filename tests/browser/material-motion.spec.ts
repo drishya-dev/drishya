@@ -36,7 +36,7 @@ test.afterEach(async () => {
 test('whole material zoom stays continuous while the result changes its allocation', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   await expect(page.locator('.origins')).toBeAttached();
   await expect.poll(() => page.locator('.history').evaluate(el => Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight))).toBeLessThan(2);
   await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
@@ -72,7 +72,7 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'local-scroll-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 60 }, (_, n) => `Documentation ${n}`).join('\n') }] } });
@@ -107,7 +107,7 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
 test('hover reading preserves live follow and safely releases when new work arrives', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'live-hover-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'Bash', input: { command: 'printf live-hover-proof' } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'Hover output' }] } });
@@ -132,7 +132,7 @@ test('hover reading preserves live follow and safely releases when new work arri
 test('hover result boundaries scroll history without dismissing the same reading surface', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const id = 'hover-boundary-proof';
   append({ type: 'assistant', message: { id, role: 'assistant', content: [{ type: 'tool_use', id, name: 'mcp__context7__get-library-docs', input: { topic: id } }] } });
   append({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: Array.from({ length: 100 }, (_, n) => `Documentation ${n}`).join('\n') }] } });
@@ -193,10 +193,18 @@ test('hover result boundaries scroll history without dismissing the same reading
       const x = Math.max(r.left, c.left) + Math.min(r.right - Math.max(r.left, c.left), c.right - Math.max(r.left, c.left)) / 2;
       const y = edge === 'composer' ? c.top + 10 : c.bottom - 10;
       const hit = document.elementFromPoint(x, y);
-      return { overlaps: y > r.top && y < r.bottom, chromeOwnsHit: !!hit && chrome.contains(hit), blur: getComputedStyle(chrome, '::after').backdropFilter };
+      const brand = chrome.querySelector('.brand'), b = brand?.getBoundingClientRect();
+      const brandHit = b && document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2);
+      return { overlaps: y > r.top && y < r.bottom, chromeOwnsHit: !!hit && chrome.contains(hit), worldOwnsHit: !!hit && el.contains(hit), brandOwnsHit: !!brandHit && !!brand?.contains(brandHit), blur: getComputedStyle(chrome, '::after').backdropFilter };
     }, edge);
     expect(overlap.overlaps).toBe(true);
-    expect(overlap.chromeOwnsHit).toBe(true);
+    // The removed centre capsule leaves the header gap click-through.
+    // Its actual brand control still owns its hit; the composer owns its panel.
+    if (edge === 'composer') expect(overlap.chromeOwnsHit).toBe(true);
+    else {
+      expect(overlap.worldOwnsHit).toBe(true);
+      expect(overlap.brandOwnsHit).toBe(true);
+    }
     expect(overlap.blur).toBe('blur(8px)');
     if (process.env.DRISHYA_REVIEW_SHOTS) await page.screenshot({ path: `.local/hover-under-${edge}.png` });
   }

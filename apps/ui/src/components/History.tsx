@@ -1,3 +1,4 @@
+import { isPersonPrompt } from '@drishya/contracts';
 import { SessionLineage } from './SessionLineage.tsx';
 import {desktopPrompt} from '../lib/desktop-prompt.ts';
 import {DesktopPromptAttachments} from './DesktopPromptAttachments.tsx';
@@ -32,6 +33,7 @@ import type { HistoryQuery } from '../../../../packages/scene/src/history.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { fileFolder, fileName } from '../lib/file-identity.ts';
 import { Markdown } from '../lib/markdown.tsx';
+import { FullProse } from './FullProse.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import './captured-file-path.css';
 import { useApp } from '../state.ts';
@@ -78,6 +80,9 @@ function readingClearance(history: HTMLElement): number {
   return Math.max(16, top - bounds.top + 16);
 }
 
+// Reading-window remounts do not repeat an outcome already shown in this live view.
+const OutcomeMotion = createContext<Set<string> | undefined>(undefined);
+
 type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> };
 
 export function History({ scene, projection, onWindow }: HistoryProps) {
@@ -99,7 +104,8 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
     promptStep === deferred.promptStep && filter === deferred.filter;
   const shown = liveArrival ? deferred : pair;
   const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
-  return <StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider>;
+  const outcomes = useMemo(() => new Set<string>(), [projection.recordingId, mode, mode === 'replay' ? shown.scene.step : undefined]);
+  return <OutcomeMotion.Provider value={outcomes}><StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider></OutcomeMotion.Provider>;
 }
 
 const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
@@ -185,7 +191,12 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
       measure();
       // Composer clearance changes padding after the first layout. It changes the
       // scroll destination without changing any passage's measured content height.
-      if (entries.some(entry => entry.target === inner) && useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) followLatest();
+      if (entries.some(entry => entry.target === inner)) {
+        if (useApp.getState().follow && !(navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection)) followLatest();
+        // Floating controls can change only padding, without resizing a passage.
+        // Detached reading needs the same compensation as measured slot growth.
+        else restoreReading(true);
+      }
     });
     if (inner) observer.observe(inner, { box: 'border-box' });
     for (const card of history.querySelectorAll('article[data-op-id]')) observer.observe(card);
@@ -542,7 +553,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
       navigationBoundary.current = { step: scene.step, projection };
       readingAtStart.current = false;
       setScrollTop(layout.prefix[targetIndex]!);
-      return;
+      // An already mounted passage may need no scroll change, so no render follows.
+      // Position its selected action now; an unmounted virtual passage waits below.
     }
     if (pendingNavigation.current !== targetId) return;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((n) => n.dataset.passageId === targetId);
@@ -620,7 +632,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false });
   };
 
-  const prompts = scene.passages.flatMap((ps, index) => ps.turnPrompt ? [{ ps, index }] : []);
+  const prompts = scene.passages.flatMap((ps, index) => (ps.turnPrompt || ps.turnImages?.length) && ps.personPrompt !== false && isPersonPrompt(ps.turnPrompt) ? [{ ps, index }] : []);
   const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 1));
   const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
 
@@ -707,7 +719,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
         setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const note = injectedMessage(ps.turnPrompt!); return note ? injectedLine(note) : ps.turnPrompt!; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const text = ps.turnPrompt ?? ''; const note = injectedMessage(text); return note ? injectedLine(note) : text; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
@@ -781,7 +793,6 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const detail = useApp(s => s.reasoningDetail);
   const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
   const [open, setOpen] = useDisclosureChoice(`prose/${pr.id}`, pr.role !== 'reasoning' || detail === 'expanded');
-  const [full, setFull] = useState(false);
   const prose = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     const root = prose.current;
@@ -802,8 +813,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
-      {open && <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />}
-      {pr.truncated && <><button className="material-more" onClick={() => { setFull((value) => !value); }}>{full ? 'Close full text' : 'Preview · read full text'}</button>{full && <ArtifactReader id={`art_${pr.id}_prose`} kind="output" />}</>}
+      {open && (pr.truncated ? <FullProse id={`art_${pr.id}_prose`} preview={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile}/> : <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />)}
     </div>
   );
 }
@@ -826,6 +836,16 @@ function ReasoningGapLine({ pr, agent }: { pr: Prose; agent?: Agent }) {
 
 const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operation; index: number }) {
   const experience = useExperience();
+  const outcomes = useContext(OutcomeMotion);
+  const resolvePermit = useRef<{ scope?: Set<string>; allowed: boolean }>(undefined);
+  const resolving = so.resolving && (resolvePermit.current?.scope === outcomes && resolvePermit.current
+    ? resolvePermit.current.allowed : !outcomes?.has(op.id));
+  useLayoutEffect(() => {
+    if (!so.resolving) { resolvePermit.current = undefined; return; }
+    if (!resolvePermit.current || resolvePermit.current.scope !== outcomes)
+      resolvePermit.current = { scope: outcomes, allowed: !outcomes?.has(op.id) };
+    if (resolvePermit.current.allowed) outcomes?.add(op.id);
+  }, [so.resolving, outcomes, op.id]);
   const workspaceRoot = useApp(s=>s.recording?.workspaceRoot);
   const card = useRef<HTMLElement>(null);
   const selected = useApp((s) => s.selectedOp === op.id);
@@ -860,7 +880,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const imageMaterial=imagePath||hasImage?<>
     {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
     {!imagePath&&['mcp','web'].includes(op.detail.kind)
-      ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>
+      ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={resolving} onSource={measureSource}/>
       :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
   </>:null;
   return (
@@ -871,7 +891,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       data-origin={so.origin.type}
       data-tool-exchange={['shell','test','mcp','web','other'].includes(op.detail.kind) || undefined}
       data-diff={op.detail.kind === 'edit' && op.detail.hunks.length > 0 && presentation.shape === 'wide' ? (isProse(op.detail.path) ? 'prose' : 'code') : undefined}
-      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.declined ? 'declined' : so.state} ph-${so.phase}${so.resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
+      className={`op op-${op.kind} shape-${presentation.shape} material-${presentation.material} st-${so.declined ? 'declined' : so.state} ph-${so.phase}${resolving ? ' resolving' : ''}${selected ? ' selected' : ''}${expanded ? ' expanded' : ''}${lit ? ' lit' : ''}${so.matchesFilter ? '' : ' filtered-out'} ${so.phase === 'arriving' ? from : ''}`}
       style={{ zIndex: selected ? 50 : 10 + index, ...(readingAllocation ? { '--reading-width': `${readingAllocation}px` } : {}) } as React.CSSProperties}
       tabIndex={0}
       onClick={(e) => {
@@ -899,7 +919,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
       {!expanded && <div className="op-body">
-        {imageMaterial??<><OpPreview op={op} resolving={so.resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
+        {imageMaterial??<><OpPreview op={op} resolving={resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
       </div>}
       {expanded&&<ExpandedOperation op={op} image={imageMaterial}/>}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Shortened · Expand to read all of it</div>}
@@ -1142,7 +1162,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   return (
     <div className="turn">
       {who}
-      {shown && <div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div>}
+      {shown && <div className="turn-capsule"><div ref={text} className={`turn-text${expanded ? '' : ' clamped'}`}>{shown}</div></div>}
       {attachments}
       {captured}
       {report && <CapturedContextReport report={report} time={time} />}

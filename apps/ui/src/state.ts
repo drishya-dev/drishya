@@ -1,3 +1,4 @@
+import {setCheckoutContext} from './api.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
 // always compose(projection, cursor) — the store never holds a hand-built scene.
 
@@ -31,6 +32,7 @@ interface State {
   error?: string;
   recordings: ReaderRecording[];
   recordingId?: string;
+  checkoutId?:string; checkoutRoot?:string; checkoutPrefix?:string;
   resumeRecordingId?: string;
   recoveryState?: 'saved' | 'unavailable';
   recoveryError?: string;
@@ -68,6 +70,10 @@ interface State {
   foldersHidden?: boolean;
   currentFile?: string;
   developerWorkspace: boolean;
+  /** GIT-8: the Compare window, a working window like the Workspace. */
+  compareOpen: boolean;
+  /** Which view Changes opens on when something asks for a particular one (the palette); read once, then cleared. */
+  comparePreset?: 'uncommitted' | 'session' | 'branch' | 'pr';
   theme: ThemePreference;
   settingsOpen: boolean;
   selectedOp?: string;
@@ -138,6 +144,7 @@ export const useApp = create<State>((set, get) => ({
   reconnectAttempt: 0,
   mode: 'history',
   developerWorkspace: false,
+  compareOpen: false,
   replayDiagnostics: false,
   step: 0,
   playing: false,
@@ -179,7 +186,8 @@ export const useApp = create<State>((set, get) => ({
     const memory = workspaceMemory(src);
     if (opts.at !== undefined || opts.play) memory.clear(id);
     const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
+    setCheckoutContext(id);
+    set({ checkoutId:undefined,checkoutRoot:undefined,checkoutPrefix:undefined, error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, compareOpen: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     let opened = () => {};
     const mine = { id, done: new Promise<void>(resolve => { opened = resolve; }) };
@@ -249,7 +257,10 @@ export const useApp = create<State>((set, get) => ({
     const { source, recordingId, mode, step, filter, selectedOp } = get();
     if (!source?.history || !recordingId) return;
     const current = newest('projection');
-    const page = await source.history(recordingId, { step: mode === 'replay' ? step : undefined, filter, selectedOperationId: selectedOp, ...query });
+    const previous = get().historyPage;
+    const liveInterval = mode === 'history' && previous
+      ? { since: previous.scene.step, previousSince: Math.max(0, previous.since ?? previous.scene.step - 1) } : {};
+    const page = await source.history(recordingId, { step: mode === 'replay' ? step : undefined, ...liveInterval, filter, selectedOperationId: selectedOp, ...query });
     if (!current() || get().recordingId !== recordingId) return;
       set({ error: undefined, historyPage: page, projection: page.projection, renderedRevisions: page.revisions,
       step: mode === 'history' ? page.scene.total : page.scene.step });
@@ -260,7 +271,7 @@ export const useApp = create<State>((set, get) => ({
     if (!p) return;
     if (get().mode === 'history' && get().source && get().recordingId) workspaceMemory(get().source!).clear(get().recordingId!);
     const s = Math.max(0, Math.min(get().historyPage?.scene.total ?? p.timeline.length, Math.round(step)));
-    set({ mode: 'replay', developerWorkspace: false, step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
+    set({ mode: 'replay', developerWorkspace: false, compareOpen: false, step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
     if (get().historyPage) void get().loadHistoryWindow({ step: s, ...(!get().follow && get().readingPassageId ? { pinnedPassageIds: [get().readingPassageId!] } : {}) }).catch((error) => set({ error: error.message }));
   },
 
@@ -335,12 +346,15 @@ export function setMapVisible(on: boolean) {
 }
 
 /** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
-export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system' | 'mocha' | 'tokyo' | 'nord' | 'gruvbox';
+export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system';
 
+/** Release 1 ships Jet Black ('dark'), Daylight ('light') and Midnight. Retired presets fall back to Jet Black, or Daylight for the light one (Royal).
+ *  The map lives inside the function: the store above calls it while this module is still initialising, before a module-level constant exists. */
 function storedTheme(): ThemePreference {
   try {
+    const retired: Record<string, ThemePreference> = { mocha: 'dark', nord: 'dark', gruvbox: 'dark', tokyo: 'light' };
     const value = localStorage.getItem('drishya.theme');
-    return ['midnight','light','system','mocha','tokyo','nord','gruvbox'].includes(value ?? '') ? value as ThemePreference : 'dark';
+    return ['midnight','light','system'].includes(value ?? '') ? value as ThemePreference : retired[value ?? ''] ?? 'dark';
   } catch {
     return 'dark';
   }

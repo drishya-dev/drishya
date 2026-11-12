@@ -12,7 +12,7 @@ import {CommitRows} from './CommitRows.tsx';
 import {refsInWindow} from '../lib/git-commit-rows.ts';
 import {ReadingDialog} from './ProductShell.tsx';
 import {ReadingResize} from './ReadingResize.tsx';
-import {useSessionWorkspace} from './SessionWorkspace.tsx';
+import {useReadingWorkspace} from './SessionWorkspace.tsx';
 import {GitPatchReader} from './GitPatchReader.tsx';
 import {FileIcon} from './FileIcon.tsx';
 import {WholeSource} from './WholeSource.tsx';
@@ -31,18 +31,21 @@ function enqueueGitRead<T>(id:string,read:()=>Promise<T>):Promise<T> {
   return next;
 }
 export function GitHistory() {
-  const [open,setOpen]=useState(false),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode);
+  const checkoutId=useApp(s=>s.checkoutId);
+  const [open,setOpen]=useState(false),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),changesOpen=useApp(s=>s.compareOpen);
   useEffect(()=>{
-    const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;state.set({developerWorkspace:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});setOpen(true);};
-    const close=()=>setOpen(false);
-    window.addEventListener('drishya-git-history',show);window.addEventListener('drishya-git-review',close);return()=>{window.removeEventListener('drishya-git-history',show);window.removeEventListener('drishya-git-review',close);};
+    const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;state.set({developerWorkspace:false,compareOpen:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});setOpen(true);};
+    window.addEventListener('drishya-git-history',show);return()=>window.removeEventListener('drishya-git-history',show);
   },[]);
   useEffect(()=>setOpen(false),[id,source,mode]);
-  return open&&id?<GitHistoryReader key={id} id={id} close={()=>{setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({preventScroll:true}));}}/>:null;
+  // Changes and Git graph are two windows over the same place; opening one puts the other away.
+  useEffect(()=>{if(changesOpen)setOpen(false);},[changesOpen]);
+  return open&&id?<GitHistoryReader key={`${id}:${checkoutId??"main"}`} id={id} close={()=>{setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({preventScroll:true}));}}/>:null;
 }
 
 function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
-  const {workspace,approve}=useSessionWorkspace(),narrow=useNarrowWorkspace();
+  const checkoutId=useApp(s=>s.checkoutId);
+  const {workspace,approve}=useReadingWorkspace(),narrow=useNarrowWorkspace();
   const [width,setWidth]=useWorkspaceState('git/historyWidth',1180);
   // Unknown until the status read returns: an already-approved repository must not flash its access prompt.
   const [approved,setApproved]=useState<boolean>(),[granting,setGranting]=useState(false);
@@ -65,27 +68,27 @@ function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
   const bounds=[...pages.keys()].sort((a,b)=>a-b),newest=bounds[0]??0,oldest=bounds.at(-1)??0;
   const moreOlder=!!pages.get(oldest)?.more,moreNewer=newest>0;
   const extend=(direction:'older'|'newer')=>{if(loading)return;const next=direction==='older'?moreOlder?oldest+50:undefined:moreNewer?Math.max(0,newest-50):undefined;if(next!==undefined)setStart(next);};
-  useEffect(()=>{let active=true;void workspaceApi.gitStatus(id).then(status=>{if(active)setApproved(status.approved);}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[id]);
+  useEffect(()=>{let active=true;void workspaceApi.gitStatus(checkoutId??id).then(status=>{if(active)setApproved(status.approved);}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[id]);
   useEffect(()=>{const timer=setTimeout(()=>{setFilter(query);setReferenceStart(0);},250);return()=>clearTimeout(timer);},[query]);
   useEffect(()=>{
     if(!approved||!workspace?.approved)return;let active=true;setLoading(true);setError('');
-    void enqueue(async()=>active?workspaceApi.gitHistory(id,{start,reference,referenceStart,q:filter,generation:generation.current}):undefined).then(next=>{
+    void enqueue(async()=>active?workspaceApi.gitHistory(checkoutId??id,{start,reference,referenceStart,q:filter,generation:generation.current}):undefined).then(next=>{
       if(!active||!next)return;generation.current=next.generation;setValue({key,data:next});
       setPages(previous=>withGitPage(previous,next));
       setSelected(current=>current||next.commits[0]?.hash||'');
     }).catch(error=>{if(active)setError(error.message);}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
-  },[id,approved,workspace?.approved,key]);
+  },[id,checkoutId,approved,workspace?.approved,key]);
   useEffect(()=>{
     setDetail(undefined);setDetailError('');setCopied(false);
     if(!selected||!data)return;let active=true;setDetailLoading(true);
-    void enqueue(async()=>active?workspaceApi.gitCommit(id,selected,parent,fileStart,data.generation):undefined).then(next=>{
+    void enqueue(async()=>active?workspaceApi.gitCommit(checkoutId??id,selected,parent,fileStart,data.generation):undefined).then(next=>{
       if(active&&next){setDetail(next);setPath(current=>next.files.some(file=>file.path===current)?current:next.files[0]?.path??'');}
     }).catch(error=>{if(active)setDetailError(error.message);}).finally(()=>{if(active)setDetailLoading(false);});
     return()=>{active=false;};
-  },[id,selected,parent,fileStart,data]);
+  },[id,checkoutId,selected,parent,fileStart,data]);
   const refresh=()=>{setPages(new Map());mainSeeds.current.clear();setValue(undefined);generation.current=undefined;setStart(0);setReferenceStart(0);setParent(0);setFileStart(0);setRetry(n=>n+1);};
-  const consent=async()=>{setGranting(true);setError('');try{await grantGit(id,!!workspace?.approved,approve);setApproved(true);}catch(error){setError((error as Error).message);}finally{setGranting(false);}};
+  const consent=async()=>{setGranting(true);setError('');try{await grantGit(checkoutId??id,!!workspace?.approved,approve);setApproved(true);}catch(error){setError((error as Error).message);}finally{setGranting(false);}};
   const choose=(hash:string)=>{setSelected(hash);setParent(0);setFileStart(0);setReading(true);};
   // Stepping along a focused branch only moves the selection; it must not swap the graph for the commit's reading pane.
   const select=(hash:string)=>{setSelected(hash);setParent(0);setFileStart(0);};

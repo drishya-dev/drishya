@@ -11,6 +11,8 @@ type Graph = ReturnType<typeof gitThreadLayout>;
 type LayoutNode = Graph['nodes'][number];
 export interface LightView { scale: number; ox: number; oy: number; width: number; height: number }
 export interface LightOptions {
+  /** Paint is supplied by the DOM palette boundary, never invented by geometry. */
+  palette: readonly (readonly [number,number,number])[];
   /** Commits whose strands brighten while one or a branch is hovered or focused; the rest dim. */
   focus?: ReadonlySet<string>;
   focusMix?: number;
@@ -44,7 +46,6 @@ export interface LightLayout {
   mainW: number;
 }
 
-const PALETTE = ['#ff3fcf', '#a24dff', '#5a6bff', '#2fd9ff', '#f2fbff', '#2fd9ff', '#7a50ff', '#ff4fc8'].map((h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255) as [number, number, number]);
 const BRAID = .4, HAIR = .045, TWIST = 1.4;
 
 function rng(seed: number) {
@@ -55,7 +56,7 @@ function noise(x: number) { const i = Math.floor(x), f = x - i, s = f * f * (3 -
 const smooth = (a: number, b: number, x: number) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 export const hashSeed = (text: string) => Array.from(text).reduce((a, ch) => Math.imul(a, 31) + ch.charCodeAt(0) | 0, 7);
-function colour(t: number) {
+function colour(t: number, PALETTE:LightOptions['palette']) {
   t = clamp(t, 0, 1) * (PALETTE.length - 1);
   const i = Math.min(PALETTE.length - 2, Math.floor(t)), f = t - i, a = PALETTE[i]!, b = PALETTE[i + 1]!;
   return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f] as const;
@@ -182,7 +183,7 @@ class Lines {
   }
 }
 const SCRATCH: [number, number, number] = [0, 0, 0];
-function colourInto(t: number) {
+function colourInto(t: number, PALETTE:LightOptions['palette']) {
   t = clamp(t, 0, 1) * (PALETTE.length - 1);
   const i = Math.min(PALETTE.length - 2, Math.floor(t)), f = t - i, a = PALETTE[i]!, b = PALETTE[i + 1]!;
   SCRATCH[0] = a[0] + (b[0] - a[0]) * f; SCRATCH[1] = a[1] + (b[1] - a[1]) * f; SCRATCH[2] = a[2] + (b[2] - a[2]) * f;
@@ -257,7 +258,7 @@ function buildTile(graph: Graph, layout: LightLayout, tile: { x0: number; x1: nu
         const x = c[0] + nx[i]! * off, y = c[1] + ny[i]! * off;
         if (i > 0) {
           const z = Math.sin(X / twist + u * 5 + phase), born = f >= entering ? smooth(0, .45, i / (n - 1)) : 1;
-          colourInto(u + .5 + .08 * Math.sin(X / 300 + phase));
+          colourInto(u + .5 + .08 * Math.sin(X / 300 + phase), options.palette);
           out.push(px, py, x, y, SCRATCH[0], SCRATCH[1], SCRATCH[2], alpha * (.7 + .3 * z) * fades[i]! * born);
         }
         px = x; py = y;
@@ -342,11 +343,11 @@ function buildTile(graph: Graph, layout: LightLayout, tile: { x0: number; x1: nu
 
 export interface LightFrameData { lines: Float32Array; points: Float32Array; segments: number; offset: [number, number]; linesKey: number }
 
-export function gitLight(graph: Graph, layout: LightLayout, view: LightView, options: LightOptions & { cache?: LightCache } = {}): LightFrameData {
+export function gitLight(graph: Graph, layout: LightLayout, view: LightView, options: LightOptions & { cache?: LightCache }): LightFrameData {
   const { scale, ox, oy, width: W, height: H } = view;
   const cache = options.cache;
   // The geometry depends on these and not on the pan position, the hover or the selection.
-  const parts = [graph, layout, scale, options.heads, options.seed, options.lowResource, options.olderBeyond, W, H];
+  const parts = [graph, layout, scale, options.palette, options.heads, options.seed, options.lowResource, options.olderBeyond, W, H];
   const visible = { x0: -ox, x1: -ox + W, y0: -oy, y1: -oy + H };
   const holds = (tile: NonNullable<LightCache['tile']>) => tile.x0 + W * .25 <= visible.x0 && visible.x1 <= tile.x1 - W * .25 && tile.y0 + H * .15 <= visible.y0 && visible.y1 <= tile.y1 - H * .15;
   let geometry: { base: Float32Array; ranges: LightRange[]; sparks: number[]; serial: number };

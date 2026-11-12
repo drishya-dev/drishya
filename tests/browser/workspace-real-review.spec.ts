@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { readUncommitted } from './git-navigation.ts';
 import {outcomeMaterial} from '../../apps/ui/src/lib/outcome-material.ts';
 import { resolve } from 'node:path';
 import { writeFileSync } from 'node:fs';
@@ -6,6 +6,7 @@ import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './his
 import { expect,test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer,type RunningServer } from '../../apps/daemon/src/server.ts';
+import {openSessionReview} from './session-review.ts';
 
 // Explicit opt-in to an existing local redacted store. No new journal import or native turn.
 const store=process.env.DRISHYA_REVIEW_STORE;
@@ -63,16 +64,15 @@ test('actual product surfaces keep evidence, current source, review and map navi
     const back=page.getByRole('button',{name:'Back to work',exact:true});if(await back.isVisible())await back.click();
     const current=page.locator('.current-file-reader');if(await current.isVisible())await current.locator(':scope>header button[aria-label^="Close "]').click();
     await expect(page.locator('.history')).toBeVisible();
-    await page.getByLabel('More workspace options',{exact:true}).click();
-    await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
-    const review=page.getByRole('dialog',{name:'Review work',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
+    await openSessionReview(page);
+    const review=page.getByRole('dialog',{name:'Session review',exact:true});await expect(review.locator('.review-counts')).toBeVisible();
     await frame(`review-${width}`);
     const changes=review.getByRole('region',{name:'Files with changes',exact:true}).getByRole('button');
     if(await changes.count()) {
       await changes.first().click();const evidence=page.locator('dialog.file-workspace');await expect(evidence).toBeVisible();
       await expect(evidence.getByText('Loading actions…',{exact:true})).toHaveCount(0);
       await frame(`captured-file-${width}`);await evidence.locator(':scope>header button[aria-label^="Close "]').click();
-    } else await review.getByRole('button',{name:'Close Review work',exact:true}).click();
+    } else await review.getByRole('button',{name:'Close Session review',exact:true}).click();
     await page.getByLabel('More workspace options',{exact:true}).click();
     await page.locator('.workspace-menu[open]').getByRole('button',{name:/^Notes/}).click();
     const questions=page.getByRole('dialog',{name:'Notes',exact:true});await expect(questions).toBeVisible();await frame(`questions-${width}`);
@@ -102,7 +102,7 @@ test('actual session palette and settings survey keeps readable controls at desk
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${encodeURIComponent(ids[0]!)}`);
   await expect(page.locator('.history')).toBeVisible();
   const metrics=[];
-  for(const label of ['Jet Black','Midnight','Daylight','Orchid','Royal','Emerald','Ember']) {
+  for(const label of ['Jet Black','Midnight','Daylight']) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
     await settings.getByRole('button',{name:label,exact:true}).click();
@@ -126,30 +126,24 @@ test('actual session palette and settings survey keeps readable controls at desk
   await page.setViewportSize({width:390,height:844});
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});
-  for(const name of ['Appearance','Reading','Playback','Privacy','Keyboard','UI versions']) {
+  for(const name of ['Appearance','Reading','Playback','Privacy','Keyboard']) {
     await settings.getByRole('tab',{name,exact:true}).click();
     const panel=settings.locator('.modern-settings-content');
     expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth),`${name} must fit its narrow reading space`).toBeLessThanOrEqual(1);
     await page.screenshot({path:resolve(`.local/settings-phone-${name.replaceAll(' ','-')}.png`)});
   }
 });
-test('actual current Git review supports expanded patch reading without repository writes',async({page})=>{
+test('actual current Git in Changes supports expanded patch reading without repository writes',async({page})=>{
   const id=ids[0]!;test.skip(!app.recording(id).workspaceRoot,'This recording has no current local workspace.');
   await page.setViewportSize({width:1440,height:960});await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern#/r/${encodeURIComponent(id)}`);
-  await openGitDestination(page, 'Git review');
-  const reader=page.getByRole('dialog',{name:'Git review',exact:true});
-  const consent=reader.getByRole('button',{name:'Approve read-only Git',exact:true});
-  await expect(consent.or(reader.getByRole('button',{name:'Refresh changes',exact:true}))).toBeVisible();
-  if(await consent.isVisible())await consent.click();
-  await expect(reader.getByRole('complementary',{name:'Git changed files',exact:true})).toBeVisible();
-  const resize=reader.getByRole('separator',{name:'Resize Git reading space',exact:true});await resize.focus();await page.keyboard.press('End');
-  await expect.poll(()=>reader.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(1200);
-  await reader.getByRole('button',{name:/^Hide files/}).click();
-  await expect(reader.getByRole('complementary',{name:'Git changed files',exact:true})).toBeHidden();
+  const reader=await readUncommitted(page);
+  await expect(reader.getByRole('complementary',{name:'Changed files',exact:true})).toBeVisible();
+  // Changes is a working window: the patch has the room Git review's drawer needed a resize and a hidden file list for.
+  expect((await reader.boundingBox())!.width).toBeGreaterThan(1000);
   await page.screenshot({path:resolve('.local/review-actual-git-expanded.png')});
-  await reader.getByRole('button',{name:'Close Git review',exact:true}).click();await expect(page.locator('.history')).toBeVisible();
+  await reader.getByRole('button',{name:'Back to agent',exact:true}).click();await expect(page.locator('.history')).toBeVisible();
 });
 test('actual library Home keeps sessions readable at desktop, phone and short-window sizes',async({page})=>{
   await page.goto(server.launchUrl);await expect(page.locator('.mh-home')).toBeVisible();
@@ -331,8 +325,8 @@ test('actual changes open import neighborhoods and current source without crowde
   for(const id of [ids[0]!,ids.at(-1)!]){
     await page.setViewportSize({width:1440,height:960});
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-    await page.getByLabel('More workspace options',{exact:true}).click();await page.locator('.workspace-menu[open]').getByRole('button',{name:'Review work',exact:true}).click();
-    const review=page.getByRole('dialog',{name:'Review work',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();
+    await openSessionReview(page);
+    const review=page.getByRole('dialog',{name:'Session review',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();
     const consent=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await consent.isVisible())await consent.click();
     const drawer=page.getByRole('region',{name:'Direct import connections',exact:true});
     const missing=page.locator('.map-focus-notice');await expect(drawer.locator('.map-connection-root').or(missing)).toBeVisible();

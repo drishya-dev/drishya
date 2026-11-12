@@ -1,0 +1,11 @@
+.folder-tree .worktree-root-text {flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;line-height:1.2;}
+.folder-tree .worktree-root-text>.file-row-name {flex:none;}
+.folder-tree .worktree-root-text>small {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--text-2xs)/1.2 var(--sans);}
+.folder-explorer .folder-tree .folder-row:has(>.worktree-root-text) {padding-block:1px;}
+
+.folder-root .checkout-picker {min-width:0;}
+.checkout-picker>summary {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.checkout-picker>.desk-options-body {left:0;right:auto;width:min(240px,calc(100vw - 48px));}
+.checkout-picker>.desk-options-body>.btn {overflow-wrap:anywhere;}
+:root[data-ui-version=modern] .folder-explorer:has(.checkout-picker[open]) {overflow:visible;}
+:root[data-ui-version=modern] .folder-root .checkout-picker[data-pointer-menu]>div {transform-origin:top left;}

@@ -5,6 +5,8 @@ import type { Operation } from '@drishya/contracts';
 import { isScreenOperation } from '@drishya/scene';
 import { browserStep, safeWebUrl } from '../lib/browser-evidence.ts';
 import { useApp } from '../state.ts';
+import { LinkCard } from './LinkCard.tsx';
+import { githubTarget } from '../lib/link-kinds.ts';
 import { ToolOutput } from './ToolOutput.tsx';
 import { ToolInput } from './ToolInput.tsx';
 import { WebResults } from './WebResults.tsx';
@@ -15,7 +17,7 @@ import { fetchFacts } from './CommandRun.tsx';
 import './browser-evidence.css';
 
 export function RecordedUrl({ url }: { url: string }) {
-  return safeWebUrl(url) ? <a className="browser-url" href={url} target="_blank" rel="noopener noreferrer" onClick={event => event.stopPropagation()}>{url}</a> : <span className="browser-url">{url}</span>;
+  return safeWebUrl(url) ? <LinkCard target={{ kind: githubTarget(url) ? 'github' : 'url', value: url }}><a className="browser-url" href={url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" onClick={event => event.stopPropagation()}>{url}</a></LinkCard> : <span className="browser-url">{url}</span>;
 }
 
 /** Captured page material. The result is an excerpt, never a generated page summary. */
@@ -23,7 +25,7 @@ export function BrowserEvidence({ op, full = false }: { op: Operation; full?: bo
   const step = browserStep(op);
   if (!step) return null;
   return <div className="browser-evidence">
-    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No URL in input</span>}</div>
+    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No page URL captured</span>}</div>
     <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not recorded'}</small></div>
     {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}

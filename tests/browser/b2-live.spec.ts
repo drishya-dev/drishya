@@ -61,9 +61,10 @@ async function appendLongRead() {
 type Anchor = { id?: string; offset?: number };
 
 test('live history keeps the reader anchored across bursts, sizes, reconnect and map-off', async ({ page }) => {
+  const initialObservations = app.store.getRecording(recordingId)!.observationCount;
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const history = page.locator('.history');
   const latest = page.getByRole('button', { name: /Back to latest/ });
   const steps = page.locator('.reading-status');
@@ -84,6 +85,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await expect(latest).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await page.getByRole('tab',{name:'Reading',exact:true}).click();
   await page.getByRole('checkbox', { name: /^Repository map/ }).uncheck();
   await page.getByRole('button', { name: 'Close Workspace settings' }).click();
   await expect(page.locator('.map')).toHaveCount(0);
@@ -134,13 +136,15 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await expect(steps).toContainText('924 recorded steps');
   await expect(page.locator('.map')).toHaveCount(0);
   await expect(page.locator('.viewer')).toHaveClass(/still/);
-  expect(app.store.getRecording(recordingId)?.observationCount).toBe(926);
+  // The fixture has 28 observations, not the old 26; three verified bursts add
+  // 300 each. Timeline entries and observation counts are different domains.
+  expect(app.store.getRecording(recordingId)?.observationCount).toBe(initialObservations + 3 * 300);
   expect((await app.ingest.sync(recordingId)).added).toBe(0);
 });
 
 test('long history mounts only nearby work while selected evidence and live updates survive', async ({ page }) => {
   await page.goto(server.launchUrl);
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
   const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
@@ -197,9 +201,9 @@ test('B3 expands content in place, pages it, and bounds file navigation', async 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(server.launchUrl);
   await page.getByRole('combobox', { name: 'Harness' }).selectOption('codex');
-  await expect(page.getByRole('button', { name: /Free orders reach checkout/ })).toHaveCount(0);
+  await expect(page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'})).toHaveCount(0);
   await page.getByRole('combobox', { name: 'Harness' }).selectOption('claude-code');
-  await page.getByRole('button', { name: /Free orders reach checkout/ }).click();
+  await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
   const history = page.locator('.history');
   const steps = page.locator('.reading-status');
   const before = Number((await steps.innerText()).match(/\d+/)?.[0]);
@@ -221,7 +225,7 @@ test('B3 expands content in place, pages it, and bounds file navigation', async 
   await expect(read.locator('.snapshot-provenance')).toContainText('Excerpt · lines 1–250');
   const find = read.getByRole('searchbox', { name: 'Find in loaded source page' });
   await find.fill('line 250');
-  await expect(read.locator('.source-find')).toContainText('0 matching lines in this page');
+  await expect(read.getByRole('status',{name:'0 matching lines in this page',exact:true})).toHaveText('0/0');
   await expect(content.locator('.ln-hi')).toHaveCount(0);
   // Page only once the first page has fully settled and the control is live.
   const next = read.getByRole('button', { name: 'Next lines' });
@@ -231,12 +235,12 @@ test('B3 expands content in place, pages it, and bounds file navigation', async 
   await expect(content).toContainText('bounded reader line 201');
   await expect(content).not.toContainText('bounded reader line 1');
   await expect(content.locator('.ln-no').first()).toHaveText('201');
-  await expect(read.locator('.source-find')).toContainText('1 matching line in this page');
+  await expect(read.getByRole('status',{name:/1 matching line in this page/})).toHaveText(/\/1$/);
   await expect(content.locator('.ln-hi .ln-no')).toHaveText('250');
   await find.fill('LINE 249');
   await expect(content.locator('.ln-hi .ln-no')).toHaveText('249');
   await find.press('Enter');
-  await read.locator('.source-utilities > summary').click();
+  await read.getByLabel('Stored source options',{exact:true}).click();
   const rangeActions = read.getByRole('group', { name: 'Loaded source range actions' });
   await rangeActions.getByRole('textbox', { name: 'Source range start' }).fill('201');
   await rangeActions.getByRole('textbox', { name: 'Source range end' }).fill('203');
@@ -266,6 +270,7 @@ test('B3 expands content in place, pages it, and bounds file navigation', async 
   await expect(content.locator('[aria-current="location"] .ln-no')).toHaveText('240');
   await read.getByRole('button', { name: 'Previous match' }).click();
   await expect(content.locator('[aria-current="location"] .ln-no')).toHaveText('249');
+  await read.getByLabel('Stored source options',{exact:true}).click();
   const go = read.getByRole('textbox', { name: 'Go to stored source line' });
   await go.fill('251');
   await go.press('Enter');
@@ -307,24 +312,9 @@ test('B3 expands content in place, pages it, and bounds file navigation', async 
   await expect.poll(() => panel.locator('[data-file-op]').count()).toBeGreaterThan(0);
   await panel.locator('[data-file-op]').first().click();
   await expect(page.getByRole('region', { name: 'Operation detail' })).toBeVisible();
-  await page.getByTitle('All recordings').click();
+  await page.getByRole('button',{name:'Drishya',exact:true}).click();
   await expect(pinned).toHaveCount(0);
 });
 
-test('B3 navigation keeps the combined synthetic story while filtering tools', async ({ page }) => {
-  // This regression exercises the retained Legacy crown/dock composition;
-  // Classic's right-hand agent families have separate browser coverage.
-  const launch = new URL(server.launchUrl); launch.search = '?experience=legacy';
-  await page.goto(launch.href);
-  await page.getByRole('button', { name: 'Open demo' }).click();
-  await expect(page.locator('.viewer')).toBeVisible();
-  await expect(page.locator('.agents .agent')).toHaveCount(3);
-  const steps = await page.locator('.reading-status').innerText();
-  const read = page.locator('.dock .instrument.k-read');
-  await read.click();
-  await expect(read).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.passage.filtered-out').first()).toBeVisible();
-  expect(await page.locator('.reading-status').innerText()).toBe(steps);
-  await page.getByRole('button', { name: /Show everything/ }).click();
-  await expect(read).toHaveAttribute('aria-pressed', 'false');
-});
+// SHIP-1 retires the Legacy crown/dock composition and its filter-only navigation test.
+// Modern's recorded/native tool navigation remains covered by tools-trail.spec.ts.

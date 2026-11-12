@@ -12,17 +12,24 @@ import {fileName, fileFolder} from '../lib/file-identity.ts';
 import './review-changes.css';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
-/** Modern calls this the Changes view everywhere (UI-8); the older experiences keep "Review work". */
-const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Changes' : 'Review work';
+/** Modern calls this the Session review (GIT-9: Changes is the header window that compares branches and reviews the working tree); the older experiences keep "Review work". */
+const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Session review' : 'Review work';
 
-export function EvidenceReview({ projection, label = reviewName(), after=-1 }: { projection: Projection; label?: string;after?:number }) {
+/** `trigger={false}`: Modern's header carries Compare (GIT-8) instead; this dialog (failures, recorded checks, gaps, each file's edits) stays one palette step away and opens on the `drishya-session-review` event. */
+export function EvidenceReview({ projection, label = reviewName(), after=-1, trigger=true }: { projection: Projection; label?: string;after?:number;trigger?:boolean }) {
   const [open, setOpen] = useState(false);
   const mode = useApp(s => s.mode);
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
   const unavailable = source?.kind === 'daemon' && id?.includes('+');
   const left = useRef<ReviewVisit>({});
-  return <><button className={`btn ghost ${after<0?'review-open':'review-turn-open'}`} disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>
+  useEffect(() => {
+    if (trigger) return;
+    const show = () => { if (useApp.getState().mode !== 'replay' && !unavailable) { useApp.setState({ compareOpen: false }); setOpen(true); } };
+    window.addEventListener('drishya-session-review', show);
+    return () => window.removeEventListener('drishya-session-review', show);
+  }, [trigger, unavailable]);
+  return <>{trigger && <button className={`btn ghost ${after<0?'review-open':'review-turn-open'}`} disabled={mode === 'replay' || unavailable} title={mode === 'replay' ? 'Return to history to review the complete recording' : unavailable ? 'Choose one native recording to review' : 'Changes, failures and recorded checks'} onClick={() => setOpen(true)}>{label}</button>}
     {open && mode !== 'replay' && <ReviewContent key={after} projection={projection} after={after} left={left} close={() => setOpen(false)} />}</>;
 }
 
@@ -56,10 +63,10 @@ const FilesPage = memo(function FilesPage({ data, close }: { data: SinceSnapshot
     // UI-8: one line per file, name first. Its edits and net diff open on request, so a long session reads as a list of files.
     if (modern) {
       const count = stat?.fileEdits?.length ? stat.edits : 0, folder = fileFolder(path);
-      return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button title={path} aria-label={`Open ${path}`} onClick={openFile}><FileIcon path={path} /><span className="review-file-name">{fileName(path)}</span>{folder && <span className="review-file-folder">{folder}</span>}</button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b> <b className="del">−{stat.removed}</b>{stat.turn?` · turn ${stat.turn}`:''}</small>}<FileReadingActions path={path} capturedKnown compact onNavigate={leave}/><button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={showMap}><InterfaceGlyph name="map"/></button></div>
+      return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button title={path} aria-label={`Open ${path}`} onClick={openFile}><FileIcon path={path} /><span className="review-file-name">{fileName(path)}</span>{folder && <span className="review-file-folder">{folder}</span>}</button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b>{!!stat.removed && <> <b className="del">−{stat.removed}</b></>}{stat.turn?` · turn ${stat.turn}`:''}</small>}<FileReadingActions path={path} capturedKnown compact onNavigate={leave}/><button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={showMap}><InterfaceGlyph name="map"/></button></div>
         {(count > 0 || stat?.netDiff) && <details className="review-file-more"><summary>{count ? `${count} ${count === 1 ? 'edit' : 'edits'}` : 'Net diff'}</summary>{edits}{net}</details>}</div>;
     }
-    return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button onClick={openFile}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b> <b className="del">−{stat.removed}</b>{stat.turn?` · turn ${stat.turn}`:''}</small>}<button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={showMap}><InterfaceGlyph name="map"/></button></div><FileReadingActions path={path} capturedKnown compact onNavigate={leave}/>{edits}{net}</div>;
+    return <div className="review-file" data-review-row={path} key={path}><div className="review-file-entry"><button onClick={openFile}><FileIcon path={path} /><span>{path}</span><span aria-hidden="true">↗</span></button>{stat&&<small className="review-file-stat" title="Counted from patches; turn is the prompt turn of the last edit"><b className="add">+{stat.added}</b>{!!stat.removed && <> <b className="del">−{stat.removed}</b></>}{stat.turn?` · turn ${stat.turn}`:''}</small>}<button className="review-file-map" aria-label={`Show map connections for ${path}`} title="Show map connections" onClick={showMap}><InterfaceGlyph name="map"/></button></div><FileReadingActions path={path} capturedKnown compact onNavigate={leave}/>{edits}{net}</div>;
   });
 });
 
@@ -137,7 +144,7 @@ function FileEdits({ stat, close }: { stat?: SinceFileStat; close: () => void })
   if (!stat?.fileEdits?.length) return null;
   const open = (operationId: string) => { useApp.getState().select(operationId); close(); };
   return <ol className="review-file-edits" aria-label="Edits of this file">{stat.fileEdits.map(edit => <li key={edit.operationId}>
-    <button className="review-edit" title="Open this edit" onClick={() => open(edit.operationId)}>{edit.turn ? `turn ${edit.turn}` : <span title="No position for this edit, so its turn is not claimed">unattributed</span>} · <b className="add">+{edit.added}</b> <b className="del">−{edit.removed}</b></button>
+    <button className="review-edit" title="Open this edit" onClick={() => open(edit.operationId)}>{edit.turn ? `turn ${edit.turn}` : <span title="No position for this edit, so its turn is not claimed">unattributed</span>} · <b className="add">+{edit.added}</b>{!!edit.removed && <> <b className="del">−{edit.removed}</b></>}</button>
     {edit.nextTest && <button className={`review-edit-test ${edit.nextTest.outcome}`} title="The first test run after this edit in the same turn; order, not a verdict on the edit" aria-label={`Next test run in this turn: ${outcomeWord[edit.nextTest.outcome]}`} onClick={() => open(edit.nextTest!.operationId)}>→ next test run <span aria-hidden="true">{outcomeMark[edit.nextTest.outcome]}</span></button>}
   </li>)}{stat.edits > stat.fileEdits.length && <li className="muted">{stat.edits - stat.fileEdits.length} more captured {stat.edits - stat.fileEdits.length === 1 ? 'edit' : 'edits'}</li>}</ol>;
 }

@@ -67,7 +67,10 @@ for (const width of [600, 1440]) {
       await desk.getByLabel('Workspace layout actions', { exact: true }).press('Enter');
       await desk.getByRole('button', { name: 'Pane 1 of 2 · switch', exact: true }).press('Enter');
     }
-    await second.getByRole('button', { name: 'Show files', exact: true }).click();
+    await second.focus();
+    await expect(second.getByText('Next file opens here')).toBeVisible();
+    const showFiles = second.getByRole('button', { name: 'Show files', exact: true });
+    if (await showFiles.isVisible()) await showFiles.click();
     await chooseFile(page, desk, paths[1]!, true);
     await expect(second.getByRole('region', { name: `Workspace file ${paths[1]}`, exact: true })).toBeVisible();
     if (width === 600) {
@@ -122,7 +125,7 @@ for (const width of [600, 1440]) {
     await expect(desk.getByRole('region', { name: `Workspace file ${paths[0]}`, exact: true })).toBeVisible();
     await desk.getByRole('button', { name: 'Back to agent', exact: true }).click();
     await expect(page.locator('.history')).toContainText(marker);
-    await page.getByLabel('More workspace options', { exact: true }).press('Enter');
+    await page.evaluate(()=>localStorage.setItem('drishya-dev-tools','1'));await page.getByLabel('More workspace options', { exact: true }).press('Enter');
     await page.getByRole('button', { name: 'Replay this session', exact: true }).press('Enter');
     await expect(page.getByLabel('Replay controls', { exact: true })).toBeVisible();
     await expect(desk).toHaveCount(0);

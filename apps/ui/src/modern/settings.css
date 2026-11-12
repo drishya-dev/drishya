@@ -1,5 +1,6 @@
-/* Modern's utility UI uses a neutral UI face; captured code keeps a dedicated mono. */
-:root[data-ui-version=modern][data-experience=classic] { --sans:'Segoe UI Variable Text','Segoe UI',ui-sans-serif,system-ui,sans-serif; }
+/* Modern's UI and prose face is Inter (variable, bundled in public/fonts with its licence; SHIP-17), so every platform reads the same face rather than whatever the system ships. Captured code keeps JetBrains Mono. */
+@font-face { font-family:Inter; src:url('/fonts/InterVariable.woff2') format('woff2'); font-weight:100 900; font-style:normal; font-display:swap; }
+:root[data-ui-version=modern][data-experience=classic] { --sans:Inter,'Segoe UI Variable Text','Segoe UI',ui-sans-serif,system-ui,sans-serif; }
 :root[data-ui-version=modern][data-experience=classic] body { font-family:var(--sans); letter-spacing:0; }
 :root[data-ui-version=modern] .settings-dialog { width:min(900px,calc(100vw - 40px)); height:min(650px,calc(100dvh - 48px)); max-height:calc(100dvh - 48px); padding:0; overflow:hidden; }
 :root[data-ui-version=modern] .settings-dialog>header { padding:20px 26px; min-height:70px; align-items:center; flex:none; }

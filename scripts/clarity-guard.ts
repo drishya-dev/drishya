@@ -1,7 +1,6 @@
-// CLARITY-1 pixel guard (user-run, private). Captures the same surfaces from three builds in one scratch Drishya home and compares them:
+// Private Modern pixel guard. Captures the same surfaces from the before/after builds in isolated scratch homes:
 //   base    = Modern before the change (a build of origin/main, --base <its apps/ui/dist>)
-//   modern  = Modern after the change  (this worktree's apps/ui/dist, ?experience=modern)
-//   clarity = Clarity                  (this worktree's apps/ui/dist, ?experience=clarity)
+//   modern  = Modern after the change  (this worktree's apps/ui/dist)
 // plus `base2`, a second capture of the base build, so renderer noise is measured rather than assumed.
 // Screenshots stay under .local; only names, counts and ratios are printed. Capture and readiness waits are Harsh's UI-26 driver (PR #350).
 //   node scripts/clarity-guard.ts --config .local/clarity-guard/inputs.json --base <dist> --out .local/clarity-guard/run-1
@@ -22,14 +21,15 @@ if (existsSync(out)) throw new Error('Run output exists; use a new --out');
 const baseDist = resolve(values.base), newDist = resolve('apps/ui/dist');
 const only = { palettes: values.palettes?.split(','), widths: values.widths?.split(',').map(Number), surfaces: values.surfaces?.split(',') };
 const wanted = new Set((values.cases ?? 'demo,claude,codex').split(','));
-const variantList = (values.variants ?? 'base,base2,modern,clarity').split(',');
+const variantList = (values.variants ?? 'base,base2,modern').split(',');
+if(variantList.some(value=>!['base','base2','modern'].includes(value)))throw new Error('Release 1 captures Modern only: use base, base2 or modern.');
 
 type Input = { id: 'claude' | 'codex'; harness: 'claude-code' | 'codex'; journal: string; workspace: string; file: string; operation?: string };
 const inputs = JSON.parse(readFileSync(config, 'utf8')).cases as Input[];
 mkdirSync(out, { recursive: true });
 const browser = await chromium.launch({ channel: process.env.DRISHYA_BROWSER_CHANNEL || undefined });
 const closers: (() => Promise<void>)[] = [];
-// Each variant gets its own daemon and scratch home: the app keeps per-recording state (open Workspace, Git review, consent) between
+// Each variant gets its own daemon and scratch home: the app keeps per-recording state (open Workspace, Changes, consent) between
 // page loads, so variants must not share it. Every variant then replays the same sequence from the same empty state.
 async function openVariant(v: string, uiDir: string) {
   const app = new App(join(out, 'home-' + v));
@@ -44,7 +44,7 @@ async function openVariant(v: string, uiDir: string) {
   return { server, cases: cases.filter(c => wanted.has(c.id)) };
 }
 try {
-  const kinds: Record<string, ['modern' | 'clarity', string]> = { base: ['modern', baseDist], base2: ['modern', baseDist], modern: ['modern', newDist], clarity: ['clarity', newDist] };
+  const kinds: Record<string, ['modern', string]> = { base: ['modern', baseDist], base2: ['modern', baseDist], modern: ['modern', newDist] };
   const files: Record<string, Map<string, Buffer>> = {};
   for (const v of variantList) {
     // Daemon discovery overrides isolate the Home list to the explicitly imported captures.
@@ -75,7 +75,7 @@ try {
     return { size: true, exact, loose, total: x.width * x.height, maxDelta };
   }, { a: a.toString('base64'), b: b.toString('base64') });
 
-  const pairs = ([['base', 'base2'], ['base', 'modern'], ['base', 'clarity'], ['modern', 'clarity']] as [string, string][]).filter(([x, y]) => variantList.includes(x) && variantList.includes(y));
+  const pairs = ([['base', 'base2'], ['base', 'modern']] as [string, string][]).filter(([x, y]) => variantList.includes(x) && variantList.includes(y));
   const report: Record<string, { name: string; exact: number; loose: number; maxDelta: number; size: boolean }[]> = {};
   for (const [x, y] of pairs) {
     const rows = [];

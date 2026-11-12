@@ -1,5 +1,5 @@
 import {queuedInputChunk} from './queued-inputs.ts';
-import {recordedFileRoots} from './file-roots.ts';
+import {recordedFileRoots,withFileRootDiskState} from './file-roots.ts';
 import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
 // strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
@@ -37,6 +37,8 @@ import { readCheckpointFile } from './checkpoint-file.ts';
 import { readImage, referencedImagePath } from './images.ts';
 import { WorkspaceAccess } from './workspace.ts';
 import { GitReview } from './git-review.ts';
+import { GithubLinks, type GhRun } from './github-links.ts';
+import { GitCompareService } from './git-compare-service.ts';
 import { repositoryRoots } from './repository-root.ts';
 import { sessionLinks } from './git-session-links.ts';
 import { HarnessController } from './controller.ts';
@@ -62,6 +64,8 @@ export interface ServerOptions {
   uiDir?: string;
   token?: string;
   app?: App;
+  /** LINK-1: tests inject a fake `gh`; the default runs the person's installed GitHub CLI. */
+  gh?: GhRun;
   model?: ModelConfig;
   /** The model transport. Tests inject one; the default speaks HTTP to `model.baseUrl`. */
   complete?: Complete;
@@ -127,6 +131,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const readStorageUsage = storageUsageReader(app.store.dataDir);
   const workspace = new WorkspaceAccess(app);
   const gitReview = new GitReview(workspace,undefined,app.history);
+  const github = new GithubLinks(app, opts.gh);
+  const gitCompare = new GitCompareService(app, gitReview, github);
   const repositoryRoot = repositoryRoots();
   const imports = new Map<string, { recordingId: string; total: number }>();
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
@@ -250,6 +256,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     const m = req.method ?? 'GET';
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
+    if(a==='checkout-grants'&&!id&&m==='GET')return json(res,{items:await workspace.remembered.list()});
+    if(a==='checkout-grants'&&id&&m==='DELETE') {
+      if(!/^[a-f0-9]{64}$/.test(id))throw new HttpError(400,'Invalid checkout grant identity.');
+      workspace.revokeRemembered(id);return json(res,{revoked:true});
+    }
+    if (a === 'github' && id === 'status' && m === 'GET') return json(res, await github.status());
+    if (a === 'github' && id === 'optin' && m === 'POST') { const body = await readJson(req, 1024) as { enabled?: unknown }; if (typeof body.enabled !== 'boolean') throw new HttpError(400, 'Send enabled: true or false.'); return json(res, await github.set(body.enabled)); }
+    if (a === 'github' && id === 'item' && m === 'GET') return json(res, await github.item(url.searchParams.get('url') ?? ''));
     if (a === 'storage' && m === 'GET') return json(res, await readStorageUsage());
     if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
     if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
@@ -314,6 +328,17 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     }
 
     if (a === 'recordings' && id) {
+      // Checkout keys are read contexts only. In particular they never reach controller,
+      // journal import/delete/export, or mutation of the captured session's metadata.
+      if (id.includes('~')) {
+        app.checkoutOwner(id);
+        if (!['workspace', 'git', 'graph', 'compare-evidence'].includes(sub ?? '') || sub === 'workspace' && ['setup', 'image', 'image-grant'].includes(subId ?? '')) throw new HttpError(400, 'A checkout view supports Files, Git and the map only.');
+      }
+      if (sub === 'checkout' && m === 'POST') {
+        const body=await readJson(req,256);
+        if(Object.keys(body).some(key=>key!=='prefix') || body.prefix!==undefined && typeof body.prefix!=='string')throw new HttpError(400,'Choose a recorded checkout.');
+        return json(res,await app.chooseCheckout(id,body.prefix));
+      }
       const firstId = id.split('+')[0]!;
       if(sub==='segments'&&m==='GET') {
         const recording=app.recording(firstId);
@@ -335,13 +360,35 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (!available) throw new HttpError(404, 'The original journal is unavailable. Captured history remains readable.');
         return json(res, await app.ingest.rescan(id));
       }
-      if (sub === 'workspace' && !subId && m === 'GET') return json(res, workspace.status(id));
+      if (sub === 'workspace' && !subId && m === 'GET') return json(res, await workspace.restoreStatus(id));
+      if(sub==='workspace'&&subId==='setup'&&m==='GET') {
+        if(id.includes('+'))throw new HttpError(400,'Choose one session workspace.');
+        const [setup,native]=await Promise.all([workspace.setup(id),controller.readiness(id)]);
+        return json(res,{...setup,native});
+      }
+      if(sub==='workspace'&&subId==='revoke'&&m==='POST'){workspace.revoke(id);return json(res,workspace.status(id));}
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
       if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
+      if(sub==='git'&&subId==='compare-refs'&&m==='GET')return json(res,await gitCompare.refs(id));
+      if(sub==='git'&&subId==='compare'&&m==='GET')return json(res,await gitCompare.compare(id,{base:url.searchParams.get('base')??'',head:url.searchParams.get('head')??''}));
+      if(sub==='git'&&subId==='compare-file'&&m==='GET')return json(res,await gitCompare.file(id,{base:url.searchParams.get('base')??'',head:url.searchParams.get('head')??'',path:url.searchParams.get('path')??'',side:url.searchParams.get('side')==='base'?'base':'head'}));
+      if(sub==='git'&&subId==='compare-pulls'&&m==='GET')return json(res,await gitCompare.pulls(id));
+      if(sub==='git'&&subId==='compare-remote'&&m==='GET')return json(res,await gitCompare.remote(id,intParam(url,'pr',0,1,999_999_999)));
+      if(sub==='compare-evidence'&&m==='GET'){
+        for(const key of id.split('+'))app.recording(key);
+        const paths=url.searchParams.getAll('path');
+        if(!paths.length||paths.length>200||paths.some(path=>!path||path.length>1024))throw new HttpError(400,'Choose 1 to 200 file paths');
+        return json(res,await gitCompare.evidence(id,paths));
+      }
+      if(sub==='git'&&subId==='ref'&&m==='GET')return json(res,await gitReview.ref(id,url.searchParams.get('rev')??''));
       if(sub==='git'&&subId==='commit'&&m==='GET')return json(res,await gitReview.commit(id,url.searchParams.get('hash')??'',intParam(url,'parent',0,0,1023),intParam(url,'start',0,0,10_000_000),url.searchParams.get('generation')??undefined));
-      if (sub === 'workspace' && subId === 'approve' && m === 'POST') return json(res, await workspace.approve(id));
+      if (sub === 'workspace' && subId === 'approve' && m === 'POST') {
+        const body=await readJson(req);
+        if(body.remember!==undefined&&typeof body.remember!=='boolean')throw new HttpError(400,'Remember must be a boolean.');
+        return json(res, await workspace.approve(id,body.remember===true));
+      }
       if (sub === 'workspace' && subId === 'file' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), intParam(url, 'count', 200, 1, 200)));
       if (sub === 'workspace' && subId === 'document' && m === 'GET') return json(res, await workspace.read(id, url.searchParams.get('path') ?? '', 0, Number.MAX_SAFE_INTEGER));
       if (sub === 'controller' && !subId && m === 'GET') return json(res, controller.status(id));
@@ -359,14 +406,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
-        await controller.forget(firstId); workspace.revoke(firstId); gitReview.revoke(firstId);
+        await controller.forget(firstId); workspace.revokeRecording(firstId); gitReview.revoke(firstId);
         const removed = await app.forget(firstId);
         return json(res, { ok: true, ...removed });
       }
       if (sub === 'history' && m === 'POST') {
         for (const key of id.split('+')) app.recording(key);
         const body = await readJson(req);
-        for (const field of ['start', 'count', 'step', 'promptStep']) if (body[field] !== undefined && (!Number.isSafeInteger(body[field]) || Number(body[field]) < 0)) throw new HttpError(400, `invalid ${field}`);
+        for (const field of ['start', 'count', 'step', 'promptStep', 'since', 'previousSince']) if (body[field] !== undefined && (!Number.isSafeInteger(body[field]) || Number(body[field]) < 0)) throw new HttpError(400, `invalid ${field}`);
         for (const field of ['selectedOperationId', 'observationId']) if (body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 512)) throw new HttpError(400, `invalid ${field}`);
         if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
@@ -410,6 +457,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         for(const key of id.split('+'))app.recording(key);
         return json(res,await app.history.screen(app.readingId(id),url.searchParams.has('step')?intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER):undefined));
       }
+      if (sub === 'context-report' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key);
+        return json(res, { candidates: await app.history.contextReport(app.readingId(id)) });
+      }
       if (sub === 'turns' && m === 'GET') {
         for (const key of id.split('+')) app.recording(key);
         return json(res, { turns: await app.history.turns(app.readingId(id)) });
@@ -447,7 +498,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       }
       if (sub === 'file-roots' && m === 'GET') {
         const ids=app.readingId(id).split('+'); for(const key of ids) app.recording(key);
-        return json(res,await recordedFileRoots(app.store,ids));
+        const metadata=await recordedFileRoots(app.store,ids);
+        const roots=await app.history.fileRoots(app.readingId(id),metadata.roots,app.recording(id.includes('+')?ids[0]!:id).workspaceRoot);
+        return json(res,await withFileRootDiskState({...metadata,roots}));
       }
       if (sub === 'lineage' && m === 'GET') { app.recording(id); return json(res, { lineage: app.store.lineageView(id) ?? null }); }
       if (sub === 'projection' && m === 'GET') return json(res, app.projection(id));
@@ -474,7 +527,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
             if (!chunk) throw new HttpError(404, 'Queued input was not captured at this point.');
             return json(res, chunk);
           }
-          return json(res, await app.history.queue(app.readingId(id), id, {through, before: intParam(url, 'before', Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER), count: intParam(url, 'count', 20, 1, 50)}));
+          const state=url.searchParams.get('state') ?? undefined;
+          if (state !== undefined && state !== 'pending' && state !== 'history') throw new HttpError(400,'Invalid queue state.');
+          return json(res, await app.history.queue(app.readingId(id), id, {through, ...(url.searchParams.has('step') ? {step:intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER)} : {}), ...(state ? {state} : {}), before: intParam(url, 'before', Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER), count: intParam(url, 'count', 20, 1, 50)}));
         } catch (error) {
           if (error instanceof HttpError) throw error;
           throw new HttpError(400, 'Invalid queue reading boundary or range.');
@@ -599,7 +654,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'checkpoint' && subId && m === 'GET') {
         if (id.includes('+')) throw new HttpError(400, 'checkpoints are read per recording, not for a combined view');
         app.recording(firstId);
-        return json(res, await readCheckpointFile(app.store, firstId, subId, workspace.status(firstId).approved));
+        return json(res, await readCheckpointFile(app.store, firstId, subId, (await workspace.restoreStatus(firstId)).approved));
       }
       // READ-7: a failed command, the next run of the same command and the edits between them.
       if (sub === 'fix-chain' && subId && m === 'GET') {
@@ -698,6 +753,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const url = `http://127.0.0.1:${port}`;
   // Enrichment uses the existing passive, sealed ingest path; the server is already listening.
   void app.ingest.rescanLegacyCodex().catch(() => undefined);
+  void app.ingest.rescanLegacyClaude().catch(() => undefined);
   return {
     url,
     token,

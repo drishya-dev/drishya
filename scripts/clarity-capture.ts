@@ -1,6 +1,5 @@
-// CLARITY-1 pixel guard capture. Adapted from Harsh's UI-26 capture (PR #350, scripts/ui-26-capture.ts): the same readiness waits and
-// surface preparation, with an `experience` parameter (modern | clarity), a developer-switch Settings so the nav matches across
-// builds, and two more surfaces: the composer with its attach menu open, and a card's context menu.
+// Release 1 Modern-only pixel guard capture. Adapted from Harsh's UI-26 capture (PR #350, scripts/ui-26-capture.ts): the same readiness waits and
+// surface preparation for Modern only. Retired developer switches are never enabled. Two more surfaces: the composer with its attach menu open, and a card's context menu.
 import type { Browser, Locator, Page } from '@playwright/test';
 
 // Fixed before any baseline is recorded. Changing these invalidates the frozen contract.
@@ -141,7 +140,7 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
   }
   if (surface === 'changes') {
     await press(page.locator('button.review-open'));
-    await populated(page.getByRole('dialog', { name: 'Changes', exact: true }));
+    await populated(page.getByRole('dialog', { name: 'Session review', exact: true }));
     if (c.id === 'demo') await populated(page.locator('.review-file').first());
     return 'material';
   }
@@ -151,14 +150,12 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     await populated(page.getByRole('complementary', { name: 'Tools and agents', exact: true }));
     const minimized = page.getByRole('button', { name: 'Expand toolbox', exact: true });
     if (await minimized.isVisible()) await press(minimized);
-    // TOOLS-2 (#349): an MCP server or the Agents group now opens in the centred Toolbox window instead of a drawer, so the
-    // surface is that window over the dock when the session has a server (always on the demo), else the dock as recorded.
+    // TOOLS-3 (#359): the Toolbox stays in the right dock, centred by its own height; an MCP server opens as a drawer in place (no window),
+    // so the surface is the dock with the first server open when the session has one (always on the demo), else the dock as recorded.
     const mcp = page.locator('.md-server').filter({ has: page.locator('[data-mcp-server]') }).first();
     if (c.id === 'demo' || await mcp.count()) {
       await press(mcp.locator(':scope > summary'));
-      const window = page.getByRole('dialog', { name: /^MCP tools for / });
-      await populated(window);
-      await page.waitForTimeout(400); // the window's arrival is 160 ms; reduced motion makes it instant, this covers both
+      await page.waitForTimeout(400); // the drawer's opening is short; reduced motion makes it instant, this covers both
     }
     return 'material';
   }
@@ -202,9 +199,9 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     await page.addStyleTag({ content: '.cm-cursorLayer { visibility: hidden !important; animation: none !important; }' });
   } else if (surface === 'git') {
     await press(desk.getByRole('button', { name: 'Back to agent', exact: true }));
-    await press(page.getByRole('button', { name: 'Git', exact: true }));
-    await press(page.getByRole('button', { name: 'Git review', exact: true }));
-    const review = page.getByRole('dialog', { name: 'Git review', exact: true }); await visible(review);
+    await press(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true }));
+    const review = page.getByRole('region', { name: 'Changes', exact: true }); await visible(review);
+    await press(review.getByRole('button', { name: 'Uncommitted', exact: true }));
     const approve = review.getByRole('button', { name: 'Approve read-only Git', exact: true });
     await approve.or(review.getByRole('button', { name: 'Refresh changes', exact: true })).waitFor({ state: 'visible' });
     if (await approve.isVisible()) await press(approve);
@@ -214,7 +211,7 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
   } else throw new Error('Unknown required surface');
   return 'material';
 }
-export async function captureSurfaces(browser: Browser, server: Server, cases: GuardCase[], experience: 'modern' | 'clarity',
+export async function captureSurfaces(browser: Browser, server: Server, cases: GuardCase[], experience: 'modern',
   save: (name: string, bytes: Buffer, kind: string) => Promise<void>, only?: { palettes?: readonly string[]; widths?: readonly number[]; surfaces?: readonly string[] }) {
   for (const c of cases) for (const palette of only?.palettes ?? contract.palettes) for (const width of only?.widths ?? contract.widths) for (const surface of only?.surfaces ?? contract.surfaces) {
     const name = `${c.id}-${palette}-${width}-${surface}`;
@@ -230,20 +227,19 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
       await page.clock.setFixedTime(new Date(contract.frozenTime));
       await context.addInitScript(() => {
         localStorage.setItem('drishya.motion', '0'); localStorage.setItem('drishya.mapOrbit', 'false'); localStorage.setItem('drishya.hoverReading', '0');
-        localStorage.setItem('drishya-dev-ui-versions', '1');
       });
-      const launch = new URL(server.launchUrl); launch.searchParams.set('experience', experience);
+      const launch = new URL(server.launchUrl);
       await page.goto(launch.href); await visible(page.locator('.mh-home'));
       await settled(page, pending);
       if (surface !== 'home') {
-        const query = c.id === 'demo' ? `?demo&experience=${experience}&motion=0` : `?experience=${experience}&motion=0`;
+        const query = c.id === 'demo' ? '?demo&motion=0' : '?motion=0';
         await page.goto(`${server.url}/${query}${c.recording ? '#/r/' + encodeURIComponent(c.recording) : ''}`);
         // A recording whose workspace tabs were kept by an earlier capture reopens in the Workspace: always start from the agent view.
         const desk = page.getByRole('region', { name: 'Developer workspace', exact: true });
         for (const end = Date.now() + 30_000; !(await desk.isVisible()) && !(await page.locator('.history').isVisible()); await page.waitForTimeout(50)) requireCase(Date.now() < end, 'Neither the history nor the Workspace appeared');
         if (await desk.isVisible()) await press(desk.getByRole('button', { name: 'Back to agent', exact: true }));
         await visible(page.locator('.history'));
-        // Likewise a Git review or file dialog kept from the previous capture: every shot starts with nothing open.
+        // Likewise a Changes window or file dialog kept from the previous capture: every shot starts with nothing open.
         for (let i = 0; i < 3 && await page.getByRole('dialog').count(); i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(300); }
       }
       await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);

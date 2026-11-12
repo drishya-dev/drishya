@@ -15,30 +15,30 @@
   --r-sm: var(--round-sm);
 }
 :root[data-experience][data-theme][data-palette=jet] {
-  --bg: #0d0d0d; --s1: #1c1c1c; --s2: #252525; --s3: #333333;
-  --t1: #f0f0ee; --t2: #c1c1bd; --t3: #9b9b97; --t4: #73736f;
-  --line: #ffffff12; --line-2: #ffffff24; --line-3: #ffffff40;
-  --focus: #a6ddb8; --source: #89bdf0; --external: #c8ade5; --edited: #e6c17d;
-  --pass: #90dca7; --fail: #ef9694; --pass-wash: #6caf7c1c; --fail-wash: #cc676721;
-  --graph-node: #bfc7c3; --graph-edge: #737d77;
-  --gold: var(--focus); --gold-soft: #a6ddb81c;
-  --canvas-dot: #ffffff14;
+  --bg: var(--default-bg-1); --s1: var(--default-s1-2); --s2: var(--default-s2-3); --s3: var(--default-s3-4);
+  --t1: var(--default-t1-5); --t2: var(--default-t2-6); --t3: var(--default-t3-7); --t4: var(--default-t4-8);
+  --line: var(--default-line-9); --line-2: var(--default-line-2-10); --line-3: var(--default-line-3-11);
+  --focus: var(--default-focus-12); --source: var(--source); --external: var(--source); --edited: var(--default-edited-13);
+  --pass: var(--default-pass-14); --fail: var(--default-fail-15); --pass-wash: color-mix(in srgb,var(--pass) 10.98%,transparent); --fail-wash: color-mix(in srgb,var(--fail) 12.941%,transparent);
+  --graph-node: var(--text-secondary); --graph-edge: var(--text-muted);
+  --gold: var(--focus); --gold-soft: color-mix(in srgb,var(--pass) 10.98%,transparent);
+  --canvas-dot: color-mix(in srgb,var(--text-primary) 7.843%,transparent);
 }
 :root[data-experience][data-theme][data-palette=midnight] {
-  --bg: #11141a; --s1: #1c212a; --s2: #272e39; --s3: #343e4c;
-  --t1: #edf0f4; --t2: #bec5ce; --t3: #99a5b5; --t4: #738297;
-  --line: #c7d7ec14; --line-2: #c7d7ec28; --line-3: #c7d7ec48;
-  --focus: #afc5e1; --source: #91bfe8; --external: #c8b6e2; --edited: #e3c593;
-  --pass: #9cd2b7; --fail: #eca0a8; --pass-wash: #69b68f20; --fail-wash: #cb758222;
-  --graph-node: #bccadb; --graph-edge: #73859b; --canvas-dot: #c7d7ec14;
+  --bg: var(--default-bg-16); --s1: var(--default-s1-17); --s2: var(--default-s2-18); --s3: var(--default-s3-19);
+  --t1: var(--default-t1-20); --t2: var(--default-t2-21); --t3: var(--default-t3-22); --t4: var(--default-t4-23);
+  --line: var(--default-line-24); --line-2: var(--default-line-2-25); --line-3: var(--default-line-3-26);
+  --focus: var(--default-focus-27); --source: var(--source); --external: var(--source); --edited: var(--default-edited-28);
+  --pass: var(--default-pass-29); --fail: var(--default-fail-30); --pass-wash: color-mix(in srgb,var(--pass) 12.549%,transparent); --fail-wash: color-mix(in srgb,var(--fail) 13.333%,transparent);
+  --graph-node: var(--source); --graph-edge: var(--pass); --canvas-dot: color-mix(in srgb,var(--source) 7.843%,transparent);
 }
 :root[data-experience][data-theme][data-palette=paper] {
-  --bg: #f4f3f0; --s1: #fdfcf9; --s2: #eeede8; --s3: #e1e0d8;
-  --t1: #242522; --t2: #52554e; --t3: #686c63; --t4: #868b80;
-  --line: #31372d12; --line-2: #31372d24; --line-3: #31372d40;
-  --focus: #39744e; --source: #336987; --external: #78568c; --edited: #886328;
-  --pass: #3c784d; --fail: #aa4946; --pass-wash: #62966e18; --fail-wash: #bd68651c;
-  --graph-node: #49564b; --graph-edge: #7e897d; --canvas-dot: #31372d1b;
+  --bg: var(--default-bg-31); --s1: var(--default-s1-32); --s2: var(--default-s2-33); --s3: var(--default-s3-34);
+  --t1: var(--default-t1-35); --t2: var(--default-t2-36); --t3: var(--default-t3-37); --t4: var(--default-t4-38);
+  --line: var(--default-line-39); --line-2: var(--default-line-2-40); --line-3: var(--default-line-3-41);
+  --focus: var(--default-focus-42); --source: var(--source); --external: var(--source); --edited: var(--default-edited-43);
+  --pass: var(--default-pass-44); --fail: var(--default-fail-45); --pass-wash: color-mix(in srgb,var(--pass) 9.412%,transparent); --fail-wash: color-mix(in srgb,var(--fail) 10.98%,transparent);
+  --graph-node: var(--text-muted); --graph-edge: var(--text-muted); --canvas-dot: color-mix(in srgb,var(--text-muted) 10.588%,transparent);
 }
 body { font-size: var(--text-md); letter-spacing: -.01em; }
 ::selection { background: color-mix(in srgb, var(--focus) 26%, transparent); }
@@ -219,9 +219,9 @@ body { font-size: var(--text-md); letter-spacing: -.01em; }
 .settings-dialog .setting-row small { font-size: var(--text-xs); color: var(--t3); }
 .settings-dialog .theme-option { min-width: 0; font-size: var(--text-sm); border: 1px solid var(--line); border-radius: var(--round-md); padding: 12px; }
 .settings-dialog .theme-option[aria-pressed=true] { border-color: var(--focus); background: var(--bg); }
-.theme-dark { --sw-bg: #0d0d0d; --sw-s: #252525; --sw-line: #454545; --sw-accent: #a6ddb8; }
-.theme-midnight { --sw-bg: #11141a; --sw-s: #272e39; --sw-line: #48576b; --sw-accent: #afc5e1; }
-.theme-light { --sw-bg: #f4f3f0; --sw-s: #fdfcf9; --sw-line: #cfcec6; --sw-accent: #39744e; }
+.theme-dark { --sw-bg: var(--text-muted); --sw-s: var(--text-muted); --sw-line: var(--line-2); --sw-accent: var(--focus); }
+.theme-midnight { --sw-bg: var(--text-muted); --sw-s: var(--text-muted); --sw-line: var(--line-2); --sw-accent: var(--focus); }
+.theme-light { --sw-bg: var(--text-primary); --sw-s: var(--text-primary); --sw-line: var(--line-2); --sw-accent: var(--focus); }
 :root[data-experience] :is(.sheet,.file-workspace,.map-reader) { background: var(--s1); border-color: var(--line-2); }
 :root[data-experience] :is(.source-reading,.current-file-code,.git-patch-reader) .code { font-size: var(--text-sm); line-height: 1.8; }
 :root[data-experience] .connected-workspace .search { background: var(--s1); border-radius: var(--round-md); }

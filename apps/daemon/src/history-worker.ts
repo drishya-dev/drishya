@@ -1,7 +1,10 @@
+import {withFileRootEvidence} from './file-roots.ts';
+import {createQueueEvidenceCache} from './queued-inputs.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import { fileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
 import { readingTarget } from '../../../packages/scene/src/reading-target.ts';
 import { fileEvidence } from '../../../packages/scene/src/file-evidence.ts';
+import { compareEvidence } from './git-compare-evidence.ts';
 import {reviewInsights,findingMembers} from '../../../packages/scene/src/review-insights.ts';
 import {commandPage} from '../../../packages/scene/src/commands.ts';
 import {toolInventory,toolTrail} from '../../../packages/scene/src/tools.ts';
@@ -26,6 +29,7 @@ import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/hist
 import { historySummary } from '../../../packages/scene/src/history.ts';
 import { nowFacts } from '../../../packages/scene/src/now.ts';
 import { turnLedgers } from '../../../packages/scene/src/turns.ts';
+import { contextReportCandidates } from './context-report-turns.ts';
 import { SqliteBlobStore, Store } from '@drishya/store';
 import { sanitize } from '@drishya/privacy';
 import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
@@ -72,15 +76,17 @@ const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.i
 const HISTORY_VERSION = 'h3-lineage-4096';
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 let cached: { id: string; revision: string; projection: Projection; revisions: Record<string, number> } | undefined;
+const queueEvidenceFor = createQueueEvidenceCache(source);
 let incremental: { id: string; reducer: ReturnType<typeof createReducer>; sequence: number; clock: string; roots: Set<string> } | undefined;
 
 function build(id: string, ids: string[], live: boolean): { projection: Projection; appended: boolean } {
   if (ids.length === 1 && incremental?.id === id) {
     const added = source.observations(ids[0]!, incremental.sequence, 10_001);
     const valid = added.length <= 10_000 && added.every((o) => {
-      const cwd = (o.payload as { cwd?: unknown }).cwd;
+      const {cwd, intent} = o.payload as {cwd?: unknown; intent?: {cwd?: unknown}};
       return !!o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime)) && new Date(o.sourceTime).toISOString() >= incremental!.clock &&
-        (!o.workspaceRoot || incremental!.roots.has(o.workspaceRoot)) && (typeof cwd !== 'string' || incremental!.roots.has(cwd));
+        (!o.workspaceRoot || incremental!.roots.has(o.workspaceRoot)) && (typeof cwd !== 'string' || incremental!.roots.has(cwd)) &&
+        (typeof intent?.cwd !== 'string' || incremental!.roots.has(intent.cwd));
     });
     if (valid) {
       const ordered = orderObservations(added);
@@ -112,8 +118,9 @@ function build(id: string, ids: string[], live: boolean): { projection: Projecti
     rememberCapturedBlobs(o.payload);
     if (o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime))) clock = new Date(o.sourceTime).toISOString();
     if (o.workspaceRoot) roots.add(o.workspaceRoot);
-    const cwd = (o.payload as { cwd?: unknown }).cwd;
+    const {cwd, intent} = o.payload as {cwd?: unknown; intent?: {cwd?: unknown}};
     if (typeof cwd === 'string') roots.add(cwd);
+    if (typeof intent?.cwd === 'string') roots.add(intent.cwd);
     yield o;
   } } };
   const reducer = createReducer(id, tracked, io, { adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096 });
@@ -193,7 +200,8 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const requestedStep = query.step !== undefined && query.observationId ? stepOfObservation(full, query.observationId) ?? query.step : query.step;
   const step = Math.max(0, Math.min(full.timeline.length, Math.floor(requestedStep ?? full.timeline.length)));
   const historical = asOfProjection(full, step);
-  const scene = compose(full, { step, filter: query.filter, selectedOperationId: query.selectedOperationId });
+  const since = query.since === step && query.previousSince !== undefined ? query.previousSince : query.since;
+  const scene = compose(full, { step, since, filter: query.filter, selectedOperationId: query.selectedOperationId });
   const count = Math.max(1, Math.min(64, Math.floor(query.count ?? 32)));
   const opMap = new Map(historical.operations.map((op) => [op.id, op]));
   const proseMap = new Map(historical.prose.map((pr) => [pr.id, pr]));
@@ -239,7 +247,7 @@ function page(id: string, query: HistoryQuery): HistoryPage {
   const allMarkers = markers(full);
   const stride = Math.max(1, Math.ceil(allMarkers.length / 500));
   const lastQueue = full.timeline.slice(0, step).findLast(item => item.type === 'queue');
-  return { ...(lastQueue?.type === 'queue' ? {queueBoundary: {ownerRecordingId: lastQueue.ownerRecordingId, observationId: lastQueue.sourceObservationId}} : {}), projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
+  return { ...(since !== undefined ? { since: Math.max(0, Math.min(step, since)) } : {}), ...(lastQueue?.type === 'queue' ? {queueBoundary: {ownerRecordingId: lastQueue.ownerRecordingId, observationId: lastQueue.sourceObservationId}} : {}), projection, scene, start, operationCount: historical.operations.length, summary: historySummary(historical), references, loadedPassageIds: passages.map((ps) => ps.id), revisions,
     markers: allMarkers.filter((_, i) => i % stride === 0), dwell: dwellFor(full, step) };
 }
 
@@ -288,7 +296,10 @@ function artifactChunk(id: string, artifactId: string, start: number, requestedF
   }
   const descriptor = artifact(id, artifactId, 0, 0);
   if (!descriptor.available || !descriptor.artifact.blob) return descriptor;
-  if (descriptor.artifact.kind !== 'output') throw Error('Only recorded output supports text continuation');
+  // Prose is bounded in history pages, but its recorded body must remain readable
+  // even when one line exceeds the line-slice response budget.
+  const prose = descriptor.artifact.kind === 'excerpt' && db.prepare("SELECT id FROM items WHERE view_id=? AND kind='prose' AND id=?").get(id, artifactId.replace(/^art_(.*)_prose$/, '$1'));
+  if (descriptor.artifact.kind !== 'output' && !prose) throw Error('Only recorded output or prose supports text continuation');
   const sha = descriptor.artifact.blob;
   const chunk = source.blobs.readTextChunk(sha, start) ?? blobs.readTextChunk(sha, start);
   return chunk ? { artifact: descriptor.artifact, available: true, ...chunk } : { artifact: descriptor.artifact, available: false, reason: 'no-longer-stored' };
@@ -324,7 +335,10 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'commands') value=commandPage(current(a.id).projection.operations,a.query);
     else if (message.method === 'tools') value=toolInventory(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step));
     else if (message.method === 'tool-trail') value=toolTrail(a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step),a.filter,a.from);
-    else if (message.method === 'queue') value=queuePage(current(a.id).projection.timeline, a.owner, a.query);
+    else if (message.method === 'queue') {
+      const view=current(a.id), revision=JSON.stringify(view.revisions);
+      value=queuePage(view.projection.timeline,a.owner,a.query,queueEvidenceFor(view.projection,a.owner,revision,a.id));
+    }
     else if (message.method === 'screen') value=screenRun((a.step===undefined?current(a.id).projection:asOfProjection(current(a.id).projection,a.step)).operations);
     else if(message.method==='git-session-evidence'){
       const projection=current(a.id).projection;
@@ -343,7 +357,10 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'summary') value = historySummary(current(a.id).projection, a.from);
     else if (message.method === 'reading-target') value = readingTarget(current(a.id).projection, a.query);
     else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? current(a.id).projection : asOfProjection(current(a.id).projection, a.step), a.paths);
+    else if (message.method === 'compare-evidence') value = compareEvidence(current(a.id).projection, a.paths);
+    else if(message.method==='file-roots') value=withFileRootEvidence(a.roots,current(a.id).projection,a.workspaceRoot);
     else if (message.method === 'now') value = nowFacts(current(a.id).projection);
+    else if (message.method === 'context-report') value = contextReportCandidates(current(a.id).projection.timeline);
     else if (message.method === 'turns') value = turnLedgers(current(a.id).projection).slice(-2000);
     else if (message.method === 'since') value = sinceSnapshot(current(a.id).projection, a.after, a.page);
     else if (message.method === 'read-before') value = readBeforeWriteFor(current(a.id).projection, a.operationId) ?? null;

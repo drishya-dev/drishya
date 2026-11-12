@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import type { ReplayBundle } from '@drishya/contracts';
+import type { ReplayBundle,Operation } from '@drishya/contracts';
 import { asOfProjection } from '@drishya/scene';
 import { describe, expect, it } from 'vitest';
 import { fileEvidence } from '../src/lib/file-evidence.ts';
@@ -42,4 +42,12 @@ describe('file evidence choices', () => {
     const choices = fileEvidence({ ...edit, artifactIds: ['snapshot_before', 'derived_after'] }, edit.detail.path);
     expect(choices.map((item) => item.label)).toEqual(['Patch', 'Before-state reference', 'After-state reference']);
   });
+});
+
+describe('captured command output associated with files',()=>{
+ const shell={...bundle.projection.operations[0]!,id:'shell-file',kind:'shell',status:'ok',paths:[{path:'worker/seed.ts',role:'read',basis:'derived'}],artifactIds:[],detail:{kind:'shell',command:'synthetic wrapper read',exitCode:0,outputPreview:'export const sample = 42;'}} as Operation;
+ it('keeps short stdout as command evidence without calling it source or a search snippet',()=>{const [value]=fileEvidence(shell,'worker/seed.ts');expect(value).toMatchObject({label:'Command output',commandOutput:'export const sample = 42;'});expect(value?.snippet).toBeUndefined();expect(value?.artifactId).toBeUndefined();expect(fileEvidence(shell,'unrelated.ts')).toEqual([]);});
+ it('prefers the stored output artifact for long results, retaining only a fallback preview',()=>{const op={...shell,detail:{...shell.detail,kind:'shell',command:'synthetic wrapper read',outputPreview:'last line',outputArtifactId:'captured-full-output'}} as Operation;expect(fileEvidence(op,'worker/seed.ts')[0]).toMatchObject({artifactId:'captured-full-output',commandOutput:'last line'});});
+ it('does not make an output choice for an empty or pending result',()=>{const op={...shell,status:'running',detail:{kind:'shell',command:'synthetic wrapper read'}} as Operation;expect(fileEvidence(op,'worker/seed.ts')).toEqual([]);expect(fileEvidence({...op,status:'ok',detail:{...op.detail,kind:'shell',command:'synthetic wrapper read',outputPreview:''}} as Operation,'worker/seed.ts')).toEqual([]);});
+ it('does not attach generic command output to a merely mentioned path',()=>{expect(fileEvidence({...shell,paths:[{path:'worker/seed.ts',role:'mentioned',basis:'derived'}]},'worker/seed.ts')).toEqual([]);});
 });

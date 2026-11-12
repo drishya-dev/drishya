@@ -26,3 +26,368 @@
 
 /* `<small>` otherwise shrinks relative to its parent, which lands off the scale. */
 small { font-size: var(--text-2xs); }
+
+/* Modern colour roles resolve at the same root as the selected palette. */
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette] {
+  --text-primary: var(--t1);
+  --text-secondary: var(--t2);
+  --text-muted: var(--t3);
+  --text-chrome: var(--t4);
+  --claude: var(--agent-claude-ink);
+  --codex: var(--agent-codex-ink);
+
+  --diff-added: var(--pass);
+  --diff-removed: var(--fail);
+  --diff-added-wash: color-mix(in srgb, var(--diff-added) 10%, transparent);
+  --diff-removed-wash: color-mix(in srgb, var(--diff-removed) 10%, transparent);
+
+  --agent-claude-ink: #ffa175;
+  --agent-codex-ink: #33ccbc;
+  --agent-violet-ink: #cfa6ff;
+  --agent-gold-ink: #d4b637;
+  --agent-blue-ink: #7ebdfc;
+  --agent-rose-ink: #fa9bc1;
+}
+
+:root[data-ui-version=modern][data-experience=classic][data-theme=light][data-palette] {
+  --diff-added: #015729;
+  --diff-removed: #8c1c2f;
+
+  --agent-claude-ink: #823110;
+  --agent-codex-ink: #01572a;
+  --agent-violet-ink: #603787;
+  --agent-gold-ink: #703e01;
+  --agent-blue-ink: #184a8c;
+  --agent-rose-ink: #802a5a;
+}
+
+/* SHIP-21: the three shipped palettes and their Settings previews own all paint here. */
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
+  --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
+  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
+  --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#8b92ec;
+  --palette-active:#5e6ad2; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
+  --syntax-number:#fc9e47; --syntax-type:#48c1f7; --syntax-property:#30c9c5;
+  --source:#80b8ff; --external:#f296df; --edited:#d4b137;
+  --pass:#83f7d1; --fail:#ff9b8f; --graph-node:#e8edf5; --graph-edge:#b4bfce;
+  color-scheme:dark;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper] {
+  --bg:#f6f9fb; --s1:#fcffff; --s2:#eef3f6; --s3:#e3eaef;
+  --line:#d7e0e6; --line-2:#c2ced6; --line-3:#8796a1; --t1:#14202a;
+  --t2:#3c4a55; --t3:#55636e; --t4:#59656f; --focus:#036a8f;
+  --palette-active:#0593c6; --syntax-keyword:#8f0a64; --syntax-string:#00572a; --syntax-function:#004f7a;
+  --syntax-number:#872c03; --syntax-type:#593b87; --syntax-property:#003db0;
+  --source:#004f7a; --external:#800c94; --edited:#872c03;
+  --pass:#003f00; --fail:#990812; --graph-node:#2d4452; --graph-edge:#6d8593;
+  color-scheme:light;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight] {
+  --bg:#070d1b; --s1:#0d1628; --s2:#14213a; --s3:#1a2a43;
+  --line:#253753; --line-2:#344c6c; --line-3:#5c7398; --t1:#f4f8ff;
+  --t2:#cbdcf6; --t3:#a0b4d3; --t4:#8c9ec0; --focus:#8db8ff;
+  --palette-active:#8db8ff; --syntax-keyword:#fc9f9d; --syntax-string:#6ccc71; --syntax-function:#d0a6ff;
+  --syntax-number:#ffa24d; --syntax-type:#56c3f5; --syntax-property:#23ccc6;
+  --source:#7ebcfc; --external:#f09cde; --edited:#d6b542;
+  --pass:#83f7d1; --fail:#ff9e96; --graph-node:#edf5ff; --graph-edge:#9db9e2;
+  color-scheme:dark;
+}
+:root[data-ui-version=modern] .theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#5e6ad2;--swatch-border:#27272a;}
+:root[data-ui-version=modern] .theme-light {--swatch-bg:#f6f9fb;--swatch-node:#fcffff;--swatch-raised:#eef3f6;--swatch-accent:#0593c6;--swatch-border:#d7e0e6;}
+:root[data-ui-version=modern] .theme-midnight {--swatch-bg:#070d1b;--swatch-node:#0d1628;--swatch-raised:#14213a;--swatch-accent:#8db8ff;--swatch-border:#253753;}
+
+/* Bootstrap paint retained for unselected/retired base rules. Active Modern palettes override these defaults. */
+:root {
+  --default-bg-1: #0d0d0d;
+  --default-s1-2: #1c1c1c;
+  --default-s2-3: #252525;
+  --default-s3-4: #333333;
+  --default-t1-5: #f0f0ee;
+  --default-t2-6: #c1c1bd;
+  --default-t3-7: #9b9b97;
+  --default-t4-8: #73736f;
+  --default-line-9: #ffffff12;
+  --default-line-2-10: #ffffff24;
+  --default-line-3-11: #ffffff40;
+  --default-focus-12: #a6ddb8;
+  --default-edited-13: #e6c17d;
+  --default-pass-14: #90dca7;
+  --default-fail-15: #ef9694;
+  --default-bg-16: #11141a;
+  --default-s1-17: #1c212a;
+  --default-s2-18: #272e39;
+  --default-s3-19: #343e4c;
+  --default-t1-20: #edf0f4;
+  --default-t2-21: #bec5ce;
+  --default-t3-22: #99a5b5;
+  --default-t4-23: #738297;
+  --default-line-24: #c7d7ec14;
+  --default-line-2-25: #c7d7ec28;
+  --default-line-3-26: #c7d7ec48;
+  --default-focus-27: #afc5e1;
+  --default-edited-28: #e3c593;
+  --default-pass-29: #9cd2b7;
+  --default-fail-30: #eca0a8;
+  --default-bg-31: #f4f3f0;
+  --default-s1-32: #fdfcf9;
+  --default-s2-33: #eeede8;
+  --default-s3-34: #e1e0d8;
+  --default-t1-35: #242522;
+  --default-t2-36: #52554e;
+  --default-t3-37: #686c63;
+  --default-t4-38: #868b80;
+  --default-line-39: #31372d12;
+  --default-line-2-40: #31372d24;
+  --default-line-3-41: #31372d40;
+  --default-focus-42: #39744e;
+  --default-edited-43: #886328;
+  --default-pass-44: #3c784d;
+  --default-fail-45: #aa4946;
+  --default-bg-46: #080808;
+  --default-s1-47: #141414;
+  --default-s2-48: #1d1d1d;
+  --default-s3-49: #282828;
+  --default-t1-50: #f1f3f2;
+  --default-t2-51: #b7bfbb;
+  --default-t3-52: #929d97;
+  --default-t4-53: #728079;
+  --default-line-54: #ffffff14;
+  --default-line-2-55: #ffffff27;
+  --default-line-3-56: #ffffff45;
+  --default-focus-57: #9cdac1;
+  --default-edited-58: #efb975;
+  --default-pass-59: #74d8a2;
+  --default-fail-60: #ff7b86;
+  --default-bg-61: #090d16;
+  --default-s1-62: #121a27;
+  --default-s2-63: #1b2637;
+  --default-s3-64: #29364c;
+  --default-t1-65: #edf2fb;
+  --default-t2-66: #b0bfd4;
+  --default-t3-67: #8c9eb8;
+  --default-t4-68: #697f9d;
+  --default-line-69: #b9d0f316;
+  --default-line-2-70: #b9d0f32b;
+  --default-line-3-71: #b9d0f34b;
+  --default-focus-72: #b3a7ff;
+  --default-edited-73: #f0bd79;
+  --default-pass-74: #6cd8b1;
+  --default-fail-75: #ff8995;
+  --default-bg-76: #f4f5f2;
+  --default-s1-77: #ffffff;
+  --default-s2-78: #ecefeb;
+  --default-s3-79: #e1e7e1;
+  --default-t1-80: #202c25;
+  --default-t2-81: #46594d;
+  --default-t3-82: #607269;
+  --default-t4-83: #77867d;
+  --default-line-84: #223c2517;
+  --default-line-2-85: #223c252b;
+  --default-line-3-86: #223c2547;
+  --default-focus-87: #29654c;
+  --default-edited-88: #945413;
+  --default-pass-89: #247a4f;
+  --default-fail-90: #bf3047;
+  --default-bg-91: #0e1014;
+  --default-s1-92: #181b21;
+  --default-s2-93: #232730;
+  --default-s3-94: #2e3440;
+  --default-line-95: #292e38;
+  --default-line-2-96: #353d49;
+  --default-line-3-97: #596575;
+  --default-t1-98: #eceef3;
+  --default-t2-99: #b7becb;
+  --default-t3-100: #929baa;
+  --default-t4-101: #7c8798;
+  --default-focus-102: #8fb9da;
+  --default-edited-103: #dfb387;
+  --default-pass-104: #81c6a3;
+  --default-fail-105: #ee929e;
+  --default-bg-106: #eeeee9;
+  --default-s1-107: #fafaf7;
+  --default-s2-108: #e3e5e1;
+  --default-s3-109: #d6dbd7;
+  --default-line-110: #d1d5d0;
+  --default-line-2-111: #bfc7c3;
+  --default-line-3-112: #8b9997;
+  --default-t1-113: #293137;
+  --default-t2-114: #4c5b64;
+  --default-t3-115: #617078;
+  --default-t4-116: #69777d;
+  --default-focus-117: #326986;
+  --default-edited-118: #935b32;
+  --default-pass-119: #2d7151;
+  --default-fail-120: #a03d4b;
+  --default-bg-121: #161817;
+  --default-s1-122: #202321;
+  --default-s2-123: #2a2e2b;
+  --default-s3-124: #353b36;
+  --default-line-125: #343a35;
+  --default-line-2-126: #485048;
+  --default-bg-127: #08090b;
+  --default-s1-128: #111215;
+  --default-s2-129: #1a1c20;
+  --default-s3-130: #24272c;
+  --default-line-131: #292c31;
+  --default-line-2-132: #3b3e44;
+  --default-focus-133: #21b9ff;
+  --default-edited-134: #ffba58;
+  --default-pass-135: #4cde9b;
+  --default-fail-136: #ff7085;
+  --default-bg-137: #090909;
+  --default-s1-138: #151515;
+  --default-s2-139: #202020;
+  --default-s3-140: #2c2c2c;
+  --default-line-141: #2a2a2a;
+  --default-line-2-142: #404040;
+  --default-bg-143: #0a0a0c;
+  --default-s1-144: #111216;
+  --default-s2-145: #16171c;
+  --default-s3-146: #1c1d23;
+  --default-line-147: #1c1d22;
+  --default-line-2-148: #26272e;
+  --default-line-3-149: #3b3c45;
+  --default-t1-150: #ededef;
+  --default-t2-151: #a9a9b3;
+  --default-t3-152: #8d8d97;
+  --default-t4-153: #83838d;
+  --default-focus-154: #8b9bff;
+  --default-pass-155: #4fc38a;
+  --default-fail-156: #f2706a;
+  --default-edited-157: #e6b98a;
+  --default-bg-158: #f1f0ea;
+  --default-s1-159: #fbfaf6;
+  --default-s2-160: #e9e7df;
+  --default-s3-161: #dedbd1;
+  --default-line-162: #d9d6cc;
+  --default-line-2-163: #c8c4b8;
+  --default-line-3-164: #9a9686;
+  --default-bg-165: #0b0b0b;
+  --default-s1-166: #121212;
+  --default-s2-167: #171717;
+  --default-s3-168: #1e1e1e;
+  --default-line-169: #1f1f1f;
+  --default-line-2-170: #2a2a2a;
+  --default-line-3-171: #424242;
+  --default-t1-172: #f1eee8;
+  --default-t2-173: #b9b5ad;
+  --default-t3-174: #9a968e;
+  --default-t4-175: #918d86;
+  --default-focus-176: #d4b98a;
+  --default-pass-177: #8fcaa2;
+  --default-fail-178: #ec8378;
+  --default-edited-179: #e0a07a;
+  --default-bg-180: #131516;
+  --default-s1-181: #1c2021;
+  --default-s2-182: #252a2b;
+  --default-s3-183: #303637;
+  --default-line-184: #2c2f36;
+  --default-line-2-185: #3b3f49;
+  --default-line-3-186: #5c6270;
+  --default-t1-187: #ededf0;
+  --default-t2-188: #b7bac4;
+  --default-t3-189: #9b9faa;
+  --default-t4-190: #9095a2;
+  --default-focus-191: #92d6c3;
+  --default-pass-192: #8bd3aa;
+  --default-fail-193: #f1a39c;
+  --default-edited-194: #e6b08e;
+  --default-bg-195: #edeee8;
+  --default-s1-196: #fafaf6;
+  --default-s2-197: #e2e5de;
+  --default-s3-198: #d6dbd3;
+  --default-line-199: #c7ccc4;
+  --default-line-2-200: #b4bdb3;
+  --default-line-3-201: #899786;
+  --default-t1-202: #272d30;
+  --default-t2-203: #50595c;
+  --default-t3-204: #596365;
+  --default-t4-205: #596365;
+  --default-focus-206: #326e60;
+  --default-pass-207: #286b48;
+  --default-fail-208: #a33e36;
+  --default-edited-209: #91512f;
+  --default-focus-210: #38bfff;
+  --default-edited-211: #ffc15a;
+  --default-pass-212: #59e8a1;
+  --default-fail-213: #ff738d;
+  --default-bg-214: #090b0d;
+  --default-s1-215: #131619;
+  --default-s2-216: #1b2025;
+  --default-s3-217: #252c32;
+  --default-t1-218: #edf2f5;
+  --default-t2-219: #a9b4bd;
+  --default-t3-220: #87939d;
+  --default-t4-221: #66727c;
+  --default-line-222: #ffffff13;
+  --default-line-2-223: #ffffff24;
+  --default-line-3-224: #ffffff40;
+  --default-focus-225: #9ccdbb;
+  --default-edited-226: #f0bd76;
+  --default-pass-227: #71d6a7;
+  --default-fail-228: #ff7a86;
+  --default-bg-229: #0a0a0c;
+  --default-s1-230: #111216;
+  --default-s2-231: #16171c;
+  --default-s3-232: #1c1d23;
+  --default-line-233: rgba(255, 255, 255, 0.07);
+  --default-line-2-234: rgba(255, 255, 255, 0.11);
+  --default-line-3-235: rgba(255, 255, 255, 0.18);
+  --default-t1-236: #ededef;
+  --default-t2-237: #a1a1aa;
+  --default-t3-238: #71717a;
+  --default-t4-239: #52525b;
+  --default-claude-240: #e0896a;
+  --default-codex-241: #6fc3b3;
+  --default-pass-242: #4fc38a;
+  --default-fail-243: #f2706a;
+  --default-edited-244: #e6b98a;
+  --default-focus-245: #8b9bff;
+  --default-bg-246: #0b0e11;
+  --default-s1-247: #171c21;
+  --default-s2-248: #20272d;
+  --default-s3-249: #2b353d;
+  --default-t1-250: #eef5f7;
+  --default-t2-251: #b5c2ca;
+  --default-t3-252: #8d9da8;
+  --default-t4-253: #697a85;
+  --default-line-254: #c7dce614;
+  --default-line-2-255: #c7dce62b;
+  --default-line-3-256: #c7dce64d;
+  --default-focus-257: #a1d7c4;
+  --default-edited-258: #f2c081;
+  --default-pass-259: #7adbb1;
+  --default-fail-260: #ff8c96;
+  --capture-pointer-ink:#ffffff;
+}
+
+/* Recorded pointer contrast and Git light material; geometry is independent of these paints. */
+:root {
+  --git-light-0: #ff3fcf;
+  --git-light-1: #a24dff;
+  --git-light-2: #5a6bff;
+  --git-light-3: #2fd9ff;
+  --git-light-4: #f2fbff;
+  --git-light-5: #2fd9ff;
+  --git-light-6: #7a50ff;
+  --git-light-7: #ff4fc8;
+  --git-ribbon-0: #e6ffff;
+  --git-ribbon-1: #69eaff;
+  --git-ribbon-2: #427bff;
+  --git-ribbon-3: #b5afff;
+  --git-ribbon-4: #ffb7ee;
+  --git-ribbon-5: #9068fa;
+  --git-ribbon-6: #96f4ff;
+  --git-ribbon-7: #e8dbb7;
+  --git-ribbon-8: #4fb8ff;
+  --git-ribbon-9: #e5dbff;
+  --git-ribbon-stop-0: #9e81ff;
+  --git-ribbon-stop-1: #65dfff;
+  --git-ribbon-stop-2: #e0faff;
+  --git-ribbon-stop-3: #ae8fff;
+  --git-ribbon-stop-4: #ffade9;
+  --git-ribbon-stop-5: #6be5ff;
+}
+
+/* Git light is an illustrated material with its own dark backing in every palette. */
+:root { --git-haze-violet:#29144d; --git-haze-cyan:#082438; --git-canvas:#010102; }

@@ -2,7 +2,9 @@
 // Capture never waits on presentation: nothing here depends on a viewer being connected.
 
 import { EventEmitter } from 'node:events';
+import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
+import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
 import { claudeAdapter } from '@drishya/adapter-claude';
 import { claudeContinuation } from '../../adapter-claude/src/continuation.ts';
@@ -79,6 +81,8 @@ const SLICE_BYTES = 1024 * 1024;
 const RECORD_YIELD_MS = 8;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
 const LEGACY_CODEX_RESCAN = 'codex-turn-details-rescan-v1:';
+// CONTENT-20: journals imported before #310 never stored the `queued_command` rows (a message typed while the agent was working).
+const LEGACY_CLAUDE_QUEUED_RESCAN = 'claude-queued-command-rescan-v1:';
 interface LegacyRescanResult { attempted: number; completed: number; unavailable: number; failed: number }
 
 /** What the ingestor remembers about a recording's collection; `health()` derives the state. */
@@ -129,6 +133,7 @@ export class Ingestor extends EventEmitter {
 
   private closed = false;
   private legacyCodexRescan?: Promise<LegacyRescanResult>;
+  private legacyClaudeRescan?: Promise<LegacyRescanResult>;
   private readonly now: () => Date;
   private readonly idleMs: number;
   private readonly liveTurnBytes: number;
@@ -203,6 +208,31 @@ export class Ingestor extends EventEmitter {
     return { recordingId, ...r };
   }
 
+  /**
+   * One background startup pass (CONTENT-21): a Claude recording imported before shared-uuid continuations were recognised has no link.
+   * Each recording is checked once (marker per recording); a link, if found, imports the earlier journal like any other ancestor.
+   */
+  refreshClaudeLineages(): Promise<number> {
+    return this.claudeLineagePass ??= (async () => {
+      await new Promise<void>(resolve => setImmediate(resolve));
+      let checked = 0;
+      for (const recording of this.store.listRecordings().filter(r => r.harness === 'claude-code')) {
+        if (this.closed) break;
+        const key = 'claude-shared-lineage-v1:' + recording.id;
+        if (this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key)) continue;
+        // An exact link is already known; only recordings with no link, an ambiguous or a missing parent are looked at again.
+        if (this.store.lineageView(recording.id)?.links.some(link => link.childRecordingId === recording.id && link.status === 'linked')) continue;
+        try {
+          await this.locked(recording.id, () => this.refreshLineage(recording.id, new Set()));
+          this.store.db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)').run(key, '1');
+          checked++;
+        } catch { /* a missing journal is retried on a later start */ }
+      }
+      return checked;
+    })();
+  }
+  private claudeLineagePass?: Promise<number>;
+
   /** Derived links are read from discovered native files; importing an ancestor never grants current-workspace access. */
   private async refreshLineage(id: string, seen: Set<string>, paths?: string[]): Promise<void> {
     if (seen.has(id) || seen.size >= 16) return;
@@ -214,7 +244,7 @@ export class Ingestor extends EventEmitter {
     if (!link) return;
     const candidates = link.candidatePaths.map(path => recordingIdFor('claude-code', path));
     const parent = link.parentPath ? recordingIdFor('claude-code', link.parentPath) : undefined;
-    this.store.putLineage({ childRecordingId: id, parentRecordingId: parent, status: link.status, basis: 'native-logical-parent', childSourceId: sourceIdFor(rec.sourcePath), boundaryRecordId: link.boundaryRecordId, logicalParentRecordId: link.logicalParentRecordId, candidateRecordingIds: candidates, sharedMessageRecords: link.sharedMessageRecords });
+    this.store.putLineage({ childRecordingId: id, parentRecordingId: parent, status: link.status, basis: link.basis, childSourceId: sourceIdFor(rec.sourcePath), boundaryRecordId: link.boundaryRecordId, logicalParentRecordId: link.logicalParentRecordId, candidateRecordingIds: candidates, sharedMessageRecords: link.sharedMessageRecords });
     if (parent && link.parentPath && !seen.has(parent)) {
       if (!this.store.getRecording(parent)) await this.importSource('claude-code', link.parentPath, { lineageSeen: seen, lineageSources: paths });
       else await this.refreshLineage(parent, seen, paths);
@@ -250,23 +280,37 @@ export class Ingestor extends EventEmitter {
 
   /** One background startup pass; successful native rereads are remembered across restarts. */
   rescanLegacyCodex(): Promise<LegacyRescanResult> {
-    return this.legacyCodexRescan ??= this.rescanLegacyCodexOnce();
+    // obs_rec_kind(recording_id, kind) bounds this check without loading captured history.
+    return this.legacyCodexRescan ??= this.rescanLegacyOnce('codex', LEGACY_CODEX_RESCAN,
+      recording => !this.store.db.prepare("SELECT 1 FROM observations WHERE recording_id=? AND kind='turn.detail' LIMIT 1").get(recording.id));
   }
 
-  private async rescanLegacyCodexOnce(): Promise<LegacyRescanResult> {
+  /**
+   * One background startup pass (CONTENT-20). Observations are stored once and a source's cursor only moves forward, so a Claude Code
+   * journal imported before the adapter kept `queued_command` rows never gained the person's mid-turn messages. A journal that has
+   * none is marked done without a reread; the rest are re-read once (rows already stored are skipped by their stable ids).
+   */
+  rescanLegacyClaude(): Promise<LegacyRescanResult> {
+    return this.legacyClaudeRescan ??= this.rescanLegacyOnce('claude-code', LEGACY_CLAUDE_QUEUED_RESCAN, async recording => {
+      for (const source of this.store.getSources(recording.id)) if (await journalMentions(source.path, '"queued_command"')) return true;
+      // Nothing to add: remember that, so a large journal is not read again on the next start.
+      this.store.db.prepare('INSERT OR IGNORE INTO meta(key,value) VALUES (?,?)').run(LEGACY_CLAUDE_QUEUED_RESCAN + recording.id, '1');
+      return false;
+    });
+  }
+
+  private async rescanLegacyOnce(harness: 'codex' | 'claude-code', prefix: string, needed: (recording: { id: string }) => boolean | Promise<boolean>): Promise<LegacyRescanResult> {
     const result: LegacyRescanResult = { attempted: 0, completed: 0, unavailable: 0, failed: 0 };
     // Let the listening server return before any native read. Never hold startup on old history.
     await new Promise<void>(resolve => setImmediate(resolve));
     if (this.closed) return result;
-    const candidates = this.store.listRecordings().filter(r => r.harness === 'codex');
-    // obs_rec_kind(recording_id, kind) bounds this check without loading captured history.
-    const turnDetail = this.store.db.prepare("SELECT 1 FROM observations WHERE recording_id=? AND kind='turn.detail' LIMIT 1");
+    const candidates = this.store.listRecordings().filter(r => r.harness === harness);
     for (const recording of candidates) {
       if (this.closed) break;
       if (!this.store.getRecording(recording.id)) continue;
-      const key = LEGACY_CODEX_RESCAN + recording.id;
+      const key = prefix + recording.id;
       if (this.store.db.prepare('SELECT 1 FROM meta WHERE key=?').get(key)) continue;
-      if (turnDetail.get(recording.id)) continue;
+      if (!await needed(recording)) continue;
       result.attempted++;
       try {
         // rescan already owns the recording lock. Do not wrap it in another same-recording lock.
@@ -643,7 +687,7 @@ export class Ingestor extends EventEmitter {
     this.closed = true;
     const running = [...this.live.values()].map((r) => r.current);
     this.stopAll();
-    await Promise.allSettled([...running, ...this.locks.values(), this.legacyCodexRescan]);
+    await Promise.allSettled([...running, ...this.locks.values(), this.legacyCodexRescan, this.legacyClaudeRescan, this.claudeLineagePass]);
   }
 
   /**
@@ -684,6 +728,15 @@ function describeError(e: unknown): { code: string; message: string } {
   const code = errno === 'EACCES' || errno === 'EPERM' ? 'permission-denied' : errno === 'ENOENT' ? 'not-found' : 'read-failed';
   const raw = e instanceof Error ? e.message : String(e);
   return { code, message: sanitize(raw).value.slice(0, 300) };
+}
+
+/** Whether a journal holds the text anywhere: a cheap read-only pass that parses nothing. An unreadable journal reports false. */
+async function journalMentions(path: string, needle: string): Promise<boolean> {
+  try {
+    const lines = createInterface({ input: createReadStream(path, { encoding: 'utf8' }), crlfDelay: Infinity });
+    for await (const line of lines) if (line.includes(needle)) { lines.close(); return true; }
+  } catch { /* a missing journal is reported by the rescan itself */ }
+  return false;
 }
 
 function gap(reason: string, bytes: number | undefined, detail: string | undefined, agentId: string | undefined): RawObservation {

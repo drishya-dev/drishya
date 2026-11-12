@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges } from './git-navigation.ts';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -8,7 +8,7 @@ import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 import { HarnessController } from '../../apps/daemon/src/controller.ts';
 
-// UI-7: no visible text on the demo session (cards expanded: code, diff, test, search, shell) falls below 4.5:1 on any of the seven palettes.
+// UI-7: no visible text on the demo session (cards expanded: code, diff, test, search, shell) falls below 4.5:1 on any of the three shipped palettes.
 let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-palette-contrast-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-palette-contrast' }); });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir && resolve(dir).startsWith(resolve(tmpdir()) + sep)) rmSync(dir, { recursive: true, force: true }); });
@@ -44,19 +44,39 @@ test('visible text keeps 4.5:1 on every palette on the expanded demo session', a
   for (const card of await page.locator('article.op').all().then(a => a.slice(0, 6))) { await card.focus().catch(() => undefined); await page.keyboard.press('Enter').catch(() => undefined); }
   // Expanded cards show captured source: line numbers prove the guard is looking at real material.
   await expect(page.locator('.ln-no').first()).toBeVisible();
-  for (const palette of ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox']) {
+  for (const palette of ['jet', 'paper', 'midnight']) {
     await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette);
     await page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
     expect(await measure(page), palette).toEqual([]);
   }
 });
 
-// UI-7 slice 2: the overlays people open on top of the session, on the same seven palettes.
+// SHIP-17: the four retired palettes are gone from Settings, and a saved retired preference resolves to Jet Black (Royal, a light one, to Daylight).
+test('retired saved palettes fall back to a shipped palette and Settings lists three', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  // A fresh page per saved value: a repeated navigation to the same URL would not reload, and init scripts would pile up.
+  for (const [stored, palette, scheme] of [['mocha', 'jet', 'dark'], ['nord', 'jet', 'dark'], ['gruvbox', 'jet', 'dark'], ['tokyo', 'paper', 'light'], ['light', 'paper', 'light'], ['midnight', 'midnight', 'dark']] as const) {
+    const fresh = await page.context().newPage();
+    await fresh.addInitScript(v => { try { localStorage.setItem('drishya.theme', v); } catch { /* optional */ } }, stored);
+    await fresh.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
+    await expect(fresh.locator('.viewer')).toBeVisible();
+    await expect(fresh.locator('html'), stored).toHaveAttribute('data-palette', palette);
+    await expect(fresh.locator('html'), stored).toHaveAttribute('data-theme', scheme);
+    await fresh.close();
+  }
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
+  await expect(page.locator('.viewer')).toBeVisible();
+  await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+  await expect(page.locator('.theme-options .theme-option')).toHaveText([/Jet Black/, /Midnight/, /Daylight/]);
+  expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^Inter,/);
+});
+
+// UI-7 slice 2: the overlays people open on top of the session, on the same three palettes.
 test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
   await expect(page.locator('.viewer')).toBeVisible();
-  const palettes = ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox'];
+  const palettes = ['jet', 'paper', 'midnight'];
   const settle = () => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
   const overlays: [string, () => Promise<void>, () => Promise<void>][] = [
     ['Settings', async () => { await page.getByRole('button', { name: 'Workspace settings', exact: true }).click(); await expect(page.getByRole('dialog', { name: 'Workspace settings' })).toBeVisible(); }, () => page.keyboard.press('Escape')],
@@ -76,8 +96,8 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   expect(found).toEqual([]);
 });
 
-// UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Git review dialog and the header over the map.
-const ALL_PALETTES = ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox'];
+// UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Changes window and the header over the map.
+const ALL_PALETTES = ['jet', 'paper', 'midnight'];
 // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
 const settled = (page: Page) => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
 // With DRISHYA_CONTRAST_REPORT set the lowest ratios per state are printed instead of asserted, so a change can be measured before it is judged.
@@ -93,7 +113,7 @@ async function everyPalette(page: Page, state: string, found: string[], scope = 
 // Keyboard, not a resting pointer: hover reading can move the cards under it.
 async function press(page: Page, target: Locator) { await target.focus(); await page.keyboard.press('Enter'); }
 
-// A workspace the native harness stub and the Git review can read: a repository with one committed file that has an unstaged change.
+// A workspace the native harness stub and Changes can read: a repository with one committed file that has an unstaged change.
 let fresh: { dir: string; root: string; id: string; app: App; server: RunningServer } | undefined;
 test.afterEach(async () => {
   if (!fresh) return; const { dir, app, server } = fresh; fresh = undefined;
@@ -138,17 +158,19 @@ test('the composer and its menus keep 4.5:1 on every palette', async ({ page }) 
   await at('composer expanded');
   const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' }); await input.fill('A draft with text');
   await at('composer draft');
-  const menu = composer.locator('.native-options > summary'); await press(page, menu);
   await expect(composer.getByRole('button', { name: 'Enable this workspace', exact: true })).toBeVisible();
-  await at('connection menu (workspace not enabled)');
+  await at('setup row (workspace not enabled)');
+  // This fixture needs a session grant; remembered checkout identity has its own spec.
+  await composer.getByRole('checkbox', { name: 'Remember for this checkout', exact: true }).uncheck();
   await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
-  await expect(composer.getByRole('button', { name: 'Read native settings', exact: true })).toBeEnabled();
-  await composer.getByRole('button', { name: 'Read native settings', exact: true }).click();
-  await expect(composer.getByRole('combobox', { name: 'Model', exact: true })).toBeEnabled();
-  await at('connection menu (native settings read)');
-  await press(page, menu);
-  await composer.getByRole('combobox', { name: 'Native model' }).selectOption('synthetic-model');
-  await expect(composer.getByRole('combobox', { name: 'Reasoning effort' })).toBeVisible();
+  await expect(composer.locator('.composer-setup')).toHaveCount(0);
+  await composer.getByRole('button', { name: 'Model', exact: true }).click();
+  await composer.getByRole('menuitem', { name: /Load model list/ }).click();
+  await expect(composer.getByRole('button', { name: 'Model', exact: true })).toBeEnabled();
+  await composer.getByRole('button', { name: 'Model', exact: true }).click();
+  await at('model menu');
+  await composer.getByRole('menuitemradio', { name: 'Synthetic model' }).click();
+  await expect(composer.getByRole('button', { name: 'Reasoning effort', exact: true })).toBeVisible();
   await at('model and effort selects');
   await input.fill('Edit the file'); await input.press('Enter');
   await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
@@ -163,27 +185,26 @@ test('the toolbox and its menus keep 4.5:1 on every palette', async ({ page }) =
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
   const toolbox = page.getByRole('complementary', { name: 'Tools and agents' }); await expect(toolbox.getByText('Toolbox', { exact: true })).toBeVisible();
-  const found: string[] = [], at = (state: string) => everyPalette(page, state, found, '.modern-tool-station, [aria-label="Tools and agents"], [data-toolbox-window]');
+  const found: string[] = [], at = (state: string) => everyPalette(page, state, found, '.modern-tool-station, [aria-label="Tools and agents"]');
   await at('toolbox at rest');
   const read = toolbox.locator('.instrument.k-read'); await press(page, read);
   await expect(read).toHaveAttribute('aria-pressed', 'true');
   await at('toolbox with an instrument focused');
   await press(page, toolbox.getByRole('button', { name: 'Clear focus ×', exact: true }));
   const mcpServer = toolbox.locator('.md-server').filter({ has: page.locator('[data-mcp-server]') }).first(); await expect(mcpServer).toBeVisible();
-  await press(page,mcpServer.locator(':scope>summary'));await expect(mcpServer.locator(':scope>summary')).toHaveAttribute('aria-expanded','true');
-  const reader=page.locator('[data-toolbox-window]');await expect(reader).toBeVisible();
-  const tool=reader.locator('button[data-mcp-tool]').first();await expect(tool).toBeVisible();
+  await press(page,mcpServer.locator(':scope>summary'));await expect(mcpServer).toHaveAttribute('open','');
+  const tool=mcpServer.locator('button[data-mcp-tool]').first();await expect(tool).toBeVisible();
   await at('MCP server drawer open');
   await press(page,tool);await expect(tool).toHaveAttribute('aria-pressed','true');
   await at('MCP tool focused');
-  await press(page,reader.getByRole('button',{name:'Clear focus ×',exact:true}));
-  await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(mcpServer.locator(':scope>summary')).toHaveAttribute('aria-expanded','false');
-  await press(page,toolbox.locator('.md-agents>summary'));await expect(page.getByRole('dialog',{name:'Agents',exact:true})).toBeVisible();
+  await press(page,toolbox.getByRole('button',{name:'Clear focus ×',exact:true}));
+  await mcpServer.locator(':scope>summary').press('Escape');await expect(mcpServer).not.toHaveAttribute('open','');
+  await press(page,toolbox.locator('.md-agents>summary'));await expect(toolbox.locator('.md-agents')).toHaveAttribute('open','');
   await at('agents disclosure open');
   expect(found).toEqual([]);
 });
 
-test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette', async ({ page }) => {
+test('the Workspace editor and the Changes window keep 4.5:1 on every palette', async ({ page }) => {
   await openSession(page, await freshWorkspace());
   await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.continue());
   const found: string[] = [];
@@ -210,23 +231,22 @@ test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette
   await page.keyboard.press('Escape');
   // The review dialog belongs to the session view; the desk covers its button.
   await page.reload(); await expect(page.getByRole('region', { name: 'Harness prompt' })).toBeVisible();
-  // Git review: grants, then the working-tree patch, side by side, the raw patch and the file list.
-  await openGitDestination(page, 'Git review');
-  const reader = page.getByRole('dialog', { name: 'Git review', exact: true }), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
+  // Changes: grants, then the working-tree patch, side by side, the raw patch and the file list.
+  const reader = await openChanges(page, 'Uncommitted'), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
   await reader.evaluate(el => el.setAttribute('data-contrast-scope', 'git'));
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git', exact: true }), refresh = reader.getByRole('button', { name: 'Refresh changes', exact: true });
   await expect(gitConsent.or(refresh)).toBeVisible();
-  await git('Git review before consent');
+  await git('Changes before consent');
   if (await gitConsent.isVisible()) await gitConsent.click();
-  await expect(reader.getByRole('complementary', { name: 'Git changed files', exact: true })).toBeVisible();
+  await expect(reader.getByRole('complementary', { name: 'Changed files', exact: true })).toBeVisible();
   await expect(reader.locator('.unified-change').first()).toBeVisible();
-  await git('Git review patch (unified)');
+  await git('Changes patch (unified)');
   await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
   await expect(reader.getByRole('region', { name: 'Current Git patch side by side' })).toBeVisible();
-  await git('Git review patch (side by side)');
+  await git('Changes patch (side by side)');
   await reader.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(reader.locator('.code .ln').first()).toBeVisible();
-  await git('Git review raw patch');
+  await git('Changes raw patch');
   expect(found).toEqual([]);
 });
 

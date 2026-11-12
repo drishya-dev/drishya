@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from 'node:fs';
 import { request } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -22,8 +22,11 @@ beforeAll(async () => {
   writeFileSync(join(dir, 'no-ui', 'concept.js'), '/* synthetic unversioned design */');
   writeFileSync(join(dir, 'no-ui', 'assets', 'index-abcd1234.js'), '/* synthetic content-hashed build */');
   const app = new App(join(dir, 'data'));
-  const r = await app.ingest.importSource('claude-code', join(fixtures, 'claude/checkout-fix.jsonl'));
-  app.store.updateRecordingMeta(r.recordingId, { graphRoot: join(fixtures, 'workspace/shop') });
+  // A current map belongs to this recording's own captured checkout, not a second fixture root.
+  const workspace=join(fixtures,'workspace/shop');const journal=join(dir,'checkout-fix.jsonl');
+  writeFileSync(journal,readFileSync(join(fixtures,'claude/checkout-fix.jsonl'),'utf8').replaceAll('/home/dev/shop',workspace.replaceAll('\\','/')));
+  const r = await app.ingest.importSource('claude-code', journal);
+  app.store.updateRecordingMeta(r.recordingId, { graphRoot: workspace });
   recId = r.recordingId;
   s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui'), model: { baseUrl: 'http://model.invalid', nanoModel: 'n', superModel: 's', ultraModel: 'u' },
     complete: async (model, messages) => {

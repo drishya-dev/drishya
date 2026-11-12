@@ -9,9 +9,9 @@ import { useApp } from '../state.ts';
 import { FileIcon } from './FileIcon.tsx';
 import { WorkspaceBar } from './Workspace.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
-import { GitReviewEntry } from './GitReview.tsx';
+import { GitEntry } from './GitEntry.tsx';
 import { agentColor, agentName } from '../lib/identity.ts';
-import { localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
+import { developerToolsEnabled, localPreviewId, saveLocalPreview } from '../lib/local-preview.ts';
 import { HealthTag } from './Home.tsx';
 import { EvidenceNavigation } from './EvidenceNavigation.tsx';
 
@@ -20,7 +20,7 @@ export function LocalPreviewEntry() {
   const source = useApp(s => s.source);
   const [saved, setSaved] = useState(localPreviewId());
   const [error, setError] = useState(false);
-  if (source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (!developerToolsEnabled() || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const url = new URL(location.href); url.searchParams.set('demo', 'local'); url.searchParams.delete('at'); url.hash = '';
   return <><button className="btn ghost" onClick={() => { const ok = saveLocalPreview(id); setError(!ok); if (ok) setSaved(id); }}>{saved === id ? 'Local preview selected ✓' : 'Use this session as local preview'}</button>{saved && <a className="btn ghost" href={url.href}>Open local preview</a>}{error && <small role="alert">This browser could not save the preview reference.</small>}</>;
 }
@@ -80,7 +80,7 @@ export function WorkbenchStation({ projection, scene, children }: { projection: 
   const filter = useApp(s => s.filter);
   if (document.documentElement.dataset.uiVersion === 'modern') return <ModernToolStation projection={projection} scene={scene} agents={<AgentFamilies projection={projection} scene={scene} />} />;
   return <div className="workbench-station">
-    <section className="workbench-review" aria-label="Work desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitReviewEntry /><NotesEntry key={id}  /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
+    <section className="workbench-review" aria-label="Work desk"><span className="desk-caption">Review</span><div><EvidenceReview key={id} projection={projection} /><GitEntry /><NotesEntry key={id}  /></div><EvidenceNavigation hideEmpty /><p>{mode === 'replay' ? 'Review the full recording in history mode.' : 'Recorded changes and checks.'}</p></section>
     <button className="btn ghost workspace-navigation-open" onClick={() => window.dispatchEvent(new Event('drishya-navigate-workspace'))}>Navigate workspace <kbd>Ctrl/⌘ K</kbd></button>
     {scene.agents.length === 1 && <div className="workbench-runtime"><span className="runtime-dot" /><span>{agentName(primary)}<small>{scene.agents.some(a => a.state === 'active') ? 'Activity in progress' : 'Agent work'}</small></span></div>}
     {scene.agents.length > 1 && <details className="station-agent-menu"><summary>Agents <span>{scene.agents.length}{filter?.agentId ? ' · focused' : ''}</span></summary><AgentFamilies projection={projection} scene={scene} /></details>}

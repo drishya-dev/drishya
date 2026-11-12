@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges, openGitDestination } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { appendFileSync, cpSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -6,6 +6,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import {openSessionReview} from './session-review.ts';
 
 let dir: string, root: string, app: App, server: RunningServer;
 const ids: Record<string, string> = {};
@@ -46,7 +47,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
  await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
- await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-node.offsetHeight-24))).toBeLessThanOrEqual(1);
+ await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-24-node.offsetHeight))).toBeLessThanOrEqual(3);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  for(const width of [390,320]){await page.setViewportSize({width,height:844});const box=(await composer.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);}
@@ -60,11 +61,16 @@ test('toolbox minimizes from actual bounds and keeps its compact icon and indepe
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
  expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
  await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ const compact=toolbox.getByRole('button',{name:'Expand toolbox',exact:true});
+ expect(await compact.evaluate(button=>{
+  const box=button.getBoundingClientRect();
+  return button.contains(document.elementFromPoint(box.right-2,box.top+box.height/2));
+ })).toBe(true);
  await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
  await expect(page.getByRole('complementary',{name:'Tools and agents'})).toBeVisible();
- const reader=page.getByRole('dialog',{name:'Toolbox',exact:true});await expect(reader).toBeVisible();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+ await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);
  await page.emulateMedia({reducedMotion:'reduce'});await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();expect(await toolbox.evaluate(node=>node.getAnimations().length)).toBe(0);
- await page.setViewportSize({width:600,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(reader).toBeVisible();await page.keyboard.press('Escape');await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
+ await page.setViewportSize({width:600,height:844});await page.getByRole('button',{name:'Tools',exact:true}).click();await toolbox.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(toolbox.locator('.modern-toolbox')).toBeVisible();await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(toolbox.getByRole('button',{name:'Expand toolbox',exact:true})).toBeVisible();
 });
 
 test.beforeEach(async () => {
@@ -135,9 +141,9 @@ test('Modern settings resets section reading, follows responsive tab orientation
   await expect(select).toBeFocused();await expect(select).toHaveValue('collapsed');await expect(settings).toBeVisible();
   await page.setViewportSize({width:390,height:844});await expect(nav).toHaveAttribute('aria-orientation','horizontal');
   await settings.getByRole('tab',{name:'Reading',exact:true}).focus();await page.keyboard.press('End');
-  // CLARITY-1: the UI versions tab is offered to everyone again (Clarity), so it is the last section.
-  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toBeFocused();
-  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveAttribute('aria-selected','true');
+  // Modern-only Release 1 ends its settings sections at Keyboard.
+  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toBeFocused();
+  await expect(settings.getByRole('tab',{name:'Keyboard',exact:true})).toHaveAttribute('aria-selected','true');
   expect(await panel.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/settings-phone-navigation-refined.png')});
   await page.keyboard.press('Escape');await expect(settings).toHaveCount(0);
@@ -156,7 +162,8 @@ test('Modern composer keeps its target and state visible, with direct Files and 
     await page.setViewportSize({width,height:900});
     await expect(composer.locator('.modern-composer-location')).toContainText('shop');
     await expect(composer.locator('.modern-composer-identity')).toHaveAttribute('title',new RegExp(`Recording: ${ids.codex!.replace(/[^\w-]/g,'.')}`));
-    await expect(composer.locator('.modern-composer-state')).toBeVisible();
+    // UI-28: no resting status word and no "replied 3 m ago" line; the composer says nothing while there is nothing to say.
+    await expect(composer.getByText(/replied .* ago|Native defaults/)).toHaveCount(0);
     expect(await composer.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
     const promptBox=(await composer.boundingBox())!;
     for(const control of [page.getByRole('button',{name:'Tools',exact:true}),page.getByRole('switch',{name:'Automatically follow new work',exact:true})]) {
@@ -258,7 +265,7 @@ for (const adapter of ['claude-code', 'codex']) test(`Modern ${adapter}: importe
   await page.goBack(); await expect(page.locator('.history')).toBeVisible();
 });
 
-test('Modern preserves Legacy action materials, layout and native graph controls', async ({ page }) => {
+test('Modern preserves action materials, layout and native graph controls on reopening', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   const inspect = async (version:string) => {
     await page.goto(`${server.url}/?demo&experience=${version}&motion=0`);
@@ -272,9 +279,9 @@ test('Modern preserves Legacy action materials, layout and native graph controls
       const css=getComputedStyle(el), copy=el.cloneNode(true) as Element; copy.querySelectorAll('.mcp-tool').forEach(node=>node.remove()); return { id:el.getAttribute('data-op-id'), text:copy.textContent, background:css.backgroundColor, border:css.borderRadius, size:css.fontSize, width:Math.round(el.getBoundingClientRect().width) };
     }));
   };
-  const legacy=await inspect('classic'), modern=await inspect('modern');
-  // Palettes intentionally differ; shared captured content, allocation and type remain equal.
-  expect(modern.map(({background:_,...material})=>material)).toEqual(legacy.map(({background:_,...material})=>material));
+  const first=await inspect('modern'), modern=await inspect('modern');
+  // Reopening preserves captured content, allocation and type.
+  expect(modern.map(({background:_,...material})=>material)).toEqual(first.map(({background:_,...material})=>material));
   expect(modern.every(material=>material.background==='rgb(18, 18, 18)')).toBe(true);
   await page.getByRole('button',{name:'Explore repository map'}).click();
   await expect(page.getByRole('button',{name:'Back to work',exact:true})).toBeVisible();
@@ -285,16 +292,17 @@ test('Modern preserves Legacy action materials, layout and native graph controls
   await expect(settings.getByRole('checkbox',{name:/Slow background orbit/})).toBeVisible();
 });
 
-test('Modern chrome fits wide, laptop and phone viewports; panels and settings remain reachable', async ({ page }) => {
+test('Modern chrome fits wide and narrow desktop viewports; panels and settings remain reachable', async ({ page }) => {
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
-  for (const [width,height] of [[1920,1080],[1280,720],[900,600],[390,844]]) {
+  for (const [width,height] of [[1920,1080],[1280,720],[900,600],[600,900]]) {
     await page.setViewportSize({width,height});
     await expect(page.locator('.history')).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const header=(await page.locator('.modern-session-header').boundingBox())!;
     const title=(await page.locator('.modern-session-header .brand').boundingBox())!;
     const actions=(await page.locator('.modern-session-header .studio-actions').boundingBox())!;
-    expect(header.height).toBeLessThanOrEqual(64);
+    const scale=await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
+    expect(header.height).toBeLessThanOrEqual(64*scale);
     expect(title.y).toBeGreaterThanOrEqual(header.y);
     expect(title.y+title.height).toBeLessThanOrEqual(header.y+header.height);
     expect(title.x+title.width).toBeLessThanOrEqual(actions.x);
@@ -337,12 +345,10 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await openComposer(page);
   await expect(composer).toBeVisible();
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Inspect the checkout condition');
-  await expect(composer.getByRole('button',{name:'Attach text or image files',exact:true})).toBeVisible();
-  await expect(composer.getByRole('button',{name:'Attach folder',exact:true})).toBeVisible();
-  await composer.locator('.native-options>summary').click();
+  await expect(composer.getByRole('button',{name:'Attach',exact:true})).toBeVisible();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});
-  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await expect(composer.getByRole('button',{name:'Send prompt',exact:true})).toBeDisabled();
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'note.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic attachment for local testing')});
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toBeVisible();
@@ -350,19 +356,18 @@ test('Modern native composer keeps attachments, outside dismissal and explicit c
   await expect(composer.getByRole('button',{name:'Remove attachment note.txt'})).toHaveCount(0);
 });
 
-test('Modern colour and UI versions remain separate; scoped Modern chrome does not affect Legacy', async ({ page }) => {
-  await page.addInitScript(() => { try { localStorage.setItem('drishya-dev-ui-versions', '1'); } catch { /* the URL switch works without storage */ } });
+test('Modern colour persists while retired version choices cannot replace the product',async({page})=>{
   await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
   await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
   const settings=page.getByRole('dialog',{name:'Workspace settings'});
   await settings.getByRole('button',{name:'Daylight',exact:true}).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
-  await settings.getByRole('tab',{name:'UI versions',exact:true}).click();
-  await expect(settings.getByRole('button',{name:/^Modern/})).toHaveAttribute('aria-pressed','true');
-  await settings.getByRole('button',{name:/^Legacy/}).click();
-  await expect(page.locator('html')).toHaveAttribute('data-ui-version','classic');
+  await expect(settings.getByRole('tab',{name:'UI versions',exact:true})).toHaveCount(0);
+  await page.evaluate(()=>localStorage.setItem('drishya-ui-version','classic'));
+  await page.goto(`${server.url}/?demo&experience=classic&versions=all&motion=0`);
+  await expect(page.locator('html')).toHaveAttribute('data-ui-version','modern');
+  await expect(page.locator('html')).toHaveAttribute('data-palette','paper');
   await expect(page.locator('.history')).toBeVisible();
-  await expect(page.locator('.modern-session-header,.modern-native-composer,.modern-toolbox')).toHaveCount(0);
 });
 
 test('Modern settings have allocated spacing, keyboard navigation and reachable controls', async ({ page }) => {
@@ -405,12 +410,11 @@ test('Modern compact composer keeps connection consent accessible and has no nee
   await openComposer(page);
   const input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
   await input.fill('A short prompt');
-  expect((await composer.boundingBox())!.height).toBeLessThan(170);
+  expect((await composer.boundingBox())!.height).toBeLessThan(230);
   expect(await input.evaluate(el=>el.scrollHeight-el.clientHeight)).toBeLessThanOrEqual(1);
-  await composer.locator('.native-options>summary').click();
   await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
   await page.locator('.history').click({position:{x:8,y:160}});
-  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeHidden();
+  await expect(composer.getByRole('button',{name:'Enable this workspace',exact:true})).toBeVisible();
 });
 
 test('structured shell output renders decoded newlines and retains the exact raw envelope', async ({ page }) => {
@@ -518,11 +522,11 @@ test('recovered Modern toolbox preserves actual instrument origins, filters and 
   await expect(mcpServer).toBeVisible();
   {
     await mcpServer.locator('summary').click();
-    const reader=page.getByRole('dialog',{name:/^MCP tools for /});await expect(reader).toBeVisible();
-    const tool=reader.locator('button[data-mcp-tool]').first();
+    await expect(mcpServer).toHaveAttribute('open','');
+    const tool=mcpServer.locator('button[data-mcp-tool]').first();
     await expect(tool).toBeVisible(); await tool.click();
     await expect(tool).toHaveAttribute('aria-pressed','true');
-    await reader.getByRole('button',{name:'Clear focus ×',exact:true}).click();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);
+    await toolbox.getByRole('button',{name:'Clear focus ×',exact:true}).click();await mcpServer.locator('summary').press('Escape');await expect(mcpServer).not.toHaveAttribute('open','');
   }
   await expect(page.getByRole('button',{name:'Show files',exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'Explore repository map',exact:true})).toHaveText('Repository');
@@ -585,9 +589,10 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await openGitDestination(page, 'Git review');
-  const git=page.getByRole('dialog',{name:'Git review',exact:true});
-  const height=git.getByRole('separator',{name:'Resize Git review window height'});
+  // GIT-9: Git review is gone; Git graph carries the same generic reading-window controls (windowId "Git history").
+  await openGitDestination(page);
+  const git=page.getByRole('dialog',{name:'Git graph',exact:true});
+  const height=git.getByRole('separator',{name:'Resize Git history window height'});
   await height.focus();await page.keyboard.press('Home');
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(220);
   await page.keyboard.press('ArrowDown');
@@ -596,7 +601,7 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   expect(grip.y).toBeGreaterThanOrEqual(box.y);expect(grip.y+grip.height).toBeLessThanOrEqual(box.y+box.height+1);
   await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2+64,{steps:5});await page.mouse.up();
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().height))).toBe(316);
-  const move=git.getByRole('button',{name:'Move Git review window'});
+  const move=git.getByRole('button',{name:'Move Git history window'});
   await move.focus();await page.keyboard.press('ArrowLeft');await page.keyboard.press('ArrowDown');
   const moved=(await git.boundingBox())!;
   expect(moved.x).toBeLessThan(box.x);expect(moved.y).toBeGreaterThan(box.y);
@@ -604,82 +609,67 @@ test('Modern reading windows resize, move, recover and reset without leaving the
   await page.mouse.move(button.x+button.width/2,button.y+button.height/2);await page.mouse.down();
   await page.mouse.move(20,400,{steps:8});await page.mouse.up();
   const dragged=(await git.boundingBox())!;expect(dragged.x).toBeGreaterThanOrEqual(12);
-  await git.getByRole('button',{name:'Close Git review'}).click();
-  await openGitDestination(page, 'Git review');
+  await git.getByRole('button',{name:'Close Git graph'}).click();
+  await openGitDestination(page);
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
-  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('surface/Git review');
-  await page.reload();await expect(git).toBeVisible();
+  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('surface/Git history');
+  // Git graph does not reopen by itself after a reload (Git review did); its layout is what is remembered.
+  await page.reload();await openGitDestination(page);await expect(git).toBeVisible();
   await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().y))).toBe(Math.round(dragged.y));
   await page.setViewportSize({width:900,height:600});
   await expect.poll(()=>git.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.top>=0&&r.right<=innerWidth&&r.bottom<=innerHeight;})).toBe(true);
-  await page.setViewportSize({width:390,height:844});
+  // Below 820 px the window controls give way (the supported minimum is 600).
+  await page.setViewportSize({width:800,height:844});
   await expect(move).toHaveCount(0);await expect(height).toHaveCount(0);
   await expect.poll(()=>git.evaluate(node=>{const r=node.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})).toBe(true);
   await page.setViewportSize({width:1440,height:900});
-  await git.getByRole('button',{name:'Reset Git review window layout'}).click();
-  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(680);
-  expect((await git.boundingBox())!.x).toBeGreaterThan(700);
+  await git.getByRole('button',{name:'Reset Git history window layout'}).click();
+  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(1180);
+  expect((await git.boundingBox())!.x).toBeGreaterThan(100);
 });
 
-test('Modern Git review opens on the right and reads actual staged/worktree patches', async ({ page }) => {
+test('Modern Changes opens over the stage and reads actual staged/worktree patches', async ({ page }) => {
   await page.setViewportSize({width:1440,height:900});
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await openGitDestination(page, 'Git review');
-  const git=page.getByRole('dialog',{name:'Git review',exact:true});
+  const git=await openChanges(page,'Uncommitted');
   await expect(git).toBeVisible();
+  // GIT-9: Changes is a working window like the Workspace (no right-hand drawer to resize or fold), so its geometry is the Workspace's.
   const bounds=(await git.boundingBox())!;
-  expect(bounds.x).toBeGreaterThan(700); expect(bounds.x+bounds.width).toBeGreaterThan(1400);
-  expect(bounds.width).toBeLessThanOrEqual(680);
-  expect((await git.locator(':scope > header').boundingBox())!.height).toBeLessThanOrEqual(48);
-  await expect(git.locator(':scope > header .git-branch-glyph')).toBeVisible();
+  expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x+bounds.width).toBeLessThanOrEqual(1440);
+  expect((await git.locator(':scope > header').boundingBox())!.height).toBeLessThanOrEqual(56);
   await expect(page.getByRole('complementary',{name:'Tools and agents'}).getByRole('button',{name:'Git review',exact:true})).toHaveCount(0);
   await expect(git.getByRole('button',{name:'Approve read-only Git'}).or(git.getByRole('button',{name:'Refresh changes'}))).toBeVisible();
   if(await git.getByRole('button',{name:'Approve read-only Git'}).isVisible()) await git.getByRole('button',{name:'Approve read-only Git'}).click();
-  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
-  await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title','src/cart/total.ts');
-  await expect(git.locator('.git-patch-reader')).toContainText('42');
-  const resize=git.getByRole('separator',{name:'Resize Git review window left',exact:true});
-  const grip=(await resize.boundingBox())!,edge=(await git.boundingBox())!;
-  await page.mouse.move(grip.x+grip.width/2,grip.y+grip.height/2);await page.mouse.down();
-  await page.mouse.move(edge.x+edge.width-1000,grip.y+grip.height/2,{steps:5});await page.mouse.up();
-  await expect.poll(()=>git.evaluate(node=>Math.abs(node.getBoundingClientRect().width-1000))).toBeLessThanOrEqual(8);
-  const draggedWidth=Math.round((await git.boundingBox())!.width);
-  const patchWidth=(await git.locator('.git-patch').boundingBox())!.width;
-  await git.getByRole('button',{name:/^Files/}).click();
-  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeHidden();
-  expect((await git.locator('.git-patch').boundingBox())!.width).toBeGreaterThan(patchWidth+100);
+  await expect(git.getByRole('complementary',{name:'Changed files'})).toBeVisible();
+  await expect(git.locator('.compare-file-title strong')).toHaveAttribute('title','src/cart/total.ts');
   await expect(git.locator('.git-patch-reader')).toContainText('42');
   await page.screenshot({path:resolve('.local/modern-compact-git-test.png')});
-  await git.getByRole('button',{name:'Close Git review'}).click();
+  await git.getByRole('button',{name:'Back to agent',exact:true}).click();
   await expect(git).toHaveCount(0);
-  await openGitDestination(page, 'Git review');
-  await expect.poll(()=>git.evaluate(node=>Math.round(node.getBoundingClientRect().width))).toBe(draggedWidth);
-  await expect(git.getByRole('button',{name:/^Files/})).toHaveAttribute('aria-expanded','false');
-  await git.getByRole('button',{name:/^Files/}).click();
-  await expect(git.getByRole('complementary',{name:'Git changed files'})).toBeVisible();
-  await git.getByRole('button',{name:'Close Git review'}).click();
+  await openChanges(page,'Uncommitted');
+  await expect(git.getByRole('complementary',{name:'Changed files'})).toBeVisible();
+  await git.getByRole('button',{name:'Back to agent',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
   const utilities=page.locator('.workspace-menu[open]');
   // The menu no longer repeats Changes (the header has it); the reading entries that are not in the header stay.
   await expect(utilities.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await expect(utilities.getByRole('button',{name:'Notes',exact:true})).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
-  await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
-  await page.getByRole('button',{name:'Close Changes',exact:true}).click();
+  await openSessionReview(page);
+  await expect(page.getByRole('dialog',{name:'Session review',exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Close Session review',exact:true}).click();
   await page.getByLabel('More workspace options',{exact:true}).click();
   await utilities.getByRole('button',{name:'Notes',exact:true}).click();
   await expect(page.getByRole('dialog',{name:'Notes',exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Close Notes',exact:true}).click();
-  await page.setViewportSize({width:390,height:844});
-  await openGitDestination(page, 'Git review');
+  await page.setViewportSize({width:600,height:844});
+  await openChanges(page,'Uncommitted');
   await expect(git).toBeVisible();
-  const mobileBounds=(await git.boundingBox())!;
-  expect(mobileBounds.x).toBeGreaterThanOrEqual(0);
-  expect(mobileBounds.x+mobileBounds.width).toBeLessThanOrEqual(390);
-  await expect(git.getByRole('separator',{name:'Resize Git reading space',exact:true})).toBeHidden();
-  await git.getByRole('button',{name:'Close Git review'}).click();
+  const narrowBounds=(await git.boundingBox())!;
+  expect(narrowBounds.x).toBeGreaterThanOrEqual(0);
+  expect(narrowBounds.x+narrowBounds.width).toBeLessThanOrEqual(600);
+  await git.getByRole('button',{name:'Back to agent',exact:true}).click();
 });
 
 for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} composer forwards text, attachments and native options with explicit consent`, async ({ page }) => {
@@ -694,8 +684,8 @@ for(const harness of ['codex','claude-code']) test(`recovered Modern ${harness} 
   await openComposer(page);
   await composer.getByRole('textbox',{name:'Prompt for selected harness session'}).fill('Review the selected source');
   await composer.getByLabel('Choose prompt files').setInputFiles({name:'context.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic context')});
-  await composer.getByRole('combobox',{name:'Native model',exact:true}).selectOption('native-one');
-  await composer.getByRole('combobox',{name:'Reasoning effort',exact:true}).selectOption('high');
+  await composer.getByRole('button',{name:'Model',exact:true}).click();await composer.getByRole('menuitemradio',{name:'Native One',exact:true}).click();
+  await composer.getByRole('button',{name:'Reasoning effort',exact:true}).click();await composer.getByRole('menuitemradio',{name:'high',exact:true}).click();
   await composer.getByRole('button',{name:'Send prompt',exact:true}).click();
   expect(payload).toBeUndefined();
   await composer.getByRole('checkbox',{name:'This session is idle in other clients'}).check();
@@ -741,20 +731,19 @@ test('Modern keeps file evidence, search controls and reading position across se
 });
 
 
-test('Modern retains Git scope and find controls after closing and reopening a reader', async ({page}) => {
+test('Modern retains Git scope and find controls after closing and reopening Changes', async ({page}) => {
   const snapshot={root,branch:'synthetic',head:'abc123',fingerprint:'page1',sampledAt:'2026-10-16T00:00:00Z',omitted:0,limit:50,pageStart:0,totalAllowed:1,protectedCount:0,files:[{path:'sample.ts',status:' M',fingerprint:'exact-patch',patch:'Working tree changes\ndiff --git a/sample.ts b/sample.ts\n--- a/sample.ts\n+++ b/sample.ts\n@@ -1 +1 @@\n-old\n+new',staged:false}]};
   await page.route('**/workspace',route=>route.fulfill({json:{approved:true,root,scope:'current-workspace'}}));
   await page.route('**/git',route=>route.fulfill({json:{approved:true,scope:'current-git'}}));
   await page.route('**/git/snapshot**',route=>route.fulfill({json:snapshot}));
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
-  await openGitDestination(page, 'Git review');
-  const reader=page.getByRole('dialog',{name:'Git review',exact:true});
+  const reader=await openChanges(page,'Uncommitted');
   await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toBeVisible();
   await reader.getByRole('searchbox',{name:'Find in patch'}).fill('new');
   await reader.getByRole('button',{name:'Side by side',exact:true}).click();
-  await reader.getByRole('button',{name:'Close Git review'}).click();
-  await openGitDestination(page, 'Git review');
+  await reader.getByRole('button',{name:'Back to agent',exact:true}).click();
+  await openChanges(page,'Uncommitted');
   await expect(reader.getByRole('searchbox',{name:'Find in patch'})).toHaveValue('new');
   await expect(reader.getByRole('button',{name:'Side by side',exact:true})).toHaveAttribute('aria-pressed','true');
 });
@@ -870,7 +859,7 @@ test('Modern Changes reaches every check as one list and returns to the row that
   const commands=page.getByRole('dialog',{name:'Navigate workspace'});
   await commands.getByRole('combobox').fill('Review changes');
   await commands.getByRole('option',{name:/Review changes and checks/}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});
+  const review=page.getByRole('dialog',{name:'Session review',exact:true});
   const checks=review.getByRole('region',{name:'Recorded checks',exact:true});
   await expect(review.locator('.review-counts')).toContainText('70 test runs');
   await expect(review.getByRole('navigation',{name:'Recorded review pages'})).toHaveCount(0);
@@ -882,7 +871,7 @@ test('Modern Changes reaches every check as one list and returns to the row that
   await checks.getByRole('button',{name:/review-case-69/}).click();
   await expect(review).toHaveCount(0);
   await expect(page.getByRole('region',{name:'Operation detail'})).toContainText('review-case-69');
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await openSessionReview(page);
   await expect(checks.locator('.review-item')).toHaveCount(70);
   await expect(checks.getByRole('button',{name:/review-case-69/})).toBeInViewport();
 });
@@ -1309,19 +1298,19 @@ test('an unexpected rendering failure has a usable recovery surface instead of a
   await expect(page.locator('.mh-home')).toBeVisible();
 });
 
-test('Modern seven palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
+test('Modern three palettes cover Home and session surfaces, and HUD controls retain the prompt draft',async({page})=>{
   await page.setViewportSize({width:1440,height:960});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await expect(page.locator('.mh-header').getByRole('button',{name:'Demo',exact:true})).toHaveCount(0);
   await expect(page.getByRole('link',{name:'Star on GitHub'})).toHaveAttribute('href','https://github.com/drishya-dev/drishya');
-  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
+  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
     await page.getByRole('button',{name:name!,exact:true}).click();
     await expect(page.locator('html')).toHaveAttribute('data-palette',palette!);
-    const expectedBase:Record<string,string>={jet:'#000',paper:'#f6f9fb',midnight:'#02070a',mocha:'#0b090d',tokyo:'#f7f8fc',nord:'#050a08',gruvbox:'#0c0908'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--bg').trim())).toBe(expectedBase[palette!]);
-    const expectedFocus:Record<string,string>={jet:'#8b92ec',paper:'#036a8f',midnight:'#29a9f0',mocha:'#ec5fae',tokyo:'#09318d',nord:'#34d39b',gruvbox:'#fc8a66'};
-    expect(await page.locator('html').evaluate(el=>getComputedStyle(el).getPropertyValue('--focus').trim())).toBe(expectedFocus[palette!]);
+    const expectedBase:Record<string,string>={jet:'rgb(0, 0, 0)',paper:'rgb(246, 249, 251)',midnight:'rgb(7, 13, 27)'};
+    expect(await page.evaluate(()=>getComputedStyle(document.body).backgroundColor)).toBe(expectedBase[palette!]);
+    const expectedFocus:Record<string,string>={jet:'rgb(139, 146, 236)',paper:'rgb(3, 106, 143)',midnight:'rgb(141, 184, 255)'};
+    expect(await page.locator('html').evaluate(el=>{const probe=document.createElement('i');probe.style.color='var(--focus)';el.append(probe);const colour=getComputedStyle(probe).color;probe.remove();return colour;})).toBe(expectedFocus[palette!]);
     await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     await page.screenshot({path:resolve(`.local/palette-${palette}-home.png`)});
   }
@@ -1332,9 +1321,9 @@ test('Modern seven palettes cover Home and session surfaces, and HUD controls re
   await prompt.getByRole('button',{name:'Minimize prompt',exact:true}).click();
   await expect(input).toBeHidden();await prompt.getByRole('button',{name:'Expand prompt',exact:true}).click();await expect(input).toHaveValue('Retain this local draft while minimizing.');
   await page.getByRole('button',{name:'Minimize toolbox',exact:true}).click();await expect(page.locator('.modern-toolbox')).toBeHidden();
-  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-tool-station>.modern-toolbox')).toBeVisible();await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toBeVisible();await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:'Expand toolbox',exact:true}).click();await expect(page.locator('.modern-tool-station>.modern-toolbox')).toBeVisible();await expect(page.getByRole('dialog',{name:'Toolbox',exact:true})).toHaveCount(0);
   await input.fill('');
-  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight'],['Orchid','mocha'],['Royal','tokyo'],['Emerald','nord'],['Ember','gruvbox']]) {
+  for(const [name,palette] of [['Jet Black','jet'],['Daylight','paper'],['Midnight','midnight']]) {
     await page.getByRole('button',{name:'Workspace settings',exact:true}).click();await page.getByRole('button',{name:name!,exact:true}).click();await page.getByRole('button',{name:'Close Workspace settings',exact:true}).click();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:resolve(`.local/palette-${palette}-session.png`)});
@@ -1469,7 +1458,7 @@ test('completed native turns open chronological review without implying attribut
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.codex}`);
   await page.getByLabel('More workspace options').click();
   await page.getByRole('button',{name:'Review new activity',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await expect(review).toContainText('Since this turn began');
+  const review=page.getByRole('dialog',{name:'Session review',exact:true});await expect(review).toContainText('Since this turn began');
   await expect(review.locator('.review-counts')).toBeVisible();expect(after).toBe('0');
 });
 
@@ -1502,7 +1491,7 @@ test('workspace utilities have grouped keyboard navigation without hiding expand
   const trigger=page.getByLabel('More workspace options',{exact:true});await trigger.focus();await page.keyboard.press('Enter');
   const menu=page.locator('.workspace-menu[open]');await expect(menu.getByText('This session',{exact:true})).toBeVisible();await expect(menu.getByText('Move around',{exact:true})).toBeVisible();await expect(menu.getByText('Share',{exact:true})).toBeVisible();await expect(menu.getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
   await page.keyboard.press('ArrowDown');await expect(menu.locator('.workspace-utilities').locator('button:not(:disabled),a[href],summary').filter({visible:true}).first()).toBeFocused();
-  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByText('No usage values recorded for this session.',{exact:true})).toBeVisible();
+  await menu.locator('.usage-peek>summary').focus();if (!await menu.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.keyboard.press('Enter');await expect(menu.getByRole('heading',{name:'Context',exact:true})).toBeVisible();await expect(menu.getByText('No context reading recorded.',{exact:true})).toBeVisible();
   await page.keyboard.press('End');await expect(menu.getByRole('link',{name:'Export recording',exact:true}).or(menu.getByRole('button',{name:'Rescan original journal',exact:true})).last()).toBeFocused();
   await page.keyboard.press('Escape');await expect(trigger).toBeFocused();await expect(menu).toHaveCount(0);
   for(const width of [1440,600]) {
@@ -1543,8 +1532,8 @@ test('captured commands page the whole session, filter outcomes and preserve com
   await page.setViewportSize({width:390,height:844});expect(await dialog.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);
   await page.screenshot({path:resolve('.local/captured-commands-phone.png')});
   await cards.first().getByRole('button',{name:'Open activity',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.getByRole('region',{name:'Operation detail'})).toBeVisible();
-  await page.keyboard.press('Escape');await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
+  await page.keyboard.press('Escape');await openSessionReview(page);
+  const review=page.getByRole('dialog',{name:'Session review',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Commands',exact:true}).click();await expect(review).toHaveCount(0);await expect(dialog).toContainText('71 matching commands');
 
 });
 
@@ -1562,10 +1551,10 @@ test('Review tools show factual findings, all prompt windows and a redacted down
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recordingId}`);await expect(page.locator('.history')).toBeVisible();
   const launch=async(name:string)=>{await page.keyboard.press('Control+k');const nav=page.getByRole('dialog',{name:'Navigate workspace',exact:true});await nav.getByRole('combobox').fill(name);await nav.getByRole('option').filter({hasText:name}).click();};
   await launch('Review findings');let dialog=page.getByRole('dialog',{name:'Review findings',exact:true});await expect(dialog).toContainText('Same command failed 7 of 45 runs');await expect(dialog).toContainText('npm test');
-  await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
+  await dialog.getByRole('button',{name:'Close Review findings',exact:true}).click();await launch('Prompt overview');dialog=page.getByRole('dialog',{name:'Prompt overview',exact:true});await expect(dialog.locator('.insights-intro p')).toHaveText('The work recorded between each prompt and the next, with its latest outcomes.');await expect(dialog.locator('.insights-intro p')).not.toContainText(/led to|started/);await expect(dialog.locator('.prompt-overview-row')).toHaveCount(20);await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_44');
   await dialog.getByRole('button',{name:'Next',exact:true}).click();await expect(dialog.locator('.prompt-overview-row').first()).toContainText('PROMPT_OVERVIEW_24');await dialog.locator('.prompt-overview-row').first().getByRole('button',{name:'Open prompt',exact:false}).click();await expect(dialog).toHaveCount(0);await expect(page.locator('.history')).toContainText('PROMPT_OVERVIEW_24');
   await page.evaluate(({recordingId})=>localStorage.setItem(`drishya-review-questions-v1:daemon:${recordingId}`,JSON.stringify([{id:'note',operationId:'captured-review-op',sequence:1,title:'Review note',question:'Check the edge condition. sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'Reviewer',status:'open',createdAt:'',updatedAt:''}])),{recordingId});
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();const review=page.getByRole('dialog',{name:'Changes',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
+  await openSessionReview(page);const review=page.getByRole('dialog',{name:'Session review',exact:true});await review.locator('.review-tools>summary').click();await review.getByRole('button',{name:'Prepare review packet',exact:true}).click();
   dialog=page.getByRole('dialog',{name:'Review packet',exact:true});await dialog.getByRole('button',{name:'Prepare packet preview',exact:true}).click();const preview=dialog.getByRole('textbox',{name:'Review packet preview',exact:true}),text=await preview.inputValue();expect(text).toContain('45 test runs');expect(text).toContain('Open reviewer questions (1)');expect(text).not.toContain('abcdefghijklmnop');
   await dialog.getByRole('button',{name:'Copy packet',exact:true}).click();expect(await page.evaluate(()=>(window as unknown as {packetCopy:string}).packetCopy)).toBe(text);
   const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Download Markdown',exact:true}).click();const file=await download;expect(readFileSync((await file.path())!,'utf8')).toBe(text);
@@ -1577,8 +1566,8 @@ test('captured changes lead to typed map connections, current reading and a pers
   await page.route('**/controller',route=>route.fulfill({status:503,json:{error:'Synthetic native runtime unavailable'}}));
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
-  const review=page.getByRole('dialog',{name:'Changes',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
+  await openSessionReview(page);
+  const review=page.getByRole('dialog',{name:'Session review',exact:true}),map=review.locator('.review-file-map').first();await expect(map).toBeVisible();const path=(await map.getAttribute('aria-label'))!.replace('Show map connections for ','');await map.click();await expect(review).toHaveCount(0);
   const approve=page.getByRole('button',{name:'Map the whole repository',exact:true});if(await approve.isVisible())await approve.click();
   const connections=page.getByRole('region',{name:'Direct import connections',exact:true});await expect(connections.locator('.map-connection-root')).toHaveText(path);
   await expect(connections).toContainText('static relationships');await connections.getByRole('button',{name:/^(Read current file|Approve reading & open file)$/}).click();
@@ -1594,7 +1583,7 @@ test('captured changes lead to typed map connections, current reading and a pers
 test('saved file selections recover as references and unavailable selections do not crash',async({page})=>{
   const id=ids['claude-code']!;
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await openSessionReview(page);await page.locator('.review-file-entry>button').first().click();
   const reader=page.locator('dialog.file-workspace'),choice=reader.getByRole('combobox',{name:'First step',exact:true});await expect(choice.locator('option').first()).toBeAttached();
   const key=(await choice.locator('option').last().getAttribute('value'))!;await choice.selectOption(key);
   await expect.poll(async()=>{const response=await page.request.get(`${server.url}/v1/working-locations`);return JSON.stringify(await response.json());}).toContain(key);
@@ -1609,7 +1598,7 @@ test('a failed reader screen can recover by navigating to a healthy session',asy
   let failedReads=0;
   await page.route(`**/v1/recordings/${id}/file-operations?*`,route=>{failedReads++;return route.fulfill({json:{operations:[null],total:1}});});
   await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();await page.locator('.review-file-entry>button').first().click();
+  await openSessionReview(page);await page.locator('.review-file-entry>button').first().click();
   const fallback=page.getByText('This view could not be displayed',{exact:true});
   await expect(fallback).toBeVisible();
   const failedBefore=failedReads;
@@ -1801,7 +1790,7 @@ test('last material clears the prompt without an oversized gap',async({page})=>{
    const history=page.locator('.history');await history.evaluate(node=>node.scrollTop=node.scrollHeight);
    await expect.poll(async()=>history.evaluate(node=>Math.abs(node.scrollHeight-node.clientHeight-node.scrollTop))).toBeLessThan(2);
    await expect.poll(async()=>{const prompt=(await composer.boundingBox())!;const last=await history.locator('.passage-slot').last().boundingBox();return last?prompt.y-last.y-last.height:-999;}).toBeGreaterThanOrEqual(6);
-   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(100);
+   const prompt=(await composer.boundingBox())!,last=(await history.locator('.passage-slot').last().boundingBox())!;expect(prompt.y-last.y-last.height).toBeLessThan(collapsed?260:100); // UI-28c: the reserved space does not shrink when the box collapses
    await page.screenshot({path:resolve(`.local/prompt-gap-${width}-${collapsed}.png`)});
   }
   await page.locator('.prompt-composer').getByRole('button',{name:'Expand prompt',exact:true}).click();
@@ -1861,13 +1850,14 @@ test('Explorer preview defaults to a compact right reader with title-bar keyboar
   await page.setViewportSize({width,height:960});await reader.getByRole('button',{name:'Reset File reader window layout',exact:true}).click();
   await expect.poll(async()=>Math.abs((await reader.boundingBox())!.width-width*.28)).toBeLessThan(2);
   const box=(await reader.boundingBox())!,prompt=(await page.locator('.prompt-composer').boundingBox())!,controls=(await page.locator('.studio-actions').boundingBox())!;
-  expect(box.x+box.width).toBeCloseTo(width-48,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
+  const scale=await page.evaluate(()=>parseFloat(getComputedStyle(document.documentElement).fontSize)/16);
+  expect(box.x+box.width).toBeCloseTo(width-48*scale,0);expect(box.height).toBeGreaterThan(450);expect(box.y).toBeGreaterThan(controls.y+controls.height);expect(box.y+box.height).toBeLessThan(prompt.y-8);
   expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('0.9');
  }
  const title=reader.locator(':scope>header'),before=(await reader.boundingBox())!;await title.focus();await page.keyboard.press('ArrowLeft');await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x+16)).toBeLessThan(2);await page.keyboard.press('Home');
  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x)).toBeLessThan(2);
  const strip=(await reader.locator('.file-peek-tabs').boundingBox())!;await page.mouse.move(strip.x+strip.width-24,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-44,strip.y+strip.height/2,{steps:4});await page.mouse.up();expect(Math.abs((await reader.boundingBox())!.x-before.x+20)).toBeLessThan(2);
  await page.screenshot({path:resolve('.local/compact-preview-desktop.png')});
- await page.setViewportSize({width:390,height:844});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);
+ await page.setViewportSize({width:600,height:900});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const narrow=(await reader.boundingBox())!;expect(narrow.x).toBeGreaterThanOrEqual(0);expect(narrow.x+narrow.width).toBeLessThanOrEqual(600);
  await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');
 });

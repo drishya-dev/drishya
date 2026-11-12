@@ -1,7 +1,7 @@
 /* Current integrated stage. Captured materials have edges; workspace chrome fades away. */
 :root[data-palette='jet'], :root[data-palette='midnight'] {
-  --source: #52caff; --focus: #38bfff; --external: #c493ff; --edited: #ffc15a;
-  --pass: #59e8a1; --fail: #ff738d; --graph-node: #f3f5fa; --graph-edge: #77818d;
+  --source: var(--source); --focus: var(--default-focus-210); --external: var(--source); --edited: var(--default-edited-211);
+  --pass: var(--default-pass-212); --fail: var(--default-fail-213); --graph-node: var(--text-primary); --graph-edge: var(--text-muted);
 }
 .connected-workspace { --crown-h: 74px; --workspace-h: 30px; --transport-h: 0px; }
 .connected-workspace .crown {
@@ -31,7 +31,7 @@
 .connected-workspace .dock .inst-tools, .connected-workspace .dock .server-tool, .connected-workspace .runtime-tools { font-size: var(--text-2xs); }
 .connected-workspace .dock .server-name { font-size: var(--text-2xs); }
 .connected-workspace .dock .tool-mark { width: 21px; height: 21px; }
-.dock .instrument:hover, .dock .server-tool:hover, .dock .instrument.on { border-color: transparent; outline: none; background: #ffffff07; }
+.dock .instrument:hover, .dock .server-tool:hover, .dock .instrument.on { border-color: transparent; outline: none; background: color-mix(in srgb,var(--focus) 2.745%,transparent); }
 .dock .instrument:focus-visible, .dock .server-tool:focus-visible { outline: 1px solid var(--t2); outline-offset: -1px; }
 .dock .instrument:hover .op-kind, .dock .server-tool:hover { color: var(--t1); }
 :root[data-palette] .dock .instrument:hover .tool-mark, :root[data-palette] .dock .instrument.on .tool-mark { border-color: var(--line-2); background: transparent; }
@@ -50,13 +50,13 @@
 .connected-workspace .history .op-title { font-size: var(--text-2xs); }
 .connected-workspace .history .op-body { padding: 6px 8px 8px; }
 .connected-workspace .history .code, .connected-workspace .history .diff, .connected-workspace .history .cmd, .connected-workspace .history .output { font-size: var(--text-2xs); line-height: 1.55; }
-:root[data-theme='dark'] .tk-kw { color: #f087da; }
-:root[data-theme='dark'] .tk-str { color: #ffb58a; }
-:root[data-theme='dark'] .tk-fn { color: #ffe18c; }
-:root[data-theme='dark'] .tk-num { color: #b5eca1; }
-:root[data-theme='dark'] .tk-com { color: #93b68d; }
-:root[data-theme='dark'] .tk-type { color: #55e0c4; }
-:root[data-theme='dark'] .tk-property { color: #8ad8ff; }
+:root[data-theme='dark'] .tk-kw { color: var(--syntax-keyword); }
+:root[data-theme='dark'] .tk-str { color: var(--syntax-string); }
+:root[data-theme='dark'] .tk-fn { color: var(--syntax-function); }
+:root[data-theme='dark'] .tk-num { color: var(--syntax-number); }
+:root[data-theme='dark'] .tk-com { color: var(--text-muted); }
+:root[data-theme='dark'] .tk-type { color: var(--syntax-type); }
+:root[data-theme='dark'] .tk-property { color: var(--syntax-property); }
 .connected-workspace .history-transport { position: fixed; bottom: 12px; left: 12px; right: 12px; height: 30px; padding: 0; min-height: 0; border: 0; background: transparent; justify-content: space-between; pointer-events: none; }
 .history-transport > * { pointer-events: auto; }
 .history-transport .prompt-menu > summary { padding: 6px 10px; background: var(--s1); border: 1px solid var(--line); border-radius: var(--round-sm); }
@@ -82,6 +82,8 @@
 .map.exploring .map-group strong { color: var(--t3); font: var(--text-2xs) var(--mono); }
 .map.exploring .map-group:hover small { color: var(--t1); }
 .map-file-label { background: color-mix(in srgb, var(--bg) 65%, transparent); padding: 0 3px; max-width: 190px; }
+.map-tip-members { list-style: none; margin: 6px 0 0; padding: 6px 0 0; border-top: 1px solid var(--line); display: grid; gap: 2px; font: var(--text-2xs)/1.5 var(--mono); color: var(--t2); }
+.map-tip-members li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .map-legend { font-size: var(--text-2xs); gap: 3px; padding: 8px; border-radius: var(--round-sm); background: color-mix(in srgb, var(--bg) 85%, transparent); }
 .map-legend > .muted:nth-child(2) { display: none; }
 .connected-workspace .map-tools { z-index: 5; gap: 4px; padding: 6px; border: 1px solid var(--line); border-radius: var(--round-md); background: color-mix(in srgb, var(--bg) 90%, transparent); max-width: min(380px, calc(100vw - 24px)); }
@@ -629,25 +631,6 @@
   .connected-workspace .map-connections { top: auto; bottom: 76px; max-height: 34dvh; }
 }
 .history .change-preview .diff { max-height: none; overflow: visible; }
-.git-review-dialog { width: min(1200px, calc(100vw - 40px)); }
-.git-review-dialog > section, .git-review-dialog > p { padding: 16px 24px; }
-.git-review-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
-.git-review-toolbar > span { flex: 1; font: var(--text-xs) var(--mono); }
-.git-scope-note { color: var(--t2); font-size: var(--text-xs); }
-.git-review-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 240px; }
-.git-review-layout aside { padding: 12px; border-right: 1px solid var(--line); overflow: auto; max-height: 60dvh; }
-.git-review-layout aside button { display: flex; align-items: center; gap: 8px; padding: 10px 8px; width: 100%; text-align: left; border-radius: var(--round-sm); }
-.git-review-layout aside button[aria-pressed=true] { background: var(--s2); }
-.git-review-layout aside button > span { flex: 1; overflow-wrap: anywhere; font: var(--text-2xs) var(--mono); }
-.git-review-layout aside small { color: var(--t2); font-size: var(--text-2xs); }
-.git-review-layout section { min-width: 0; }
-.git-review-layout section > header, .git-review-layout footer { padding: 12px 18px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
-.git-review-layout header strong { flex: 1; overflow-wrap: anywhere; font: var(--text-xs) var(--mono); }
-.git-patch { max-height: 44dvh; overflow: auto; padding: 12px 18px; }
-.git-patch .code { font-size: var(--text-xs); line-height: 1.7; }
-.git-review-layout footer textarea { width: 100%; min-height: 60px; font-size: var(--text-xs); padding: 10px; }
-.handoff-preview textarea { width: 100%; min-height: 200px; max-height: 35dvh; font: var(--text-xs)/1.6 var(--mono); padding: 12px; }
-@media (max-width: 700px) { .git-review-layout { grid-template-columns: minmax(0, 1fr); } .git-review-layout aside { max-height: 140px; border-right: 0; border-bottom: 1px solid var(--line); } }
 
 /* On a narrow map, place the import reader below its measured controls. */
 .connected-workspace.exploring .map-tools {top:var(--workspace-tools-bottom,calc(var(--workspace-header-h,64px) + 68px));}
@@ -664,3 +647,8 @@
 .fix-chain-edits > summary { display: list-item; list-style-position: inside; cursor: pointer; color: var(--t2); }
 .fix-chain-edits ul { margin: 2px 0 2px 14px; padding: 0; list-style: none; }
 .fix-chain-edits li { max-width: 100%; }
+
+/* The same measured fixed-chrome boundary clips history and its navigation viewport. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history { top: var(--workspace-tools-bottom, 134px); }
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner { padding-top: 16px; }
+:root[data-ui-version=modern] .connected-workspace.developer-workspace-open .follow-pill { display: none; }

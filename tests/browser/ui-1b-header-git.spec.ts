@@ -5,7 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges, openGitDestination } from './git-navigation.ts';
 
 let dir: string, app: App, server: RunningServer, id: string, absentId: string;
 const branch = 'feature/' + 'captured-branch-with-readable-full-name/'.repeat(5) + 'finish';
@@ -44,17 +44,16 @@ for (const width of [600, 1440]) {
     expect(await name.evaluate(el => el.scrollHeight <= el.clientHeight + 1)).toBe(true);
     const box = (await name.boundingBox())!; expect(box.x).toBeGreaterThanOrEqual(0); expect(box.x + box.width).toBeLessThanOrEqual(width + 1);
     const git = page.getByRole('button', { name: 'Git', exact: true }); await expect(git).toHaveCount(1);
-    await expect(page.getByRole('button', { name: 'Git review', exact: true })).toHaveCount(0);
+    // GIT-9: no Git review and no popover; the Git icon opens Git graph in one click, and Changes is the header's own button.
+    await expect(page.getByText('Git review')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Git graph', exact: true })).toHaveCount(0);
     await git.focus(); await git.press('Enter');
-    const review = page.getByRole('button', { name: 'Git review', exact: true }), graph = page.getByRole('button', { name: 'Git graph', exact: true });
-    await expect(review).toBeFocused(); await review.press('Tab'); await expect(graph).toBeFocused(); await graph.press('Shift+Tab'); await expect(review).toBeFocused(); await review.press('ArrowDown'); await expect(graph).toBeFocused(); await graph.press('Home'); await expect(review).toBeFocused(); await review.press('End'); await expect(graph).toBeFocused(); await graph.press('Home'); await expect(review).toBeFocused();
-    await review.press('Escape'); await expect(git).toBeFocused(); await expect(review).toHaveCount(0);
-    await git.press('Space'); await expect(review).toBeFocused(); await page.locator('.session-line-title').click(); await expect(review).toHaveCount(0);
-    await openGitDestination(page, 'Git review'); const reader = page.getByRole('dialog', { name: 'Git review', exact: true }); await expect(reader).toBeVisible();
-    await expect(reader.getByRole('button', { name: 'Approve read-only Git', exact: true })).toBeVisible();
-    await reader.getByRole('button', { name: 'Close Git review', exact: true }).click(); await expect(git).toBeFocused();
-    await openGitDestination(page, 'Git graph'); const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true }); await expect(atlas).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Git graph', exact: true })).toBeVisible(); await expect(page.getByRole('menu')).toHaveCount(0);
+    await page.keyboard.press('Escape'); await expect(page.getByRole('dialog', { name: 'Git graph', exact: true })).toHaveCount(0); await expect(git).toBeFocused();
+    const changes = await openChanges(page, 'Uncommitted'); await expect(changes).toBeVisible();
+    await expect(changes.getByRole('button', { name: 'Approve read-only Git', exact: true })).toBeVisible();
+    await changes.getByRole('button', { name: 'Back to agent', exact: true }).click(); await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeFocused();
+    await openGitDestination(page); const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true }); await expect(atlas).toBeVisible();
     await expect(atlas.getByRole('button', { name: 'Approve read-only Git', exact: true })).toBeVisible();
     await page.setViewportSize({ width: width === 600 ? 1440 : 600, height: 900 }); await expect(atlas).toHaveCount(1); await expect(atlas).toBeVisible();
     await atlas.getByRole('button', { name: 'Close Git graph', exact: true }).click(); await expect(git).toBeFocused();
@@ -77,28 +76,28 @@ test('privacy-outdated and root-mismatched identities stay absent', async ({ pag
 });
 test('the two readers retain loading, empty, failure and command-palette behavior', async ({ page }) => {
   await open(page); await page.keyboard.press('Control+k'); await page.getByRole('combobox').fill('Review current Git changes'); await page.getByRole('combobox').press('Enter');
-  const reader = page.getByRole('dialog', { name: 'Git review', exact: true }); await expect(reader).toBeVisible();
+  const reader = page.getByRole('region', { name: 'Changes', exact: true }); await expect(reader).toBeVisible();
+  await expect(reader.getByRole('button', { name: 'Uncommitted', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await page.route('**/git/snapshot*', async route => { await new Promise(resolve => setTimeout(resolve, 500)); await route.continue(); });
   await reader.getByRole('button', { name: 'Approve read-only Git', exact: true }).click(); await expect(reader.getByRole('button', { name: 'Refresh changes' })).toBeDisabled();
-  await expect(reader.getByText('No visible changes.', { exact: true })).toBeVisible();
+  await expect(reader.getByText('No uncommitted changes.', { exact: true })).toBeVisible();
   await page.unroute('**/git/snapshot*'); await page.route('**/git/snapshot*', route => route.fulfill({ status: 409, json: { error: 'Synthetic inspection conflict. Refresh before reviewing.' } }));
   await reader.getByRole('button', { name: 'Refresh changes' }).click(); await expect(reader).toContainText('Synthetic inspection conflict.');
-  await reader.getByRole('button', { name: 'Close Git review', exact: true }).click();
+  await reader.getByRole('button', { name: 'Back to agent', exact: true }).click();
   await page.route('**/git/history?*', route => route.fulfill({ status: 500, json: { error: 'Synthetic history unavailable.' } }));
-  await openGitDestination(page, 'Git graph'); const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true });
+  await openGitDestination(page); const atlas = page.getByRole('dialog', { name: 'Git graph', exact: true });
   const approve = atlas.getByRole('button', { name: 'Approve read-only Git', exact: true }); if (await approve.isVisible()) await approve.click();
   await expect(atlas.getByRole('alert')).toContainText('Synthetic history unavailable.');
 });
 
-test('Git destinations switch readers without leaving another open', async ({ page }) => {
+test('Changes and Git graph switch without leaving the other open', async ({ page }) => {
   await open(page);
-  await openGitDestination(page, 'Git review');
-  const review = page.getByRole('dialog', { name: 'Git review', exact: true });
+  const changes = await openChanges(page, 'Uncommitted');
   const graph = page.getByRole('dialog', { name: 'Git graph', exact: true });
-  await expect(review).toBeVisible();
-  await openGitDestination(page, 'Git graph');
-  await expect(graph).toBeVisible(); await expect(review).toHaveCount(0);
-  // The graph remains modal; its existing event route can hand ownership to review.
-  await page.evaluate(() => window.dispatchEvent(new Event('drishya-git-review')));
-  await expect(review).toBeVisible(); await expect(graph).toHaveCount(0);
+  await expect(changes).toBeVisible();
+  await openGitDestination(page);
+  await expect(graph).toBeVisible(); await expect(changes).toHaveCount(0);
+  await page.keyboard.press('Escape'); await expect(graph).toHaveCount(0);
+  await openChanges(page, 'Uncommitted');
+  await expect(changes).toBeVisible(); await expect(graph).toHaveCount(0);
 });

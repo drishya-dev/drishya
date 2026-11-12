@@ -1,3 +1,5 @@
+import {ToolOutput} from './ToolOutput.tsx';
+import {interfaceRem,useInterfaceScale} from '../lib/interface-scale.ts';
 import {currentReadingTarget} from '../lib/file-reading.ts';
 import {FileReadingActions} from './FileReadingActions.tsx';
 import {OpImages} from './OpImages.tsx';
@@ -19,7 +21,7 @@ import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import { VerificationPanel } from './Verification.tsx';
 import { CapturedTime } from './common.tsx';
-import { useSessionWorkspace } from './SessionWorkspace.tsx';
+import { useReadingWorkspace } from './SessionWorkspace.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { CodeView, Output } from './common.tsx';
@@ -42,6 +44,7 @@ export function CapturedFileFallback({path,projection,reason}:{path:string;proje
 
 function FileWorkspace({ path, projection,embedded=false,reason }: { path: string; projection: Projection;embedded?:boolean;reason?:string }) {
   const memoryScope=embedded?`file-fallback/${path}`:'file';
+  const interfaceScale=useInterfaceScale();
   const roots=useFileRoots(projection.observationCount);
   const root=roots.find(root=>path.startsWith(root.prefix+'/'));
   const recordedLocation=root?`${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length+1)}`:undefined;
@@ -50,8 +53,9 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
   const preferred = useApp(s => s.filePanelEvidence);
   const requestedLine = useApp(s => s.filePanelLine);
   const explore = useApp(s => s.explore);
-  const { workspace, approve } = useSessionWorkspace();
-  const diskPath=currentReadingTarget(path,roots,workspace?.root).path;
+  const { workspace, approve } = useReadingWorkspace();
+  const checkoutId=useApp(s=>s.checkoutId);
+  const diskPath=checkoutId&&!path.startsWith('worktree-')?undefined:currentReadingTarget(path,roots,workspace?.root).path;
   const [diskError, setDiskError] = useState<string>();
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId)!;
@@ -186,14 +190,14 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
     trail.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [first?.key]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
-  const readDiskAction=source?.kind === 'daemon' && workspace?.root && diskPath!==undefined && !reason && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId || useApp.getState().source !== source) return; rememberCurrentFileOrigin(source,recordingId,diskPath,path); useApp.getState().set({ currentFile: diskPath, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>;
+  const readDiskAction=source?.kind === 'daemon' && workspace?.root && diskPath!==undefined && !reason && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId || useApp.getState().source !== source) return; rememberCurrentFileOrigin(source,recordingId,diskPath,path); useApp.getState().set({ currentFile: checkoutId?path:diskPath, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>;
   const content=<>
 
     <div className="file-reading-context">{(!modern||(embedded&&!reason))&&<EvidenceNavigation compact={modern} hideEmpty={modern} />}
     {recoveryError&&<p role="status" className="file-workspace-intro">{recoveryError}</p>}
     {(mode === 'replay' || requestedLine !== undefined) && <div className="file-workspace-intro"><span className="muted small">{mode === 'replay' ? 'Up to this replay step' : ''}{mode === 'replay' && requestedLine !== undefined && ' · '}{requestedLine !== undefined && `Line ${requestedLine}, within the lines the agent saw`}</span></div>}</div>
-    <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': `${trailWidth}px` } as React.CSSProperties}>
-      {!trailHidden && <ReadingResize value={trailWidth} minimum={160} maximum={440} change={setTrailWidth} reset={()=>setTrailWidth(230)} label="Resize file action history" />}
+    <div className={`file-workspace-layout${trailHidden ? ' trail-hidden' : ''}`} style={{ '--trail-width': interfaceRem(trailWidth) } as React.CSSProperties}>
+      {!trailHidden && <ReadingResize value={trailWidth*interfaceScale} minimum={160*interfaceScale} maximum={440*interfaceScale} change={pixels=>setTrailWidth(pixels/interfaceScale)} reset={()=>setTrailWidth(230)} label="Resize file action history" />}
       <nav ref={trail} className="file-trail" aria-label="File action history">
         <input className="file-filter" aria-label="Filter actions on this file" placeholder={page ? `${page.total} action${page.total === 1 ? '' : 's'} on this file` : 'Loading…'} value={query} onChange={(e) => { setQuery(e.target.value); setStart(0); setLeft(undefined); setRight(undefined); }} />
         {error && <p role="alert" className="bad">{error} <button className="btn" onClick={() => { setFailure(undefined); setRetry((n) => n + 1); }}>Retry</button></p>}
@@ -228,7 +232,7 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
       </section>
     </div>
   </>;
-  return embedded?<section className="file-workspace captured-file-fallback" aria-label="File fallback" style={{width:'100%',height:'100%',maxHeight:'none',minHeight:0,border:0,borderRadius:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>{reason&&(modern?<div className="captured-fallback-head"><p role="status">{reason}</p><EvidenceNavigation compact hideEmpty/></div>:<p className="file-workspace-intro" role="status">{reason}</p>)}{content}</section>:<ReadingDialog title={`Work on ${recordedLocation ?? path}`} headerIcon={modern?<EvidenceNavigation compact hideEmpty/>:undefined} heading={modern?<span className="file-heading" tabIndex={-1} data-dialog-focus><strong>{fileName(path)}</strong><small title={recordedLocation ?? path}>{fileFolder(recordedLocation ?? path,4)}</small></span>:undefined} windowId={explore?undefined:'File'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${windowWidth}px,calc(100vw - 28px))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth} minimum={640} maximum={1800} change={setWindowWidth} reset={()=>setWindowWidth(1700)} label="Resize file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>{content}</ReadingDialog>;
+  return embedded?<section className="file-workspace captured-file-fallback" aria-label="File fallback" style={{width:'100%',height:'100%',maxHeight:'none',minHeight:0,border:0,borderRadius:0,display:'flex',flexDirection:'column',overflow:'hidden'}}>{reason&&(modern?<div className="captured-fallback-head"><p role="status">{reason}</p><EvidenceNavigation compact hideEmpty/></div>:<p className="file-workspace-intro" role="status">{reason}</p>)}{content}</section>:<ReadingDialog title={`Work on ${recordedLocation ?? path}`} headerIcon={modern?<EvidenceNavigation compact hideEmpty/>:undefined} heading={modern?<span className="file-heading" tabIndex={-1} data-dialog-focus><strong>{fileName(path)}</strong><small title={recordedLocation ?? path}>{fileFolder(recordedLocation ?? path,4)}</small></span>:undefined} windowId={explore?undefined:'File'} resetWindow={()=>{setWindowWidth(1700);setTrailWidth(230);setTrailHidden(false);}} style={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:{width:`min(${interfaceRem(windowWidth)},calc(100vw - ${interfaceRem(28)}))`}} resizeControl={explore||document.documentElement.dataset.uiVersion!=='modern'?undefined:<ReadingResize value={windowWidth*interfaceScale} minimum={640*interfaceScale} maximum={1800*interfaceScale} change={pixels=>setWindowWidth(pixels/interfaceScale)} reset={()=>setWindowWidth(1700)} label="Resize file reading space" fromRight/>} close={close} className="file-workspace" modeless={explore}>{content}</ReadingDialog>;
 }
 
 /** The file is the window's title, so a row says what this step was. */
@@ -246,10 +250,10 @@ function stepName(op: Operation): string {
 
 function EvidenceColumn({ choices, value, choose, label, path, requestedLine, diskRefused = false }: { choices: FileEvidence[]; value?: FileEvidence; choose: (key: string) => void; label: string; path: string; requestedLine?: number; diskRefused?: boolean }) {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
-  return <section className="file-evidence-column"><div className="file-evidence-choice"><label><span className="muted small">{label}</span><select aria-label={label} value={value?.key ?? ''} onChange={(e) => choose(e.target.value)}>{choices.map((item) => <option key={item.key} value={item.key}>{modern?`${KIND_LABEL[item.operation.kind]} · ${item.operation.startTime?new Date(item.operation.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):stepName(item.operation)} · ${item.label.replace('-state reference','')}`:`${item.operation.title} · ${item.label}`}</option>)}</select></label>{modern && value && !diskRefused && <CapturedSourceComparison compact evidence={value} path={path}/>}</div>
+  return <section className="file-evidence-column"><div className="file-evidence-choice"><label><span className="muted small">{label}</span><select aria-label={label} value={value?.key ?? ''} onChange={(e) => choose(e.target.value)}>{choices.map((item) => <option key={item.key} value={item.key}>{modern?`${KIND_LABEL[item.operation.kind]} · ${item.operation.startTime?new Date(item.operation.startTime).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):stepName(item.operation)} · ${item.label.replace('-state reference','')}`:`${item.operation.title} · ${item.label}`}</option>)}</select></label>{modern && value && value.commandOutput===undefined && !diskRefused && <CapturedSourceComparison compact evidence={value} path={path}/>}</div>
     {value && <div key={value.key} className="file-evidence-material">
-      {!modern && <><p className="small">{value.label}</p><CapturedSourceComparison evidence={value} path={path}/></>}
-      {value.snippet !== undefined ? <>
+      {!modern && <><p className="small">{value.label}</p>{value.commandOutput===undefined&&<CapturedSourceComparison evidence={value} path={path}/>}</>}
+      {value.commandOutput!==undefined?<><p className="muted small">Captured command output · includes anything printed by this command</p>{value.artifactId?<ArtifactReader id={value.artifactId} kind="output" fallback={value.commandOutput}/>:<ToolOutput text={value.commandOutput}/>}</>:value.snippet !== undefined ? <>
         <p className="muted small">Exact search result · surrounding file was not recorded by this result{value.startLine === undefined ? ' · line number not reported' : ''}</p>
         {value.startLine === undefined ? <Output text={value.snippet} /> : <CodeView text={value.snippet} path={path} startLine={value.startLine} activeLine={requestedLine} />}
       </> : value.patch && value.operation.detail.kind === 'edit' ? <DiffReader hunks={value.operation.detail.hunks} path={path} navigationKey={`${label}/${value.key}`} /> : <ArtifactReader id={value.artifactId} kind="code" path={path} startLine={value.startLine} navigationSlot={label} requestedLine={requestedLine} provenance />}

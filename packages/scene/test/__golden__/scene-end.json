@@ -141,6 +141,7 @@
       "turnPrompt": "Free orders don't reach checkout — a cart with the LAUNCH100 code (100% off) is rejected with missing-total, and the free-order test in test/checkout.test.ts fails. Find out why and fix it.",
       "turnTime": "2026-09-21T10:00:00.000Z",
       "turnStep": 0,
+      "turnId": "turn_obs#5",
       "inTurn": 0
     },
     {
@@ -203,7 +204,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#5",
+          "id": "prose_obs#6",
           "role": "assistant",
           "exposure": "full",
           "arriving": false
@@ -256,7 +257,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#6",
+          "id": "prose_obs#7",
           "role": "reasoning",
           "exposure": "full",
           "arriving": false
@@ -327,7 +328,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#7",
+          "id": "prose_obs#8",
           "role": "assistant",
           "exposure": "full",
           "arriving": false
@@ -417,7 +418,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#8",
+          "id": "prose_obs#9",
           "role": "assistant",
           "exposure": "full",
           "arriving": false
@@ -428,12 +429,12 @@
       "inTurn": 0
     },
     {
-      "id": "psg_t_prose_obs#9",
+      "id": "psg_t_prose_obs#10",
       "agentId": "rec#2.agent:main",
       "ops": [],
       "prose": [
         {
-          "id": "prose_obs#9",
+          "id": "prose_obs#10",
           "role": "reasoning",
           "exposure": "summary",
           "arriving": false
@@ -444,6 +445,7 @@
       "turnPrompt": "Review the uncommitted change to the checkout guard. Is it correct, and is it tested?",
       "turnTime": "2026-09-21T10:20:01.000Z",
       "turnStep": 31,
+      "turnId": "turn_obs#11",
       "inTurn": 31
     },
     {
@@ -489,7 +491,7 @@
       ],
       "prose": [
         {
-          "id": "prose_obs#10",
+          "id": "prose_obs#12",
           "role": "reasoning",
           "exposure": "summary",
           "arriving": false

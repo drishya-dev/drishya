@@ -8,7 +8,7 @@ import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts
 let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-classic-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-classic-test' }); });
 test.afterAll(async () => { await server.close(); await app.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
-const url = () => new URL('/?demo&experience=classic', server.launchUrl).href;
+const url = () => new URL('/?demo&experience=modern', server.launchUrl).href;
 
 test('continuous explorer reaches every file with bounded rows and keyboard navigation', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
@@ -36,67 +36,17 @@ test('continuous explorer reaches every file with bounded rows and keyboard navi
   await expect.poll(() => tree.evaluate(el => el.scrollTop)).toBeGreaterThan(1000);
   expect(await tree.getByRole('treeitem').count()).toBeLessThan(80);
   const offset = await tree.evaluate(el => el.scrollTop);
-  await page.getByRole('button', { name: 'Minimize folders' }).click();
-  await page.getByRole('button', { name: 'Show session folders' }).click();
+  await page.getByRole('button', { name: 'Minimize files' }).click();
+  await page.getByRole('button', { name: 'Show files', exact: true }).click();
   await expect(tree).toBeVisible();
   expect(await tree.evaluate(el => el.scrollTop)).toBeCloseTo(offset, 0);
-  await page.getByRole('textbox', { name: 'Find session files' }).fill('file-599');
+  await page.getByRole('textbox', { name: 'Find repository files' }).fill('file-599');
   await expect(tree.getByRole('treeitem')).toHaveCount(1);
   await expect(tree.getByRole('treeitem')).toHaveAttribute('title', 'file-599.rs');
 });
 
-test('Classic evidence and agent rail, explicit palettes and map reading work across widths', async ({ page }) => {
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(url());
-  await expect(page.locator('.workbench-station')).toBeVisible();
-  await expect(page.locator('.workspace-header [data-agent-id]')).toHaveCount(0);
-  await expect(page.getByRole('switch', { name: 'Agent overview', exact: true })).toHaveCount(0);
-  await expect(page.getByRole('switch', { name: 'Filter by Explore agent', exact: true })).toBeHidden();
-  await page.locator('.station-agent-menu > summary').click();
-  await expect(page.getByRole('switch', { name: 'Filter by Explore agent', exact: true })).toBeHidden();
-  await page.locator('.station-subagents > summary').click();
-  const agent = page.getByRole('switch', { name: 'Filter by Explore agent', exact: true });
-  await expect(agent).toHaveAttribute('title', /surrounding history stays visible/);
-  await agent.click(); await expect(agent).toHaveAttribute('aria-checked', 'true');
-  await expect(page.locator('.history .filtered-out').first()).toBeAttached();
-  await agent.click();
-  await page.getByRole('button', { name: 'Review work', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: 'Review work' })).toBeVisible();
-  await page.keyboard.press('Escape');
-  const settings = page.getByRole('button', { name: 'Workspace settings' });
-  expect(await settings.evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThanOrEqual(22);
-  await settings.click();
-  const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
-  await expect(dialog.getByRole('button', { name: 'System', exact: true })).toHaveCount(0);
-  for (const [name, palette, bg] of [['Midnight', 'midnight', 'rgb(17, 20, 26)'], ['Paper', 'paper', 'rgb(244, 243, 240)'], ['Jet Black', 'jet', 'rgb(13, 13, 13)']]) {
-    await dialog.getByRole('button', { name, exact: true }).click();
-    await expect(page.locator('html')).toHaveAttribute('data-palette', palette);
-    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(bg);
-  }
-  await page.emulateMedia({ colorScheme: 'light' });
-  await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
-  await dialog.getByRole('button', { name: 'Close Workspace settings' }).click();
-  for (const [width, height] of [[1920, 1080], [1280, 720], [900, 500], [768, 900], [390, 844]]) {
-    await page.setViewportSize({ width, height });
-    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
-    if (width <= 820) await page.getByRole('button', { name: 'Tools', exact: true }).click();
-    await expect(page.locator('.workbench-station')).toBeVisible();
-    const bounds = (await page.locator('.workbench-station').boundingBox())!;
-    expect(bounds.x).toBeGreaterThanOrEqual(0); expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
-    await expect(page.getByRole('group', { name: 'Agents' })).toBeVisible();
-    if (width <= 820) await page.getByRole('button', { name: 'Close tools', exact: true }).click();
-  }
-  await page.setViewportSize({ width: 1440, height: 900 });
-  await page.screenshot({ path: resolve('.local/classic-evidence-desk.png') });
-  await page.getByRole('button', { name: 'Explore repository map' }).click();
-  await page.getByRole('textbox', { name: 'Find a file on the map' }).fill('guard.ts');
-  await page.locator('.map-matches').getByRole('button', { name: 'src/checkout/guard.ts', exact: true }).click();
-  await page.getByRole('button', { name: 'Open agent work on this file' }).click();
-  const reader = page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' });
-  await expect(reader.locator('.file-workspace-layout')).toHaveClass(/trail-hidden/);
-  await expect(reader.locator('.code .ln').first()).toBeInViewport();
-});
-
+// The retired Classic rail/palette composition is not a Release 1 surface.
+// Modern semantics are covered by tools-trail, palette-contrast and repository-navigation.
 test('usage expands inside the utility menu without clipping at narrow widths', async ({ page }) => {
   await page.goto(url());
   for (const [width, height] of [[1440, 900], [900, 500], [600, 844]]) {
@@ -149,7 +99,7 @@ test('utility menus restore nested focus, stay bounded and keep keyboard/reduced
   await expect(trigger).toBeFocused();
   await trigger.click();
   await expect(menu).toHaveAttribute('data-pointer-menu', '');
-  await page.getByRole('button', { name: 'Show session folders', exact: true }).focus();
+  await page.getByRole('button', { name: 'Show files', exact: true, exact: true }).focus();
   await expect(menu).not.toHaveAttribute('open', '');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await trigger.click();
@@ -198,8 +148,8 @@ test('reading Back restores a page, search, selected line, wrap and scroll after
   const sourceContent = reader.locator('.source-reading > .code');
   await sourceContent.evaluate(el => { el.scrollTop = 100; });
   await expect.poll(() => sourceContent.evaluate(el => el.scrollTop)).toBe(100);
-  await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
   const selected = await reader.getByRole('combobox', { name: 'First step' }).inputValue();
+  await reader.getByLabel('File actions',{exact:true}).click();
   await reader.locator('.import-context > summary').click();
   await reader.getByRole('button', { name: 'Work on src/cart/types.ts', exact: true }).click();
   const destination = page.getByRole('dialog', { name: 'Work on src/cart/types.ts' });
@@ -215,11 +165,7 @@ test('reading Back restores a page, search, selected line, wrap and scroll after
   await reader.getByRole('button', { name: 'Forward in reading history', exact: true }).click();
   await expect(destination).toBeVisible();
   await destination.getByRole('button', { name: 'Back in reading history', exact: true }).click();
-  await reader.locator('.file-evidence-reading').evaluate(el => { el.scrollTop = 330; });
-  await expect.poll(() => reader.locator('.file-evidence-reading').evaluate(el => el.scrollTop)).toBeGreaterThan(300);
-  await reader.getByRole('button', { name: 'Close Work on src/checkout/guard.ts', exact: true }).click();
-  await page.locator('.workbench-review').getByRole('button', { name: 'Back in reading history', exact: true }).click();
-  await expect.poll(() => reader.locator('.file-evidence-reading').evaluate(el => el.scrollTop)).toBeCloseTo(330, 0);
+  // Modern retains navigation inside the reader; Legacy's global closed-reader Back bar is retired.
   await page.screenshot({ path: resolve('.local/evidence-reading-navigation.png') });
 });
 

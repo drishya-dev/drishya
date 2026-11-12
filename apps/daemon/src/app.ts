@@ -1,3 +1,4 @@
+import {recordedFileRoots,recordedMainRootPrefixes} from './file-roots.ts';
 // Shared application wiring used by the server and the CLI.
 
 import { existsSync, realpathSync, statSync } from 'node:fs';
@@ -25,6 +26,43 @@ export class App {
   private probes = new Map<string, { at: number; generation: string }>();
   private readonly graphProbeMs: number;
   private deleting = new Set<string>();
+  private checkouts = new Map<string, { owner: string; root: string; prefix: string }>();
+  private checkoutGraphs = new Set<string>();
+
+  /** A browsing context is not a recording and can never become a native controller target. */
+  checkoutOwner(id: string): string {
+    if (!id.includes('~')) return id;
+    const context = this.checkouts.get(id);
+    if (!context) throw new HttpError(404, 'Choose this recorded checkout again.');
+    this.recording(context.owner);
+    return context.owner;
+  }
+  checkoutPrefix(id: string): string | undefined { this.checkoutOwner(id); return this.checkouts.get(id)?.prefix; }
+  workspaceRecording(id: string): RecordingSummary {
+    const context = this.checkouts.get(id);
+    if (!context) return this.recording(id);
+    const recording = this.recording(context.owner);
+    return { ...recording, workspaceRoot: context.root, graphRoot: this.checkoutGraphs.has(id) ? context.root : undefined };
+  }
+  async chooseCheckout(id: string, prefix?: string) {
+    if (id.includes('+') || id.includes('~')) throw new HttpError(400, 'Choose one captured session.');
+    const recording = this.recording(id);
+    if (prefix === undefined) return { id, recordingId: id, root: recording.workspaceRoot, prefix: undefined };
+    if (!/^worktree-[a-f0-9]{10}$/.test(prefix)) throw new HttpError(400, 'Choose a recorded checkout.');
+    const ids = this.readingId(id).split('+');
+    const metadata = await recordedFileRoots(this.store, ids);
+    const roots = await this.history.fileRoots(this.readingId(id), metadata.roots, recording.workspaceRoot);
+    const selected = roots.find(root => root.prefix === prefix && (root.fileCount ?? 0) > 0);
+    if (!selected) throw new HttpError(404, 'This checkout has no captured file work in this session.');
+    const why = this.unscannable(selected.root);
+    if (why) throw new HttpError(409, `This checkout ${why}. Its captured files remain readable.`);
+    if (recordedMainRootPrefixes([selected], recording.workspaceRoot).length) return { id, recordingId: id, root: recording.workspaceRoot, prefix: undefined };
+    const key = `${id}~${prefix}`;
+    if (!this.checkouts.has(key) && this.checkouts.size >= 256) throw new HttpError(409, 'Too many active checkout views. Restart Drishya to clear them.');
+    this.checkouts.set(key, { owner: id, root: selected.root, prefix });
+    return { id: key, recordingId: id, root: selected.root, prefix };
+  }
+
 
   /** `graphProbeMs`: how long a freshness probe of a map root is reused (default 15 s). */
   constructor(dir = dataDir(), opts: { memory?: boolean; graphProbeMs?: number } = {}) {
@@ -61,11 +99,15 @@ export class App {
         } catch { this.store.db.prepare('DELETE FROM meta WHERE key=?').run(key); }
       }
       return removed;
-    } finally { this.deleting.delete(id); }
+    } finally {
+      this.deleting.delete(id);
+      for(const [key,context] of this.checkouts)if(context.owner===id){this.checkouts.delete(key);this.checkoutGraphs.delete(key);}
+    }
   }
 
   /** Historical identity only; controller, grants and current files keep the physical selected id. */
   readingId(id: string): string {
+    id = this.checkoutOwner(id);
     if (id.includes('+')) return id;
     this.recording(id);
     return this.store.lineageView(id)?.recordingIds.join('+') ?? id;
@@ -128,12 +170,27 @@ export class App {
    */
   async graph(idOrIds: string, refresh = false): Promise<RepoGraph> {
     const ids = this.readingId(idOrIds).split('+');
-    const rec = this.recording(ids[0]!);
+    // A proven continuation contributes evidence, not the earlier journal's checkout.
+    const rec = this.workspaceRecording(idOrIds.includes('+')?ids[0]!:idOrIds);
     const large = this.paged(idOrIds);
-    const projection = large ? (await this.history.page(idOrIds, { count: 1 })).projection : this.projection(idOrIds);
-    const filesOnly = () => graphFromPaths(projection.files.map((f) => f.path));
-    if (!projection.workspaceRoot) return filesOnly();
-    const root = rec.graphRoot || undefined;
+    const projection = large ? (await this.history.page(this.readingId(idOrIds), { count: 1 })).projection : this.projection(idOrIds);
+    // An explicitly combined export is evidence from several sessions, not one current checkout.
+    if(idOrIds.includes('+'))return graphFromPaths(projection.files.map(file=>file.path));
+    const roots=rec.workspaceRoot?await recordedFileRoots(this.store,ids):undefined;
+    const primary=new Set(recordedMainRootPrefixes(roots?.roots??[],rec.workspaceRoot));
+    const namespaces=new Set(roots?.roots.map(root=>root.prefix)??[]);
+    const filesOnly = () => graphFromPaths(projection.files.filter(file=>{
+      if(!rec.workspaceRoot)return true;
+      const prefix=file.path.split('/')[0]!;
+      return namespaces.has(prefix)?primary.has(prefix):!/^worktree-[a-f0-9]{10}\//.test(file.path);
+    }).map(file=>file.path));
+    // Multiple recorded roots namespace evidence; they do not replace this session's checkout.
+    if (!rec.workspaceRoot) return filesOnly();
+    let root = rec.graphRoot || undefined;
+    if(root){
+      try{if(realpathSync(root)!==realpathSync(rec.workspaceRoot))root=undefined;}
+      catch{root=undefined;}
+    }
     if (!root || this.unscannable(root)) {
       const captured = rec.workspaceRoot;
       return captured && !this.unscannable(captured) ? { ...filesOnly(), approvalNeeded: { root: captured } } : filesOnly();
@@ -148,7 +205,9 @@ export class App {
       this.graphs.set(root, g);
       this.probes.set(root, { at: Date.now(), generation: g.generation });
     }
-    return { ...g, stale: (await this.probe(root)) !== g.generation };
+    const prefix=this.checkoutPrefix(idOrIds);
+    const visible=prefix?{...g,generation:`${prefix}:${g.generation}`,nodes:g.nodes.map(node=>({...node,id:`${prefix}/${node.id}`,path:`${prefix}/${node.path}`,dir:`${prefix}/${node.dir}`})),edges:g.edges.map(edge=>({...edge,from:`${prefix}/${edge.from}`,to:`${prefix}/${edge.to}`})),unresolved:g.unresolved.map(item=>({...item,from:`${prefix}/${item.from}`}))}:g;
+    return { ...visible, stale: (await this.probe(root)) !== g.generation };
   }
 
   /** The current generation of a root, reused for `graphProbeMs` so map requests stay cheap. */
@@ -165,13 +224,14 @@ export class App {
    * the API (no arbitrary folders), and never a drive root or the home folder.
    */
   async approveGraphRoot(id: string, root?: string): Promise<RepoGraph> {
-    const rec = this.recording(id);
+    const rec = this.workspaceRecording(id);
     const captured = rec.workspaceRoot;
     if (!captured) throw new HttpError(400, 'this recording captured no workspace root');
     if (root !== undefined && (typeof root !== 'string' || resolve(root) !== resolve(captured))) throw new HttpError(400, 'only the captured workspace root can be approved');
     const why = this.unscannable(captured);
     if (why) throw new HttpError(400, `the captured root ${why}`);
-    this.store.updateRecordingMeta(id, { graphRoot: captured });
+    if (this.checkouts.has(id)) this.checkoutGraphs.add(id);
+    else this.store.updateRecordingMeta(id, { graphRoot: captured });
     return this.graph(id, true);
   }
 

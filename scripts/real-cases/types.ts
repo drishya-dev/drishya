@@ -10,6 +10,8 @@ export interface RealCase {
   prefilter: string | Partial<Record<'claude-code' | 'codex', string>>;
   /** Hits on one parsed journal line, or undefined. `only` counts the stricter subset (for example an image with no text). */
   scan(row: Record<string, unknown>, harness: 'claude-code' | 'codex'): { hits: number; only?: number } | undefined;
+  /** Called before each journal is scanned, for a case that remembers rows within one file. */
+  reset?(): void;
   /** Counts read back from the imported recording. Lines starting with "FAIL" fail the check. */
   verify?(projection: Projection, found: { hits: number; only: number; sourceId: string }): string[];
 }

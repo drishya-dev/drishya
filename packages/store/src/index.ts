@@ -10,7 +10,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import { isBlobText } from '@drishya/contracts';
+import { isPersonPrompt, isBlobText } from '@drishya/contracts';
 import type { BlobText, Observation, RecordingSummary, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
 import { recordingStats } from './recording-stats.ts';
@@ -797,7 +797,8 @@ export class Store {
   /** Every distinct working directory a recording's observations captured, e.g. for export masking. */
   workspaceRoots(recordingId: string): string[] {
     const rows = this.q(`SELECT DISTINCT json_extract(body, '$.workspaceRoot') AS r FROM observations WHERE recording_id = ?
-                         UNION SELECT DISTINCT json_extract(body, '$.payload.cwd') FROM observations WHERE recording_id = ? AND kind = 'session.meta'`).all(recordingId, recordingId) as { r: unknown }[];
+                         UNION SELECT DISTINCT json_extract(body, '$.payload.cwd') FROM observations WHERE recording_id = ?
+                         UNION SELECT DISTINCT json_extract(body, '$.payload.intent.cwd') FROM observations WHERE recording_id = ?`).all(recordingId, recordingId, recordingId) as { r: unknown }[];
     return rows.map((x) => x.r).filter((r): r is string => typeof r === 'string' && r.length > 0);
   }
 
@@ -922,17 +923,49 @@ export class Store {
 
   // ── search and bookmarks ───────────────────────────────────────────────────
 
-  /** Hits come with the turn they fall in (turn.start count for the same agent, else prompts for harnesses that record none) and the tool call they belong to, shown in capture order. */
+  /** Hits keep captured native turn numbers; otherwise count person prompts, excluding harness notices. */
   search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
     const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
+    // Read prompt metadata once, not once per hit. Large bodies use their stored prefix:
+    // every recognised harness wrapper is a leading shape, before any clipping.
+    const prompts = new Map<string, number[]>();
+    const entries = this.q("SELECT seq, agent_id AS agent, body FROM observations WHERE recording_id = ? AND kind = 'message.user' ORDER BY seq").all(recordingId) as { seq: number; agent: string; body: string }[];
+    const records = new Map<string, { seq: number; text?: string; images: boolean }[]>();
+    for (const entry of entries) {
+      if (entry.agent !== 'agent:main') continue;
+      const observation = JSON.parse(entry.body) as Observation;
+      const payload = observation.payload as { text?: string | BlobText; images?: unknown[] };
+      const text = typeof payload.text === 'string' ? payload.text : payload.text?.preview;
+      const key = `${observation.source.sourceId}|${observation.source.generation}|${observation.source.recordId ?? observation.id}`;
+      const list = records.get(key) ?? [];
+      list.push({ seq: entry.seq, text, images: !!payload.images?.length }); records.set(key, list);
+    }
+    const positions: number[] = [];
+    for (const record of records.values()) {
+      const texts = record.filter(part => part.text?.trim());
+      if (texts.length) positions.push(...texts.filter(part => isPersonPrompt(part.text)).map(part => part.seq));
+      else if (record.some(part => part.images)) positions.push(record[0]!.seq);
+    }
+    prompts.set('agent:main', positions.sort((a, b) => a - b));
+    // Native turn numbers are captured harness turns, not prompt counts. Preserve them;
+    // only the fallback for harnesses without turn records counts person prompts.
+    const nativeTurns = new Map<string, number[]>();
+    for (const row of this.q("SELECT agent_id AS agent, seq FROM observations WHERE recording_id = ? AND kind = 'turn.start' ORDER BY seq").all(recordingId) as { agent: string; seq: number }[]) {
+      const list = nativeTurns.get(row.agent) ?? []; list.push(row.seq); nativeTurns.set(row.agent, list);
+    }
+    const promptAt = (agent: string, seq: number) => {
+      const list = nativeTurns.get(agent) ?? prompts.get(agent) ?? []; let lo = 0, hi = list.length;
+      while (lo < hi) { const mid = (lo + hi) >>> 1; if (list[mid]! <= seq) lo = mid + 1; else hi = mid; }
+      return lo;
+    };
     const rows = this.q(`SELECT search.observation_id AS observationId, snippet(search, 0, '«', '»', '…', 12) AS snippet, o.seq AS seq, o.kind AS kind, o.source_time AS time, o.operation_id AS operationId,
         json_extract(o.body, '$.payload.tool') AS tool, json_extract(o.body, '$.payload.intent.path') AS path, json_extract(o.body, '$.payload.intent.command') AS command,
-        (SELECT COUNT(*) FROM observations u WHERE u.recording_id = o.recording_id AND u.agent_id = o.agent_id AND u.kind = CASE WHEN EXISTS (SELECT 1 FROM observations s WHERE s.recording_id = o.recording_id AND s.agent_id = o.agent_id AND s.kind = 'turn.start') THEN 'turn.start' ELSE 'message.user' END AND u.seq <= o.seq) AS turn
+        o.agent_id AS agent
       FROM search JOIN observations o ON o.id = search.observation_id AND o.recording_id = search.recording_id
       WHERE search MATCH ? AND search.recording_id = ? LIMIT ?`).all(safe, recordingId, limit) as any[];
     return rows.sort((x, y) => x.seq - y.seq).map((r) => ({
-      observationId: r.observationId, snippet: r.snippet, kind: r.kind, ...(r.operationId ? { operationId: r.operationId } : {}), ...(r.time ? { time: r.time } : {}), ...(r.turn ? { turn: r.turn } : {}),
+      observationId: r.observationId, snippet: r.snippet, kind: r.kind, ...(r.operationId ? { operationId: r.operationId } : {}), ...(r.time ? { time: r.time } : {}), ...(promptAt(r.agent, r.seq) ? { turn: promptAt(r.agent, r.seq) } : {}),
       ...(typeof r.tool === 'string' ? { tool: r.tool } : {}), ...(typeof r.path === 'string' ? { path: r.path } : {}), ...(typeof r.command === 'string' ? { command: r.command.slice(0, 120) } : {}),
     }));
   }

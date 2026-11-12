@@ -1,3 +1,4 @@
+import {paletteRGB,usePaletteKey} from '../lib/palette-paint.ts';
 import {gitSessionLinkDescription} from '../../../daemon/src/git-types.ts';
 import {useCallback,useEffect,useId,useLayoutEffect,useMemo,useRef,useState} from 'react';
 import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
@@ -9,7 +10,7 @@ import {ago} from '../lib/git-commit-rows.ts';
 import './git-thread-graph.css';
 import {useApp} from '../state.ts';
 
-const ribbonColors=['#e6ffff','#69eaff','#427bff','#b5afff','#ffb7ee','#9068fa','#96f4ff','#e8dbb7','#4fb8ff','#e5dbff'];
+const ribbonColors=Array.from({length:10},(_,i)=>`var(--git-ribbon-${i})`);
 const MIN_SCALE=.04,MAX_SCALE=2.5,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value));
 
 export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence,mirror,onHover,reveal,links}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
@@ -22,7 +23,8 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
   const fit=()=>{const el=viewport.current;if(el){setInset({});setScale(clampScale(Math.min(1,(el.clientWidth-48)/graph.width,lit?9:(el.clientHeight-70)/graph.height)));el.scrollLeft=0;centerRiver.current=true;}};
   const previous=useRef<{graph:typeof graph;key:string}|undefined>(undefined);
   const gradient=useId().replace(/:/g,'');
-  const lowResource=useApp(state=>state.lowResource),motion=useApp(state=>state.motion);
+  const lowResource=useApp(state=>state.lowResource),motion=useApp(state=>state.motion),theme=usePaletteKey();
+  const paint=useMemo(()=>Array.from({length:8},(_,i)=>paletteRGB(`--git-light-${i}`)),[theme]);
   // GIT-1: filament light drawn by WebGL behind the DOM commits; the SVG ribbon remains only where WebGL2 is unavailable.
   const canvas=useRef<HTMLCanvasElement>(null),world=useRef<HTMLDivElement>(null),renderer=useRef<LightRenderer|undefined>(undefined),[lit,setLit]=useState(false);
   useLayoutEffect(()=>{const element=canvas.current;if(!element)return;renderer.current??=LightRenderer.create(element);setLit(!!renderer.current);},[]);
@@ -123,7 +125,7 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
   const focusSet=active?neighbors:branch?new Set([...branch.members,...(branch.fork?[branch.fork]:[]),...(branch.merge?[branch.merge]:[])]):undefined;
   const lastFocus=useRef<Set<string>|undefined>(undefined);if(focusSet)lastFocus.current=focusSet;
   const focusMix=useRef(0),cache=useRef(lightCache()),frame=useRef<number|undefined>(undefined),seed=useMemo(()=>hashSeed(primary?.name??'repository'),[primary?.name]);
-  const scene=useRef({graph,light,scale,selected,lowResource,heads,seed,moreOlder});scene.current={graph,light,scale,selected,lowResource,heads,seed,moreOlder};
+  const scene=useRef({graph,light,scale,selected,lowResource,heads,seed,moreOlder,paint});scene.current={graph,light,scale,selected,lowResource,heads,seed,moreOlder,paint};
   const view=()=>{const el=viewport.current,origin=world.current;if(!el||!origin)return undefined;const box=el.getBoundingClientRect(),at=origin.getBoundingClientRect();return{box,ox:at.left-box.left,oy:at.top-box.top};};
   // Redraws only when the view, the data or the hover changes; idle costs nothing.
   const schedule=useCallback(()=>{
@@ -132,14 +134,14 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
       frame.current=undefined;const output=renderer.current,el=viewport.current,s=scene.current,v=view();if(!output||!el||!v||!s.light)return;
       output.resize(el.clientWidth,el.clientHeight,Math.min(2,devicePixelRatio||1));
       const t0=performance.now();
-      const built=gitLight(s.graph,s.light,{scale:s.scale,ox:v.ox,oy:v.oy,width:el.clientWidth,height:el.clientHeight},{cache:cache.current,focus:lastFocus.current,focusMix:focusMix.current,heads:s.heads,selected:s.selected,lowResource:s.lowResource,seed:s.seed,olderBeyond:s.moreOlder});
+      const built=gitLight(s.graph,s.light,{scale:s.scale,ox:v.ox,oy:v.oy,width:el.clientWidth,height:el.clientHeight},{palette:s.paint,cache:cache.current,focus:lastFocus.current,focusMix:focusMix.current,heads:s.heads,selected:s.selected,lowResource:s.lowResource,seed:s.seed,olderBeyond:s.moreOlder});
       const t1=performance.now();
       output.draw({lines:built.lines,points:built.points,offset:built.offset,linesKey:built.linesKey,bloom:s.lowResource?0:1,exposure:1.6});
       el.dataset.lightMs=`${(t1-t0).toFixed(1)}/${(performance.now()-t1).toFixed(1)}`;el.dataset.lightBuilds=String(cache.current.builds);
       el.dataset.lightSegments=String(built.segments);
     });
   },[]);
-  useLayoutEffect(()=>{if(lit)schedule();},[lit,light,scale,selected,lowResource,heads,schedule]);
+  useLayoutEffect(()=>{if(lit)schedule();},[lit,light,scale,selected,lowResource,heads,paint,schedule]);
   useEffect(()=>()=>{if(frame.current!==undefined)cancelAnimationFrame(frame.current);},[]);
   // Hover brightens the touched commit's or branch's strands and dims the rest over 160 ms; instant without motion.
   const focusKey=active?`c:${active.hash}`:branch?`b:${branch.key}`:'';
@@ -178,7 +180,7 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
     }}>
       <div className="thread-space" style={{width:(inset.x??24)+graph.width*scale+24+(inset.padX??0),height:(inset.y??24)+worldHeight*scale+24+(inset.padY??0)}}><div ref={world} className="thread-world" style={{width:graph.width,height:worldHeight,left:inset.x!==undefined?inset.x:`max(24px,calc(50% - ${graph.width*scale/2}px))`,top:inset.y!==undefined?inset.y:`max(24px,calc(50% - ${worldHeight*scale/2}px))`,transform:`scale(${scale})`}}>
         {ribbons&&<svg className="thread-links" width={graph.width} height={graph.height} aria-hidden="true">
-          <defs><linearGradient id={gradient} x1="0" y1="0" x2={graph.width} y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="#9e81ff"/><stop offset=".24" stopColor="#65dfff"/><stop offset=".48" stopColor="#e0faff"/><stop offset=".7" stopColor="#ae8fff"/><stop offset=".86" stopColor="#ffade9"/><stop offset="1" stopColor="#6be5ff"/></linearGradient></defs>
+          <defs><linearGradient id={gradient} x1="0" y1="0" x2={graph.width} y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stopColor="var(--git-ribbon-stop-0)"/><stop offset=".24" stopColor="var(--git-ribbon-stop-1)"/><stop offset=".48" stopColor="var(--git-ribbon-stop-2)"/><stop offset=".7" stopColor="var(--git-ribbon-stop-3)"/><stop offset=".86" stopColor="var(--git-ribbon-stop-4)"/><stop offset="1" stopColor="var(--git-ribbon-stop-5)"/></linearGradient></defs>
           {ribbons.pieces.map(piece=>{const edge=piece.edge;return <g key={piece.key} data-depth={piece.depth.toFixed(2)} className={`thread-bundle${active&&!neighbors.has(edge.from)?' muted':''}${selected===edge.to||hovered===edge.to?' active':''}`}>
             <path data-parent={edge.from} data-child={edge.to} style={{fill:`url(#${gradient})`,stroke:`url(#${gradient})`,strokeWidth:0}} className="thread-ribbon" d={piece.surface}/>
             {piece.bands.map((band,index)=><path key={index} d={band.path} className="ribbon-lamina" style={{fill:ribbonColors[band.color],opacity:band.shade}}/>)}

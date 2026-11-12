@@ -37,3 +37,16 @@ it('sends queue image bytes through the existing image-candidate privacy boundar
  const rows=parser.parse({type:'queue-operation',operation:'enqueue',content:[{type:'text',text:'look'},{type:'image',source:{type:'base64',data:'synthetic bytes'}}]});
  expect(rows).toHaveLength(1);expect(rows[0]?.payload).toMatchObject({text:'look',images:[{kind:'captured-image'}]});
 });
+
+it('adds end_turn after final content and usage with stable, independent identities',()=>{
+ const rows={type:'assistant',uuid:'final-row',message:{id:'message-final',role:'assistant',stop_reason:'end_turn',usage:{input_tokens:2,output_tokens:3},content:[{type:'text',text:'final content'}]}};
+ const parser=createParser({recordingId:'r',sourceId:'s',sourcePath:'synthetic.jsonl'});
+ const result=parser.parse(rows);
+ expect(result.map(item=>item.kind)).toEqual(['usage','message.assistant','turn.end']);
+ expect(result.find(item=>item.kind==='message.assistant')?.part).toBe(0);
+ expect(result.at(-1)).toMatchObject({part:0xffffffff,kind:'turn.end',payload:{}});
+ expect(parser.parse(rows).filter(item=>item.kind==='turn.end')).toEqual(result.filter(item=>item.kind==='turn.end'));
+ expect(parser.parse({...rows,uuid:'tool-row',message:{...rows.message,stop_reason:'tool_use'}}).some(item=>item.kind==='turn.end')).toBe(false);
+ expect(createParser({recordingId:'r',sourceId:'child-source',sourcePath:'synthetic.jsonl',agentId:'agent:child'}).parse(rows).at(-1)).toMatchObject({kind:'turn.end',agentId:'agent:child',payload:{}});
+ expect(parser.parse({...rows,uuid:'empty-final',message:{stop_reason:'end_turn',content:[]}})).toMatchObject([{kind:'turn.end'}]);
+});

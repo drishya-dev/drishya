@@ -11,7 +11,7 @@ import { useEvidenceState } from './EvidenceNavigation.tsx';
 import { RecordedWorkMenu } from './RecordedWorkMenu.tsx';
 
 /** `openRecorded` opens the captured patch of an edit; without it (or without matches) no per-hunk action appears. */
-export function GitPatchReader({ file, openRecorded }: { file: GitFile; openRecorded?: (path: string, evidenceKey: string) => void }) {
+export function GitPatchReader({ file, openRecorded, hideScope = false }: { file: GitFile; openRecorded?: (path: string, evidenceKey: string) => void; /** Compare reads one patch, so the Staged / Working tree switch has nothing to switch. */ hideScope?: boolean }) {
   const operations = useApp(s => s.projection?.operations);
   const hunkAction = openRecorded && operations ? (hunk: Hunk) => {
     const matches = recordedEditsForHunk(hunk, file.path, operations);
@@ -29,7 +29,7 @@ export function GitPatchReader({ file, openRecorded }: { file: GitFile; openReco
   const structured = !raw && !!section?.hunks.length;
   return <div className="git-patch-reader">
     <nav className="reader-tools" aria-label="Git patch scope">
-      {sections.map(item => <button key={item.name} className="btn ghost small" aria-pressed={section === item} onClick={() => { setScope(item.name); setPage(0); }}>{item.name}</button>)}
+      {!hideScope && sections.map(item => <button key={item.name} className="btn ghost small" aria-pressed={section === item} onClick={() => { setScope(item.name); setPage(0); }}>{item.name}</button>)}
       <OriginalToggle original={raw} onToggle={() => { setRaw(value => !value); setPage(0); }}/>
     </nav>
     {section?.partial && !raw && <p className="material-context">Some patch hunks could not be parsed safely. Raw patch retains the complete loaded output.</p>}

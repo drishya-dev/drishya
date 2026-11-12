@@ -1,3 +1,4 @@
+import { resolveHunkLines } from '../../../packages/projection/src/patch.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import type {QueueQuery, QueuePage, QueueInputChunk, QueueTimelineItem} from '@drishya/contracts';
 import type { FileOperationPage } from '../../../packages/scene/src/file-timeline.ts';
@@ -24,6 +25,13 @@ import type { TurnLedger } from '../../../packages/scene/src/turns.ts';
 import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
 import type { BlobSearchResult, SessionSearchHit } from '../../../packages/store/src/search-types.ts';
+
+/** A browsing choice routes maps only; native controls and captured identity never use it. */
+const checkoutContexts=new Map<string,string>();
+export function setCheckoutContext(owner:string,context?:string) {
+  if(context&&context!==owner)checkoutContexts.set(owner,context);else checkoutContexts.delete(owner);
+}
+function graphCheckoutId(owner:string) {return checkoutContexts.get(owner)??owner;}
 
 /** The reader's mark: the last observation sequence they marked as seen, and the one before it. */
 export interface ReadingBoundary {
@@ -107,6 +115,8 @@ export interface DataSource {
   now?(id: string): Promise<NowFacts>;
   /** What each turn did, over the whole recording, whatever window the reader holds. */
   turns?(id: string): Promise<{ turns: TurnLedger[] }>;
+  /** USAGE-1: the newest captured `/context` outputs of a recording, whatever window the reader holds (a paged history carries no timeline). */
+  contextReport?(id: string): Promise<{ candidates: { time?: string; prompt: string }[] }>;
   historyMarker?(id: string, step: number, types: Marker['type'][], direction: 1 | -1): Promise<number | undefined>;
   fileOperations?(id: string, path: string, start: number, count: number, step?: number, query?: string, selectedOperationId?: string): Promise<FileOperationPage>;
   /** `refresh` rebuilds a stale map; otherwise the cached map is returned unchanged. */
@@ -157,7 +167,13 @@ export interface DataSource {
 /** Presentation hints do not change the immutable captured event contract. */
 export interface ReaderRecording extends RecordingSummary { sourceBytes?: number }
 
-export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace' }
+export interface WorkspaceStatus { approved: boolean; root?: string; scope: 'current-workspace'; remembered?:boolean }
+export interface CheckoutIdentity {root:string;directory:string;checkout:{root:string;directory:string;gitDirectory?:{root:string;directory:string}};repository:{kind:'git';root:string;directory:string}|{kind:'directory'}}
+export interface CheckoutGrant {id:string;root:string;identity:CheckoutIdentity;createdAt:string}
+export interface WorkspaceSetup extends WorkspaceStatus {
+  identity?:CheckoutIdentity;
+  siblingApproved:boolean;reason?:string;native:{available:boolean;signedIn:boolean|null;supported:boolean|null;state:'ready'|'missing'|'signed-out'|'unsupported'|'unavailable';reason?:string};
+}
 export interface CurrentFile { path: string; scope: 'current-workspace'; text: string; start: number; totalLines: number; returnedLines: number; hasMore: boolean; redacted: boolean; modifiedAt: string }
 export interface PromptAttachment { name: string; type: 'text' | 'image'; data: string; mime?: string }
 export type { TurnOptions, NativeSettings } from '../../daemon/src/native-types.ts';
@@ -177,6 +193,7 @@ export interface ControllerStatus {
 }
 /** Explicit local workspace/controller capabilities; offline bundles never call them. */
 export const workspaceApi = {
+  chooseCheckout:(id:string,prefix?:string)=>req<{id:string;recordingId:string;root?:string;prefix?:string}>(`/v1/recordings/${encodeURIComponent(id)}/checkout`,{method:'POST',json:{prefix}}),
   fileRoots: (id:string) => req<{roots:import('./lib/worktree-files.ts').RecordedFileRoot[];truncated:boolean}>(`/v1/recordings/${encodeURIComponent(id)}/file-roots`),
   searchLibrary: (query:import('../../../packages/store/src/search-types.ts').LibrarySearchQuery) => req<import('../../../packages/store/src/search-types.ts').LibrarySearchPage>(`/v1/search-library?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
   workingLocations: () => req<import('../../../packages/contracts/src/working-locations.ts').WorkingLocations>('/v1/working-locations'),
@@ -186,8 +203,24 @@ export const workspaceApi = {
   gitSnapshot: (id: string, start = 0) => req<import('../../daemon/src/git-types.ts').GitSnapshot>(`/v1/recordings/${encodeURIComponent(id)}/git/snapshot?start=${encodeURIComponent(start)}`),
   gitHistory:(id:string,query:{start?:number;referenceStart?:number;reference?:string;q?:string;generation?:string}={})=>req<import('../../daemon/src/git-types.ts').GitHistoryPage>(`/v1/recordings/${encodeURIComponent(id)}/git/history?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
   gitCommit:(id:string,hash:string,parent=0,start=0,generation?:string)=>req<import('../../daemon/src/git-types.ts').GitCommitDetail>(`/v1/recordings/${encodeURIComponent(id)}/git/commit?${new URLSearchParams({hash,parent:String(parent),start:String(start),...(generation?{generation}:{})})}`),
+  /** LINK-1 hover cards: a commit or local branch from read-only Git (needs the session's Git approval). */
+  gitRef: (id: string, rev: string) => req<import('../../daemon/src/link-types.ts').GitRefSummary>(`/v1/recordings/${encodeURIComponent(id)}/git/ref?rev=${encodeURIComponent(rev)}`),
+  /** GIT-8 Changes (comparison): read-only, behind the one Git approval the working-tree snapshot also uses. */
+  compareRefs: (id: string) => req<import('../../daemon/src/git-compare-types.ts').CompareRefs>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-refs`),
+  compare: (id: string, base: string, head: string) => req<import('../../daemon/src/git-compare-types.ts').GitCompareResult>(`/v1/recordings/${encodeURIComponent(id)}/git/compare?${new URLSearchParams({ base, head })}`),
+  compareFile: (id: string, base: string, head: string, path: string, side: 'head' | 'base') => req<import('../../daemon/src/git-compare-types.ts').CompareFilePatch>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-file?${new URLSearchParams({ base, head, path, side })}`),
+  comparePulls: (id: string) => req<import('../../daemon/src/git-compare-types.ts').ComparePulls>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-pulls`),
+  compareRemote: (id: string, pr: number) => req<import('../../daemon/src/git-compare-types.ts').GitCompareResult>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-remote?pr=${pr}`),
+  compareEvidence: (id: string, paths: string[]) => req<import('../../daemon/src/git-compare-types.ts').CompareEvidence>(`/v1/recordings/${encodeURIComponent(id)}/compare-evidence?${new URLSearchParams(paths.map(path => ['path', path]))}`),
+  githubStatus: () => req<{ enabled: boolean; available?: boolean }>('/v1/github/status'),
+  githubOptIn: (enabled: boolean) => req<{ enabled: boolean; available?: boolean }>('/v1/github/optin', { method: 'POST', json: { enabled } }),
+  githubItem: (url: string) => req<import('../../daemon/src/link-types.ts').GithubReply>(`/v1/github/item?url=${encodeURIComponent(url)}`),
   status: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace`),
-  approve: (id: string) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {} }),
+  approve: (id: string,remember=false) => req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/approve`, { method: 'POST', json: {remember} }),
+  revoke: (id:string)=>req<WorkspaceStatus>(`/v1/recordings/${encodeURIComponent(id)}/workspace/revoke`,{method:'POST',json:{}}),
+  setup: (id:string)=>req<WorkspaceSetup>(`/v1/recordings/${encodeURIComponent(id)}/workspace/setup`),
+  checkoutGrants:()=>req<{items:CheckoutGrant[]}>('/v1/checkout-grants'),
+  revokeCheckout:(key:string)=>req<{revoked:boolean}>(`/v1/checkout-grants/${encodeURIComponent(key)}`,{method:'DELETE'}),
   file: (id: string, path: string, start: number) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/file?${new URLSearchParams({ path, start: String(start), count: '200' })}`),
   document: (id:string,path:string) => req<CurrentFile>(`/v1/recordings/${encodeURIComponent(id)}/workspace/document?${new URLSearchParams({path})}`),
   controller: (id: string) => req<ControllerStatus>(`/v1/recordings/${encodeURIComponent(id)}/controller`),
@@ -268,6 +301,7 @@ export const daemon: DataSource = {
   summary: (id, from = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/summary?from=${from}`),
   now: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/now`),
   turns: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/turns`),
+  contextReport: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/context-report`),
   kind: 'daemon',
   config: () => req('/v1/config'),
   recordings: async () => (await req<{ recordings: ReaderRecording[] }>('/v1/recordings')).recordings,
@@ -278,8 +312,20 @@ export const daemon: DataSource = {
   history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
   fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
-  graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
-  approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
+  graph: async (id, refresh) => {
+    for(let attempt=0;attempt<4;attempt++){
+      const target=graphCheckoutId(id);
+      const graph=await req<RepoGraph>(`/v1/recordings/${encodeURIComponent(target)}/graph${refresh?'?refresh=1':''}`);
+      if(graphCheckoutId(id)===target)return graph;
+    }
+    throw new Error('Checkout changed while the map was loading. Try again.');
+  },
+  approveGraph: async (id) => {
+    const target=graphCheckoutId(id);
+    const graph=await req<RepoGraph>(`/v1/recordings/${encodeURIComponent(target)}/graph/approve`,{method:'POST',json:{}});
+    if(graphCheckoutId(id)===target)return graph;
+    const current=await daemon.graph(id);if(!current)throw new Error('The selected checkout map is unavailable.');return current;
+  },
   artifactChunk: (id, art, start, field) => req<StoredResultChunk>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?byteStart=${start}${field?`&field=${field}`:''}`),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
   artifactFind: (id, art, query, start, continuation) => req<BlobSearchResult>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?${new URLSearchParams({ find: query, start: String(start), ...(continuation ? { cursor: continuation } : {}) })}`),
@@ -361,10 +407,25 @@ export const daemon: DataSource = {
 
 /** A static replay bundle: read-only, no model calls, no capture. */
 export function bundleSource(bundle: ReplayBundle): DataSource {
+  // Older exports can contain sealed references without the referenced diff text.
+  const operations = bundle.projection.operations.map(operation => {
+    const detail = operation.detail;
+    if (detail.kind !== 'edit') return operation;
+    const hunks = resolveHunkLines(detail.hunks);
+    return hunks === detail.hunks ? operation : { ...operation, detail: { ...detail, hunks } };
+  });
+  const projection = operations.some((operation, index) => operation !== bundle.projection.operations[index])
+    ? { ...bundle.projection, operations }
+    : bundle.projection;
+
   const unsupported = () => Promise.reject(new Error('Not available in a replay bundle — run Drishya locally.'));
   return {
     kind: 'bundle',
-    queue: async (id, query = {}) => queuePage(bundle.projection.timeline, id, query),
+    queue: async (id, query = {}) => queuePage(bundle.projection.timeline, id, query, {
+      // A bundle has whole queue artifacts, but no physical source identity/full-text
+      // guarantee for anonymous prompt previews. Keep those receipts conservative.
+      input:item=>item.type==='queue' ? {text:item.inputArtifactId ? bundle.artifactText[item.inputArtifactId] : undefined,sourceId:item.sourceId,generation:item.generation} : undefined,
+    }),
     queueInput: async (id, receiptId, through, start = 0) => {
       const all = bundle.projection.timeline.filter((item): item is QueueTimelineItem => item.type === 'queue' && item.ownerRecordingId === id);
       const visible = queuePage(bundle.projection.timeline, id, {through, receiptId, count: 1});
@@ -383,9 +444,9 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
     recordings: async () => [bundle.recording],
     sources: async () => ({ sources: [], errors: [] }),
     // A bundle carries the whole projection, so freshness is computed here exactly as the worker would.
-    verification: async (_id, operationId) => verificationFor(bundle.projection, operationId) ?? null,
-    fixChain: async (_id, operationId) => fixChainFor(bundle.projection, operationId) ?? null,
-    readBefore: async (_id, operationId) => readBeforeWriteFor(bundle.projection, operationId) ?? null,
+    verification: async (_id, operationId) => verificationFor(projection, operationId) ?? null,
+    fixChain: async (_id, operationId) => fixChainFor(projection, operationId) ?? null,
+    readBefore: async (_id, operationId) => readBeforeWriteFor(projection, operationId) ?? null,
     importSource: unsupported,
     artifactFind: async (_id, art, query, start, continuation) => {
       const text = bundle.artifactText[art];
@@ -400,7 +461,7 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       }
       return { available: true, matches, totalLines: lines.length, scannedThrough: cursor, skippedLines, continuation: cursor < lines.length ? String(cursor) : undefined };
     },
-    projection: async () => bundle.projection,
+    projection: async () => projection,
     graph: async () => bundle.graph,
     approveGraph: unsupported,
     artifactChunk: async (_id, art, start) => {
@@ -427,7 +488,7 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       const t = q.toLowerCase();
       const hits: SessionSearchHit[] = [];
       for (const p of bundle.projection.prose) if (p.text.toLowerCase().includes(t)) hits.push({ observationId: p.observationIds[0]!, snippet: snippet(p.text, t), kind: p.role === 'user' ? 'message.user' : p.role === 'reasoning' ? 'reasoning' : 'message.assistant' });
-      for (const o of bundle.projection.operations) if (o.title.toLowerCase().includes(t)) hits.push({ observationId: o.observationIds[0]!, snippet: o.title, kind: 'tool.call', tool: o.tool, ...(o.paths[0] ? { path: o.paths[0].path } : {}) });
+      for (const o of projection.operations) if (o.title.toLowerCase().includes(t)) hits.push({ observationId: o.observationIds[0]!, snippet: o.title, kind: 'tool.call', tool: o.tool, ...(o.paths[0] ? { path: o.paths[0].path } : {}) });
       return hits.slice(0, 50);
     },
     setLive: unsupported,

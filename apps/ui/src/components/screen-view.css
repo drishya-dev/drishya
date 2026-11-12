@@ -1,8 +1,8 @@
 /* SCREEN-1: the large reader for a computer-use run. One captured frame, the recorded action drawn on it, a strip of captured steps. */
-.screen-view { --screen-h:min(780px,88vh); width:min(1180px,94vw); height:var(--screen-h); max-width:none; max-height:none; padding:0; border:1px solid var(--line-2); border-radius:var(--round-lg); background:var(--bg,#0b0b0c); color:var(--t1); overflow:hidden; }
+.screen-view { --screen-h:min(780px,88vh); width:min(1180px,94vw); height:var(--screen-h); max-width:none; max-height:none; padding:0; border:1px solid var(--line-2); border-radius:var(--round-lg); background:var(--bg,var(--bg)); color:var(--t1); overflow:hidden; }
 .screen-view[open] { display:grid; grid-template-rows:auto minmax(0,1fr) auto auto auto; }
 .screen-view.full { --screen-h:100vh; width:100vw; height:100vh; border:0; border-radius:0; }
-.screen-view::backdrop { background:#000b; }
+.screen-view::backdrop { background:color-mix(in srgb,var(--bg) 73.333%,transparent); }
 .screen-bar { display:flex; align-items:center; gap:6px; padding:8px 12px; border-bottom:1px solid var(--line); font:var(--text-xs)/18px var(--sans); color:var(--t2); }
 .screen-title { color:var(--t1); font-weight:var(--weight-strong); }
 .screen-count { font-variant-numeric:tabular-nums; color:var(--t3); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
@@ -18,19 +18,19 @@
 .screen-leaving { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; pointer-events:none; }
 .screen-missing, .screen-empty { display:grid; place-items:center; min-width:min(520px,80%); min-height:160px; padding:16px; border:1px dashed var(--line-2); border-radius:var(--round-md); color:var(--t3); font:var(--text-sm)/20px var(--sans); text-align:center; }
 .screen-empty { margin:24px; }
-.screen-mark { position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px; box-sizing:border-box; border:2px solid #fff; border-radius:50%; box-shadow:0 0 0 1.5px #000a, inset 0 0 0 1.5px #000a; pointer-events:none; }
+.screen-mark { position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px; box-sizing:border-box; border:2px solid var(--capture-pointer-ink); border-radius:50%; box-shadow:0 0 0 1.5px #000a, inset 0 0 0 1.5px #000a; pointer-events:none; }
 .screen-mark.double-click { box-shadow:0 0 0 1.5px #000a, 0 0 0 4px #fff, 0 0 0 5.5px #000a; }
 .screen-mark.triple-click { box-shadow:0 0 0 1.5px #000a, 0 0 0 4px #fff, 0 0 0 5.5px #000a, 0 0 0 8px #fff, 0 0 0 9.5px #000a; }
 .screen-mark.right-click { border-style:dashed; }
-.screen-mark.hover { width:12px; height:12px; margin:-6px 0 0 -6px; background:#fff8; }
-.screen-mark.start { width:10px; height:10px; margin:-5px 0 0 -5px; background:#fff; }
-.screen-mark.scroll::after { position:absolute; inset:0; display:grid; place-items:center; color:#fff; font:var(--weight-strong) var(--text-md)/1 var(--sans); text-shadow:0 0 2px #000; }
+.screen-mark.hover { width:12px; height:12px; margin:-6px 0 0 -6px; background:color-mix(in srgb,var(--capture-pointer-ink) 53.333%,transparent); }
+.screen-mark.start { width:10px; height:10px; margin:-5px 0 0 -5px; background:var(--capture-pointer-ink); }
+.screen-mark.scroll::after { position:absolute; inset:0; display:grid; place-items:center; color:var(--capture-pointer-ink); font:var(--weight-strong) var(--text-md)/1 var(--sans); text-shadow:0 0 2px #000; }
 .screen-mark.scroll[data-direction="down"]::after { content:"↓"; }
 .screen-mark.scroll[data-direction="up"]::after { content:"↑"; }
 .screen-mark.scroll[data-direction="left"]::after { content:"←"; }
 .screen-mark.scroll[data-direction="right"]::after { content:"→"; }
 .screen-drag { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
-.screen-drag line { stroke:#fff; stroke-width:2.5; stroke-linecap:round; filter:drop-shadow(0 0 1.5px #000); }
+.screen-drag line { stroke:var(--capture-pointer-ink); stroke-width:2.5; stroke-linecap:round; filter:drop-shadow(0 0 1.5px #000); }
 .screen-caption { display:flex; align-items:baseline; flex-wrap:wrap; gap:4px 12px; padding:8px 14px 2px; font:var(--text-sm)/20px var(--sans); color:var(--t2); min-width:0; }
 .screen-caption strong { color:var(--t1); font-weight:var(--weight-strong); overflow-wrap:anywhere; }
 .screen-fail { color:var(--fail); }
@@ -41,7 +41,7 @@
 .screen-cell { position:relative; flex:none; width:96px; height:56px; padding:0; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s1); color:var(--t3); font:var(--text-2xs)/1 var(--sans); overflow:hidden; cursor:pointer; content-visibility:auto; contain-intrinsic-size:96px 56px; }
 .screen-cell img { display:block; width:100%; height:100%; object-fit:cover; }
 .screen-cell > span { display:grid; place-items:center; height:100%; }
-.screen-cell small { position:absolute; left:3px; bottom:3px; padding:1px 4px; border-radius:var(--round-xs); background:#000a; color:#fff; font:var(--text-2xs)/12px var(--mono); font-variant-numeric:tabular-nums; }
+.screen-cell small { position:absolute; left:3px; bottom:3px; padding:1px 4px; border-radius:var(--round-xs); background:color-mix(in srgb,var(--bg) 66.667%,transparent); color:var(--text-primary); font:var(--text-2xs)/12px var(--mono); font-variant-numeric:tabular-nums; }
 .screen-cell[aria-selected="true"] { border-color:var(--t1); box-shadow:0 0 0 1px var(--t1); }
 .screen-cell.failed { border-color:var(--fail); }
 .screen-cell:hover { border-color:var(--line-3); }

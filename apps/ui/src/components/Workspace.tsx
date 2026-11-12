@@ -1,5 +1,6 @@
+import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {openGitHistory} from './GitHistory.tsx';
-import { GitReviewEntry } from './GitReview.tsx';
+import { GitEntry } from './GitEntry.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
@@ -16,16 +17,17 @@ export function WorkspaceBar() {
   const experience = useExperience();
   const narrow = useNarrowWorkspace();
   const modern = document.documentElement.dataset.uiVersion === 'modern';
+  const interfaceScale = useInterfaceScale();
   useLayoutEffect(() => {
     const element = bar.current;
     const viewer = element?.closest<HTMLElement>('.viewer');
     if (!element || !viewer) return;
     // Demo controls and focus controls can wrap; the explorer must start below them.
-    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12}px`); const leading=element.querySelector('.workspace-leading');if(leading)viewer.style.setProperty('--workspace-leading-bottom',`${leading.getBoundingClientRect().bottom-viewer.getBoundingClientRect().top+12}px`); };
+    const measure = () => { const groups=[...element.querySelectorAll<HTMLElement>('.workspace-leading,.workspace-secondary')]; const bottom=Math.max(element.getBoundingClientRect().bottom,...groups.map(group=>group.getBoundingClientRect().bottom)); viewer.style.setProperty('--workspace-tools-bottom', `${bottom-viewer.getBoundingClientRect().top+12*interfaceScale}px`); const leading=element.querySelector('.workspace-leading');if(leading)viewer.style.setProperty('--workspace-leading-bottom',`${leading.getBoundingClientRect().bottom-viewer.getBoundingClientRect().top+12*interfaceScale}px`); };
     const observer = new ResizeObserver(measure);
     observer.observe(element); for(const group of element.querySelectorAll('.workspace-leading,.workspace-secondary'))observer.observe(group);observer.observe(viewer);const header=viewer.querySelector('.workspace-header');if(header)observer.observe(header);measure();
     return () => { observer.disconnect(); viewer.style.removeProperty('--workspace-tools-bottom');viewer.style.removeProperty('--workspace-leading-bottom'); };
-  }, [experience]);
+  }, [experience, interfaceScale]);
   const developerWorkspace = useApp(s => s.developerWorkspace);
   const mode = useApp(s => s.mode);
   const explore = useApp((s) => s.explore);
@@ -65,7 +67,7 @@ export function WorkspaceViewActions() {
   // The owner stays here; only the buttons move into the header cluster, so an open Git dialog survives a resize.
   const target = modern && !phone ? slot : null;
   const put = (node: ReactNode) => target ? createPortal(node, target) : node;
-  return <>{experience === 'classic' && put(<button className={target ? 'btn ghost workspace-open' : undefined} aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title={source?.kind!=='daemon'?'Workspace needs a local session; this bundle holds the session only.':mode!=='history'?'Leave replay to open current files and local drafts in Workspace.':recording?.id.includes('+')?'Open a single session to use Workspace.':'Workspace: current files, split views and local drafts; return to the agent when ready.'} onClick={() => { const state=useApp.getState(),path=modern?state.currentFile:undefined; state.set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: path, filePanel: undefined, follow: false, held: true, foldersHidden: false }); if(!developerWorkspace&&path)window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path})); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>)}{modern && <div className={target ? 'modern-review-control in-header' : 'modern-review-control'}><GitReviewEntry icon slot={target} /></div>}</>;
+  return <>{experience === 'classic' && put(<button className={target ? 'btn ghost workspace-open' : undefined} aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title={source?.kind!=='daemon'?'Workspace needs a local session; this bundle holds the session only.':mode!=='history'?'Leave replay to open current files and local drafts in Workspace.':recording?.id.includes('+')?'Open a single session to use Workspace.':'Workspace: current files, split views and local drafts; return to the agent when ready.'} onClick={() => { const state=useApp.getState(),path=modern?state.currentFile:undefined; state.set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: path, follow: false, held: true, foldersHidden: false }); if(!developerWorkspace&&path)window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path})); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>)}{modern && <div className={target ? 'modern-review-control in-header' : 'modern-review-control'}><GitEntry icon slot={target} /></div>}</>;
 }
 
 /** Uses only the current evidence boundary. Counts describe shown work, never a paged session total. */

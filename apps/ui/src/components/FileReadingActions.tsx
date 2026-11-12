@@ -4,7 +4,7 @@ import {useApp} from '../state.ts';
 import {useFileRoots} from '../lib/use-file-roots.ts';
 import {rememberCurrentFileOrigin} from '../lib/current-file-origin.ts';
 import {capturedFileEvidence,currentReadingTarget,recordedFileIdentity} from '../lib/file-reading.ts';
-import {useSessionWorkspace} from './SessionWorkspace.tsx';
+import {useReadingWorkspace} from './SessionWorkspace.tsx';
 import {WorkspaceOptions} from './WorkspaceOptions.tsx';
 
 export function openCapturedFileReading(path:string,op?:Operation) {
@@ -15,10 +15,11 @@ export function openCapturedFileReading(path:string,op?:Operation) {
 /** One navigation contract for captured material; current bytes never stand in for it. */
 export function FileReadingActions({path,op,capturedKnown=false,hideCaptured=false,hideReveal=false,compact=false,onNavigate,beforeWorkspace,workspaceLabel='Open in Workspace',unavailableReason,hideWorkspace=false,copyPath=true,explain=true}:{path:string;op?:Operation;capturedKnown?:boolean;hideCaptured?:boolean;hideReveal?:boolean;compact?:boolean;onNavigate?:()=>void;beforeWorkspace?:()=>void;workspaceLabel?:string;unavailableReason?:string;hideWorkspace?:boolean;explain?:boolean;copyPath?:boolean}) {
   const source=useApp(s=>s.source),id=useApp(s=>s.recordingId),mode=useApp(s=>s.mode),projection=useApp(s=>s.projection),graph=useApp(s=>s.graph);
-  const roots=useFileRoots(projection?.observationCount??0),{workspace}=useSessionWorkspace();
+  const roots=useFileRoots(projection?.observationCount??0),{workspace}=useReadingWorkspace();
   const files=projection?.files.map(file=>file.path)??[],root=workspace?.root??projection?.workspaceRoot;
   const identity=recordedFileIdentity(path,files,roots,root),target=currentReadingTarget(identity,roots,root);
-  const reason=unavailableReason??(source?.kind!=='daemon'?'This bundle holds the session only, not your files.':id?.includes('+')?'Choose one session to read current files.':mode!=='history'?'Leave replay to read current files.':target.reason);
+  const browsingCheckout=useApp(s=>!!s.checkoutId);
+  const reason=unavailableReason??(browsingCheckout?'Workspace edits belong to the session checkout; return there to edit.':source?.kind!=='daemon'?'This bundle holds the session only, not your files.':id?.includes('+')?'Choose one session to read current files.':mode!=='history'?'Leave replay to read current files.':target.reason);
   const known=capturedKnown||files.includes(identity)||!!op?.paths.some(item=>item.path===identity);
   const step=useApp(s=>s.mode==='replay'?s.step:undefined),revision=useApp(s=>id?s.renderedRevisions[id]:undefined);
   const [checked,setChecked]=useState<{source:typeof source;id:typeof id;path:string;step:typeof step;revision:typeof revision;found:boolean}>();
@@ -36,7 +37,7 @@ export function FileReadingActions({path,op,capturedKnown=false,hideCaptured=fal
   const navigate=(run:()=>void)=>{onNavigate?.();run();};
   const actions=<>
     {!hideCaptured&&<button type="button" className="btn ghost" disabled={!captured} title={captured?'Read what the agent saw':!verified&&source?.fileOperations?'Checking file history…':'No file material was recorded for this path'} onClick={()=>navigate(()=>openCapturedFileReading(identity,op))}>View what the agent saw</button>}
-    {!hideWorkspace&&<button type="button" className="btn ghost" disabled={!!reason||!target.path} title={reason??'Read the current file with workspace consent'} onClick={()=>navigate(()=>{if(!source||!id||!target.path)return;beforeWorkspace?.();rememberCurrentFileOrigin(source,id,target.path,identity);useApp.getState().set({developerWorkspace:true,explore:false,currentFile:undefined,filePanel:undefined,filePanelEvidence:capturedFileEvidence(op,identity),selectedOp:undefined,expandedOp:undefined,foldersHidden:false,follow:false,held:true});window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:target.path}));})}>{workspaceLabel}</button>}
+    {!hideWorkspace&&<button type="button" className="btn ghost" disabled={!!reason||!target.path} title={reason??'Read the current file with workspace consent'} onClick={()=>navigate(()=>{if(!source||!id||!target.path)return;beforeWorkspace?.();rememberCurrentFileOrigin(source,id,target.path,identity);useApp.getState().set({developerWorkspace:true,explore:false,foldersHidden:false,follow:false,held:true});window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:target.path}));})}>{workspaceLabel}</button>}
     {!hideReveal&&<button type="button" className="btn ghost" disabled={!listed} title={listed?'Reveal this exact path in Files':'This path is not listed in Files; what the agent saw remains readable'} onClick={()=>navigate(()=>{useApp.getState().set({filePanel:undefined,currentFile:undefined,selectedOp:undefined,expandedOp:undefined,explore:false,foldersHidden:false,follow:false,held:true});window.dispatchEvent(new CustomEvent('drishya-reveal-captured-file',{detail:identity}));})}>Show in Files</button>}
     {reason&&explain&&<small className="muted" role="status">{reason}</small>}
     {copyPath&&<button type="button" className="btn ghost" onClick={()=>void navigator.clipboard.writeText(path).catch(()=>undefined)}>Copy path</button>}

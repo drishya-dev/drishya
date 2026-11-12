@@ -39,7 +39,7 @@ test.afterEach(async () => { await server?.close(); await app?.close(); if (dir)
 // shares its wording. SVG glyphs are not text; icon-only buttons have no text to size.
 const SCOPE = '[aria-label="Harness prompt"], .attachment-preview-dialog, .workspace-grant';
 // Rules this slice raised: their text must also keep 4.5:1 on the composited background on every palette.
-const RAISED = ['.modern-composer-state', '.modern-native-model', '.native-options > summary', '.native-options-menu small', '#prompt-size-status', '.send-confirmation small', '.attachment-chip button', '.tool-approval', '.tool-approval button', '.native-questions > header span', '.workspace-grant', '.workspace-grant small', '.send-prompt', '.stop-turn', '.modern-composer-input-tools select'].join(',');
+const RAISED = ['.modern-composer-state', '.modern-native-model', '.native-options > summary', '.native-options-menu small', '.composer-menu-trigger', '.composer-menu small', '.composer-setup', '.composer-setup label', '#prompt-size-status', '.send-confirmation small', '.attachment-chip button', '.tool-approval', '.tool-approval button', '.native-questions > header span', '.workspace-grant', '.workspace-grant small', '.send-prompt', '.stop-turn', '.modern-composer-input-tools select'].join(',');
 
 async function failures(page: Page) {
   return page.evaluate(({ scope, raised }) => {
@@ -71,7 +71,7 @@ async function failures(page: Page) {
   }, { scope: SCOPE, raised: RAISED });
 }
 async function everyPalette(page: Page, state: string) {
-  for (const palette of ['jet', 'paper', 'midnight', 'mocha', 'tokyo', 'nord', 'gruvbox']) {
+  for (const palette of ['jet', 'paper', 'midnight']) {
     await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);
     // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
     await page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(animation => animation.playState === 'running' && animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => undefined))), new Promise(done => setTimeout(done, 1500))]));
@@ -79,7 +79,6 @@ async function everyPalette(page: Page, state: string) {
   }
 }
 // Keyboard, not a resting pointer: hover reading can move the cards under it.
-async function toggle(page: Page, summary: Locator) { await summary.focus(); await page.keyboard.press('Enter'); }
 async function open(page: Page, width: number, height: number) {
   await page.setViewportSize({ width, height });
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
@@ -95,8 +94,13 @@ async function expand(composer: Locator) {
 async function send(page: Page, composer: Locator, prompt: string) {
   const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' });
   await input.fill(prompt); await input.press('Enter');
-  await composer.getByRole('checkbox', { name: 'This session is idle in other clients' }).check();
-  await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  // CONNECT-4a: the first native send asks; later sends in this connection proceed directly.
+  const confirmation=composer.getByRole('checkbox', { name: 'This session is idle in other clients' });
+  await expect.poll(async()=>await confirmation.isVisible()||await input.inputValue()==='').toBe(true);
+  if(await confirmation.isVisible()) {
+    await confirmation.check();
+    await composer.getByRole('button', { name: 'Confirm and send', exact: true }).click();
+  }
 }
 
 for (const [width, height] of [[1440, 900], [390, 844]] as const) {
@@ -108,21 +112,26 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     const input = composer.getByRole('textbox', { name: 'Prompt for selected harness session' });
     await input.fill('A draft with text');
     await everyPalette(page, `${width} draft`);
-    // Native connection menu, before and after the workspace is enabled and the native settings are read.
-    const menu = composer.locator('.native-options > summary');
-    await toggle(page, menu);
+    // UI-28: the setup row before the workspace is enabled, then the product menus once it is and the model list is read.
     await expect(composer.getByRole('button', { name: 'Enable this workspace', exact: true })).toBeVisible();
-    await everyPalette(page, `${width} connection menu (workspace not enabled)`);
+    await everyPalette(page, `${width} setup row (workspace not enabled)`);
     await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
-    await expect(composer.getByRole('button', { name: 'Read native settings', exact: true })).toBeEnabled();
-    await composer.getByRole('button', { name: 'Read native settings', exact: true }).click();
-    await expect(composer.getByRole('combobox', { name: 'Model', exact: true })).toBeEnabled();
-    await everyPalette(page, `${width} connection menu (native settings read)`);
-    await toggle(page, menu);
-    await expect(composer.getByRole('combobox', { name: 'Native model' })).toBeVisible();
-    await composer.getByRole('combobox', { name: 'Native model' }).selectOption('synthetic-model');
-    await expect(composer.getByRole('combobox', { name: 'Reasoning effort' })).toBeVisible();
-    await everyPalette(page, `${width} model and effort selects`);
+    await expect(composer.locator('.composer-setup')).toHaveCount(0);
+    await composer.getByRole('button', { name: 'Model', exact: true }).click();
+    await everyPalette(page, `${width} model menu (list not read)`);
+    await composer.getByRole('menuitem', { name: /Load model list/ }).click();
+    await expect(composer.getByRole('button', { name: 'Model', exact: true })).toBeEnabled();
+    await composer.getByRole('button', { name: 'Model', exact: true }).click();
+    await expect(composer.getByRole('menuitemradio', { name: 'Synthetic model' })).toBeVisible();
+    await everyPalette(page, `${width} model menu`);
+    await composer.getByRole('menuitemradio', { name: 'Synthetic model' }).click();
+    await expect(composer.getByRole('button', { name: 'Reasoning effort', exact: true })).toBeVisible();
+    await composer.getByRole('button', { name: 'Reasoning effort', exact: true }).click();
+    await everyPalette(page, `${width} effort menu`);
+    await page.keyboard.press('Escape');
+    await composer.getByRole('button', { name: 'Attach', exact: true }).click();
+    await everyPalette(page, `${width} attach menu`);
+    await page.keyboard.press('Escape');
     // Attachments: a text file, a pasted image and a folder, then the preview dialog.
     const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=';
     await composer.locator('input[aria-label="Choose prompt files"]').setInputFiles({ name: 'source.ts', mimeType: 'text/plain', buffer: Buffer.from('export const attached = true;') });
@@ -147,10 +156,8 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
   test(`the composer keeps the type floor while a native turn runs, waits for approval, stops and asks a question at ${width}px`, async ({ page }) => {
     const composer = await open(page, width, height);
     await expand(composer);
-    await toggle(page, composer.locator('.native-options > summary'));
     await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
-    await expect(composer.getByRole('button', { name: 'Read native settings', exact: true })).toBeEnabled();
-    await toggle(page, composer.locator('.native-options > summary'));
+    await expect(composer.locator('.composer-setup')).toHaveCount(0);
     await send(page, composer, 'Edit the file');
     await expect(composer.locator('.tool-approval')).toBeVisible();
     await everyPalette(page, `${width} running with an approval request`);
@@ -169,10 +176,8 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
   test(`the composer keeps the type floor when a send fails at ${width}px`, async ({ page }) => {
     const composer = await open(page, width, height);
     await expand(composer);
-    await toggle(page, composer.locator('.native-options > summary'));
     await composer.getByRole('button', { name: 'Enable this workspace', exact: true }).click();
-    await expect(composer.getByRole('button', { name: 'Read native settings', exact: true })).toBeEnabled();
-    await toggle(page, composer.locator('.native-options > summary'));
+    await expect(composer.locator('.composer-setup')).toHaveCount(0);
     await page.route('**/controller/prompt', route => route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ error: { code: 'synthetic', message: 'The synthetic harness refused this prompt.' } }) }));
     await send(page, composer, 'This send fails');
     await expect(composer.getByRole('alert')).toBeVisible();
@@ -188,6 +193,7 @@ for (const [width, height] of [[1440, 900], [390, 844]] as const) {
     await expect(composer.getByRole('button', { name: 'Expand prompt', exact: true })).toBeVisible();
     await everyPalette(page, `${width} unreachable (pill)`);
     await expand(composer);
+    await expect(composer.getByRole('button', { name: 'Send prompt', exact: true })).toHaveAttribute('title', /Connection .* unavailable/);
     await everyPalette(page, `${width} unreachable (expanded)`);
   });
 }

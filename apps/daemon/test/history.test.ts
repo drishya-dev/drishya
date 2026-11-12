@@ -14,6 +14,23 @@ let dir: string;
 afterEach(async () => { await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 describe('worker-owned history pages', () => {
+  it('continues full captured prose across UTF-8 byte boundaries, including a line over 2 MiB',async()=>{
+    dir=mkdtempSync(join(tmpdir(),'drishya-full-prose-'));app=new App(join(dir,'data'));
+    const text='दृश्य'.repeat(160_000)+'\nFINAL_PARAGRAPH',journal=join(dir,'synthetic.jsonl');
+    writeFileSync(journal,[{type:'session_meta',payload:{id:'full-prose',cwd:dir}},
+      {type:'response_item',payload:{type:'message',role:'assistant',content:[{type:'output_text',text}]}}
+    ].map(row=>JSON.stringify(row)).join('\n'));
+    const {recordingId}=await app.ingest.importSource('codex',journal);
+    const page=await app.history.page(recordingId,{count:1});
+    const prose=page.projection.prose[0]!;expect(prose.truncated).toBe(true);expect(prose.text.length).toBeLessThan(text.length);
+    const parts:string[]=[];let start=0;
+    for(;;){
+      const chunk=await app.history.artifactChunk(recordingId,`art_${prose.id}_prose`,start) as {available:boolean;text:string;start:number;next:number;hasMore:boolean};
+      expect(chunk.available).toBe(true);expect(chunk.start).toBe(start);expect(chunk.next).toBeGreaterThan(start);parts.push(chunk.text);
+      if(!chunk.hasMore)break;start=chunk.next;
+    }
+    expect(parts.join('')).toBe(text);expect(parts.length).toBeGreaterThan(1);
+  });
   it('releases bulk SQLite working pages without changing warm/restarted history or cache configuration', async () => {
     dir=mkdtempSync(join(tmpdir(),'drishya-sqlite-working-set-'));
     const journal=join(dir,'invented.jsonl');generateLargeJournal(journal,33);
@@ -279,4 +296,18 @@ describe('worker-owned history pages', () => {
     expect(app.store.blobs.has(orphan.sha)).toBe(true);
     await expect(app.history.page(recordingId)).rejects.toThrow('Recording not found');
   });
+});
+
+it('retains a batched live interval on same-step worker paging and leaves replay single-step', async () => {
+ dir=mkdtempSync(join(tmpdir(),'drishya-batched-history-'));app=new App(join(dir,'data'));
+ const rows=[{type:'user',uuid:'u',sessionId:'synthetic-live6',cwd:dir,message:{role:'user',content:'synthetic prompt'}},
+ {type:'assistant',uuid:'a',sessionId:'synthetic-live6',message:{id:'a',role:'assistant',content:['a','b'].map(id=>({type:'tool_use',id,name:'Bash',input:{command:'echo synthetic'}}))}},
+ {type:'user',uuid:'r',sessionId:'synthetic-live6',message:{role:'user',content:['a','b'].map(id=>({type:'tool_result',tool_use_id:id,content:'synthetic output'}))}},
+ {type:'assistant',uuid:'reply',sessionId:'synthetic-live6',message:{id:'reply',role:'assistant',content:[{type:'text',text:'synthetic reply'}]}}];
+ const file=join(dir,'synthetic.jsonl');writeFileSync(file,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
+ const id=(await app.ingest.importSource('claude-code',file)).recordingId;
+ const page=await app.history.page(id,{since:1,count:1}),ops=page.scene.passages.flatMap(ps=>ps.ops);
+ expect(ops).toHaveLength(2);expect(ops.every(op=>op.phase==='arriving'&&op.resolving)).toBe(true);
+ const same=await app.history.page(id,{since:page.scene.step,previousSince:page.since,count:1});expect(same.scene).toEqual(page.scene);expect(same.since).toBe(1);
+ const replay=await app.history.page(id,{step:page.scene.step,count:1});expect(replay.scene.passages.flatMap(ps=>ps.ops).some(op=>op.resolving)).toBe(false);
 });
