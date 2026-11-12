@@ -8,7 +8,7 @@ Release 1 ships three. Orchid, Royal, Emerald and Ember are retired from Setting
 
 | Settings name | Stored ID | Palette ID | Direction |
 | --- | --- | --- | --- |
-| Jet Black (default) | `dark` | `jet` | Neutral graphite and indigo. |
+| Jet Black (default) | `dark` | `jet` | Neutral graphite and azure (UI-34). |
 | Midnight | `midnight` | `midnight` | Navy and sky blue. |
 | Daylight | `light` | `paper` | Cool paper and blue. The light reference. |
 

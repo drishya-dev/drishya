@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | SHIP-6e | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6e` | 2026-11-12 | `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/components/SessionWorkspace.tsx`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/workspace-chrome.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/stage.css`, `tests/browser/chrome-reading-edge.spec.ts`, `tests/browser/palette-contrast.spec.ts`, `docs/review/ship-6e-reading-edges.md`, `STATUS.md`, `TASKS.md`. |
-| UI-34 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-34` | 2026-11-12 | `apps/ui/src/tokens.css`, `apps/ui/src/modern/theme-presets.css`, `apps/ui/src/modern/surroundings.css`, `apps/ui/src/modern/workspace-chrome.css`, `apps/ui/src/modern/composer.css`, `apps/ui/src/modern/session-home.css`, `apps/ui/src/components/ProductShell.tsx`, `apps/ui/src/components/recorded-usage.css`, `apps/ui/test/palette-contrast.test.ts`, `tests/browser/fresh-workspace.spec.ts`, `tests/browser/palette-contrast.spec.ts`, `tests/browser/focus-rings.spec.ts`, `docs/review/ui-34-jet-azure.md`, `STATUS.md`, `TASKS.md`. |
 | UI-33 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-33` | 2026-11-12 | `apps/ui/src/components/PromptRail.tsx`, `apps/ui/src/stage.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `tests/browser/toolbox-window.spec.ts`, `tests/browser/prompt-timeline.spec.ts`, `docs/review/ui-33-prompt-rail-lane.md`, `STATUS.md`, `TASKS.md`. |
 | UI-35 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-35` | 2026-11-12 | `apps/ui/public/brand/`, `apps/ui/public/favicon.ico`, `apps/ui/index.html`, `apps/ui/src/components/BrandMark.tsx`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `docs/review/ui-35-woven-logo.md`, `TASKS.md`, `STATUS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
@@ -60,6 +59,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: UI-34 Jet Black azure accent
+
+- Replaced Jet Black's indigo accent (`#8b92ec` / `#5e6ad2`) with azure `#4f9cff` (`--focus`, `--palette-active`, `--swatch-accent`) and partner cyan `#34d6e6` for two-tone `/context` usage series (`tokens.css`, `recorded-usage.css`), derived `--accent-hover`/`--accent-pressed`/`--accent-tint`/`--accent-tint-strong` for `.btn.primary` and `.send-prompt` (`theme-presets.css`), updated `"azure"` descriptions (`ProductShell.tsx`, `ship-17-palette-contract.md`), and scoped Jet Black active-control/switch styling to `--focus` so `--source` (`#80b8ff`) remains distinct for file-reads (`OKLab 0.094`).
+- Contrast measured at 7.53:1–5.62:1 across `--bg`..`--s3` for `#4f9cff`, 8.68:1 / 5.62:1 for primary hover/pressed, and >= 3:1 for focus; `git grep` shows zero remaining indigo values in `apps/`.
+- Verified before/after real local sessions (`claude-code rec_5ee6b391` 2,400 obs, `codex rec_8415940e` 263 obs) at 600 & 1440 in Jet Black (`.local/ui-34/`), `typecheck`, `ui:build`, 118 UI unit files (581 passed / 1 existing skip), and 6 targeted Edge browser specs (94 passed / 15 existing skips / 0 failures; [review record](review/ui-34-jet-azure.md)).
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: GIT-11 squash-merged branches join main
 
