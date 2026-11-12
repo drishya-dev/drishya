@@ -56,6 +56,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — 7 November: LAND-1 landing page plan
+
+- [Design proposal](superpowers/plans/2026-11-07-drishya-landing-page.md) uses Sui's visual rhythm and Linear's product-first presentation. Its central visual links the sample repository map to a readable investigation. The plan covers public pages, UI states, motion, a static sample replay, authenticated local setup and release verification under REL-4.
+- Verified all four chapter positions against the committed synthetic bundle (4, 24, 26, 28), checked plan links and 22 motion entries, and measured five proposed text/background pairs at 6.12:1 or higher. Docs-only validation. Public routes, budgets and release states remain proposals until implementation and acceptance.
 ### Yash with Codex — 11 Nov: FILES-16 complete for Opus review
 
 - Whole checkout picker, native controller identity separate, per-root consent/current files/Git/map, retained per-root reading state. Seven focused security/identity units, final 1,403 units/one skip, both types/package and 36 focused browsers pass. Four genuine Claude/Codex journeys at 600/1440 pass on final runtime `0924fe2a`, zero page errors/controller prompts; frames private.
