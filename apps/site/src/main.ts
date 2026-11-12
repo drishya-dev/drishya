@@ -117,6 +117,168 @@ if (dottedContext) {
 }
 // The why section's stream: the same CLI lines the laptop shows, scrolling past as they do in a terminal.
 $('[data-why-lines]').innerHTML = Array.from({ length: 3 }, () => $$('.tl', $('[data-screen="cli"]')).map(l => `<div class="${l.classList.contains('r') ? 'r' : ''}">${l.innerHTML}</div>`).join('')).join('');
+const compareRows = $$<HTMLTableRowElement>('[data-compare-row]');
+const compareWrap = $<HTMLElement>('.compare > .wrap');
+const compareProof = $<HTMLElement>('[data-compare-proof]');
+const proofTitle = $<HTMLElement>('[data-proof-title]');
+const proofSource = $<HTMLElement>('[data-proof-source]');
+const proofBody = $<HTMLElement>('[data-proof-body]');
+const proofExpand = $<HTMLButtonElement>('[data-proof-expand]');
+const chapter = (key: string) => sample.chapters.find(c => c.key === key)!;
+const readChapter = chapter('read');
+const failureChapter = chapter('failure');
+const editChapter = chapter('edit');
+const graphPaths = sample.graph.nodes.filter(n => n.path.startsWith('src/')).slice(0, 9).map(n => `• ${n.path}`).join('\n');
+const subagentOps = sample.operations.filter(o => o.agent === 'Explore sub-agent' || o.kind === 'spawn' || o.kind === 'mcp').slice(0, 7).map(o => `${o.kind.padEnd(6)} ${o.target ?? o.path ?? ''}`).join('\n');
+const proofs: Record<string, { title: string; source: string; body: string }> = {
+  files: { title: readChapter.title, source: readChapter.provenance, body: readChapter.text },
+  output: { title: failureChapter.title, source: failureChapter.provenance, body: failureChapter.text },
+  edits: { title: editChapter.title, source: editChapter.provenance, body: editChapter.text },
+  location: { title: 'Repository map · working set', source: `Captured graph · ${sample.graph.nodes.length} nodes`, body: graphPaths },
+  branches: { title: 'The work stays linked', source: 'Captured session metadata', body: `Harnesses: ${sample.harnesses.join(' · ')}\n\nAgents\n${sample.agents.map(a => `• ${a.label} · ${a.model}`).join('\n')}\n\nGraph edges: ${sample.graph.edges.length}` },
+  subagents: { title: 'Parallel work stays visible', source: 'Captured operations · agents and tools', body: subagentOps },
+  replay: { title: 'Replay the whole session', source: `Captured timeline · ${sample.operations.length} operations`, body: sample.chapters.map(c => `${c.status.padEnd(18)} ${c.title}`).join('\n') },
+};
+let selectedCompareRow = compareRows[0];
+let openCompareRow: HTMLTableRowElement | undefined;
+let hideCompareTimer = 0;
+let showCompareTimer = 0;
+let pendingCompareRow: HTMLTableRowElement | undefined;
+let activePointerRow: HTMLTableRowElement | undefined;
+let pointerInProof = false;
+let proofExpansionPinned = false;
+let proofExpansionHover = false;
+let proofExpansionFocus = false;
+const compareHoverIntentDelay = 140;
+const compareHideGrace = 180;
+const renderProof = (row: HTMLTableRowElement) => {
+  const proof = proofs[row.dataset.proof ?? ''] ?? proofs.files!;
+  proofTitle.textContent = proof.title;
+  proofSource.textContent = proof.source;
+  proofBody.textContent = proof.body;
+  compareProof.dataset.proof = row.dataset.proof ?? '';
+};
+const positionProof = (row: HTMLTableRowElement) => {
+  const wrapRect = compareWrap.getBoundingClientRect();
+  const rowRect = row.getBoundingClientRect();
+  const left = Math.max(0, compareWrap.clientWidth - compareProof.offsetWidth);
+  const top = Math.max(0, rowRect.bottom - wrapRect.top + 14);
+  compareProof.style.left = `${left}px`;
+  compareProof.style.top = `${top}px`;
+  compareProof.style.setProperty('--transform-origin', `${Math.max(24, Math.min(compareProof.offsetWidth - 24, rowRect.left - wrapRect.left + rowRect.width * .75 - left))}px 0`);
+};
+const refreshProofExpansion = () => {
+  const expanded = proofExpansionPinned || proofExpansionHover || proofExpansionFocus;
+  compareProof.classList.toggle('is-expanded', expanded);
+  proofExpand.setAttribute('aria-expanded', String(expanded));
+  proofExpand.setAttribute('aria-label', expanded ? 'Collapse evidence' : 'Expand evidence');
+  if (openCompareRow) requestAnimationFrame(() => positionProof(openCompareRow!));
+};
+const showCompareProof = (row: HTMLTableRowElement) => {
+  window.clearTimeout(hideCompareTimer);
+  window.clearTimeout(showCompareTimer);
+  pendingCompareRow = undefined;
+  proofExpansionPinned = false;
+  proofExpansionHover = false;
+  proofExpansionFocus = false;
+  openCompareRow = row;
+  renderProof(row);
+  compareProof.classList.add('is-open');
+  compareProof.setAttribute('aria-hidden', 'false');
+  refreshProofExpansion();
+  positionProof(row);
+};
+const hideCompareProof = () => {
+  window.clearTimeout(showCompareTimer);
+  pendingCompareRow = undefined;
+  proofExpansionPinned = false;
+  proofExpansionHover = false;
+  proofExpansionFocus = false;
+  openCompareRow = undefined;
+  compareProof.classList.remove('is-open');
+  compareProof.setAttribute('aria-hidden', 'true');
+  refreshProofExpansion();
+};
+const scheduleShowCompareProof = (row: HTMLTableRowElement) => {
+  window.clearTimeout(hideCompareTimer);
+  window.clearTimeout(showCompareTimer);
+  pendingCompareRow = row;
+  if (openCompareRow === row) {
+    pendingCompareRow = undefined;
+    return;
+  }
+  showCompareTimer = window.setTimeout(() => showCompareProof(row), compareHoverIntentDelay);
+};
+const queueHideCompareProof = () => {
+  window.clearTimeout(hideCompareTimer);
+  hideCompareTimer = window.setTimeout(() => {
+    if (!activePointerRow && !pointerInProof) hideCompareProof();
+  }, compareHideGrace);
+};
+const selectCompareRow = (row: HTMLTableRowElement) => {
+  selectedCompareRow = row;
+  for (const candidate of compareRows) candidate.classList.toggle('is-selected', candidate === row);
+  renderProof(row);
+};
+for (const row of compareRows) {
+  row.addEventListener('pointerenter', () => {
+    activePointerRow = row;
+    scheduleShowCompareProof(row);
+  });
+  row.addEventListener('pointerleave', () => {
+    if (activePointerRow === row) activePointerRow = undefined;
+    if (pendingCompareRow === row) {
+      window.clearTimeout(showCompareTimer);
+      pendingCompareRow = undefined;
+    }
+    queueHideCompareProof();
+  });
+  row.addEventListener('focus', () => showCompareProof(row));
+  row.addEventListener('blur', queueHideCompareProof);
+  row.addEventListener('click', () => { selectCompareRow(row); showCompareProof(row); });
+  row.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectCompareRow(row); showCompareProof(row); }
+  });
+}
+compareProof.addEventListener('pointerenter', () => {
+  pointerInProof = true;
+  window.clearTimeout(hideCompareTimer);
+  window.clearTimeout(showCompareTimer);
+  pendingCompareRow = undefined;
+});
+compareProof.addEventListener('pointerleave', () => {
+  pointerInProof = false;
+  queueHideCompareProof();
+});
+proofExpand.addEventListener('pointerenter', () => {
+  proofExpansionHover = true;
+  refreshProofExpansion();
+});
+proofExpand.addEventListener('pointerleave', () => {
+  proofExpansionHover = false;
+  refreshProofExpansion();
+});
+proofExpand.addEventListener('focus', () => {
+  proofExpansionFocus = true;
+  refreshProofExpansion();
+});
+proofExpand.addEventListener('blur', () => {
+  proofExpansionFocus = false;
+  refreshProofExpansion();
+});
+proofExpand.addEventListener('click', () => {
+  proofExpansionPinned = !proofExpansionPinned;
+  refreshProofExpansion();
+});
+compareProof.addEventListener('wheel', event => {
+  event.preventDefault();
+  event.stopPropagation();
+  const maxScroll = Math.max(0, proofBody.scrollHeight - proofBody.clientHeight);
+  proofBody.scrollTop = Math.max(0, Math.min(maxScroll, proofBody.scrollTop + event.deltaY));
+}, { passive: false });
+addEventListener('scroll', () => { if (openCompareRow) positionProof(openCompareRow); }, { passive: true });
+addEventListener('resize', () => { if (openCompareRow) positionProof(openCompareRow); });
+if (selectedCompareRow) selectCompareRow(selectedCompareRow);
 if (reduced) {
   for (const o of sample.operations) heroMap.light(o.path, toneOf(o), false);
   $$('.screen').forEach(el => (el.style.display = 'none'));

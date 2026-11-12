@@ -102,15 +102,20 @@
         <table class="compare-table">
           <thead><tr><th></th><th>Without Drishya</th><th>With Drishya</th></tr></thead>
           <tbody>
-            <tr><th>Files the agent read</th><td>A one-line note in the CLI or app</td><td>The exact lines it saw</td></tr>
-            <tr><th>Test and command output</th><td>Collapsed or scrolled away</td><td>The full output, kept</td></tr>
-            <tr><th>Edits</th><td>A count of lines changed</td><td>The diff as written, before later edits</td></tr>
-            <tr><th>Where the work happened</th><td>Paths in text, a separate editor to look</td><td>Marked in your file tree and on the map</td></tr>
-            <tr><th>Branches and pull requests</th><td>A separate Git client, no link to the agent</td><td>Changes and the Git graph, with the agent behind each file</td></tr>
-            <tr><th>Sub-agents and MCP tools</th><td>Mixed into one stream</td><td>Each kept with its own work and counted</td></tr>
-            <tr><th>Later</th><td>Scroll back through the chat, if it is still there</td><td>Replay any session, live or finished</td></tr>
+            <tr data-compare-row="files" data-proof="files" tabindex="0" aria-controls="compare-proof"><th>Files the agent read</th><td>A one-line note in the CLI or app</td><td>The exact lines it saw</td></tr>
+            <tr data-compare-row="output" data-proof="output" tabindex="0" aria-controls="compare-proof"><th>Test and command output</th><td>Collapsed or scrolled away</td><td>The full output, kept</td></tr>
+            <tr data-compare-row="edits" data-proof="edits" tabindex="0" aria-controls="compare-proof"><th>Edits</th><td>A count of lines changed</td><td>The diff as written, before later edits</td></tr>
+            <tr data-compare-row="location" data-proof="location" tabindex="0" aria-controls="compare-proof"><th>Where the work happened</th><td>Paths in text, a separate editor to look</td><td>Marked in your file tree and on the map</td></tr>
+            <tr data-compare-row="branches" data-proof="branches" tabindex="0" aria-controls="compare-proof"><th>Branches and pull requests</th><td>A separate Git client, no link to the agent</td><td>Changes and the Git graph, with the agent behind each file</td></tr>
+            <tr data-compare-row="subagents" data-proof="subagents" tabindex="0" aria-controls="compare-proof"><th>Sub-agents and MCP tools</th><td>Mixed into one stream</td><td>Each kept with its own work and counted</td></tr>
+            <tr data-compare-row="replay" data-proof="replay" tabindex="0" aria-controls="compare-proof"><th>Later</th><td>Scroll back through the chat, if it is still there</td><td>Replay any session, live or finished</td></tr>
           </tbody>
         </table>
+      <div id="compare-proof" class="compare-proof" data-compare-proof aria-live="polite" aria-hidden="true">
+        <button class="compare-proof-expand" type="button" data-proof-expand aria-controls="compare-proof" aria-expanded="false" aria-label="Expand evidence"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l6 6M16 3h5v5M21 3l-6 6M8 21H3v-5M3 21l6-6M16 21h5v-5M21 21l-6-6" /></svg></button>
+        <div class="compare-proof-head"><div><span class="compare-proof-kicker">Captured evidence</span><h3 data-proof-title></h3></div><span class="compare-proof-source" data-proof-source></span></div>
+          <pre class="compare-proof-body" data-proof-body></pre>
+        </div>
       </div>
     </section>
 
