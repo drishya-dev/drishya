@@ -1,0 +1,64 @@
+/* FILES-17: Muted language-family tints and calm folder marks across all three Modern palettes.
+   Icon colour stays quieter than filename text (--t1/--t2) and never competes with evidence marks (E/A/D). */
+
+.file-format {
+  flex: none;
+  color: var(--t3);
+}
+
+.file-format .folder-mark {
+  color: var(--folder-mark, var(--t2));
+}
+
+:root[data-ui-version=modern] .file-format {
+  color: var(--t3);
+}
+
+:root[data-ui-version=modern] .format-folder {
+  color: color-mix(in srgb, var(--t2) 72%, var(--t3));
+}
+
+:root[data-ui-version=modern] .folder-git { --folder-mark: color-mix(in srgb, var(--edited) 76%, var(--t2)); }
+:root[data-ui-version=modern] .folder-github { --folder-mark: color-mix(in srgb, var(--focus) 72%, var(--t2)); }
+:root[data-ui-version=modern] .folder-agent { --folder-mark: color-mix(in srgb, var(--external) 68%, var(--t2)); }
+:root[data-ui-version=modern] .folder-src { --folder-mark: color-mix(in srgb, var(--source) 76%, var(--t2)); }
+:root[data-ui-version=modern] .folder-docs { --folder-mark: color-mix(in srgb, var(--syntax-type, var(--source)) 72%, var(--t2)); }
+:root[data-ui-version=modern] .folder-tests { --folder-mark: color-mix(in srgb, var(--pass) 72%, var(--t2)); }
+:root[data-ui-version=modern] .folder-scripts { --folder-mark: color-mix(in srgb, var(--syntax-property, var(--pass)) 74%, var(--t2)); }
+:root[data-ui-version=modern] .folder-dist { --folder-mark: var(--t3); }
+:root[data-ui-version=modern] .folder-modules { --folder-mark: color-mix(in srgb, var(--external) 58%, var(--t3)); }
+:root[data-ui-version=modern] .folder-assets { --folder-mark: color-mix(in srgb, var(--external) 66%, var(--t2)); }
+:root[data-ui-version=modern] .folder-fixtures { --folder-mark: color-mix(in srgb, var(--edited) 70%, var(--t2)); }
+
+/* Language families (muted ~64% semantic token mixed into t2/t3 so text and E/A/D marks always lead) */
+:root[data-ui-version=modern] :is(.format-ts, .format-tsx, .format-dts, .format-css, .format-c, .format-cpp, .format-sql, .format-svg) {
+  color: color-mix(in srgb, var(--source) 68%, var(--t2));
+}
+:root[data-ui-version=modern] :is(.format-js, .format-jsx, .format-json, .format-py, .format-ipynb, .format-manifest, .format-toml) {
+  color: color-mix(in srgb, var(--edited) 66%, var(--t2));
+}
+:root[data-ui-version=modern] :is(.format-sh, .format-ps1, .format-test, .format-go, .format-vue, .format-csv) {
+  color: color-mix(in srgb, var(--pass) 64%, var(--t2));
+}
+:root[data-ui-version=modern] :is(.format-html, .format-svelte, .format-rs, .format-java, .format-rb, .format-swift, .format-git, .format-docker, .format-diff, .format-pdf) {
+  color: color-mix(in srgb, var(--syntax-keyword, var(--edited)) 62%, var(--t2));
+}
+:root[data-ui-version=modern] :is(.format-md, .format-scss, .format-php, .format-kt, .format-cs, .format-yml, .format-graphql, .format-prisma, .format-image, .format-ex, .format-lua, .format-dart, .format-zig, .format-scala, .format-r) {
+  color: color-mix(in srgb, var(--external) 60%, var(--t2));
+}
+:root[data-ui-version=modern] :is(.format-env) {
+  color: color-mix(in srgb, color-mix(in srgb, var(--fail) 58%, var(--edited)) 70%, var(--t2));
+}
+:root[data-ui-version=modern] :is(.format-config, .format-xml, .format-make, .format-lock, .format-archive, .format-license, .format-txt) {
+  color: var(--t3);
+}
+
+/* Override classic's heavy light-mode brightness filter on Modern icons; Modern tokens handle Paper natively. */
+:root[data-ui-version=modern][data-theme=light] .file-format {
+  filter: none;
+}
+
+/* Keep the opened folder in Explorer softly tinted without overriding its semantic corner mark. */
+:root[data-ui-version=modern] .folder-tree .folder-row[aria-expanded=true] .format-folder {
+  color: var(--t2);
+}
