@@ -2,6 +2,7 @@ import {useCallback,useEffect,useLayoutEffect,useMemo,useRef,useState} from 'rea
 import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
 import {gitSessionLinkDescription} from '../../../daemon/src/git-types.ts';
 import {gitHistoryStore} from '../lib/git-history-cache.ts';
+import type {SquashEvidence} from '../lib/git-squash.ts';
 import {BranchChip,BranchPeek} from './GitThreadGraph.tsx';
 import {useApp} from '../state.ts';
 import './git-network-graph.css';
@@ -9,11 +10,11 @@ import './git-network-graph.css';
 const PAD=28,MIN_SCALE=.3,MAX_SCALE=3,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value)),zoomStep=1.25;
 
 /** UI-8 (Yash, 3 Nov): a plain network graph. Time runs left to right, main is the top line, branches leave and rejoin it on lanes below; labels name branch heads. */
-export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,mirror,onHover,reveal,links,initialScale,initialScrollLeft,onViewChange}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number;initialScale?:number;initialScrollLeft?:number;onViewChange?:(view:{scale?:number;scrollLeft?:number})=>void}){
+export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,mirror,onHover,reveal,evidence,links,initialScale,initialScrollLeft,onViewChange}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:SquashEvidence;commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number;initialScale?:number;initialScrollLeft?:number;onViewChange?:(view:{scale?:number;scrollLeft?:number})=>void}){
   const [scale,setScale]=useState(()=>initialScale??1),[hovered,setHovered]=useState(''),[pinnedKey,setPinnedKey]=useState(''),[branchKey,setBranchKey]=useState('');
   const {layout,mainSeeds,branches,branchOf,byHash,labels}=useMemo(
-    ()=>gitHistoryStore.resolveBundle(commits,primary,seeds,offset,scale).bundle,
-    [commits,primary?.tip,primary?.name,offset,scale],
+    ()=>gitHistoryStore.resolveBundle(commits,primary,seeds,offset,scale,evidence).bundle,
+    [commits,primary?.tip,primary?.name,offset,scale,evidence],
   );
   const viewport=useRef<HTMLDivElement>(null),previous=useRef(resetKey);
   const viewChangeRef=useRef(onViewChange);viewChangeRef.current=onViewChange;
@@ -59,7 +60,8 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
   const active=byHash.get(hovered||mirror||'');
   const peek=!active?branches.find(branch=>branch.key===(branchKey||refBranch?.key||pinnedKey)):undefined;
   const step=(direction:1|-1)=>{if(!focused)return;const at=focused.members.indexOf(selected),next=at<0?(direction>0?0:focused.members.length-1):at+direction;const hash=focused.members[Math.max(0,Math.min(focused.members.length-1,next))];if(hash){(select??choose)(hash);revealCommit(hash);}};
-  const lit=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash)]:(focused??peek)?.members??[]);
+  const targetBranch=focused??peek;
+  const lit=new Set(active?[active.hash,...active.parents,...commits.filter(commit=>commit.parents.includes(active.hash)).map(commit=>commit.hash),...layout.edges.filter(edge=>edge.squash&&(edge.from===active.hash||edge.to===active.hash)).map(edge=>edge.from===active.hash?edge.to:edge.from)]:targetBranch?[...targetBranch.members,...(targetBranch.fork?[targetBranch.fork]:[]),...(targetBranch.merge?[targetBranch.merge]:[])]:[]);
   const dim=lit.size>0;
   return <div className="thread-graph network-graph">
     <div className="thread-controls">{focused?<BranchChip branch={focused} byHash={byHash} selected={selected} step={step} clear={()=>setPinnedKey('')}/>:<span className="thread-title">{primary?`${primary.name} · ${commits.length} commits`:`${commits.length} commits`}</span>}
@@ -86,7 +88,7 @@ export function GitNetworkGraph({select,mirrorRef,commits,selected,choose,primar
     }}>
       <div className="network-world" style={{width:layout.width,height:layout.height+28}}>
         <svg className="thread-links network-links" width={layout.width} height={layout.height} aria-hidden="true">
-          {layout.edges.map(edge=><g key={`${edge.from}>${edge.to}`} data-edge={`${edge.from}>${edge.to}`} className={`network-edge lane-${edge.main?0:1+(edge.lane-1)%5}${dim&&!(lit.has(edge.from)&&lit.has(edge.to))?' muted':''}`}><path className="network-halo" d={edge.path}/><path className="network-core" d={edge.path} onPointerEnter={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setBranchKey(branch.key);}} onPointerLeave={()=>setBranchKey('')} onClick={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setPinnedKey(value=>value===branch.key?'':branch.key);}}/></g>)}
+          {layout.edges.map(edge=><g key={`${edge.from}>${edge.to}${edge.squash?':squash':''}`} data-edge={`${edge.from}>${edge.to}`} data-squash={edge.squash?'true':undefined} className={`network-edge lane-${edge.main?0:1+(edge.lane-1)%5}${edge.squash?' squash':''}${dim&&!(lit.has(edge.from)&&lit.has(edge.to))?' muted':''}`}><path className="network-halo" d={edge.path}/><path className="network-core" d={edge.path} onPointerEnter={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setBranchKey(branch.key);}} onPointerLeave={()=>setBranchKey('')} onClick={()=>{const branch=branchOf.get(edge.to)??branchOf.get(edge.from);if(branch)setPinnedKey(value=>value===branch.key?'':branch.key);}}/></g>)}
         </svg>
         {layout.nodes.map(node=>{const commit=byHash.get(node.hash)!,link=links?.get(node.hash);return <button key={node.hash} type="button" className={`thread-commit atlas-commit network-commit${node.main?' thread-primary':''}${dim&&!lit.has(node.hash)?' muted':''}${link?' linked':''}`} data-commit-hash={node.hash} style={{left:node.x,top:node.y}} aria-pressed={selected===node.hash} aria-label={`${commit.subject||'Untitled commit'} · ${commit.hash.slice(0,7)}${commit.labels.length?` · ${commit.labels.join(', ')}`:''}${link?` · ${gitSessionLinkDescription(link)}`:''}`} title={`${commit.hash.slice(0,10)} · ${commit.subject}`} onPointerEnter={()=>setHovered(node.hash)} onPointerLeave={()=>setHovered('')} onFocus={()=>setHovered(node.hash)} onBlur={()=>setHovered('')} onClick={()=>choose(node.hash)}/>;})}
         {labels.map(label=><span key={`label-${label.hash}`} className={`network-label${label.main?' main':''}`} style={{left:label.x,top:label.y}} title={label.title}>{label.text}</span>)}
