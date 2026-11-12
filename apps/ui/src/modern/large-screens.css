@@ -4,9 +4,12 @@
 :root[data-ui-version=modern] { font-size: calc(16px * var(--ui-scale, 1)); }
 
 /* LAYOUT-1c: a 2560-device-pixel stage fills laptop/desktop windows at every browser zoom.
-   Only a genuinely wider physical window centres the working composition; text remains browser-sized. */
+   Only a genuinely wider physical window centres the working composition; text remains browser-sized.
+   UI-37: the stage is never narrower than 2560 CSS px either. Device pixels alone capped every high-density
+   screen (a 4K monitor at 150 %, a Retina laptop at 2x) to a centred strip with empty gutters, while a
+   standard screen with the same CSS size filled edge to edge. Zooming out (ratio below 1) is unchanged. */
 :root[data-ui-version=modern] {
-  --stage-max: calc(2560px / var(--device-ratio, 1));
+  --stage-max: max(2560px, calc(2560px / var(--device-ratio, 1)));
   --stage-edge: max(0px, calc((100vw - var(--stage-max)) / 2));
 }
 /* Extra zoom-out space goes to passages, not longer prose lines. The existing 1280 CSS-px measure stays at 100%. */

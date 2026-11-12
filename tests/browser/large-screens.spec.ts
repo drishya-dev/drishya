@@ -152,6 +152,21 @@ for(const ratio of [1,.8,.67,.5,.33])test(`1920 device px at ${ratio}: zoom leav
  }finally{await context.close();}
 });
 
+// UI-37: high-density screens fill like a standard screen of the same CSS size (4K at 150 %, Retina laptops at 2x).
+for(const [width,height,ratio] of [[2560,1440,1.5],[1920,1080,2],[1728,1117,2],[1512,982,2]] as const)test(`${width}x${height} CSS px at ratio ${ratio}: a high-density screen fills edge to edge`,async({browser})=>{
+ const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:ratio});try{const page=await context.newPage();await open(page,width,height);
+ await expect(page.locator('html')).not.toHaveAttribute('data-stage-limited');expect(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize)).toBe('16px');
+ expect((await span(page,'.workspace-leading'))!.left).toBeLessThan(25);expect(width-(await span(page,'.workspace-utilities'))!.right).toBeCloseTo(30,1);
+ await expect(page.locator('.history .prose').first()).toHaveCSS('font-size','15px');
+ }finally{await context.close();}
+});
+test('a 3840 CSS px window at ratio 1.5 (a 5760 device px screen) still centres a 2560 CSS px stage',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:3840,height:1440},deviceScaleFactor:1.5});try{const page=await context.newPage();await open(page,3840,1440);
+ await expect(page.locator('html')).toHaveAttribute('data-stage-limited','');
+ expect((await span(page,'.workspace-leading'))!.left).toBeCloseTo((3840-2560)/2+18,0);
+ }finally{await context.close();}
+});
+
 test('ratio-only changes update the physical cap and retain one stable final dock position',async({browser})=>{
  const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1});try{const page=await context.newPage();await open(page,1920,1080);const cdp=await context.newCDPSession(page);
  for(const ratio of [.8,.67,.5,.33,1]){await cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(1920/ratio),height:Math.round(1080/ratio),deviceScaleFactor:ratio,mobile:false});await expect.poll(()=>page.evaluate(()=>Number(document.documentElement.style.getPropertyValue('--device-ratio')))).toBeCloseTo(ratio,3);await expect(page.locator('html')).not.toHaveAttribute('data-stage-limited');const left=(await span(page,'.workspace-leading'))!.left;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect((await span(page,'.workspace-leading'))!.left).toBeCloseTo(left,1);expect(left).toBeLessThan(25);}
