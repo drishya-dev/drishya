@@ -53,41 +53,44 @@ async function openWork(page: Page) {
   return work;
 }
 
-test('Previous and Next change step through every read and edit with its version', async ({ page }) => {
+test('Previous and Next change step newest first and keep Previous moving down the list', async ({ page }) => {
   const work = await openWork(page);
   const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true }), next = steps.getByRole('button', { name: 'Next change', exact: true });
   const label = steps.getByRole('status');
   const choice = work.getByRole('combobox', { name: 'First step', exact: true });
-  await expect(label).toHaveText(/\d of 4/);
-  // Land on the first captured step whichever evidence the panel opened with.
-  while (await previous.isEnabled()) await previous.click();
+  // Opens on the latest change at the top of the action list.
+  await expect(label).toHaveText('4 of 4');
+  await expect(next).toBeDisabled();
+  await expect(previous).toBeEnabled();
+  await expect(choice).toHaveValue(/\/patch$/);
+  await expect(work).toContainText('third');
+  await expect(work.locator('.file-op').nth(0)).toHaveAttribute('aria-pressed', 'true');
+  await work.screenshot({ path: resolve('.local/file-timeline-last.png') });
+
+  // Stepping back goes to older edits further down the list.
+  await previous.click();
+  await expect(label).toHaveText('3 of 4');
+  await expect(next).toBeEnabled();
+  await expect(work).toContainText('second');
+  await expect(work.locator('.file-op').nth(1)).toHaveAttribute('aria-pressed', 'true');
+  await previous.click();
+  await expect(label).toHaveText('2 of 4');
+  await expect(work).toContainText('first');
+  await expect(work.locator('.file-op').nth(2)).toHaveAttribute('aria-pressed', 'true');
+  await previous.click();
   await expect(label).toHaveText('1 of 4');
   await expect(previous).toBeDisabled();
   await expect(choice).toHaveValue(/\/read$/);
   await expect(work).toContainText('export const total = 0;');
+  await expect(work.locator('.file-op').nth(3)).toHaveAttribute('aria-pressed', 'true');
   await work.screenshot({ path: resolve('.local/file-timeline-first.png') });
 
+  // Next change walks back up toward the latest step.
   await next.click();
   await expect(label).toHaveText('2 of 4');
-  await expect(previous).toBeEnabled();
-  await expect(choice).toHaveValue(/\/patch$/);
   await expect(work).toContainText('first');
-  await expect(work.locator('.file-op[aria-pressed="true"]')).toHaveCount(1);
-  await next.click();
-  await expect(label).toHaveText('3 of 4');
-  await expect(work).toContainText('second');
-  await next.click();
-  await expect(label).toHaveText('4 of 4');
-  await expect(work).toContainText('third');
-  await expect(next).toBeDisabled();
   await expect(previous).toBeEnabled();
-  await work.screenshot({ path: resolve('.local/file-timeline-last.png') });
-
-  await previous.click();
-  await expect(label).toHaveText('3 of 4');
-  await expect(work).toContainText('second');
-  await expect(next).toBeEnabled();
 });
 
 test('the stepper works from the keyboard and keeps focus on a button that still works', async ({ page }) => {
@@ -126,4 +129,33 @@ test('the stepper keeps the type floor and hides while two versions are compared
   await expect(steps).toHaveCount(0);
   await work.getByRole('button', { name: 'Single evidence', exact: true }).click();
   await expect(steps).toBeVisible();
+});
+
+test('at 600px Previous and Next change stay clear of toolbar actions and step down the list', async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.continue());
+  await page.goto(`${server.url}/?experience=modern&motion=0#token=${server.token}`);
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  await expect(page.locator('.viewer')).toBeVisible();
+  if (!await page.locator('.folder-explorer').isVisible()) await page.getByRole('button', { name: 'Show files', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Find repository files', exact: true }).fill('src/total.ts');
+  await page.locator('[data-spine-path="src/total.ts"]').first().click();
+  const disk = page.locator('.current-file-reader');
+  if (await disk.isVisible()) {
+    const opts = disk.locator('summary[aria-label="Reading options"]');
+    if (await opts.isVisible()) await opts.click();
+    await disk.getByRole('button', { name: 'Agent work on this file' }).click();
+  }
+  const work = page.getByRole('dialog', { name: 'Work on src/total.ts', exact: true });
+  await expect(work).toBeVisible();
+  await work.getByLabel('File actions', { exact: true }).click();
+  await work.getByRole('button', { name: 'Show actions', exact: true }).click();
+  const steps = work.getByRole('group', { name: /Step through reads and edits/ });
+  const label = steps.getByRole('status');
+  await expect(label).toHaveText('4 of 4');
+  await expect(work.locator('.file-op').nth(0)).toHaveAttribute('aria-pressed', 'true');
+  await steps.getByRole('button', { name: 'Previous change', exact: true }).click();
+  await expect(label).toHaveText('3 of 4');
+  await expect(work.locator('.file-op').nth(1)).toHaveAttribute('aria-pressed', 'true');
 });

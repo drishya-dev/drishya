@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -253,4 +253,84 @@ it('continues oversized UTF-8 lines without losing original bytes or the final n
   expect(store.blobs.readTextChunk('invalid',0)).toBeUndefined();
   expect(()=>store.blobs.readTextChunk(sha,-1)).toThrow('Invalid text chunk range');
   expect(()=>store.blobs.readTextChunk(sha,0,1024*1024)).toThrow('Invalid text chunk range');
+});
+
+describe('privacy policy upgrade scrub (SEC-2)', () => {
+  it('re-redacts existing p3 observations, blobs, previews, titles, caches and FTS index on open without leaving raw bytes on disk', () => {
+    const rnd = (n: number, a = 'aB3dE5fG7hJ9kL2mN4pQ6rS8tU0vW1xY') => Array.from({ length: n }, (_, i) => a[(i * 7 + 3) % a.length]).join('');
+    const pypi = 'py' + 'pi-' + 'AgE' + rnd(70);
+    const gl = 'gl' + 'pat-' + rnd(24);
+    const sg = 'S' + 'G.' + rnd(22) + '.' + rnd(43);
+    const azure = 'AccountKey=' + rnd(64) + '==';
+    const bigPayload = 'harmless header\n'.repeat(1200) + `TOKEN=${pypi}\nGITLAB=${gl}\n`;
+    const bigPadPrefix = 'A'.repeat(100) + ' ' + pypi;
+
+    seed();
+    store.upsertRecording({ id: 'rec_straddle', adapterId: 'claude-code', harness: 'claude-code', sourcePath: join(dir, 's.jsonl') });
+    store.upsertSource({ id: 'src_s', recordingId: 'rec_straddle', path: join(dir, 's.jsonl'), role: 'main', cursor });
+
+    store.appendObservations('rec_a', 'src_a', cursor, [
+      { ...obs('inline-sec'), payload: { text: `use ${pypi} and ${sg} and ${azure}` } },
+      { ...obs('blob-sec'), kind: 'tool.result', payload: { text: bigPayload } },
+    ]);
+    store.appendObservations('rec_straddle', 'src_s', cursor, [
+      { ...obs('s1'), recordingId: 'rec_straddle', payload: { text: bigPadPrefix } },
+    ]);
+    store.updateRecordingMeta('rec_a', { title: `Setup ${pypi}` });
+    store.updateRecordingMeta('rec_straddle', { title: bigPadPrefix.slice(0, 120) });
+    store.addBookmark('rec_a', 1, `check ${gl}`);
+    store.putProjection('rec_a', 'r39', 2, JSON.stringify({ leak: pypi }));
+    store.putGenerated('rec_a', 'k1', { summary: sg });
+    store.putGraph('/repo', 'g1', JSON.stringify({ root: '/repo', note: pypi }));
+    mkdirSync(join(dir, 'history'), { recursive: true });
+    writeFileSync(join(dir, 'history', 'index.db'), pypi);
+
+    const oldBlobRef = (store.observations('rec_a')[1]!.payload as { text: { $blob: string } }).text.$blob;
+
+    // Simulate pre-p4 database state before closing
+    store.db.prepare("DELETE FROM meta WHERE key = 'privacy_policy_version'").run();
+    store.close();
+
+    // Reopen Store: triggers upgradePrivacyPolicy() automatically
+    store = new Store(dir);
+
+    expect(store.policyVersions('rec_a')).toEqual(['p4']);
+    expect(store.policyVersions('rec_straddle')).toEqual(['p4']);
+
+    const cleanedObs = store.observations('rec_a');
+    expect((cleanedObs[0]!.payload as { text: string }).text).toBe('use [REDACTED:pypi-token] and [REDACTED:sendgrid-key] and AccountKey=[REDACTED:azure-storage-key]');
+    expect(cleanedObs[0]!.redactions.map((r) => r.rule).sort()).toEqual(['azure-storage-key', 'pypi-token', 'sendgrid-key']);
+
+    const newBlobRef = (cleanedObs[1]!.payload as { text: { $blob: string; preview: string } }).text;
+    expect(newBlobRef.$blob).not.toBe(oldBlobRef);
+    expect(store.blobs.get(oldBlobRef)).toBeUndefined();
+    const cleanedBlob = store.blobs.get(newBlobRef.$blob)!;
+    expect(cleanedBlob).toContain('[REDACTED:pypi-token]');
+    expect(cleanedBlob).toContain('[REDACTED:gitlab-token]');
+    expect(cleanedBlob).not.toContain(pypi);
+    expect(cleanedBlob).not.toContain(gl);
+
+    expect(store.getRecording('rec_a')!.title).toBe('Setup [REDACTED:pypi-token]');
+    expect(store.getRecording('rec_straddle')!.title).toBe(('A'.repeat(100) + ' [REDACTED:pypi-token]').slice(0, 120));
+    expect(store.getProjection('rec_a')).toBeUndefined();
+    expect(JSON.stringify(store.getGenerated('rec_a', 'k1'))).not.toContain(sg);
+    expect(store.getGraph('/repo')).not.toContain(pypi);
+    expect(JSON.stringify(store.bookmarks('rec_a'))).not.toContain(gl);
+    expect(store.search('rec_a', pypi)).toEqual([]);
+    expect(store.searchLibrary({ q: pypi }).items).toEqual([]);
+
+    // Confirm zero raw secret bytes anywhere under the store directory (SQLite DB, WAL, blobs, history).
+    const walkFiles = (root: string): string[] => readdirSync(root, { withFileTypes: true }).flatMap((e) => {
+      const full = join(root, e.name);
+      return e.isDirectory() ? walkFiles(full) : [full];
+    });
+    for (const file of walkFiles(dir)) {
+      if (statSync(file).size === 0) continue;
+      const content = readFileSync(file);
+      for (const secret of [pypi, gl, sg, rnd(64)]) {
+        expect(content.includes(Buffer.from(secret))).toBe(false);
+      }
+      expect(content.includes(Buffer.from('py' + 'pi-AgE'))).toBe(false);
+    }
+  });
 });

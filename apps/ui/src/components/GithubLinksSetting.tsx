@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { workspaceApi } from '../api.ts';
 import { useApp } from '../state.ts';
 import { GITHUB_OPTIN_EVENT } from './LinkCard.tsx';
+import { gitHistoryStore } from '../lib/git-history-cache.ts';
 
 /** LINK-1: the explicit opt-in for GitHub pull request and issue cards. Off by default; on, Drishya asks the person's own `gh` CLI. */
 export function GithubLinksSetting() {
@@ -11,7 +12,7 @@ export function GithubLinksSetting() {
   useEffect(() => { if (local) workspaceApi.githubStatus().then(setStatus, () => setError('Could not read this setting.')); }, [local]);
   const change = async (enabled: boolean) => {
     setError('');
-    try { setStatus(await workspaceApi.githubOptIn(enabled)); window.dispatchEvent(new Event(GITHUB_OPTIN_EVENT)); }
+    try { setStatus(await workspaceApi.githubOptIn(enabled)); gitHistoryStore.clear(); window.dispatchEvent(new Event(GITHUB_OPTIN_EVENT)); }
     catch { setError('Could not change this setting.'); }
   };
   return <section><h3>Links</h3>
