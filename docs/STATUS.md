@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| GIT-11 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/git-11` | 2026-11-12 | `apps/daemon/src/git-types.ts`, `apps/daemon/src/git-history.ts`, `apps/daemon/src/git-review.ts`, `apps/daemon/src/github-links.ts`, `apps/daemon/src/server.ts`, `apps/ui/src/lib/git-light.ts`, `apps/ui/src/components/GitThreadGraph.tsx`, `apps/ui/src/components/GitHistory.tsx`, `apps/daemon/test/git-history.test.ts`, `apps/ui/test/git-light.test.ts`, `tests/browser/git-branches.spec.ts`, `tests/browser/git-graph-focus.spec.ts`, `docs/review/git-11-squash-joins.md`, `STATUS.md`, `TASKS.md`. |
 | UI-33 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-33` | 2026-11-12 | `apps/ui/src/components/PromptRail.tsx`, `apps/ui/src/stage.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `tests/browser/toolbox-window.spec.ts`, `tests/browser/prompt-timeline.spec.ts`, `docs/review/ui-33-prompt-rail-lane.md`, `STATUS.md`, `TASKS.md`. |
 | UI-35 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-35` | 2026-11-12 | `apps/ui/public/brand/`, `apps/ui/public/favicon.ico`, `apps/ui/index.html`, `apps/ui/src/components/BrandMark.tsx`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `docs/review/ui-35-woven-logo.md`, `TASKS.md`, `STATUS.md`. |
 | SEC-2 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/sec-2` | 2026-11-12 | `packages/privacy/src/index.ts`, `packages/privacy/test/privacy.test.ts`, `packages/privacy/test/assignment-differential.test.ts`, `packages/store/src/index.ts`, `packages/store/test/`, `packages/ingest/src/index.ts`, `packages/ingest/test/`, `apps/daemon/src/app.ts`, `apps/daemon/src/history-worker.ts`, `apps/daemon/test/`, `scripts/`, `docs/review/`, `STATUS.md`, `TASKS.md`. |
@@ -61,6 +60,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash — 12 Nov: GIT-11 squash-merged branches join main
+
+- Added evidence-based squash-merge matching across loaded history pages (`apps/daemon/src/git-history.ts`, `git-review.ts`, `github-links.ts`, `apps/ui/src/lib/git-squash.ts`, `git-history-cache.ts`, `GitNetworkGraph.tsx`, `GitThreadGraph.tsx`, `git-network-graph.css`): priority order `content-signature` -> `patch-id` (`git patch-id --stable` net diff) -> `path-superset` (non-merge branch paths) -> opt-in GitHub closed PR -> opt-in `(#N)` subject PR, plus ancestry and reused-branch guards so unmerged branches stay unjoined.
+- Verified on this repository across #419–#427 (`codex/ship-2e`, `gemini/ui-32`, `claude/site-1`, `gemini/git-10`, `gemini/files-16b`, `gemini/ui-32b`, `gemini/ui-30`, `gemini/ui-31`, `gemini/files-17`) with lookups OFF (18 joins) and ON (with `PR #N`), unmerged branches (`gemini/ui-35`, `gemini/sec-2`, `gemini/files-18`, `gemini/ui-33`) unjoined, and on real Claude Code (`rec_5ee6b391`) & Codex (`rec_8415940e`) sessions at 600 & 1440 px across Jet Black, Midnight, and Paper (`overflow: 0`, private frames in `.local/git-11/`). [Review record](review/git-11-squash-joins.md).
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: FILES-17 file and folder icons (PR #427)
 

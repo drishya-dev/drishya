@@ -73,3 +73,113 @@ for (const width of [1440, 700]) test(`the graph's controls are one quiet group,
   await expect(chip).toHaveCount(0); await expect(dialog).toBeVisible();
   expect(await dialog.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
 });
+
+test.describe('squash-merged branches join main in the Git graph', () => {
+  let sDir: string, sApp: App, sServer: RunningServer, sId: string;
+  let pHead: string, pSquash: string, openHead: string, ghHead: string, ghSquash: string;
+  test.beforeEach(async () => {
+    sDir = mkdtempSync(join(tmpdir(), 'drishya-squash-ui-'));
+    const root = join(sDir, 'repo'); mkdirSync(root);
+    git(root, 'init', '-b', 'main'); git(root, 'config', 'user.name', 'Synthetic'); git(root, 'config', 'user.email', 'synthetic@example.invalid'); git(root, 'config', 'core.autocrlf', 'false');
+    git(root, 'remote', 'add', 'origin', 'https://github.com/example/demo.git');
+    writeFileSync(join(root, 'shared.ts'), Array.from({ length: 20 }, (_, i) => `export const s${i} = ${i};`).join('\n') + '\n');
+    git(root, 'add', '.'); git(root, 'commit', '-m', 'Base');
+    git(root, 'switch', '-c', 'feature/patch');
+    writeFileSync(join(root, 'shared.ts'), Array.from({ length: 20 }, (_, i) => i === 19 ? 'export const s19 = 999;' : `export const s${i} = ${i};`).join('\n') + '\n');
+    git(root, 'add', '.'); git(root, 'commit', '-m', 'Patch edit'); pHead = git(root, 'rev-parse', 'HEAD');
+    git(root, 'switch', 'main');
+    writeFileSync(join(root, 'shared.ts'), Array.from({ length: 20 }, (_, i) => i === 0 ? 'export const s0 = 100;' : `export const s${i} = ${i};`).join('\n') + '\n');
+    git(root, 'add', '.'); git(root, 'commit', '-m', 'Main drift');
+    git(root, 'merge', '--squash', 'feature/patch'); git(root, 'commit', '-m', 'Patch branch (#10)'); pSquash = git(root, 'rev-parse', 'HEAD');
+    git(root, 'switch', '-c', 'open-wip');
+    writeFileSync(join(root, 'open.ts'), 'export const openWip = true;\n');
+    git(root, 'add', '.'); git(root, 'commit', '-m', 'Unmerged WIP'); openHead = git(root, 'rev-parse', 'HEAD');
+    git(root, 'switch', 'main');
+    git(root, 'switch', '-c', 'feature/gh-only');
+    writeFileSync(join(root, 'gh.ts'), 'export const gh = 1;\n');
+    git(root, 'add', '.'); git(root, 'commit', '-m', 'GH branch commit'); ghHead = git(root, 'rev-parse', 'HEAD');
+    git(root, 'switch', 'main');
+    writeFileSync(join(root, 'gh.ts'), 'export const gh = 2;\n');
+    git(root, 'add', '.'); git(root, 'commit', '-m', 'PR feature (#99)'); ghSquash = git(root, 'rev-parse', 'HEAD');
+
+    const journal = join(sDir, 's.jsonl');
+    writeFileSync(journal, JSON.stringify({ type: 'user', uuid: 'u1', sessionId: '88888888-8888-4888-8888-888888888888', cwd: root, timestamp: '2026-11-12T12:00:00Z', message: { role: 'user', content: 'Squash graph session' } }) + '\n');
+    sApp = new App(join(sDir, 'store')); sId = (await sApp.ingest.importSource('claude-code', journal)).recordingId;
+    sServer = await startServer({
+      app: sApp,
+      port: 0,
+      token: 'squash-focus',
+      gh: async (args) => {
+        if (args[0] === '--version') return 'gh version 2.0.0';
+        if (args[1]?.startsWith('repos/example/demo/pulls?')) {
+          return JSON.stringify([{ number: 99, merged_at: '2026-11-12T12:10:00Z', head: { ref: 'feature/gh-only', sha: ghHead }, merge_commit_sha: ghSquash }]);
+        }
+        if (args[1] === 'repos/example/demo/pulls/10') return '';
+        if (args[1] === 'repos/example/demo/pulls/99') {
+          return JSON.stringify({ number: 99, merged_at: '2026-11-12T12:10:00Z', head: { ref: 'feature/gh-only', sha: ghHead }, merge_commit_sha: ghSquash });
+        }
+        return '';
+      },
+    });
+  });
+  test.afterEach(async () => {
+    await sServer?.close(); await sApp?.close();
+    if (sDir) { if (!resolve(sDir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch directory'); rmSync(sDir, { recursive: true, force: true }); }
+  });
+
+  for (const [width, palette] of [[1440, 'jet'], [600, 'midnight'], [1440, 'light']] as const) {
+    test(`joins patch-matched branch offline, joins PR branch when GitHub opt-in is on, keeps WIP unjoined at ${width}px (${palette})`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(sServer.launchUrl);
+      await expect(page.locator('.home')).toBeVisible();
+      await page.evaluate((theme) => localStorage.setItem('drishya.theme', theme), palette);
+      await page.goto(`${sServer.url}/?experience=modern&motion=0#/r/${sId}`);
+      await openGitDestination(page, 'Git graph');
+      const dialog = page.getByRole('dialog', { name: 'Git graph', exact: true });
+      const approve = dialog.getByRole('button', { name: 'Approve read-only Git', exact: true });
+      await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();
+      if (await approve.isVisible()) await approve.click();
+      await expect(dialog.locator('.network-commit').first()).toBeVisible({ timeout: 40_000 });
+
+      // Rule 1 (patch-id) joins feature/patch with GitHub lookups off; GH-only and unmerged WIP do not join.
+      await expect(dialog.locator(`.network-edge[data-squash="true"][data-edge="${pHead}>${pSquash}"]`)).toHaveCount(1);
+      await expect(dialog.locator(`.network-edge[data-squash="true"][data-edge^="${openHead}>"]`)).toHaveCount(0);
+      await expect(dialog.locator(`.network-edge[data-squash="true"][data-edge^="${ghHead}>"]`)).toHaveCount(0);
+
+      // Focusing the patch-matched branch explains the patch-id join honestly.
+      await dialog.locator(`.thread-commit[data-commit-hash="${pHead}"]`).focus();
+      await page.keyboard.press('b');
+      await dialog.getByRole('group', { name: /Focused branch/ }).getByRole('button', { name: 'Next commit on this branch' }).focus();
+      await expect(dialog.locator('.thread-branch-peek')).toContainText(`squash-merged into main at ${pSquash.slice(0, 7)}`);
+      await expect(dialog.locator('.thread-branch-peek')).toContainText('matches this branch');
+      await page.keyboard.press('Escape');
+
+      // Opting into GitHub links clears cached Git history and joins PR #99 too, keeping open-wip unjoined.
+      await dialog.getByRole('button', { name: 'Close Git graph', exact: true }).click();
+      await expect(dialog).toHaveCount(0);
+      await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
+      const settings = page.getByRole('dialog', { name: 'Workspace settings', exact: true });
+      await settings.getByRole('tab', { name: 'Links', exact: true }).click();
+      const toggle = settings.getByRole('checkbox', { name: 'GitHub pull request and issue cards' });
+      await expect(toggle).toBeEnabled();
+      const toggled = page.waitForResponse((res) => res.url().includes('/v1/github/optin') && res.status() === 200);
+      await toggle.click();
+      await toggled;
+      await expect(toggle).toBeChecked();
+      await settings.getByRole('button', { name: 'Close Workspace settings', exact: true }).click();
+
+      await openGitDestination(page, 'Git graph');
+      const dialogOn = page.getByRole('dialog', { name: 'Git graph', exact: true });
+      await expect(dialogOn.locator(`.network-edge[data-squash="true"][data-edge="${pHead}>${pSquash}"]`)).toHaveCount(1, { timeout: 20_000 });
+      await expect(dialogOn.locator(`.network-edge[data-squash="true"][data-edge="${ghHead}>${ghSquash}"]`)).toHaveCount(1);
+      await expect(dialogOn.locator(`.network-edge[data-squash="true"][data-edge^="${openHead}>"]`)).toHaveCount(0);
+
+      await dialogOn.locator(`.thread-commit[data-commit-hash="${ghHead}"]`).focus();
+      await page.keyboard.press('b');
+      await dialogOn.getByRole('group', { name: /Focused branch/ }).getByRole('button', { name: 'Next commit on this branch' }).focus();
+      await expect(dialogOn.locator('.thread-branch-peek')).toContainText('#99');
+      await expect(dialogOn.locator('.thread-branch-peek')).toContainText('PR #99');
+      expect(await dialogOn.evaluate((node) => node.scrollWidth - node.clientWidth)).toBeLessThanOrEqual(1);
+    });
+  }
+});
