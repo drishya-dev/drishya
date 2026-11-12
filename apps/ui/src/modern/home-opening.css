@@ -2,8 +2,8 @@
    running or latest session as the first action, on the same dotted ground. The session library is a sheet whose top
    shows in the first screen and which comes up over the opening as the page scrolls.
    The ground is plain CSS: no canvas and no loop, so Home costs nothing at rest. */
-.mh-home-v2 { --mh-pad:clamp(18px,4vw,64px); --mh-peek:148px; --mh-ink:var(--t1); }
-:root[data-palette=jet] .mh-home-v2 { --mh-ink:#f1eee4; }
+/* --brand-ink is the website's cream, defined for Jet Black in tokens.css; the other palettes use their own ink. */
+.mh-home-v2 { --mh-pad:clamp(18px,4vw,64px); --mh-peek:148px; --mh-ink:var(--brand-ink,var(--t1)); }
 .mh-home-v2 .mh-header { position:relative; z-index:3; }
 .mh-home-v2 .mh-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:none; margin-inline:calc(-1 * var(--mh-pad)); padding-inline:var(--mh-pad); }
 .mh-home-v2 .mh-scroll::-webkit-scrollbar { display:none; }

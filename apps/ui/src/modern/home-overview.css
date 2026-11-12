@@ -17,8 +17,8 @@
 .mh-ov-harness dt b { font-weight:var(--weight-medium); color:var(--t2); }
 .mh-ov-harness dd { display:flex; gap:2px; height:3px; border-radius:2px; overflow:hidden; }
 .mh-ov-harness dd span { min-width:2px; border-radius:2px; }
-.mh-ov-harness dd .claude-code { background:var(--agent-claude-ink,#e8956a); }
-.mh-ov-harness dd .codex { background:var(--agent-codex-ink,#6fb3ff); }
+.mh-ov-harness dd .claude-code { background:var(--agent-claude-ink); }
+.mh-ov-harness dd .codex { background:var(--agent-codex-ink); }
 
 .mh-ov-recent { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; min-width:0; }
 .mh-ov-recent button { display:grid; gap:2px; min-width:0; padding:11px 14px; border:1px solid var(--line); border-radius:var(--round-lg); background:var(--s1); text-align:left; }
