@@ -1,6 +1,7 @@
 .browser-evidence,.web-evidence{min-width:0;display:grid;gap:8px}
 .browser-url{display:block;overflow-wrap:anywhere;color:var(--t1);font:var(--text-xs)/1.5 var(--mono)}
-.browser-address{border-bottom:1px solid var(--line-2);padding-bottom:7px;font-size:var(--text-2xs)}
+.browser-address{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line-2);padding-bottom:7px;font-size:var(--text-2xs)}
+.browser-url-source{color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);white-space:nowrap}
 .browser-action{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;font:var(--text-xs)/1.5 var(--mono)}
 .browser-action small{color:var(--t3);font:var(--text-2xs)/1.5 var(--sans)}
 .browser-query{white-space:pre-wrap;overflow-wrap:anywhere;font:var(--text-xs)/1.5 var(--mono)}

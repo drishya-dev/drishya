@@ -31,6 +31,49 @@ describe('captured browser presentation', () => {
   expect(browserStep(op('1','Claude_Browser','navigate',{url:'https://captured.invalid'}))?.url).toBeDefined();
   expect(browserStep(op('2'))?.url).toBeUndefined();
  });
+ it('takes the URL from returned page text when the input omitted one, labelled from result', () => {
+  const step = browserStep({
+    id: 'g1',
+    agentId: 'a',
+    detail: {
+      kind: 'mcp',
+      server: 'Claude_Browser',
+      tool: 'get_page_text',
+      input: { max_chars: 12000 },
+      resultPreview: 'Title: RouteLab | Delivery planning\nURL: http://127.0.0.1:8501/\nSource element: <main>\n---\n\nTab Context:\n- url: https://other.invalid/',
+    },
+  } as Operation)!;
+  expect(step.url).toBe('http://127.0.0.1:8501/');
+  expect(step.urlFromResult).toBe(true);
+  const direct = browserStep(op('g2', 'Claude_Browser', 'get_page_text', { url: 'https://explicit.invalid/' }))!;
+  expect(direct.url).toBe('https://explicit.invalid/');
+  expect(direct.urlFromResult).toBe(false);
+  const unsafe = browserStep({
+    id: 'g3',
+    agentId: 'a',
+    detail: {
+      kind: 'mcp',
+      server: 'Claude_Browser',
+      tool: 'get_page_text',
+      input: {},
+      resultPreview: 'Title: Bad\nURL: javascript:alert(1)\n---',
+    },
+  } as Operation)!;
+  expect(unsafe.url).toBeUndefined();
+  expect(unsafe.urlFromResult).toBe(false);
+  const tabOnly = browserStep({
+    id: 'g4',
+    agentId: 'a',
+    detail: {
+      kind: 'mcp',
+      server: 'Claude_Browser',
+      tool: 'get_page_text',
+      input: {},
+      resultPreview: 'Title: Plain\n---\n\nTab Context:\nURL: https://later.invalid/',
+    },
+  } as Operation)!;
+  expect(tabOnly.url).toBeUndefined();
+ });
  it('keeps unsafe and credential-bearing URLs inert', () => {
   for(const url of ['javascript:alert(1)','file:///secret','//relative.invalid','https://','https://user:pass@example.invalid'])expect(safeWebUrl(url)).toBe(false);
   expect(safeWebUrl('https://example.invalid/?q=test')).toBe(true);

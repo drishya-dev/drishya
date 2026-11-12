@@ -31,3 +31,9 @@
 .captured-result-views:empty{display:none}
 /* Beside an inline reading the chip sits at the bottom corner so it never covers the reading's own toolbar. */
 .result-readings>.captured-result-views-inline{top:auto;bottom:2px}
+.tool-markdown{font:var(--text-sm)/1.6 var(--sans);color:var(--t1);overflow-wrap:anywhere;min-width:0}
+.tool-markdown :is(h1,h2,h3,h4,h5,h6){margin:6px 0 3px;font:var(--weight-strong) var(--text-md)/1.4 var(--sans);color:var(--t1)}
+.tool-markdown p{margin:3px 0}
+.tool-markdown :is(ol,ul){margin:4px 0;padding-inline-start:1.5em}
+.tool-markdown code{font-family:var(--mono);font-size:var(--text-xs)}
+.tool-markdown .fenced-code{margin:6px 0}
