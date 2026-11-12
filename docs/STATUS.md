@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-16b | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-16b` | 2026-11-12 | `SessionWorkspace.tsx` (checkout picker), `worktree-files.ts` / picker helper, `worktree-evidence.css`, units, `tests/browser/files-16b-picker.spec.ts`, TASKS/STATUS/review record; no MOTION-4 owners. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -58,6 +57,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash — 12 Nov: FILES-16b complete for Opus review, PR #423
+
+- Added `buildCheckoutPickerModel` & `filterCheckoutOptions` in `apps/ui/src/lib/checkout-picker.ts`, wired bounded height, keyboard navigation, filter input (>8 roots), unavailable-on-disk divider, and non-squishing row styling into `SessionWorkspace.tsx` and `worktree-evidence.css` (without touching `FILES-16` specs or `MOTION-4` owners).
+- Verified on synthetic fixture + 4 real local sessions (`52-86a4` 892.7 MB / 51 roots, `73-9ba5` 31.3 MB / 6 roots, `80-b172` 8.1 MB / 7 roots, `13-bd2d` 8.2 MB / 6 roots) at `600` & `1440` px across `jet`, `midnight`, and `paper`: unique names without hover, single search chrome, zero row overlap, menu stays clear of composer/window, summary reflects active checkout without short-label truncation.
+- `apps/ui/test/checkout-picker.test.ts` (6/6), `worktree-files.test.ts` (29/29), `pnpm check:real -- worktree-roots`, `pnpm check:affected` (typecheck, units, `ui:build`, 29/29 browser specs), and targeted checkout specs (14/14 in Edge, 2 workers) all pass. Review record: [files-16b-checkout-picker.md](review/files-16b-checkout-picker.md).
 ### Yash with Gemini 3.8 Flash — 12 Nov: GIT-10 complete for Opus review, PR #422
 
 - Added LRU history page caching (`GitHistoryCache`, 64 entries) keyed by `(root, generation, reference, referenceStart, query, start)` with generation-change invalidation per repo root, parallelized ref snapshot helpers, cached commit path lookups (`git-session-context.ts`), and `GET /v1/recordings/:id/git/generation` behind read-only Git consent. Shared `GitReview.historyCache` preserves session-specific overlays without mutating cached pages.
