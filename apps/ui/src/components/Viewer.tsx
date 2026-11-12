@@ -89,6 +89,7 @@ function WorkspaceViewer() {
   const filePeek=!!currentFile&&!explore&&!developerWorkspace&&document.documentElement.dataset.uiVersion==='modern';
   useFilePeekLayout(main,filePeek&&!!projection);
   const [reading, setReading] = useState<{ left: number; width: number }>();
+  const [followSlot, setFollowSlot] = useState<HTMLElement | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [mapError, setMapError] = useState<string>();
   const [mapRetry, setMapRetry] = useState(0);
@@ -209,13 +210,13 @@ function WorkspaceViewer() {
         {mapVisible && mapError && <div className="map-recovery" role="alert">Repository map unavailable: {mapError}<button className="btn" onClick={() => setMapRetry(n => n + 1)}>Retry repository map</button></div>}
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
-        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
+        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} followSlot={followSlot} />
         {!workingWindow && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
-      <Transport scene={scene} projection={projection} />
+      <Transport scene={scene} projection={projection} followSlot={setFollowSlot} />
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
       <ContextReportWatcher key={`context-report/${recordingId}`} />
@@ -460,7 +461,7 @@ function Dock({ scene }: { scene: Scene }) {
 
 // ─── transport: play, step, scrub ────────────────────────────────────────────────────────
 
-function Transport({ scene, projection }: { scene: Scene; projection: Projection }) {
+function Transport({ scene, projection, followSlot }: { scene: Scene; projection: Projection; followSlot?: (node: HTMLElement | null) => void }) {
   const lowResource = useApp((s) => s.lowResource);
   const mode = useApp((s) => s.mode);
   const playing = useApp((s) => s.playing);
@@ -492,6 +493,7 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
     <footer className="transport history-transport">
       <span className="reading-status sr-only">{scene.total} recorded steps</span>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
+      <span className="history-follow-slot" ref={followSlot} />
       {!explore && <LiveWatch />}
     </footer>
   );
