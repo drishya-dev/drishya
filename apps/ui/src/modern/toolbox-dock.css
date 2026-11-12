@@ -1,7 +1,7 @@
 
 :root[data-ui-version=modern][data-experience=classic] .toolbox-rail {
   position: absolute;
-  inset: calc(var(--workspace-header-h, 70px) + 14px) 18px
+  inset: calc(var(--workspace-header-h, 70px) + 14px) 50px
     max(58px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px))) 18px;
   display: flex;
   flex-direction: column;
@@ -63,8 +63,11 @@
 
 @media (max-width: 820px) {
   :root[data-ui-version=modern][data-experience=classic] .toolbox-rail {
-    inset-inline: 12px;
+    inset-inline: 12px 50px;
     top: calc(var(--workspace-header-h, 70px) + 66px);
     bottom: max(96px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px) + 48px));
+  }
+  :root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .workbench-station.modern-tool-station {
+    max-width: 100%;
   }
 }

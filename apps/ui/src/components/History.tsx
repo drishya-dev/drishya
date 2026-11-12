@@ -69,16 +69,21 @@ import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { foldedHeights, foldedSteps, foldOf, measureKey } from '../lib/turn-fold.ts';
+import { measureReadingEdges, READING_EDGE_FADE } from '../lib/reading-edges.ts';
 
-/** Navigation targets the readable world below any overlapping fixed controls. */
-function readingClearance(history: HTMLElement): number {
+/** Navigation targets the readable world clear of top and bottom fixed controls and their reading fade. */
+function readingClearance(history: HTMLElement): { top: number; bottom: number } {
+  const viewer = history.closest<HTMLElement>('.viewer');
+  if (!viewer) return { top: 16, bottom: 16 };
+  const edges = measureReadingEdges(viewer);
   const bounds = history.getBoundingClientRect();
-  let top = bounds.top;
-  for (const control of history.closest('.viewer')?.querySelectorAll<HTMLElement>('.workspace-header, .workspace-bar') ?? []) {
-    const rect = control.getBoundingClientRect();
-    if (rect.width > 0 && rect.right > bounds.left && rect.left < bounds.right && rect.top <= bounds.top + 240) top = Math.max(top, rect.bottom);
-  }
-  return Math.max(16, top - bounds.top + 16);
+  const viewerRect = viewer.getBoundingClientRect();
+  const topOverlap = Math.max(0, viewerRect.top + edges.top - bounds.top);
+  const bottomOverlap = Math.max(0, bounds.bottom - (viewerRect.bottom - edges.bottom));
+  return {
+    top: Math.max(16, topOverlap + (edges.top > 0 ? READING_EDGE_FADE : 16)),
+    bottom: Math.max(16, bottomOverlap + (edges.bottom > 0 ? READING_EDGE_FADE : 16)),
+  };
 }
 
 // Reading-window remounts do not repeat an outcome already shown in this live view.
@@ -577,9 +582,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     const bounds = selected ? selected.getBoundingClientRect() : nodeBounds;
     const viewportBounds = el.getBoundingClientRect();
     const clearance = readingClearance(el);
-    const available = Math.max(0, el.clientHeight - clearance);
+    const available = Math.max(0, el.clientHeight - clearance.top - clearance.bottom);
     const scrollBefore = el.scrollTop;
-    if (bounds.top < viewportBounds.top + clearance || bounds.bottom > viewportBounds.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - clearance - Math.max(0, (available - bounds.height) / 2));
+    if (bounds.top < viewportBounds.top + clearance.top || bounds.bottom > viewportBounds.bottom - clearance.bottom) setScrollTop(el.scrollTop + bounds.top - viewportBounds.top - clearance.top - Math.max(0, (available - bounds.height) / 2));
     // Anchor reading to the navigated passage itself. Passages above may still carry estimated
     // heights; anchoring to whichever slot was first visible let their measurement pull the
     // reader away from the action just opened.
@@ -739,7 +744,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
           navigationBoundary.current = { step: scene.step, projection };
           chapterNavigation.current = onWindow && ps.unloaded ? { id: ps.id, step: scene.step } : undefined;
           setFocusedPassageId(ps.id);
-          readingAnchor.current = { id: ps.id, offset: ref.current ? readingClearance(ref.current) : 16 }; readingAtStart.current = false;
+          readingAnchor.current = { id: ps.id, offset: ref.current ? readingClearance(ref.current).top : 16 }; readingAtStart.current = false;
           setScrollTop(layout.prefix[index]!);
           if (onWindow && ps.unloaded) void onWindow({ start: Math.max(0, index - 8), count: 32, pinnedPassageIds: [ps.id] }).catch(error => set({ error: error.message }));
         }} />}
