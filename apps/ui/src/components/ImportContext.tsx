@@ -3,13 +3,13 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../state.ts';
 import { repositoryNeighbors } from '../lib/repository-context.ts';
 import { FileIcon } from './FileIcon.tsx';
-import { useSessionWorkspace } from './SessionWorkspace.tsx';
+import { useReadingWorkspace } from './SessionWorkspace.tsx';
 
 /** Optional current-index context; never an explanation of a historical action. */
 export function ImportContext({ path, current = false, openCurrent, hideEmpty = false }: { path: string; current?: boolean; openCurrent?: (path: string) => void; hideEmpty?: boolean }) {
   const graph = useApp(s => s.graph);
   const source = useApp(s => s.source);
-  const { workspace, approve } = useSessionWorkspace();
+  const { workspace, approve } = useReadingWorkspace();
   const id = useApp(s => s.recordingId);
   const [page, setPage] = useState(0);
   const [opening, setOpening] = useState<string>();

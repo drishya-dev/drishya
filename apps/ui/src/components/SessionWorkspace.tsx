@@ -1,3 +1,4 @@
+import {setCheckoutContext} from '../api.ts';
 import './worktree-evidence.css';
 import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {ProseFilesProvider} from './ProseFiles.tsx';
@@ -27,6 +28,7 @@ import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './Evide
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type PromptAttachment, type TurnOptions } from '../api.ts';
 import { pastedFiles, promptFiles, promptSizeNote, PROMPT_BYTES, utf8Bytes, attachmentBytes } from '../lib/prompt-files.ts';
 import { promptDrafts } from '../lib/prompt-drafts.ts';
+import {workspaceMemory} from '../lib/workspace-memory.ts';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNowText } from './NowWatcher.tsx';
 import { ComposerMenu } from './ComposerMenu.tsx';
@@ -53,10 +55,29 @@ interface Connection {
 }
 const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {}, submit: async () => {} });
 export const useSessionWorkspace = () => useContext(SessionContext);
+const ReadingContext=createContext<Pick<Connection,'workspace'|'approve'>>({approve:async()=>{}});
+export const useReadingWorkspace=()=>useContext(ReadingContext);
+
 
 export function SessionWorkspaceProvider({ children }: { children: ReactNode }) {
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
+  const checkoutId=useApp(s=>s.checkoutId);
+  const developerWorkspace=useApp(s=>s.developerWorkspace);
+  const [readingWorkspace,setReadingWorkspace]=useState<WorkspaceStatus&{checkoutId:string}>();
+  const [readingRevision,setReadingRevision]=useState(0);
+  useEffect(()=>{const refresh=()=>setReadingRevision(value=>value+1);window.addEventListener('drishya-checkout-changed',refresh);return()=>window.removeEventListener('drishya-checkout-changed',refresh);},[]);
+  useEffect(()=>{
+    setReadingWorkspace(undefined);
+    if(!checkoutId)return;
+    let active=true;
+    void workspaceApi.status(checkoutId).then(value=>{if(active)setReadingWorkspace({...value,checkoutId});}).catch(()=>{});
+    return()=>{active=false;};
+  },[checkoutId,source,readingRevision]);
+  useEffect(()=>{
+    // Workspace editing remains attached to the native session's real working root.
+    if(developerWorkspace&&checkoutId){if(id)setCheckoutContext(id);useApp.setState({checkoutId:undefined,checkoutRoot:undefined,checkoutPrefix:undefined,graph:undefined,currentFile:undefined});}
+  },[developerWorkspace,checkoutId]);
   const connection=useApp(s=>s.connection),screen=useApp(s=>s.screen);
   const [acknowledged,acknowledge]=useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceStatus>();
@@ -100,11 +121,11 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
   // Consent belongs to this selected-session connection, never to a saved checkout or turn.
   useEffect(()=>{if(connection!=='connected'||screen!=='viewer'||controller?.state==='failed'||controller?.available===false||workspace?.approved===false)acknowledge(false);},[connection,screen,controller?.state,controller?.available,workspace?.approved]);
   useEffect(()=>{
-    if(!eligible||!workspace?.approved)return;
+    if(!eligible||!workspace?.approved||checkoutId)return;
     let active=true;
     void source!.graph(id!).then(graph=>{if(active&&useApp.getState().source===source&&useApp.getState().recordingId===id)useApp.setState({graph});}).catch(()=>{});
     return()=>{active=false;};
-  },[id,source,workspace?.approved]);
+  },[id,source,workspace?.approved,checkoutId]);
   useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
   const approve = async (remember=false) => {
     if (!eligible) return;
@@ -113,7 +134,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     const graph = await source!.graph(id!);
     if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
     ++revision.current;
-    setWorkspace(w); useApp.setState({ graph });
+    setWorkspace(w); if(!useApp.getState().checkoutId)useApp.setState({ graph });
   };
   const inspect = async () => {
     if (!eligible) return;
@@ -128,7 +149,14 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     catch(error){acknowledge(false);throw error;}
     finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
-  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ProseFilesProvider approved={!!workspace?.approved}>{children}</ProseFilesProvider></SessionContext.Provider>;
+  const approveReading=async(remember=false)=>{
+    if(!checkoutId)return approve(remember);
+    const target=checkoutId;
+    const value=await workspaceApi.approve(target,remember);
+    const graph=await source!.graph(target);
+    if(useApp.getState().checkoutId===target){setReadingWorkspace({...value,checkoutId:target});useApp.setState({graph});}
+  };
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ReadingContext.Provider value={{workspace:checkoutId?readingWorkspace?.checkoutId===checkoutId?readingWorkspace:undefined:workspace,approve:approveReading}}><ProseFilesProvider approved={!!(checkoutId?readingWorkspace?.checkoutId===checkoutId?readingWorkspace:undefined:workspace)?.approved}>{children}</ProseFilesProvider></ReadingContext.Provider></SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
@@ -168,7 +196,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const id = useApp(s => s.recordingId);
   const graph = useApp(s => s.graph);
   const files = useApp(s => s.projection?.files);
-  const capturedRoot=useApp(s=>s.recording?.workspaceRoot);
+  const capturedRoot=useApp(s=>s.checkoutRoot??s.recording?.workspaceRoot);
+  const checkoutId=useApp(s=>s.checkoutId),readingId=checkoutId??id;
+  const [switching,setSwitching]=useState(false);
   const [touchedOnly, setTouchedOnly] = useState(false);
   const [rootRefresh,setRootRefresh]=useState(0);
   const fileRoots=useFileRoots(projection.observationCount+rootRefresh);
@@ -176,7 +206,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const touched = useMemo(() => touchedFiles(files ?? []), [files]);
   const hidden = useApp(s => s.foldersHidden);
   const narrow = useNarrowWorkspace(), developerWorkspace = useApp(s => s.developerWorkspace);
-  const memory=useWorkspaceMemory();
+  const memory=useWorkspaceMemory(readingId);
   // Primitive snapshots stay stable during unrelated document/scroll writes. The
   // state hook is owner-local; a second copy would miss Workspace tab changes.
   const workspaceSnapshot=useSyncExternalStore(subscribeWorkspaceFiles,()=>{
@@ -202,18 +232,18 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     useApp.setState({ foldersHidden: true });
     if (returnFocus && narrow) document.querySelector<HTMLElement>(developerWorkspace ? '.developer-workspace [data-workspace-files-trigger]' : '.workspace-bar [data-workspace-files-trigger]')?.focus({ preventScroll: true });
   };
-  const { workspace, approve } = useSessionWorkspace();
-  const [query, setQuery] = useWorkspaceState('folders/query', '');
+  const { workspace, approve } = useReadingWorkspace();
+  const [query, setQuery] = useWorkspaceState('folders/query', '',readingId);
   const [approving,setApproving] = useState(false);
   const [remember,setRemember]=useState(true);
-  const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
+  const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']),readingId);
   useLayoutEffect(()=>{
     const next=canonicalFileFolders(opened,fileRoots,capturedRoot ?? projection.workspaceRoot);
     if(next!==opened)setOpened(next);
   },[opened,fileRoots,capturedRoot,projection.workspaceRoot,setOpened]);
   useEffect(()=>{const reveal=(event:Event)=>{const path=(event as CustomEvent).detail;if(typeof path==='string'){setQuery(path);setTouchedOnly(false);}};window.addEventListener('drishya-reveal-captured-file',reveal);return()=>window.removeEventListener('drishya-reveal-captured-file',reveal);},[setQuery,setTouchedOnly]);
   const treeElement = useRef<HTMLDivElement>(null);
-  const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
+  const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0,readingId);
   const [treeHeight, setTreeHeight] = useState(600);
   const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
@@ -228,9 +258,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   useEffect(() => {
     if (graph || !source || !id) return;
     let active = true; setError(undefined);
-    void source.graph(id).then(g => { if (active && useApp.getState().recordingId === id) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
+    void source.graph(readingId!).then(g => { if (active && useApp.getState().recordingId === id && (useApp.getState().checkoutId??id)===readingId) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, graph, graphRetry]);
+  }, [source, id, readingId, graph, graphRetry]);
   const candidatePaths = useMemo(() => {
     const paths=[...(graph?.nodes.map(n=>n.path)??[]),...(files?.map(f=>f.path)??[])].filter(p=>!(graph?.temporal==='current'&&p.startsWith('.local/'))&&!p.startsWith('/')&&!/^[A-Za-z]:/.test(p));
     if(developerWorkspace)paths.push(...draftFiles);
@@ -370,11 +400,33 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     else if((index+1)*rowHeight>element.scrollTop+element.clientHeight)element.scrollTop=(index+1)*rowHeight-element.clientHeight;
     setTreeScroll(element.scrollTop);
   },[tree,shown,treeHeight,query,touchedOnly,opened,activeReveal,setTreeScroll]);
-  const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
+  const choose=async(prefix?:string)=>{
+    if(!source||!id||switching)return;
+    setSwitching(true);setError(undefined);
+    try {
+      const choice=await workspaceApi.chooseCheckout(id,prefix);
+      if(useApp.getState().source!==source||useApp.getState().recordingId!==id)return;
+      memory.set('peek/last',useApp.getState().currentFile);
+      const target=workspaceMemory(source).session(choice.id);
+      setCheckoutContext(id,choice.id);
+      useApp.setState({checkoutId:choice.id===id?undefined:choice.id,checkoutRoot:choice.id===id?undefined:choice.root,checkoutPrefix:choice.prefix,graph:undefined,currentFile:target.get('peek/last') as string|undefined,filePanel:undefined});
+      window.dispatchEvent(new Event('drishya-checkout-changed'));
+    } catch(error){setError((error as Error).message);}
+    finally{setSwitching(false);}
+  };
+  const rootName = (workspace?.root??capturedRoot)?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
+  const checkoutPicker=(source?.kind==='daemon'&&fileRoots.some(root=>(root.fileCount??0)>0&&currentWorkspacePath(root.prefix+'/file',fileRoots,useApp.getState().recording?.workspaceRoot)===undefined)&&<details className="desk-options checkout-picker">
+      <summary aria-label="Choose browsing checkout">{switching?'Switching…':rootName}<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5z"/></svg></summary>
+      <div className="desk-options-body" role="group" aria-label="Recorded checkouts">
+        <button className="btn ghost" aria-pressed={!checkoutId} disabled={switching||developerWorkspace} onClick={event=>{event.currentTarget.closest('details')!.open=false;void choose();}}>Session checkout</button>
+        {fileRoots.filter(root=>(root.fileCount??0)>0&&currentWorkspacePath(root.prefix+'/file',fileRoots,useApp.getState().recording?.workspaceRoot)===undefined).sort((a,b)=>Number(b.onDisk==='present')-Number(a.onDisk==='present')||(b.lastFileSequence??0)-(a.lastFileSequence??0)).map(root=><button className="btn ghost" key={root.prefix} title={root.root} data-checkout={root.prefix} aria-pressed={useApp.getState().checkoutPrefix===root.prefix} disabled={switching||developerWorkspace||root.onDisk!=='present'} onClick={event=>{event.currentTarget.closest('details')!.open=false;void choose(root.prefix);}}>{root.branch??root.root.replace(/\\/g,'/').split('/').at(-1)}{root.onDisk==='removed'?' · removed':root.onDisk!=='present'?' · unavailable':''}</button>)}
+      </div>
+    </details>);
   if (!shown) return null;
   return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(260)} label="Resize Files reading space" />}
-    <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
+    <header><div className="folder-root" title={workspace?.root}>{checkoutPicker||rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
+
     <div className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={modern ? 'Find repository files' : 'Find session files'} placeholder={touchedOnly?'Find touched files…':'Find files…'} maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}
       <details className="desk-options tree-evidence-filter" data-touched={touchedOnly} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.open){event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}>
         <summary aria-label="File filters" title={touchedOnly?'File filters · Touched':'File filters'}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M5 10h10M8 16h4" strokeWidth="1.5"/></svg></summary>
@@ -410,7 +462,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         else if (row.unplaced || row.location && currentPath===undefined) useApp.getState().set({filePanel:row.path,currentFile:undefined,...(narrow?{foldersHidden:true}:{})});
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: currentPath ?? row.path }));
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
-        else useApp.getState().set({...(workspace?.approved ? { currentFile: currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
+        else useApp.getState().set({...(workspace?.approved ? { currentFile: checkoutId?row.path:currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
       }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} />{row.metadata?<span className="worktree-root-text" title={row.description}><FileRowName name={row.name} folder={row.folder}/><small className="muted">{row.metadata}</small></span>:<FileRowName name={row.name} folder={row.folder}/>}{row.count!==undefined&&<small className="muted" aria-hidden="true">{row.count}</small>}<FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
@@ -420,30 +472,32 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
 
 export function CurrentFileReader() {
   const path=useApp(s=>s.currentFile),id=useApp(s=>s.recordingId),explore=useApp(s=>s.explore),inWorkspace=useApp(s=>s.developerWorkspace);
+  const checkoutId=useApp(s=>s.checkoutId),prefix=useApp(s=>s.checkoutPrefix),readingId=checkoutId??id;
   const modern=document.documentElement.dataset.uiVersion==='modern';
-  const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]}),[error,setError]=useState('');
+  const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]},readingId),[error,setError]=useState('');
   const tabs=useMemo(()=>filePeekState(saved),[saved]);
-  const select=(next:string)=>useApp.getState().set({currentFile:next,filePanel:undefined,selectedOp:undefined});
-  const open=(next:string,pin=false)=>{const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
+  const qualify=(next:string)=>prefix&&!/^worktree-[a-f0-9]{10}\//.test(next)?`${prefix}/${next}`:next;
+  const select=(next:string)=>useApp.getState().set({currentFile:qualify(next),filePanel:undefined,selectedOp:undefined});
+  const open=(next:string,pin=false)=>{next=qualify(next);const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
   useEffect(()=>{if(modern&&path&&!explore&&!tabs.files.includes(path)&&tabs.preview!==path)setSaved(openFilePeek(tabs,path).state);},[modern,path,explore,tabs]);
   useEffect(()=>{
     const receive=(event:Event)=>{const request=(event as CustomEvent<{path:string;pin?:boolean}>).detail;if(!modern||!id||!request||typeof request.path!=='string')return;open(request.path,request.pin);};
     window.addEventListener('drishya-preview-file',receive);return()=>window.removeEventListener('drishya-preview-file',receive);
-  },[modern,id,tabs]);
+  },[modern,id,tabs,prefix]);
   // Keep the selected peek location while the full Workspace owns the screen.
   if(!path||!id||inWorkspace)return null;
   const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setSaved(next);setError('');if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
-  return <CurrentDocument key={id} id={id} path={path} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
+  return <CurrentDocument key={readingId} id={readingId!} path={path} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
 }
 function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:ReactNode }) {
-  const memory=useWorkspaceMemory();
+  const memory=useWorkspaceMemory(id);
   const source=useApp(s=>s.source),revision=useApp(s=>s.projection?.observationCount??0);
   const fileRoots=useFileRoots(revision);
   const modern=document.documentElement.dataset.uiVersion==='modern';
   const explore = useApp(s => s.explore);
   const narrow=useNarrowWorkspace();
-  const {workspace,approve}=useSessionWorkspace();
-  const recordedPath=currentFileOrigin(source,id,path,fileRoots,workspace?.root);
+  const {workspace,approve}=useReadingWorkspace();
+  const recordedPath=currentFileOrigin(source,id.split('~')[0]!,path,fileRoots,workspace?.root);
   const projection=useApp(s=>s.projection),target=currentReadingTarget(path,fileRoots,workspace?.root??projection?.workspaceRoot);
   const [granting,setGranting]=useState(false),[grantError,setGrantError]=useState('');
   const [start, setStart] = useEvidenceState('disk/start', 0);
@@ -489,7 +543,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   const returnToChanges = peek && memory.get('compare/return') === true ? <button className="btn ghost" aria-label="Return to Changes" title="Return to Changes" onClick={() => openChanges()}>← Changes</button> : undefined;
   const refusal=target.reason??currentReadingFailure(error)??currentReadingFailure(grantError);
   if(projection&&!file&&refusal)return <ReadingDialog title={path} close={()=>useApp.setState({currentFile:undefined})} className="current-file-reader file-peek-reader" modeless floating headerExtra={tabs} headerActions={returnToChanges}><CapturedFileFallback path={recordedPath??path} projection={projection} reason={refusal}/></ReadingDialog>;
-  const fileActions=<><button disabled={!target.path} className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open this current file in Workspace for split views and local drafts">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Agent work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Agent work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button>{!narrow&&<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace compact/>}</>;
+  const fileActions=<><button disabled={!target.path||id.includes('~')} className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title={id.includes('~')?'Workspace edits belong to the session checkout; return there to edit.':'Open this current file in Workspace for split views and local drafts'}>{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Agent work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Agent work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button>{!narrow&&<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace compact/>}</>;
   const lineControls=<form className="source-go" onSubmit={e=>{e.preventDefault();go();}}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e=>{setLineInput(e.target.value);setLineError(undefined);}}/><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={()=>setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>;
   const phoneOptions=<details className="desk-options current-reader-options" onKeyDown={event=>{if(event.key!=='Escape'||!event.currentTarget.open)return;event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector<HTMLElement>(':scope>summary')?.focus({preventScroll:true});}}><summary aria-label="Reading options" title="Reading options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 3v6M15 9v6M9 15v6"/></svg></summary><div>
    <span className="reader-source-context">{file?`${current.candidate?'Retained snapshot':'On disk'} · ${file.totalLines} lines${file.redacted?' · secrets redacted':''}`:'Current file not loaded'}</span>

@@ -11,8 +11,9 @@ const noRoots:ReturnType<typeof useFileRoots>=[];
 /** One shared evidence index for the conversation, not a filesystem lookup for each sentence. */
 export function ProseFilesProvider({children,approved}:{children:ReactNode;approved:boolean}){
  const loaded=useApp(s=>s.projection),page=useApp(s=>s.historyPage),step=useApp(s=>s.step),graph=useApp(s=>s.graph),recording=useApp(s=>s.recording);
+ const checkoutRoot=useApp(s=>s.checkoutRoot);
  const projection=useMemo(()=>page?.projection??(loaded?asOfProjection(loaded,step):undefined),[loaded,page?.projection,step]);
- const loadedRoots=useFileRoots(projection?.observationCount??0),roots=loadedRoots.length?loadedRoots:noRoots,root=recording?.workspaceRoot??projection?.workspaceRoot;
+ const loadedRoots=useFileRoots(projection?.observationCount??0),roots=loadedRoots.length?loadedRoots:noRoots,root=checkoutRoot??recording?.workspaceRoot??projection?.workspaceRoot;
  const source=useApp(s=>s.source),id=useApp(s=>s.recordingId);
  const [image,setImage]=useState<{source:typeof source;id:typeof id;operation:string;url:string;image:NonNullable<NonNullable<typeof projection>['operations'][number]['images']>[number]}>();
  const [pathImage,setPathImage]=useState<{source:typeof source;id:typeof id;path:string;op:Operation}>();

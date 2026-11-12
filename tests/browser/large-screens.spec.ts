@@ -1,8 +1,5 @@
-// LAYOUT-1: past --stage-max (1920 px) the working composition is one centred stage, so extra width becomes map, never a wider
-// gap between a dock and the thing it belongs to. Browser zoom changes the CSS viewport width in the same way (67 % of a
-// 1440 px window is 2149 CSS px), so widths here stand for both large monitors and zoom-out. The stage never moves at or
-// below 1920 px, and 600 px must not overflow sideways.
-// LAYOUT-1b revert (Yash, 11 Nov): the interface size is never derived from the viewport; browser zoom and OS scaling own it.
+// LAYOUT-1c: the stage cap is physical; browser zoom/OS scaling alone choose text size.
+// Laptop/desktop zoom-out fills the window, while a physically ultrawide stage stays centred.
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -10,7 +7,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
-const STAGE_MAX = 1920;
+const STAGE_MAX = 2560;
 let dir: string, app: App, server: RunningServer, recording: string;
 
 test.beforeAll(async () => {
@@ -56,7 +53,7 @@ async function open(page: Page, width: number, height = 900) {
   await page.goto(server.launchUrl);
   await page.locator('.home').waitFor();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${recording}`);
-  if (width <= 820) return; // the Files panel is a drawer at phone widths; only overflow is checked there
+  if (width <= 820) return; // the Files panel is a drawer at narrow supported windows; only overflow is checked there
   const grant = page.getByRole('button', { name: /^Enable workspace reading/ });
   const explorer = page.locator('.folder-explorer');
   await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();
@@ -73,7 +70,7 @@ const span = (page: Page, selector: string) => page.evaluate((s) => {
   return r && r.width > 0 ? { left: r.left, right: r.right } : null;
 }, selector);
 
-for (const width of [1440, 1920, 2149, 2560, 3840]) {
+for (const width of [1440, 1920, 2149, 2560, 3840, 5120]) {
   test(`${width}px: every dock, the column, the Workspace and the peek stay inside the stage`, async ({ page }) => {
     await open(page, width);
     const edge = Math.max(0, (width - STAGE_MAX) / 2), inside = (box: { left: number; right: number } | null, name: string) => {
@@ -90,7 +87,7 @@ for (const width of [1440, 1920, 2149, 2560, 3840]) {
     await expect(page.locator('.file-peek-reader[open]')).toBeVisible();
     const peek = (await span(page, '.file-peek-reader'))!;
     inside(peek, 'file peek');
-    // The build writes --stage-max in rem; the peek must still resolve it to 1920 px, not collapse to a sliver.
+    // The peek must resolve the same calc/rem CSS limit as the docks, not parse the expression as a number.
     expect(peek.right - peek.left, 'file peek keeps its reading width').toBeGreaterThanOrEqual(360);
     expect(Math.abs(peek.right - (Math.min(width, STAGE_MAX) + edge - 48)), 'file peek docks 48 px inside the stage edge').toBeLessThan(1.5);
 
@@ -144,3 +141,19 @@ for (const [width, height] of [[1440, 900], [1920, 1080], [2560, 1440]]) {
     }
   });
 }
+
+for(const ratio of [1,.8,.67,.5,.33])test(`1920 device px at ${ratio}: zoom leaves docks at the edges`,async({browser})=>{
+ const context=await browser.newContext({viewport:{width:Math.round(1920/ratio),height:Math.round(1080/ratio)},deviceScaleFactor:ratio});try{const page=await context.newPage();await open(page,Math.round(1920/ratio),Math.round(1080/ratio));
+ await expect(page.locator('html')).not.toHaveAttribute('data-stage-limited');expect(await page.evaluate(()=>getComputedStyle(document.documentElement).fontSize)).toBe('16px');
+ expect((await span(page,'.workspace-leading'))!.left).toBeLessThan(25);expect((await page.evaluate(()=>innerWidth))-(await span(page,'.workspace-utilities'))!.right).toBeCloseTo(30,1);
+ if(ratio<1)expect((await span(page,'.history-inner'))!.right-(await span(page,'.history-inner'))!.left).toBeGreaterThan(1280);
+ await expect(page.locator('.history .prose').first()).toHaveCSS('font-size','15px');
+ const ratioValue=await page.evaluate(()=>Number(getComputedStyle(document.documentElement).getPropertyValue('--device-ratio')));expect(ratioValue).toBeCloseTo(ratio,3);
+ }finally{await context.close();}
+});
+
+test('ratio-only changes update the physical cap and retain one stable final dock position',async({browser})=>{
+ const context=await browser.newContext({viewport:{width:1920,height:1080},deviceScaleFactor:1});try{const page=await context.newPage();await open(page,1920,1080);const cdp=await context.newCDPSession(page);
+ for(const ratio of [.8,.67,.5,.33,1]){await cdp.send('Emulation.setDeviceMetricsOverride',{width:Math.round(1920/ratio),height:Math.round(1080/ratio),deviceScaleFactor:ratio,mobile:false});await expect.poll(()=>page.evaluate(()=>Number(document.documentElement.style.getPropertyValue('--device-ratio')))).toBeCloseTo(ratio,3);await expect(page.locator('html')).not.toHaveAttribute('data-stage-limited');const left=(await span(page,'.workspace-leading'))!.left;await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));expect((await span(page,'.workspace-leading'))!.left).toBeCloseTo(left,1);expect(left).toBeLessThan(25);}
+ }finally{await context.close();}
+});
