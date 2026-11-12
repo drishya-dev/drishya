@@ -270,6 +270,7 @@ html[data-section="features"] .backdrop { opacity: .34; }
 .feature-lenses span + span::before { content: '·'; position: absolute; left: -12px; color: var(--line-2); }
 .features-grid { transform: translateY(clamp(96px, 13vh, 128px)); }
 .feat-window { width: min(100%, calc(68svh * 1.6)); }
+@media (min-width: 900px) { .feat-stage { transform: translateY(clamp(-38px, -4vh, -20px)); } }
 .feat-steps .step-tag { border: 0; padding: 0; color: var(--accent-2); }
 .compare-hint { margin-top: 12px; color: var(--t3); font-size: 13px; }
 .compare-proof-kicker { color: var(--accent-2); }
