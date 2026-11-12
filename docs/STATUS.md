@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-32b | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32b` | 2026-11-12 | `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/recovered-surfaces.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/large-screens.css`, `History.tsx`, `Viewer.tsx`, `tests/browser/toolbox-window.spec.ts`, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
 | FILES-16b | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-16b` | 2026-11-12 | `SessionWorkspace.tsx` (checkout picker), `worktree-files.ts` / picker helper, `worktree-evidence.css`, units, `tests/browser/files-16b-picker.spec.ts`, TASKS/STATUS/review record; no MOTION-4 owners. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
@@ -58,6 +57,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash — 12 Nov: UI-32b Toolbox Y-axis centering and zero screen shift (PR #424)
+
+- **Root causes ([ui-32b-toolbox-centering.md](review/ui-32b-toolbox-centering.md)):** idle `.queued-input-receipts` toggled button `visibility: hidden` when Follow turned off, dropping `--composer-raised-gap` from `44 px` to `0 px` and shifting History scroll, passages, and Toolbox by `44 px`; `PromptRail.tsx` started at `bottom = 48` (`10 px` jump when `.follow-pill` appeared); wide desktop (`>= 1020 px`) still constrained `.toolbox-rail` with `--composer-gap + --composer-raised-gap` even though the centered composer never overlaps Toolbox columns.
+- **Fix:** keep `--composer-raised-gap` constant for `.queued-input-receipts` (`SessionWorkspace.tsx`), initialize `PromptRail` clearance at `bottom = 58` (`PromptRail.tsx`), release `.toolbox-rail` bottom clearance to `58 px` (`96 px` with replay transport) at `min-width: 1020px` (`toolbox-dock.css`), and center `.modern-tool-station` on `innerHeight / 2` clamped within `.toolbox-rail` using unscaled `offsetHeight` (`ModernToolStation.tsx`).
+- **Checks:** genuine local Claude Code (`rec_061e5f2d`, 7.15 MB) and Codex (`rec_7cb1cda1`, 15.02 MB) sessions across `1440×900` & `600×900` in `jet`, `midnight`, and `paper` measured `0 px` centering error and `0 px` pixel shift on Follow toggles/Back-to-latest; `typecheck`, `ui:build`, 116 UI unit files (570 passed, 1 existing skip), and 9 targeted Edge browser specs (**68 passed / 0 failed**). Private frames in `.local/ui-32b/`.
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: GIT-10 complete for Opus review, PR #422
 
