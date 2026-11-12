@@ -38,7 +38,7 @@
 .composer-menu-trigger svg.composer-chevron { width:11px; height:11px; }
 .composer-menu-trigger.composer-attach { width:28px; padding:0; justify-content:center; }
 .composer-menu-trigger:is(:hover,[aria-expanded=true]):not(:disabled) { background:var(--s3); color:var(--t1); }
-.composer-menu-trigger:focus-visible { outline:1px solid var(--focus); outline-offset:1px; }
+:root:not([data-input-modality="pointer"]) .composer-menu-trigger:focus-visible { outline:1px solid var(--focus-ring); outline-offset:1px; }
 .composer-menu-trigger:disabled { opacity:.5; cursor:default; }
 .composer-menu-trigger[aria-expanded=true] svg.composer-chevron { transform:rotate(180deg); }
 

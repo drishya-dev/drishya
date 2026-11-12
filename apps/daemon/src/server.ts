@@ -370,6 +370,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
+      if(sub==='git'&&subId==='generation'&&m==='GET')return json(res,await gitReview.generation(id));
       if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
       if(sub==='git'&&subId==='compare-refs'&&m==='GET')return json(res,await gitCompare.refs(id));
       if(sub==='git'&&subId==='compare'&&m==='GET')return json(res,await gitCompare.compare(id,{base:url.searchParams.get('base')??'',head:url.searchParams.get('head')??''}));

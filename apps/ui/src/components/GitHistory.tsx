@@ -1,9 +1,11 @@
 import {GitBranchHeader} from './GitBranchHeader.tsx';
 import {withGitPage} from '../lib/git-history-window.ts';
-import {useEffect,useMemo,useRef,useState,type CSSProperties} from 'react';
+import {gitHistoryStore,type GitHistorySnapshot} from '../lib/git-history-cache.ts';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
 import type {GitHistoryPage,GitCommitDetail} from '../../../daemon/src/git-types.ts';
 import {gitSessionLinkDescription} from '../../../daemon/src/git-types.ts';
-import {workspaceApi} from '../api.ts';
+import {HttpError,workspaceApi} from '../api.ts';
 import {useApp} from '../state.ts';
 import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
 import {useNarrowWorkspace} from '../lib/responsive-workspace.ts';
@@ -34,7 +36,7 @@ export function GitHistory() {
   const checkoutId=useApp(s=>s.checkoutId);
   const [open,setOpen]=useState(false),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),changesOpen=useApp(s=>s.compareOpen);
   useEffect(()=>{
-    const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;state.set({developerWorkspace:false,compareOpen:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});setOpen(true);};
+    const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;const next:Partial<typeof state>={};if(state.developerWorkspace)next.developerWorkspace=false;if(state.compareOpen)next.compareOpen=false;if(state.currentFile!==undefined)next.currentFile=undefined;if(state.filePanel!==undefined)next.filePanel=undefined;if(state.selectedOp!==undefined)next.selectedOp=undefined;if(state.follow)next.follow=false;if(!state.held)next.held=true;if(Object.keys(next).length)state.set(next);setOpen(true);};
     window.addEventListener('drishya-git-history',show);return()=>window.removeEventListener('drishya-git-history',show);
   },[]);
   useEffect(()=>setOpen(false),[id,source,mode]);
@@ -43,24 +45,62 @@ export function GitHistory() {
   return open&&id?<GitHistoryReader key={`${id}:${checkoutId??"main"}`} id={id} close={()=>{setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({preventScroll:true}));}}/>:null;
 }
 
+const FOCUSABLE='button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex]:not([tabindex="-1"])';
+let atlasModalRoots=0;
+
 function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
-  const checkoutId=useApp(s=>s.checkoutId);
+  const source=useApp(s=>s.source),checkoutId=useApp(s=>s.checkoutId);
+  const targetId=checkoutId??id,cacheScope=source??'default',cacheKey=`${id}:${checkoutId??'main'}`;
+  const initialRef=useRef<{hydrated:boolean;snapshot?:GitHistorySnapshot}>(undefined);
+  if(!initialRef.current){
+    const snapshot=gitHistoryStore.get(cacheScope,cacheKey);
+    initialRef.current={hydrated:!!(snapshot?.approved&&snapshot.value&&snapshot.pages.size>0),snapshot};
+  }
+  const initial=initialRef.current.snapshot,hydrated=initialRef.current.hydrated;
   const {workspace,approve}=useReadingWorkspace(),narrow=useNarrowWorkspace();
   const [width,setWidth]=useWorkspaceState('git/historyWidth',1180);
   // Unknown until the status read returns: an already-approved repository must not flash its access prompt.
-  const [approved,setApproved]=useState<boolean>(),[granting,setGranting]=useState(false);
-  const [start,setStart]=useState(0),[reference,setReference]=useState('all'),[referenceStart,setReferenceStart]=useState(0);
-  const [query,setQuery]=useState(''),[filter,setFilter]=useState(''),[retry,setRetry]=useState(0);
-  const [value,setValue]=useState<{key:string;data:GitHistoryPage}>(),[error,setError]=useState(''),[loading,setLoading]=useState(false);
-  const [selected,setSelected]=useState(''),[parent,setParent]=useState(0),[fileStart,setFileStart]=useState(0);
-  const [detail,setDetail]=useState<GitCommitDetail>(),[detailError,setDetailError]=useState(''),[detailLoading,setDetailLoading]=useState(false),[path,setPath]=useState('');
-  const [refsOpen,setRefsOpen]=useState(false),[reading,setReading]=useState(false),[copied,setCopied]=useState(false);
-  const [rowsOpen,setRowsOpen]=useWorkspaceState('git/rows',true),[hoverRow,setHoverRow]=useState(''),[hoverRef,setHoverRef]=useState(''),[hoverGraph,setHoverGraph]=useState(''),[reveal,setReveal]=useState<{hash:string;n:number}>(),[allRefs,setAllRefs]=useState(false);
-  const generation=useRef<string|undefined>(undefined);
+  const [approved,setApproved]=useState<boolean|undefined>(()=>initial?.approved?true:undefined),[granting,setGranting]=useState(false);
+  const [start,setStart]=useState(()=>initial?.start??0),[reference,setReference]=useState(()=>initial?.reference??'all'),[referenceStart,setReferenceStart]=useState(()=>initial?.referenceStart??0);
+  const [query,setQuery]=useState(()=>initial?.query??''),[filter,setFilter]=useState(()=>initial?.filter??''),[retry,setRetry]=useState(()=>initial?.retry??0);
+  const [value,setValue]=useState<{key:string;data:GitHistoryPage}|undefined>(()=>initial?.value),[error,setError]=useState(''),[loading,setLoading]=useState(false);
+  const [selected,setSelected]=useState(()=>initial?.selected??''),[parent,setParent]=useState(()=>initial?.parent??0),[fileStart,setFileStart]=useState(()=>initial?.fileStart??0);
+  const [detail,setDetail]=useState<GitCommitDetail|undefined>(()=>initial?.detail),[detailError,setDetailError]=useState(''),[detailLoading,setDetailLoading]=useState(false),[path,setPath]=useState(()=>initial?.path??'');
+  const [refsOpen,setRefsOpen]=useState(false),[reading,setReading]=useState(()=>initial?.reading??false),[copied,setCopied]=useState(false);
+  const [rowsOpen,setRowsOpen]=useWorkspaceState('git/rows',true),[hoverRow,setHoverRow]=useState(''),[hoverRef,setHoverRef]=useState(''),[hoverGraph,setHoverGraph]=useState(''),[reveal,setReveal]=useState<{hash:string;n:number}>(),[allRefs,setAllRefs]=useState(()=>initial?.allRefs??false);
+  const generation=useRef<string|undefined>(initial?.value?.data.generation);
   const enqueue=<T,>(read:()=>Promise<T>)=>enqueueGitRead(id,read);
   const key=`${start}/${reference}/${referenceStart}/${filter}/${retry}`,data=value?.data;
-  const [pages,setPages]=useState<Map<number,GitHistoryPage>>(new Map());
-  const mainSeeds=useRef(new Set<string>());
+  const [pages,setPages]=useState<Map<number,GitHistoryPage>>(()=>initial?new Map(initial.pages):new Map());
+  const mainSeeds=useRef(new Set<string>(initial?.mainSeeds??[]));
+  const viewRef=useRef<{scale:number;scrollLeft?:number;rowsScrollTop?:number}>({scale:initial?.scale??1,scrollLeft:initial?.scrollLeft,rowsScrollTop:initial?.rowsScrollTop});
+  const detailCacheRef=useRef<Map<string,{detail:GitCommitDetail;path:string}>>(new Map(initial?.detailCache));
+  const detailKey=selected&&data?`${targetId}:${selected}:${parent}:${fileStart}`:'';
+  const loadedDetailKeyRef=useRef<string>(initial?.detail?initial.detailKey:'');
+  const onViewChange=useCallback((view:{scale?:number;scrollLeft?:number})=>{
+    if(view.scale!==undefined)viewRef.current.scale=view.scale;
+    if(view.scrollLeft!==undefined)viewRef.current.scrollLeft=view.scrollLeft;
+  },[]);
+  const onRowsScrollTop=useCallback((top:number)=>{viewRef.current.rowsScrollTop=top;},[]);
+  const snapshotRef=useRef<()=>void>(() => undefined);
+  snapshotRef.current=()=>{
+    if(!approved){if(approved===false)gitHistoryStore.delete(cacheScope,cacheKey);return;}
+    if(!value||!pages.size)return;
+    gitHistoryStore.upsert(cacheScope,cacheKey,{
+      approved:true,
+      start,reference,referenceStart,query,filter,retry,value,
+      pages:new Map(pages),
+      selected,parent,fileStart,detail,detailKey,
+      detailCache:new Map(detailCacheRef.current),
+      path,reading,allRefs,
+      scale:viewRef.current.scale,
+      scrollLeft:viewRef.current.scrollLeft,
+      rowsScrollTop:viewRef.current.rowsScrollTop,
+      mainSeeds:[...mainSeeds.current],
+    });
+  };
+  useEffect(()=>{snapshotRef.current();});
+  useEffect(()=>()=>snapshotRef.current(),[]);
   const history=useMemo(()=>[...pages.entries()].sort((a,b)=>a[0]-b[0]).flatMap(([,page])=>page.commits),[pages]);
   // Squash-merge evidence joins across loaded pages: a squash commit is usually newer than its branch.
   const evidence=useMemo(()=>({changes:new Map([...pages.values()].flatMap(page=>Object.entries(page.changeSignatures??{}))),branches:new Map([...pages.values()].flatMap(page=>Object.entries(page.branchSignatures??{})))}),[pages]);
@@ -68,27 +108,111 @@ function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
   const bounds=[...pages.keys()].sort((a,b)=>a-b),newest=bounds[0]??0,oldest=bounds.at(-1)??0;
   const moreOlder=!!pages.get(oldest)?.more,moreNewer=newest>0;
   const extend=(direction:'older'|'newer')=>{if(loading)return;const next=direction==='older'?moreOlder?oldest+50:undefined:moreNewer?Math.max(0,newest-50):undefined;if(next!==undefined)setStart(next);};
-  useEffect(()=>{let active=true;void workspaceApi.gitStatus(checkoutId??id).then(status=>{if(active)setApproved(status.approved);}).catch(error=>{if(active)setError(error.message);});return()=>{active=false;};},[id]);
-  useEffect(()=>{const timer=setTimeout(()=>{setFilter(query);setReferenceStart(0);},250);return()=>clearTimeout(timer);},[query]);
   useEffect(()=>{
-    if(!approved||!workspace?.approved)return;let active=true;setLoading(true);setError('');
-    void enqueue(async()=>active?workspaceApi.gitHistory(checkoutId??id,{start,reference,referenceStart,q:filter,generation:generation.current}):undefined).then(next=>{
+    if(approved!==undefined)return;
+    let active=true;
+    void workspaceApi.gitStatus(targetId).then(status=>{if(active)setApproved(status.approved);}).catch(error=>{if(active)setError(error.message);});
+    return()=>{active=false;};
+  },[targetId,approved]);
+  useEffect(()=>{
+    if(query===filter)return;
+    const timer=setTimeout(()=>{setFilter(query);setReferenceStart(0);},250);
+    return()=>clearTimeout(timer);
+  },[query,filter]);
+  useEffect(()=>{
+    if(!approved||!workspace?.approved)return;
+    if(value?.key===key&&pages.has(start))return;
+    let active=true;setLoading(true);setError('');
+    void enqueue(async()=>active?workspaceApi.gitHistory(targetId,{start,reference,referenceStart,q:filter,generation:generation.current}):undefined).then(next=>{
       if(!active||!next)return;generation.current=next.generation;setValue({key,data:next});
       setPages(previous=>withGitPage(previous,next));
       setSelected(current=>current||next.commits[0]?.hash||'');
     }).catch(error=>{if(active)setError(error.message);}).finally(()=>{if(active)setLoading(false);});
     return()=>{active=false;};
-  },[id,checkoutId,approved,workspace?.approved,key]);
+  },[targetId,approved,workspace?.approved,key]);
+  const revalidatedRef=useRef(false);
   useEffect(()=>{
-    setDetail(undefined);setDetailError('');setCopied(false);
-    if(!selected||!data)return;let active=true;setDetailLoading(true);
-    void enqueue(async()=>active?workspaceApi.gitCommit(checkoutId??id,selected,parent,fileStart,data.generation):undefined).then(next=>{
-      if(active&&next){setDetail(next);setPath(current=>next.files.some(file=>file.path===current)?current:next.files[0]?.path??'');}
+    if(!hydrated||revalidatedRef.current||!approved||!workspace?.approved)return;
+    revalidatedRef.current=true;
+    let active=true;
+    const savedGeneration=generation.current;
+    const savedReference=reference,savedReferenceStart=referenceStart,savedFilter=filter,savedStart=start,savedKey=key;
+    const loadedOffsets=[...pages.keys()].sort((a,b)=>a-b);
+    void enqueue(async()=>{
+      if(!active)return;
+      let currentGen:string;
+      try{
+        currentGen=(await workspaceApi.gitGeneration(targetId)).generation;
+      }catch(err){
+        if(err instanceof HttpError&&err.status===403&&active){setApproved(false);gitHistoryStore.delete(cacheScope,cacheKey);return;}
+        throw err;
+      }
+      if(!active||currentGen===savedGeneration)return;
+      const offsets=loadedOffsets.length?loadedOffsets:[savedStart];
+      const nextPages=new Map<number,GitHistoryPage>();
+      let firstGen:string|undefined;
+      try{
+        for(const offset of offsets){
+          if(!active)return;
+          const next=await workspaceApi.gitHistory(targetId,{start:offset,reference:savedReference,referenceStart:savedReferenceStart,q:savedFilter,...(firstGen?{generation:firstGen}:{})});
+          if(!firstGen)firstGen=next.generation;
+          if(next.commits.length>0||offset===0)nextPages.set(offset,next);
+        }
+      }catch(err){
+        if(err instanceof HttpError&&err.status===404&&savedReference!=='all'){
+          const fallback=await workspaceApi.gitHistory(targetId,{start:0,reference:'all',referenceStart:0,q:savedFilter});
+          if(!active)return;
+          generation.current=fallback.generation;
+          setReference('all');setStart(0);setReferenceStart(0);
+          setValue({key:`0/all/0/${savedFilter}/${retry}`,data:fallback});
+          setPages(new Map([[0,fallback]]));
+          setSelected(current=>current&&fallback.commits.some(c=>c.hash===current)?current:(fallback.commits[0]?.hash??''));
+          return;
+        }
+        throw err;
+      }
+      if(!active)return;
+      if(!nextPages.size){
+        const zero=await workspaceApi.gitHistory(targetId,{start:0,reference:savedReference,referenceStart:savedReferenceStart,q:savedFilter});
+        if(!active)return;
+        nextPages.set(0,zero);
+      }
+      const primaryPage=nextPages.get(savedStart)??nextPages.get(0)??[...nextPages.values()][0]!;
+      generation.current=primaryPage.generation;
+      setValue({key:savedKey,data:primaryPage});
+      setPages(nextPages);
+      const allHashes=new Set([...nextPages.values()].flatMap(p=>p.commits.map(c=>c.hash)));
+      setSelected(current=>current&&allHashes.has(current)?current:(primaryPage.commits[0]?.hash??''));
+    }).catch(err=>{if(active)setError((err as Error).message);});
+    return()=>{active=false;};
+  },[approved,workspace?.approved,targetId]);
+  useEffect(()=>{
+    setDetailError('');setCopied(false);
+    if(!detailKey){setDetail(undefined);loadedDetailKeyRef.current='';return;}
+    if(loadedDetailKeyRef.current===detailKey&&detail)return;
+    const hit=detailCacheRef.current.get(detailKey);
+    if(hit){
+      loadedDetailKeyRef.current=detailKey;
+      setDetail(hit.detail);
+      setPath(current=>hit.detail.files.some(file=>file.path===current)?current:hit.path);
+      return;
+    }
+    setDetail(undefined);
+    let active=true;setDetailLoading(true);
+    const gen=generation.current??data?.generation;
+    void enqueue(async()=>active?workspaceApi.gitCommit(targetId,selected,parent,fileStart,gen):undefined).then(next=>{
+      if(!active||!next)return;
+      const nextPath=next.files.some(file=>file.path===path)?path:next.files[0]?.path??'';
+      loadedDetailKeyRef.current=detailKey;
+      if(detailCacheRef.current.has(detailKey))detailCacheRef.current.delete(detailKey);
+      detailCacheRef.current.set(detailKey,{detail:next,path:nextPath});
+      if(detailCacheRef.current.size>24){const oldest=detailCacheRef.current.keys().next().value;if(oldest!==undefined)detailCacheRef.current.delete(oldest);}
+      setDetail(next);setPath(current=>next.files.some(file=>file.path===current)?current:next.files[0]?.path??'');
     }).catch(error=>{if(active)setDetailError(error.message);}).finally(()=>{if(active)setDetailLoading(false);});
     return()=>{active=false;};
-  },[id,checkoutId,selected,parent,fileStart,data]);
-  const refresh=()=>{setPages(new Map());mainSeeds.current.clear();setValue(undefined);generation.current=undefined;setStart(0);setReferenceStart(0);setParent(0);setFileStart(0);setRetry(n=>n+1);};
-  const consent=async()=>{setGranting(true);setError('');try{await grantGit(checkoutId??id,!!workspace?.approved,approve);setApproved(true);}catch(error){setError((error as Error).message);}finally{setGranting(false);}};
+  },[detailKey]);
+  const refresh=()=>{setPages(new Map());mainSeeds.current.clear();setValue(undefined);generation.current=undefined;setDetail(undefined);detailCacheRef.current.clear();loadedDetailKeyRef.current='';viewRef.current={scale:1};gitHistoryStore.delete(cacheScope,cacheKey);setStart(0);setReferenceStart(0);setParent(0);setFileStart(0);setRetry(n=>n+1);};
+  const consent=async()=>{setGranting(true);setError('');try{await grantGit(targetId,!!workspace?.approved,approve);setApproved(true);}catch(error){setError((error as Error).message);}finally{setGranting(false);}};
   const choose=(hash:string)=>{setSelected(hash);setParent(0);setFileStart(0);setReading(true);};
   // Stepping along a focused branch only moves the selection; it must not swap the graph for the commit's reading pane.
   const select=(hash:string)=>{setSelected(hash);setParent(0);setFileStart(0);};
@@ -96,16 +220,45 @@ function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
   const chooseRow=(hash:string)=>{choose(hash);setReveal(previous=>({hash,n:(previous?.n??0)+1}));};
   // Refs named by the commits in view, unless the reader searched or asked for every ref.
   const windowed=!!data&&!allRefs&&!filter,shownRefs=!data?[]:windowed?refsInWindow(data.references,history,{selected:reference}):data.references;
-  const chooseRef=(next:string)=>{setPages(new Map());mainSeeds.current.clear();setValue(undefined);setSelected('');setReference(next);setStart(0);setParent(0);setFileStart(0);setReading(false);setRefsOpen(false);};
+  const chooseRef=(next:string)=>{setPages(new Map());mainSeeds.current.clear();setValue(undefined);setDetail(undefined);loadedDetailKeyRef.current='';viewRef.current={scale:1};setSelected('');setReference(next);setStart(0);setParent(0);setFileStart(0);setReading(false);setRefsOpen(false);};
   const file=detail?.files.find(file=>file.path===path),commit=history.find(commit=>commit.hash===selected);
   const selectedLink=links.get(selected),working=pages.get(0)?.workingTree;
   const navigateFile=(current:boolean)=>{close();useApp.getState().set(current?{currentFile:path,explore:false}:{filePanel:path,filePanelFocus:'change',explore:false});};
-  return <ReadingDialog title="Git graph" windowId="Git history" resetWindow={()=>setWidth(1180)} close={close} className="git-atlas" style={{width:`min(${width}px,calc(100vw - 28px))`}} resizeControl={<ReadingResize value={width} minimum={700} maximum={1800} change={setWidth} reset={()=>setWidth(1180)} label="Resize Git graph reading space" fromRight/>}>
+  const anchorRef=useRef<HTMLSpanElement>(null);
+  useEffect(()=>{
+    const dialog=anchorRef.current?.closest('dialog');
+    if(!dialog)return;
+    dialog.setAttribute('aria-modal','true');
+    dialog.tabIndex=-1;
+    if(++atlasModalRoots===1)document.getElementById('root')?.setAttribute('aria-hidden','true');
+    let active=true;
+    queueMicrotask(()=>{if(active&&dialog.isConnected&&!dialog.contains(document.activeElement))(dialog.querySelector<HTMLElement>('[data-dialog-focus]')??dialog).focus({preventScroll:true});});
+    const onKeyDown=(event:KeyboardEvent)=>{
+      if(event.key!=='Tab'||event.defaultPrevented||event.ctrlKey||event.metaKey||event.altKey)return;
+      const items=[...dialog.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(el=>el.getClientRects().length>0);
+      if(!items.length){event.preventDefault();dialog.focus({preventScroll:true});return;}
+      const first=items[0]!,last=items[items.length-1]!;
+      if(event.shiftKey&&(document.activeElement===first||document.activeElement===dialog)){event.preventDefault();last.focus({preventScroll:true});}
+      else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus({preventScroll:true});}
+    };
+    dialog.addEventListener('keydown',onKeyDown);
+    return()=>{
+      active=false;
+      dialog.removeEventListener('keydown',onKeyDown);
+      dialog.removeAttribute('aria-modal');
+      dialog.removeAttribute('tabindex');
+      if(--atlasModalRoots===0)document.getElementById('root')?.removeAttribute('aria-hidden');
+    };
+  },[]);
+  return <>
+    {createPortal(<div className="atlas-scrim" aria-hidden="true" onPointerDown={e=>{e.preventDefault();e.stopPropagation();}}/>,document.body)}
+    <ReadingDialog title="Git graph" windowId="Git history" modeless floating resetWindow={()=>setWidth(1180)} close={close} className="git-atlas" style={{width:`min(${width}px,calc(100vw - 28px))`}} resizeControl={<ReadingResize value={width} minimum={700} maximum={1800} change={setWidth} reset={()=>setWidth(1180)} label="Resize Git graph reading space" fromRight/>}>
+    <span ref={anchorRef} hidden/>
     {approved&&workspace?.approved&&<div className="atlas-toolbar"><GitBranchHeader data={data} reference={reference} choose={chooseRef} loading={loading}/><span title="Remote-tracking branches show their locally stored state. No fetch is performed.">Local refs{data?.shallow?' · shallow history':''}</span><button className="btn ghost" disabled={loading||granting} onClick={refresh}>Refresh</button></div>}
     {error&&<p className="atlas-error" role="alert">{error}<button className="btn ghost" onClick={refresh}>Retry history</button></p>}
     {approved===undefined&&!error?<section className="atlas-access" aria-busy="true"><p>Checking Git access…</p></section>:!approved||!workspace?.approved?workspace?.root?<GitAccess workspaceApproved={!!workspace.approved} busy={granting} disabled={granting} grant={()=>void consent()}/>:<section className="atlas-access"><p>This session did not record a workspace, so there is no repository to read.</p></section>:<div className={`atlas-layout${reading?' atlas-reading':''}`}>
       <details className="atlas-references" open={!narrow||refsOpen} onToggle={event=>{if(narrow)setRefsOpen(event.currentTarget.open);}}><summary>Branches &amp; tags{data?` · ${data.referenceTotal}`:''}</summary><div className="atlas-ref-content"><label>Find a branch or tag<input aria-label="Find Git branches and tags" maxLength={200} value={query} onChange={event=>setQuery(event.target.value)}/></label><button className="atlas-ref" aria-pressed={reference==='all'} onClick={()=>chooseRef('all')}><span>◎</span><strong>All local history</strong></button><div className="atlas-ref-list" aria-label="Git references">{shownRefs.map(ref=><button className="atlas-ref" key={ref.id} title={`${ref.kind} · ${ref.name}`} aria-pressed={reference===ref.id} onClick={()=>chooseRef(ref.id)} onMouseEnter={()=>setHoverRef(ref.name)} onMouseLeave={()=>setHoverRef('')} onFocus={()=>setHoverRef(ref.name)} onBlur={()=>setHoverRef('')}><span aria-hidden="true">{ref.kind==='tag'?'◇':ref.kind==='remote'?'↗':'⑂'}</span><strong>{ref.name}</strong>{ref.current&&<small>HEAD</small>}</button>)}{data&&!shownRefs.length&&<p>{windowed?'No branch or tag labels in the commits in view.':'No matching references.'}</p>}</div>{data&&!filter&&<div className="atlas-ref-scope" role="group" aria-label="Reference scope"><button aria-pressed={!allRefs} onClick={()=>setAllRefs(false)}>In view</button><button aria-pressed={allRefs} onClick={()=>setAllRefs(true)}>All {data.referenceTotal}</button></div>}{!windowed&&<nav className="atlas-ref-pages" aria-label="Reference pages"><button className="btn ghost" aria-label="Previous references" disabled={!referenceStart||loading} onClick={()=>setReferenceStart(n=>Math.max(0,n-100))}>←</button><span>{data?`${Math.min(referenceStart+1,data.referenceCount)}–${Math.min(referenceStart+100,data.referenceCount)} / ${data.referenceCount}`:'…'}</span><button className="btn ghost" aria-label="Next references" disabled={!data||referenceStart+100>=data.referenceCount||loading} onClick={()=>setReferenceStart(n=>n+100)}>→</button></nav>}</div></details>
-      <section className="atlas-history" aria-label="Commit graph">{working&&working.files.length>0&&<details className="atlas-working"><summary>Working tree · this session <small>{working.files.length} matching {working.files.length===1?'file':'files'}</small></summary><p>Changed-line text matches edits. Positions are not verified; this is not proof of who last changed the file.{working.omitted>0?` ${working.omitted} paths could not be compared in this bounded sample.`:''}</p><div className="atlas-files">{working.files.map(file=><button key={file.path} title={gitSessionLinkDescription(file.links[0]!)} onClick={()=>{close();useApp.getState().set({filePanel:file.path,filePanelFocus:'change',explore:false});}}><FileIcon path={file.path}/><span>{file.path}</span><small>{file.links[0]?.turn?`turn ${file.links[0].turn}`:'Edit'}</small></button>)}</div></details>}<header><strong>{data?.selectedReference?.name??'All refs'}</strong><span>Parent topology</span>{!!history.length&&<button className="btn ghost atlas-rows-toggle" aria-expanded={rowsOpen} aria-controls="atlas-commit-rows" onClick={()=>setRowsOpen(!rowsOpen)}>Commits · {history.length}</button>}</header>{loading&&!data?<p className="atlas-empty" role="status">Reading local history…</p>:data&&!data.commits.length?<p className="atlas-empty">No commits in this view. New repositories appear here after their first commit.</p>:<GitNetworkGraph mirrorRef={hoverRef} commits={history} selected={selected} choose={choose} select={select} primary={data?.mainline} seeds={mainSeeds.current} resetKey={`${reference}/${retry}`} moreOlder={moreOlder} moreNewer={moreNewer} loading={loading} extend={extend} offset={newest} evidence={evidence} links={links} mirror={hoverRow} onHover={setHoverGraph} reveal={reveal}/>}{rowsOpen&&!!history.length&&<section id="atlas-commit-rows" className="atlas-rows" aria-label="Commit list"><CommitRows commits={history} selected={selected} hovered={hoverRow||hoverGraph} links={links} choose={chooseRow} hover={setHoverRow}/></section>}</section>
+      <section className="atlas-history" aria-label="Commit graph">{working&&working.files.length>0&&<details className="atlas-working"><summary>Working tree · this session <small>{working.files.length} matching {working.files.length===1?'file':'files'}</small></summary><p>Changed-line text matches edits. Positions are not verified; this is not proof of who last changed the file.{working.omitted>0?` ${working.omitted} paths could not be compared in this bounded sample.`:''}</p><div className="atlas-files">{working.files.map(file=><button key={file.path} title={gitSessionLinkDescription(file.links[0]!)} onClick={()=>{close();useApp.getState().set({filePanel:file.path,filePanelFocus:'change',explore:false});}}><FileIcon path={file.path}/><span>{file.path}</span><small>{file.links[0]?.turn?`turn ${file.links[0].turn}`:'Edit'}</small></button>)}</div></details>}<header><strong>{data?.selectedReference?.name??'All refs'}</strong><span>Parent topology</span>{!!history.length&&<button className="btn ghost atlas-rows-toggle" aria-expanded={rowsOpen} aria-controls="atlas-commit-rows" onClick={()=>setRowsOpen(!rowsOpen)}>Commits · {history.length}</button>}</header>{loading&&!data?<p className="atlas-empty" role="status">Reading local history…</p>:data&&!data.commits.length?<p className="atlas-empty">No commits in this view. New repositories appear here after their first commit.</p>:<GitNetworkGraph mirrorRef={hoverRef} commits={history} selected={selected} choose={choose} select={select} primary={data?.mainline} seeds={mainSeeds.current} resetKey={`${reference}/${retry}`} moreOlder={moreOlder} moreNewer={moreNewer} loading={loading} extend={extend} offset={newest} evidence={evidence} links={links} mirror={hoverRow} onHover={setHoverGraph} reveal={reveal} initialScale={viewRef.current.scale} initialScrollLeft={viewRef.current.scrollLeft} onViewChange={onViewChange}/>}{rowsOpen&&!!history.length&&<section id="atlas-commit-rows" className="atlas-rows" aria-label="Commit list"><CommitRows commits={history} selected={selected} hovered={hoverRow||hoverGraph} links={links} choose={chooseRow} hover={setHoverRow} initialScrollTop={viewRef.current.rowsScrollTop} onScrollTop={onRowsScrollTop}/></section>}</section>
       <section className="atlas-detail" aria-label="Selected commit"><header><button className="btn ghost atlas-back" aria-label="Back to Git graph" onClick={()=>setReading(false)}>← Graph</button><strong>{selected?selected.slice(0,12):'Select a commit'}</strong>{selected&&links.get(selected)?.operationId&&<button className="btn ghost" title={selectedLink?gitSessionLinkDescription(selectedLink):undefined} onClick={()=>{const operationId=links.get(selected)!.operationId!;close();useApp.getState().select(operationId);}}>{selectedLink?.basis==='commit-time-paths'?'Command matches':'Seen in'} turn {selectedLink?.turn??'—'}</button>}{selected&&<button className="btn ghost" aria-label="Copy commit hash" onClick={()=>void navigator.clipboard.writeText(selected).then(()=>setCopied(true),()=>setCopied(false))}>{copied?'Copied':'Copy hash'}</button>}</header>
         {detailError&&<p className="atlas-error" role="alert">{detailError}<button className="btn ghost" onClick={refresh}>Refresh history</button></p>}
         {detailLoading&&!detail&&<p className="atlas-empty" role="status">Reading commit changes…</p>}
@@ -117,7 +270,7 @@ function GitHistoryReader({id,close}:{id:string;close:()=>void}) {
         </div>}
       </section>
     </div>}
-  </ReadingDialog>;
+  </ReadingDialog></>;
 }
 
 function CommitMessage({text}:{text:string}) {

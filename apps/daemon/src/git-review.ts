@@ -4,7 +4,7 @@ import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { redactText } from '@drishya/privacy';
 import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
-import {gitHistory,gitCommit,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
+import {GitHistoryCache,gitHistory,gitCommit,gitRefGeneration,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
 import type { WorkspaceAccess } from './workspace.ts';
 
@@ -69,6 +69,7 @@ const GIT_TURN_LIMIT = 8;
 export class GitReview {
   private grants = new Set<string>();
   private turns = new Map<string, { tail: Promise<unknown>; waiting: number }>();
+  private historyCache = new GitHistoryCache(64);
   private workspace: WorkspaceAccess;
   private read: GitReader;
   private historyService?:HistoryService;
@@ -86,23 +87,24 @@ export class GitReview {
     try{return await run;}
     finally{if(--turn.waiting===0)this.turns.delete(id);}
   }
-  private async readHistory<T>(id:string,inspect:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {
+  private async readHistory<T>(id:string,inspect:(git:(args:string[])=>Promise<string>,root:string)=>Promise<T>):Promise<T> {
     if(!this.grants.has(id))throw new HttpError(403,'Approve read-only Git inspection separately.');
     return this.inTurn(id,async()=>{
       const signal=AbortSignal.timeout(30_000);
       const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
       if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
-      const result=await inspect(git);
+      const result=await inspect(git,root);
       if(!this.grants.has(id)||await this.workspace.root(id)!==root)throw new HttpError(403,'Git reading access changed. Approve this workspace again.');
       return result;
     });
   }
   /** GIT-8: Compare reads through the same consent, turn and repository-root checks as History. */
-  inspect<T>(id:string,read:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {return this.readHistory(id,read);}
-  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async git=>{
-    const page=await gitHistory(git,query);
+  inspect<T>(id:string,read:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {return this.readHistory(id,git=>read(git));}
+  generation(id:string) {return this.readHistory(id,async (git,root)=>{const generation=await gitRefGeneration(git);this.historyCache.syncGeneration(root,generation);return {generation};});}
+  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async (git,root)=>{
+    const page=await gitHistory(git,query,{root,cache:this.historyCache});
     if(!this.historyService||id.includes('+'))return page;
-    const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001));
+    const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001),root);
     const evidenceQuery={commits:context.query.commits.map(commit=>({...commit,paths:commit.paths.map(path=>this.workspace.evidencePath(id,path))})),working:context.query.working.map(file=>({...file,path:this.workspace.evidencePath(id,file.path)}))};
     const evidence=await this.historyService.gitSessionEvidence(this.workspace.evidenceId(id),evidenceQuery);
     // Check refs again after reading patches and captured evidence.

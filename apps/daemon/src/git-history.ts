@@ -14,22 +14,77 @@ const clean=(text:string)=>redactText(text).text;
 const preview=(text:string,limit:number)=>{const value=clean(text);return value.length>limit?value.slice(0,limit)+'…':value;};
 const page=(value:number)=>{if(!Number.isSafeInteger(value)||value<0||value>10_000_000)throw invalid();};
 
-async function state(git:Git) {
-  const raw=await git(['for-each-ref','--sort=refname','--format=%(refname)%00%(objectname)%00%(*objectname)%00%(committerdate:iso-strict)%00%(upstream:short)%00%(symref)%00','refs/heads','refs/remotes','refs/tags']);
-  const head=(await git(['rev-parse','--verify','HEAD']).catch(()=>'')).trim();
-  const branch=(await git(['symbolic-ref','-q','HEAD']).catch(()=>'')).trim();
-  const refs=raw.split('\n').filter(Boolean).map(row=>{
+interface RefSnapshot { raw: string; head: string; branch: string; generation: string }
+
+async function refSnapshot(git:Git):Promise<RefSnapshot> {
+  const [raw,head,branch]=await Promise.all([
+    git(['for-each-ref','--sort=refname','--format=%(refname)%00%(objectname)%00%(*objectname)%00%(committerdate:iso-strict)%00%(upstream:short)%00%(symref)%00','refs/heads','refs/remotes','refs/tags']),
+    git(['rev-parse','--verify','HEAD']).then(value=>value.trim()).catch(()=>''),
+    git(['symbolic-ref','-q','HEAD']).then(value=>value.trim()).catch(()=>''),
+  ]);
+  return {raw,head,branch,generation:hash(raw+'\0'+head+'\0'+branch)};
+}
+
+function parseRefs(snap:RefSnapshot) {
+  const refs=snap.raw.split('\n').filter(Boolean).map(row=>{
     const [name,tip,peeled,lastCommit,upstream]=row.split('\0');
     if(!name||!oid.test(tip??''))throw new HttpError(422,'Git returned invalid reference metadata.');
-    return {raw:name,id:hash(name),name:clean(name.replace(/^refs\/(heads|remotes|tags)\//,'')),tip:peeled&&oid.test(peeled)?peeled:tip!,kind:name.startsWith('refs/heads/')?'branch':name.startsWith('refs/remotes/')?'remote':'tag',current:name===branch,...(lastCommit?{lastCommit}:{}),...(upstream?{upstream:clean(upstream)}:{})} as GitReference&{raw:string};
+    return {raw:name,id:hash(name),name:clean(name.replace(/^refs\/(heads|remotes|tags)\//,'')),tip:peeled&&oid.test(peeled)?peeled:tip!,kind:name.startsWith('refs/heads/')?'branch':name.startsWith('refs/remotes/')?'remote':'tag',current:name===snap.branch,...(lastCommit?{lastCommit}:{}),...(upstream?{upstream:clean(upstream)}:{})} as GitReference&{raw:string};
   });
   refs.sort((a,b)=>Number(b.current)-Number(a.current)||Number(b.kind==='branch')-Number(a.kind==='branch')||(Date.parse(b.lastCommit??'')||0)-(Date.parse(a.lastCommit??'')||0)||a.name.localeCompare(b.name));
-  return {raw,head,branch,refs,generation:hash(raw+'\0'+head+'\0'+branch)};
+  return {...snap,refs};
 }
+
 /** Compare (GIT-8) reads the same reference snapshot History does. */
-export const gitRefState=state;
+export async function gitRefState(git:Git) {return parseRefs(await refSnapshot(git));}
+export async function gitRefGeneration(git:Git):Promise<string> {return (await refSnapshot(git)).generation;}
 const publicRef=({raw,...reference}:GitReference&{raw:string}):GitReference=>reference;
-export async function verifyGitHistoryGeneration(git:Git,generation:string) {if((await state(git)).generation!==generation)throw changed();}
+export async function verifyGitHistoryGeneration(git:Git,generation:string) {if((await refSnapshot(git)).generation!==generation)throw changed();}
+
+export class GitHistoryCache {
+  private entries=new Map<string,{root:string;generation:string;page:GitHistoryPage}>();
+  private generations=new Map<string,string>();
+  private maxEntries:number;
+  constructor(maxEntries=64) {
+    if(!Number.isSafeInteger(maxEntries)||maxEntries<1)throw new RangeError('GitHistoryCache maxEntries must be a positive integer.');
+    this.maxEntries=maxEntries;
+  }
+  private key(root:string,generation:string,reference:string,referenceStart:number,query:string,start:number) {
+    return JSON.stringify([root,generation,reference,referenceStart,query,start]);
+  }
+  syncGeneration(root:string,generation:string) {
+    const previous=this.generations.get(root);
+    if(previous!==undefined&&previous!==generation){
+      for(const [k,entry] of this.entries)if(entry.root===root&&entry.generation!==generation)this.entries.delete(k);
+    }
+    this.generations.set(root,generation);
+  }
+  get(root:string,generation:string,reference:string,referenceStart:number,query:string,start:number):GitHistoryPage|undefined {
+    this.syncGeneration(root,generation);
+    const k=this.key(root,generation,reference,referenceStart,query,start);
+    const hit=this.entries.get(k);
+    if(!hit)return undefined;
+    this.entries.delete(k);this.entries.set(k,hit);
+    return hit.page;
+  }
+  set(root:string,generation:string,reference:string,referenceStart:number,query:string,start:number,value:GitHistoryPage) {
+    this.syncGeneration(root,generation);
+    const k=this.key(root,generation,reference,referenceStart,query,start);
+    if(this.entries.has(k))this.entries.delete(k);
+    while(this.entries.size>=this.maxEntries){
+      const oldest=this.entries.keys().next().value;
+      if(oldest===undefined)break;
+      this.entries.delete(oldest);
+    }
+    this.entries.set(k,{root,generation,page:value});
+  }
+  clear(root?:string) {
+    if(root===undefined){this.entries.clear();this.generations.clear();return;}
+    this.generations.delete(root);
+    for(const [k,entry] of this.entries)if(entry.root===root)this.entries.delete(k);
+  }
+  get size() {return this.entries.size;}
+}
 
 // Revision walking treats shallow boundaries as roots; the object header retains the real parents.
 async function objectParents(git:Git,id:string):Promise<string[]> {
@@ -40,19 +95,27 @@ async function objectParents(git:Git,id:string):Promise<string[]> {
 }
 
 export interface GitHistoryQuery {start?:number;referenceStart?:number;reference?:string;query?:string;generation?:string}
-export async function gitHistory(git:Git,options:GitHistoryQuery={}):Promise<GitHistoryPage> {
+export async function gitHistory(git:Git,options:GitHistoryQuery={},cacheOptions:{root?:string;cache?:GitHistoryCache}={}):Promise<GitHistoryPage> {
   const {start=0,referenceStart=0,reference='all',query='',generation}=options;
   page(start);page(referenceStart);
   if(query.length>200||reference!=='all'&&!/^[a-f0-9]{64}$/.test(reference)||generation!==undefined&&!/^[a-f0-9]{64}$/.test(generation))throw invalid();
-  const before=await state(git);if(generation&&generation!==before.generation)throw changed();
+  const snap=await refSnapshot(git);if(generation&&generation!==snap.generation)throw changed();
+  if(cacheOptions.cache&&cacheOptions.root){
+    const cached=cacheOptions.cache.get(cacheOptions.root,snap.generation,reference,referenceStart,query,start);
+    if(cached)return cached;
+  }
+  const before=parseRefs(snap);
   const selected=reference==='all'?undefined:before.refs.find(ref=>ref.id===reference);
   if(reference!=='all'&&!selected)throw new HttpError(404,'This Git reference is no longer available.');
+  const shallowPromise=git(['rev-parse','--is-shallow-repository']).then(value=>value.trim()==='true');
   const revision=selected?(await git(['rev-parse','--verify',`${selected.raw}^{commit}`])).trim():undefined;
   if(revision&&!oid.test(revision))throw new HttpError(422,'This reference does not point to a commit.');
-  const log=await git(['log','--no-show-signature','--no-notes','--topo-order','--no-decorate','-z','--format=%H%x00%P%x00%an%x00%aI%x00%s','--max-count=51',`--skip=${start}`,...(revision?[revision]:['--all',...(before.head?[before.head]:[])]),'--']);
+  const [log,shallow]=await Promise.all([
+    git(['log','--no-show-signature','--no-notes','--topo-order','--no-decorate','-z','--format=%H%x00%P%x00%an%x00%aI%x00%s','--max-count=51',`--skip=${start}`,...(revision?[revision]:['--all',...(before.head?[before.head]:[])]),'--']),
+    shallowPromise,
+  ]);
   const fields=log.split('\0');if(fields.at(-1)==='')fields.pop();
   if(fields.length%5)throw new HttpError(422,'Git returned incomplete commit metadata.');
-  const shallow=(await git(['rev-parse','--is-shallow-repository'])).trim()==='true';
   const commits:GitCommit[]=[];
   for(let n=0;n<fields.length;n+=5){
     const [id,parentList,author,time,subject]=fields.slice(n,n+5);
@@ -69,13 +132,20 @@ export async function gitHistory(git:Git,options:GitHistoryQuery={}):Promise<Git
   const target=remoteHead?.[5];
   const defaultRef=target?(before.refs.find(ref=>ref.raw===target.replace(/^refs\/remotes\/[^/]+\//,'refs/heads/'))??before.refs.find(ref=>ref.raw===target)):primary;
   const comparisonTip=selected?.kind==='branch'?selected.tip:reference==='all'?before.head:undefined;
-  const branchComparison=comparisonTip?{
-    ...(before.head?{current:await compareBranch(git,comparisonTip,{name:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',tip:before.head},shallow)}:{}),
-    ...(defaultRef?{default:await compareBranch(git,comparisonTip,{name:defaultRef.name,tip:defaultRef.tip,basis:remoteHead?'remote-head':'conventional-name'},shallow)}:{})
-  }:undefined;
-  const signatures=await squashEvidence(git,commits.slice(0,50),primary?.tip??before.head);
-  if((await state(git)).generation!==before.generation)throw changed();
-  return {mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,localBranches:before.refs.filter(ref=>ref.kind==='branch').slice(0,100).map(publicRef),localBranchTotal:before.refs.filter(ref=>ref.kind==='branch').length,selectedReference:selected?publicRef(selected):undefined,branchComparison,...signatures};
+  const [branchComparison,signatures]=await Promise.all([
+    comparisonTip?(async()=>{
+      const [current,def]=await Promise.all([
+        before.head?compareBranch(git,comparisonTip,{name:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',tip:before.head},shallow):Promise.resolve(undefined),
+        defaultRef?compareBranch(git,comparisonTip,{name:defaultRef.name,tip:defaultRef.tip,basis:remoteHead?'remote-head':'conventional-name'},shallow):Promise.resolve(undefined),
+      ]);
+      return {...(current?{current}:{}),...(def?{default:def}:{})};
+    })():Promise.resolve(undefined),
+    squashEvidence(git,commits.slice(0,50),primary?.tip??before.head),
+  ]);
+  if((await refSnapshot(git)).generation!==before.generation)throw changed();
+  const result:GitHistoryPage={mainline:primary?{name:primary.name,tip:primary.tip}:before.head?{name:clean(before.branch.replace(/^refs\/heads\//,''))||'HEAD',tip:before.head}:undefined,generation:before.generation,head:before.head,branch:clean(before.branch.replace(/^refs\/heads\//,''))||'Detached HEAD',shallow,sampledAt:new Date().toISOString(),commits:commits.slice(0,50),start,more:commits.length>50,limit:50,references:matching.slice(referenceStart,referenceStart+100).map(publicRef),referenceStart,referenceCount:matching.length,referenceTotal:before.refs.length,localBranches:before.refs.filter(ref=>ref.kind==='branch').slice(0,100).map(publicRef),localBranchTotal:before.refs.filter(ref=>ref.kind==='branch').length,selectedReference:selected?publicRef(selected):undefined,branchComparison,...signatures};
+  if(cacheOptions.cache&&cacheOptions.root)cacheOptions.cache.set(cacheOptions.root,before.generation,reference,referenceStart,query,start,result);
+  return result;
 }
 
 /**
@@ -109,17 +179,20 @@ async function squashEvidence(git:Git,commits:GitCommit[],tip:string|undefined) 
   for(const commit of single){const value=signatureCache.get(`c:${commit.hash}`);if(value)changeSignatures[commit.hash]=value;}
   // Branch heads: commits with no child on this page. A head already on the primary line gives an empty diff.
   const children=new Set(commits.flatMap(commit=>commit.parents));
-  for(const commit of commits.filter(commit=>!children.has(commit.hash)&&commit.hash!==tip).slice(0,30)){
-    const key=`b:${tip}:${commit.hash}`;
-    const value=signatureCache.get(key)??remember(key,signature(await git(['diff','--raw','--no-renames','--no-abbrev','-z',`${tip}...${commit.hash}`,'--']).catch(()=>'')));
-    if(value)branchSignatures[commit.hash]=value;
+  const heads=commits.filter(commit=>!children.has(commit.hash)&&commit.hash!==tip).slice(0,30);
+  for(let i=0;i<heads.length;i+=4){
+    await Promise.all(heads.slice(i,i+4).map(async commit=>{
+      const key=`b:${tip}:${commit.hash}`;
+      const value=signatureCache.get(key)??remember(key,signature(await git(['diff','--raw','--no-renames','--no-abbrev','-z',`${tip}...${commit.hash}`,'--']).catch(()=>'')));
+      if(value)branchSignatures[commit.hash]=value;
+    }));
   }
   return {changeSignatures,branchSignatures};
 }
 
 export async function gitCommit(git:Git,id:string,parentIndex=0,start=0,generation?:string):Promise<GitCommitDetail> {
   if(!oid.test(id)||!Number.isSafeInteger(parentIndex)||parentIndex<0||parentIndex>1023||generation!==undefined&&!/^[a-f0-9]{64}$/.test(generation))throw invalid();page(start);
-  const before=await state(git);if(generation&&generation!==before.generation)throw changed();
+  const before=await refSnapshot(git);if(generation&&generation!==before.generation)throw changed();
   if((await git(['cat-file','-t',id])).trim()!=='commit')throw new HttpError(400,'Select a commit object.');
   const parents=await objectParents(git,id);
   if(parents.some(parent=>!oid.test(parent))||parents.length>1024||parentIndex>=Math.max(1,parents.length))throw invalid();
@@ -140,6 +213,6 @@ export async function gitCommit(git:Git,id:string,parentIndex=0,start=0,generati
     }catch(error){if(error instanceof HttpError&&error.status===413)omissions.push({path:clean(item.path),reason:'process-limit'});else throw error;}
   }
   const message=clean(await git(['show','--no-show-signature','--no-notes','--format=%B','--no-patch',id,'--']));
-  if((await state(git)).generation!==before.generation)throw changed();
+  if((await refSnapshot(git)).generation!==before.generation)throw changed();
   return {hash:id,parents,parent,message,files,start,total:allowed.length,protectedCount:paths.length-allowed.length,omissions,limit:50};
 }

@@ -1,3 +1,6 @@
+.atlas-scrim {position:fixed;inset:0;z-index:190;background:color-mix(in srgb,var(--bg) 53.333%,transparent);}
+.git-atlas.product-dialog[open] {position:fixed;inset:0;margin:auto;z-index:191;max-width:calc(100vw - 32px);}
+.git-atlas.product-dialog:focus {outline:none;}
 .git-atlas {height:min(820px,calc(100dvh - 36px));max-height:calc(100dvh - 36px);display:flex;flex-direction:column;overflow:hidden;}
 .git-atlas>header {flex:none;padding:10px 16px;min-height:46px;}.git-atlas>header h2 {font:var(--weight-medium) var(--text-md)/1.5 var(--sans);}
 :root[data-ui-version=modern][data-experience=classic] .git-atlas>header {padding:8px 16px;min-height:46px;}
@@ -30,7 +33,7 @@
 .atlas-files {max-height:220px;overflow:auto;scrollbar-gutter:stable;border-block:1px solid var(--line);padding:5px 0;}.atlas-files>button {display:flex;align-items:center;gap:8px;width:100%;padding:7px;border-radius:var(--round-sm);min-width:0;text-align:left;font:var(--text-2xs)/1.5 var(--mono);color:var(--t2);}.atlas-files .file-icon {width:15px;height:15px;flex:none;}.atlas-files>button>span {overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0;flex:1;}.atlas-files small {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}.atlas-files>button[aria-pressed=true] {background:var(--s3);color:var(--t1);}.atlas-files p {font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);}
 .atlas-file-pages,.atlas-file-actions {display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-block:10px;color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);}.atlas-file-actions>strong {min-width:0;flex-basis:100%;overflow-wrap:anywhere;font:var(--text-2xs)/1.5 var(--mono);color:var(--t2);}
 .atlas-detail .git-patch-reader {min-width:0;}.atlas-detail .reader-tools {flex-wrap:wrap;}.atlas-detail .diff-scroll {max-height:500px;}.atlas-empty,.atlas-error,.atlas-access {padding:20px;color:var(--t3);font:var(--text-xs)/1.7 var(--sans);}.atlas-error {color:var(--fail);display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0;}.atlas-access h3 {font:var(--weight-medium) var(--text-lg)/1.5 var(--sans);color:var(--t1);}
-.git-atlas :is(button,input,select):focus-visible {outline:1px solid var(--t3);outline-offset:-2px;}
+:root:not([data-input-modality="pointer"]) .git-atlas :is(button,input,select):focus-visible {outline:1px solid var(--focus-ring);outline-offset:-2px;}
 @media(hover:hover) and (pointer:fine){.atlas-ref:hover,.atlas-files>button:hover {background:var(--s2);}.atlas-commit:hover {background:var(--s1);}}
 @media(max-width:1000px){.atlas-layout {grid-template-columns:150px minmax(250px,1fr) minmax(280px,1fr);}}
 @media(max-width:820px){

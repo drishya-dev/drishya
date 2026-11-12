@@ -99,7 +99,6 @@
 :root[data-experience=studio] .agent-overview { top: calc(var(--workspace-header-h, 76px) + 90px); }
 :root[data-experience=studio] .sample-state, :root[data-experience=studio] .sample-watch, :root[data-experience=studio] .sample-complete { font-size: var(--text-2xs); }
 :root[data-low-resource][data-experience=studio] .workspace-header { backdrop-filter: none; background: var(--bg); }
-:root[data-experience=studio] :is(button,summary):focus-visible { outline: 2px solid var(--t2); outline-offset: 3px; }
 @media (max-width: 1100px) {
   :root[data-experience=studio] .viewer { --stage-rail: 190px; }
   .workbench-header { padding-inline: 20px; gap: 16px; grid-template-columns: 170px minmax(0, 1fr) auto; }

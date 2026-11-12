@@ -11,7 +11,6 @@
 .screen-bar button:hover:not(:disabled), .screen-link:hover { color:var(--t1); background:var(--s2); }
 .screen-bar button:disabled { opacity:.4; cursor:default; }
 .screen-bar button[aria-pressed="true"] { color:var(--t1); background:var(--s3); }
-.screen-view :is(button):focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
 .screen-stage { display:grid; place-items:center; min-height:0; padding:12px; overflow:hidden; }
 .screen-frame { position:relative; display:inline-block; max-width:100%; line-height:0; border-radius:var(--round-sm); overflow:hidden; box-shadow:0 0 0 1px var(--line-2); background:var(--s1); }
 .screen-image { display:block; width:auto; height:auto; max-width:100%; max-height:calc(var(--screen-h) - 236px); object-fit:contain; }

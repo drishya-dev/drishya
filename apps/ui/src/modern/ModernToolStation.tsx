@@ -1,7 +1,8 @@
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
-import { useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
+import { useCallback, useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import { useSurfaceReflow } from '../lib/use-surface-reflow.ts';
+import { scrollEdgeCue } from '../lib/scroll-edge-cue.ts';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { ModernTools } from './ModernTools';
 import { useApp } from '../state';
@@ -20,7 +21,31 @@ export function ModernToolStation({ projection, scene, agents }: {
   const id = useApp(s => s.recordingId);
   const motion = useApp(s => s.motion);
   const lowResource = useApp(s => s.lowResource);
+
+  // Center the Toolbox on the viewport's Y axis according to its rendered height,
+  // clamped cleanly inside the safe rail clearances above bottom controls and below the header.
+  const syncCenter = useCallback(() => {
+    const node = surface.current, bounds = rail.current;
+    if (!node || !bounds) return;
+    const railRect = bounds.getBoundingClientRect();
+    const boxHeight = node.offsetHeight;
+    if (!railRect.height || !boxHeight) return;
+    const free = Math.max(0, railRect.height - boxHeight);
+    const ideal = innerHeight / 2 - boxHeight / 2 - railRect.top;
+    const next = `${Math.round(Math.max(0, Math.min(free, ideal)) * 2) / 2}px`;
+    if (node.style.getPropertyValue('--toolbox-center-top') !== next) {
+      node.style.setProperty('--toolbox-center-top', next);
+    }
+  }, []);
+
+  useLayoutEffect(() => {
+    syncCenter();
+  });
+
   const prepareCollapse = useSurfaceReflow(surface, collapsed, id);
+  const { controller } = useSessionWorkspace();
+  const filter = useApp(s => s.filter);
+  const setFilter = useApp(s => s.setFilter);
 
   function cancelRecentering() {
     if (frame.current !== undefined) cancelAnimationFrame(frame.current);
@@ -29,12 +54,50 @@ export function ModernToolStation({ projection, scene, agents }: {
     recentering.current = undefined;
   }
 
+  const syncScrollCue = useCallback(() => {
+    const node = surface.current;
+    if (!node || collapsed) {
+      node?.removeAttribute('data-scroll-top');
+      node?.removeAttribute('data-scroll-bottom');
+      return;
+    }
+    const cue = scrollEdgeCue({ scrollTop: node.scrollTop, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight });
+    if (cue.top) node.setAttribute('data-scroll-top', '1');
+    else node.removeAttribute('data-scroll-top');
+    if (cue.bottom) node.setAttribute('data-scroll-bottom', '1');
+    else node.removeAttribute('data-scroll-bottom');
+  }, [collapsed]);
+
   useLayoutEffect(() => {
     const stage = rail.current?.closest<HTMLElement>('.connected-workspace');
     if (!stage) return;
     stage.toggleAttribute('data-toolbox-minimized', collapsed);
     return () => stage.removeAttribute('data-toolbox-minimized');
   }, [collapsed]);
+
+  useLayoutEffect(() => {
+    const node = surface.current, bounds = rail.current;
+    if (!node) return;
+    const panel = node.querySelector('.modern-toolbox');
+    const stage = bounds?.closest('.connected-workspace');
+    const sync = () => { syncCenter(); syncScrollCue(); };
+    const observer = new ResizeObserver(sync);
+    const onToggle = () => { sync(); requestAnimationFrame(sync); };
+    observer.observe(node);
+    if (bounds) observer.observe(bounds);
+    if (panel) observer.observe(panel);
+    node.addEventListener('toggle', onToggle, true);
+    window.addEventListener('resize', sync);
+    const classes = stage ? new MutationObserver(sync) : undefined;
+    classes?.observe(stage!, { attributes: true, attributeFilter: ['class'] });
+    sync();
+    return () => {
+      observer.disconnect();
+      classes?.disconnect();
+      window.removeEventListener('resize', sync);
+      node.removeEventListener('toggle', onToggle, true);
+    };
+  }, [syncCenter, syncScrollCue, projection, scene, filter]);
 
   useLayoutEffect(() => {
     const preference = matchMedia('(prefers-reduced-motion: reduce)');
@@ -70,6 +133,7 @@ export function ModernToolStation({ projection, scene, agents }: {
       frame.current = undefined;
       if (!node.isConnected || !details.isConnected || details.open === wasOpen || !node.checkVisibility()) return;
       recentering.current?.cancel();
+      syncCenter();
       const bounds = rail.current?.getBoundingClientRect();
       if (!bounds) return;
       const after = node.getBoundingClientRect();
@@ -84,13 +148,11 @@ export function ModernToolStation({ projection, scene, agents }: {
     });
   }
 
-  const { controller } = useSessionWorkspace();
-  const filter = useApp(s => s.filter);
-  const setFilter = useApp(s => s.setFilter);
   return <div ref={rail} className="toolbox-rail">
     <div
       ref={surface}
       className={'workbench-station modern-tool-station' + (collapsed ? ' toolbox-minimized' : '')}
+      onScroll={syncScrollCue}
       onClickCapture={prepareDisclosure}
       onKeyDownCapture={event => {
         if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') cancelRecentering();

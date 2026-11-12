@@ -24,16 +24,15 @@
 :root[data-ui-version=modern] .workspace-utilities :is(.usage-peek,.prompt-menu)[open]>summary::before {content:'⌄';}
 :root[data-ui-version=modern] .workspace-utilities summary::-webkit-details-marker {display:none;}
 :root[data-ui-version=modern] .workspace-utilities .usage-peek>div {padding:8px 10px 12px;}
-:root[data-ui-version=modern] .workspace-utilities :is(button,a,summary):focus-visible {
-  outline:1px solid var(--t3);outline-offset:-2px;background:var(--s2);color:var(--t1);
+:root[data-ui-version=modern]:not([data-input-modality="pointer"]) .workspace-utilities :is(button,a,summary):focus-visible {
+  outline:1px solid var(--focus-ring);outline-offset:-2px;background:var(--s2);color:var(--t1);
 }
 .mh-clear-search {flex:none;width:28px;height:28px;min-height:28px;font:var(--text-lg)/1 var(--sans);color:var(--t3);}
 .mh-clear-filters {flex:none;font-size:var(--text-2xs);padding:5px 8px;min-height:30px;}
 .mh-results>header .mh-save-status {margin-left:auto;}
 .mh-results>header>div {flex-wrap:wrap;column-gap:10px;row-gap:2px;}
 .mh-session:focus-within {background:var(--s2);}
-.mh-session-open:focus-visible {outline:1px solid var(--t3);outline-offset:5px;border-radius:var(--round-xs);}
-.mh-session-list:focus-visible,.mh-workspace-list:focus-visible {outline:1px solid var(--line-3);outline-offset:-2px;}
+:root:not([data-input-modality="pointer"]) .mh-session-open:focus-visible {outline:1px solid var(--focus-ring);outline-offset:2px;border-radius:var(--round-xs);}
 .mh-workspace.selected {box-shadow:inset 2px 0 var(--modern-accent);}
 .mh-refresh[aria-busy=true] {color:var(--t3);}
 .mh-refresh {min-width:144px;justify-content:center;}

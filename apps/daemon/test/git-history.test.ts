@@ -7,7 +7,7 @@ import {App} from '../src/app.ts';
 import {WorkspaceAccess} from '../src/workspace.ts';
 import {GitReview,readGit} from '../src/git-review.ts';
 import {startServer,type RunningServer} from '../src/server.ts';
-import {gitHistory,gitCommit} from '../src/git-history.ts';
+import {GitHistoryCache,gitHistory,gitCommit,gitRefGeneration} from '../src/git-history.ts';
 
 let dir:string,root:string,id:string,first:string,merge:string,app:App,access:WorkspaceAccess,review:GitReview,server:RunningServer;
 const git=(...args:string[])=>execFileSync('git',args,{cwd:root,encoding:'utf8',windowsHide:true}).trim();
@@ -104,4 +104,58 @@ it('ignores ambient object/repository redirection for local inspection',async()=
   const expected=git('-c','core.fsmonitor=false','rev-parse','HEAD'),names=['GIT_OBJECT_DIRECTORY','GIT_COMMON_DIR','GIT_NAMESPACE'],previous=names.map(name=>process.env[name]);
   try{for(const name of names)process.env[name]=join(dir,'not-this-repository');expect((await readGit(root,['rev-parse','--verify','HEAD'])).trim()).toBe(expected);}
   finally{names.forEach((name,index)=>{if(previous[index]===undefined)delete process.env[name];else process.env[name]=previous[index];});}
+});
+
+it('caches history pages per root by generation, evicts LRU entries and drops stale generations',async()=>{
+  const cache=new GitHistoryCache(2);
+  let logCalls=0;
+  const countingGit=async(args:string[])=>{if(args[0]==='log')logCalls++;return readGit(root,args);};
+
+  const firstPage=await gitHistory(countingGit,{},{root,cache});
+  expect(logCalls).toBe(1);
+  // Second read with matching generation/query returns cached page without invoking git log.
+  const hit=await gitHistory(countingGit,{},{root,cache});
+  expect(hit.commits).toEqual(firstPage.commits);
+  expect(hit.generation).toBe(firstPage.generation);
+  expect(logCalls).toBe(1);
+
+  // Distinct query params miss once and respect maxEntries=2 LRU bound.
+  await gitHistory(countingGit,{start:50},{root,cache});
+  expect(logCalls).toBe(2);
+  expect(cache.size).toBe(2);
+  // Touch start=0 so start=50 becomes least-recently-used.
+  await gitHistory(countingGit,{start:0},{root,cache});
+  expect(logCalls).toBe(2);
+  // Adding query:'v1' evicts start=50 while keeping start=0.
+  await gitHistory(countingGit,{query:'v1'},{root,cache});
+  expect(logCalls).toBe(3);
+  expect(cache.size).toBe(2);
+  await gitHistory(countingGit,{start:0},{root,cache});
+  expect(logCalls).toBe(3);
+  await gitHistory(countingGit,{start:50},{root,cache});
+  expect(logCalls).toBe(4);
+
+  // Keep another root's cached page alive while updating refs on `root`.
+  const otherRoot=`${root}-other`;
+  cache.set(otherRoot,firstPage.generation,'all',0,'',0,firstPage);
+  const head=git('rev-parse','HEAD');
+  git('update-ref','refs/heads/cache-generation-bump',head);
+  try{
+    const updated=await gitHistory(countingGit,{},{root,cache});
+    expect(updated.generation).not.toBe(firstPage.generation);
+    expect(logCalls).toBe(5);
+    expect(cache.get(otherRoot,firstPage.generation,'all',0,'',0)).toBe(firstPage);
+  }finally{
+    git('update-ref','-d','refs/heads/cache-generation-bump');
+  }
+},20_000);
+
+it('serves /git/generation behind auth and Git consent with current ref digest',async()=>{
+  const unauth=await fetch(`${server.url}/v1/recordings/${id}/git/generation`);
+  expect(unauth.status).toBe(401);
+  const headers={authorization:`Bearer ${server.token}`};
+  const authed=await fetch(`${server.url}/v1/recordings/${id}/git/generation`,{headers});
+  expect(authed.status).toBe(200);
+  const body=await authed.json() as {generation:string};
+  expect(body.generation).toBe(await gitRefGeneration(args=>readGit(root,args)));
 });

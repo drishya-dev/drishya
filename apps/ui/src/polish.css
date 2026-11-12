@@ -83,7 +83,6 @@
 :root[data-theme="light"] { --surface-edge: var(--bg); }
 
 body { font-size: var(--text-sm); font-feature-settings: "cv11", "ss01"; text-rendering: optimizeLegibility; }
-:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .inst-uses, .reading-status, .activity-count { font-variant-numeric: tabular-nums; }
 * { scrollbar-width: thin; scrollbar-color: var(--line-3) transparent; }
 ::selection { background: color-mix(in srgb, var(--focus) 32%, transparent); }
