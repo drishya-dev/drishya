@@ -16,11 +16,7 @@
   -webkit-mask-image:radial-gradient(80% 90% at 50% 44%,#000 0,rgba(0,0,0,.55) 50%,transparent 100%); mask-image:radial-gradient(80% 90% at 50% 44%,#000 0,rgba(0,0,0,.55) 50%,transparent 100%); }
 .mh-opening-words { position:relative; display:flex; flex-direction:column; align-items:center; max-width:min(720px,calc(100vw - 2 * var(--mh-pad))); padding-bottom:6px; text-align:center; }
 /* The shared mark is pinned to 25 px for headers (atelier.css, !important); the opening shows it large. */
-.mh-home-v2 .mh-opening-mark .brand-mark.brand-image { width:clamp(64px,6.4vw,128px)!important; height:clamp(64px,6.4vw,128px)!important; display:block; background:none!important; border:0; border-radius:0; overflow:visible; }
-/* The raster mark carries a near-black backing; screen blending leaves only the ribbon on the dotted ground. */
-.mh-opening-mark .brand-mark img { width:100%; height:100%; mix-blend-mode:screen; }
-/* On a light ground the backing cannot blend away, so it is a deliberate rounded badge. */
-:root[data-theme=light] .mh-opening-mark .brand-mark img { mix-blend-mode:normal; border-radius:22%; }
+.mh-home-v2 .mh-opening-mark .brand-mark.brand-image { width:clamp(64px,6.4vw,128px)!important; height:clamp(64px,6.4vw,128px)!important; display:block; background:none!important; border:0; border-radius:0; overflow:visible; color:var(--mh-ink); }
 :root[data-ui-version=modern][data-experience=classic] .home .mh-wordmark { margin:10px 0 0; font:600 clamp(60px,9vw,184px)/.9 var(--sans); letter-spacing:-.055em; color:var(--mh-ink); }
 /* No letter-spacing on Devanagari: spacing splits its conjuncts. */
 .mh-wordmark span { display:block; margin-top:14px; font:var(--weight-regular) var(--text-xl)/1.3 var(--sans); letter-spacing:0; color:var(--t4); }
