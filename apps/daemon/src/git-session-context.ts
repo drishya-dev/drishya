@@ -7,21 +7,56 @@ import type {GitSessionQuery} from './git-session-evidence.ts';
 type Git=(args:string[])=>Promise<string>;
 type CurrentFile=(path:string)=>Promise<{text:string;hasMore:boolean;redacted:boolean}>;
 const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
+
+const commitPathCache=new Map<string,GitSessionQuery['commits'][number]|null>();
+const rememberCommit=(cacheKey:string,entry:GitSessionQuery['commits'][number]|null)=>{
+  if(commitPathCache.has(cacheKey))commitPathCache.delete(cacheKey);
+  commitPathCache.set(cacheKey,entry);
+  if(commitPathCache.size>2000){
+    const oldest=commitPathCache.keys().next().value;
+    if(oldest!==undefined)commitPathCache.delete(oldest);
+  }
+};
+const readCachedCommit=(cacheKey:string)=>{
+  if(!commitPathCache.has(cacheKey))return undefined;
+  const entry=commitPathCache.get(cacheKey)!;
+  commitPathCache.delete(cacheKey);commitPathCache.set(cacheKey,entry);
+  return entry;
+};
+
 /** Bounded current Git facts; no source or working-tree bytes are persisted. */
-export async function gitSessionContext(git:Git,hashes:string[],includeWorking=true,readNew?:CurrentFile):Promise<{query:GitSessionQuery;omitted:number}> {
-  const commits:GitSessionQuery['commits']=[];
-  if(hashes.length){
-    const raw=await git(['log','--no-show-signature','--no-notes','--no-walk=unsorted','--no-renames','--name-only','-z','--format=%x01%H%x00%cI',...hashes.slice(0,50),'--']).catch(error=>{if(error instanceof HttpError&&(error.status===413||error.status===422))return '';throw error;});
+export async function gitSessionContext(git:Git,hashes:string[],includeWorking=true,readNew?:CurrentFile,root?:string):Promise<{query:GitSessionQuery;omitted:number}> {
+  const sample=hashes.slice(0,50);
+  const keyFor=(hash:string)=>`${root}\0${hash}`;
+  const missing=root?sample.filter(hash=>readCachedCommit(keyFor(hash))===undefined):sample;
+  const statusArgs=['status','--porcelain=v1','-z','--untracked-files=all','--ignore-submodules=all'];
+  const parsedUncached=new Map<string,GitSessionQuery['commits'][number]>();
+  const loadMissing=async()=>{
+    if(!missing.length)return;
+    const raw=await git(['log','--no-show-signature','--no-notes','--no-walk=unsorted','--no-renames','--name-only','-z','--format=%x01%H%x00%cI',...missing,'--']).catch(error=>{if(error instanceof HttpError&&(error.status===413||error.status===422))return '';throw error;});
     for(const part of raw.split('\x01').slice(1)){
       const [hash,committedAt,...names]=part.split('\0');
+      if(!hash||!committedAt)continue;
       const paths=names.map(path=>path.replace(/^\n/,'')).filter(Boolean);
       // Protected, merged or oversized changes cannot provide an exact path-set assertion.
-      if(hash&&committedAt&&paths.length<=500&&paths.every(safeGitPath))commits.push({hash,committedAt,paths});
+      const valid=paths.length<=500&&paths.every(safeGitPath)?{hash,committedAt,paths}:null;
+      if(root)rememberCommit(keyFor(hash),valid);
+      else if(valid)parsedUncached.set(hash,valid);
     }
+  };
+  let status='';
+  if(includeWorking){
+    const [,rawStatus]=await Promise.all([loadMissing(),git(statusArgs)]);
+    status=rawStatus;
+  }else{
+    await loadMissing();
+  }
+  const commits:GitSessionQuery['commits']=[];
+  for(const hash of sample){
+    const entry=root?readCachedCommit(keyFor(hash)):parsedUncached.get(hash);
+    if(entry)commits.push(entry);
   }
   if(!includeWorking)return {query:{commits,working:[]},omitted:0};
-  const statusArgs=['status','--porcelain=v1','-z','--untracked-files=all','--ignore-submodules=all'];
-  const status=await git(statusArgs);
   const fields=status.split('\0'),paths:{status:string;path:string}[]=[];
   for(let n=0;n<fields.length;n++){const row=fields[n]!;if(!row)continue;paths.push({status:row.slice(0,2),path:row.slice(3)});if(/[RC]/.test(row.slice(0,2)))n++;}
   // This is a small contextual sample, not another all-files Git review. Older commit pages
