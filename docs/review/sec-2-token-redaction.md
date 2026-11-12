@@ -1,0 +1,19 @@
+# SEC-2 · Redact PyPI tokens and missed formats, plus store cleanup on upgrade
+
+- **Summary:**
+  - Bumped `PRIVACY_POLICY_VERSION` from `'p3'` to `'p4'` in `packages/privacy/src/index.ts` and added 12 token redaction rules before `bearer`/`url-credentials`/`secret-assignment`: `pypi-token`, `gitlab-token`, `docker-token`, `digitalocean-token`, `sendgrid-key`, `twilio-key`, `shopify-token`, `azure-storage-key`, `databricks-token`, `linear-token`, `notion-token`, and `discord-token`.
+  - Used standard Web `atob`/`btoa` in `packages/privacy/src/index.ts` (avoiding Node `Buffer`) so `@drishya/ui` imports stay browser-safe, and guarded `url-credentials` against already-redacted `[REDACTED:...]` tokens inside URLs.
+  - Added automatic policy-upgrade scrubbing in `packages/store/src/index.ts` (`Store.migrate()`): whenever `meta['privacy_policy_version'] !== PRIVACY_POLICY_VERSION`, clears derived `projections` and removes `history/index.db*`, re-redacts stored `observations` (inline text, object keys, externalized `$blob` content/previews while skipping binary `captured-image.data`), `recordings.title` (and refreshes truncated titles from first observation via `captureMetadata`), `bookmarks.note`, `generated.body`, and `graphs.body`, rebuilds affected FTS5 `search` rows, deletes unreferenced old unredacted blob files, bumps `revision`, and runs `VACUUM; PRAGMA wal_checkpoint(TRUNCATE);` so zero raw secret bytes remain anywhere under the store directory.
+  - Bumped `HISTORY_VERSION` in `apps/daemon/src/history-worker.ts` to include `PRIVACY_POLICY_VERSION` (`h3-lineage-4096-p4`) so cached history databases rebuild cleanly against scrubbed observations.
+  - Added `scripts/real-cases/redaction.ts` (`redaction` case in `scripts/check-real.ts`) scanning local Claude Code and Codex journals and confirming zero unredacted rule matches survive in imported projections.
+
+- **Verification:**
+  - `corepack pnpm typecheck` (`tsc -p tsconfig.json --noEmit` + `@drishya/ui` typecheck): passed.
+  - Unit suite (`corepack pnpm test` across 236 files / 1472 active tests): 235/236 passed in parallel, `apps/daemon/test/git-compare.test.ts` passed standalone (`11 passed`) after the 5s parallel CPU timeout; `packages/privacy/test/privacy.test.ts` (`91 passed`), `packages/privacy/test/assignment-differential.test.ts` (`2 passed`), and `packages/store/test/store.test.ts` (`19 passed`, including end-to-end `p3 -> p4` DB/WAL/blob/FTS scrub check).
+  - Real-session corpus (`node scripts/check-real.ts redaction --pick 3`): scanned local Claude Code (`rec_ebc58aff`, `rec_39af3c94`, `rec_c8e5c9c8` — 79 matching sessions) and Codex (`rec_7cb1cda1`, `rec_58787f2c`, `rec_fa9e37da` — 3 matching sessions); `PASS zero unredacted matches for all rules`.
+  - Scratch-home verification on real `rec_39af3c94` (Claude Code, 14.5 MB, +3419 obs) & `rec_7cb1cda1` (Codex, 15.0 MB, +4147 obs):
+    - History, session menu (`Navigate history`), FTS search (`REDACTED pypi` hits > 0, prefix hits = 0), export bundle (`[REDACTED:pypi-token]` present, 0 residual per-string rule hits), and raw binary scan of all files under scratch store dir all passed.
+    - Simulated pre-`p4` store holding `rec_39af3c94` cleaned automatically on `App` reopen (`privacyOutdated = false`, 0 prefix search hits, 0 leaked bytes on disk).
+    - Screenshots inspected across `1440x900` and `600x900` in Jet, Midnight, and Paper (retained privately in `.local/sec-2/`).
+  - Edge browser specs (`DRISHYA_BROWSER_CHANNEL=msedge DRISHYA_WORKERS=2 node scripts/test-browser.ts tests/browser/session-menu.spec.ts tests/browser/search-panel.spec.ts tests/browser/search-position.spec.ts tests/browser/stored-find.spec.ts tests/browser/stored-tool-result.spec.ts --retries=0`): `21 passed / 0 failed / 0 retries`.
+  - `corepack pnpm ui:build` and `corepack pnpm package:verify`: passed.

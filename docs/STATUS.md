@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SEC-2 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/sec-2` | 2026-11-12 | `packages/privacy/src/index.ts`, `packages/privacy/test/privacy.test.ts`, `packages/privacy/test/assignment-differential.test.ts`, `packages/store/src/index.ts`, `packages/store/test/`, `packages/ingest/src/index.ts`, `packages/ingest/test/`, `apps/daemon/src/app.ts`, `apps/daemon/src/history-worker.ts`, `apps/daemon/test/`, `scripts/`, `docs/review/`, `STATUS.md`, `TASKS.md`. |
 | FILES-18 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-18` | 2026-11-12 | `apps/ui/src/components/FileHistory.tsx`, `apps/ui/src/components/FileReadingActions.tsx`, file-history helpers/units, browser specs (`file-timeline-steps.spec.ts`, `file-timeline-pages.spec.ts`, `fresh-workspace.spec.ts`, `product-workspace.spec.ts`), `docs/review/files-18-newest-first.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
@@ -59,6 +58,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash — 12 Nov: SEC-2 token redaction and store upgrade scrub (PR #429)
+
+- Added 12 token redaction rules under `PRIVACY_POLICY_VERSION = "p4"` in `packages/privacy/src/index.ts` (`pypi-token`, `gitlab-token`, `docker-token`, `digitalocean-token`, `sendgrid-key`, `twilio-key`, `shopify-token`, `azure-storage-key`, `databricks-token`, `linear-token`, `notion-token`, `discord-token`) with browser-safe Web `atob`/`btoa` validation and `url-credentials` protection for already-redacted URL tokens.
+- Added automatic policy-upgrade scrubbing in `packages/store/src/index.ts` (`Store.migrate()`) so opening an older store re-redacts observations, `$blob` contents/previews, `recordings.title`, `bookmarks.note`, `generated.body`, and `graphs.body`, rebuilds FTS5 `search`, drops cached `projections` and `history/index.db*`, deletes unreferenced old blobs, and runs `VACUUM; PRAGMA wal_checkpoint(TRUNCATE);` leaving zero raw bytes on disk; bumped `HISTORY_VERSION` in `apps/daemon/src/history-worker.ts`.
+- Added `scripts/real-cases/redaction.ts` and verified on real local sessions (`claude-code` `rec_39af3c94` / `rec_ebc58aff` / `rec_c8e5c9c8` and `codex` `rec_7cb1cda1` / `rec_58787f2c` / `rec_fa9e37da`), pre-`p4` store upgrade on `rec_39af3c94`, unit suite, `typecheck`, `ui:build`, `package:verify`, and 21 Edge browser checks ([review record](review/sec-2-token-redaction.md)).
 ### Yash with Gemini 3.8 Flash — 12 Nov: FILES-17 file and folder icons (PR #427)
 
 - Replaced the minimal `FileIcon.tsx` labels with custom inline geometric vector icons in Drishya's own minimal line style (zero external icon packages or license notices required): 55+ file types by extension and exact filename plus open/closed folder states with calm bottom-right badge marks for 11 well-known folder categories (`.git`, `.github`, `.claude`/`.codex`/`.agents`, `src`/`apps`/`packages`/`lib`, `docs`, `tests`/`spec`, `scripts`/`tools`, `dist`/`build`, `node_modules`/`vendor`, `public`/`assets`, `fixtures`/`mocks`).
