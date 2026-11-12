@@ -114,7 +114,6 @@
   :root[data-experience='classic'] .studio-actions .btn:hover, :root[data-experience='classic'] .studio-dock .instrument:hover { background: var(--s2); }
 }
 /* Keyboard navigation is immediate. No extra animation system competes with measured arrivals. */
-:root[data-experience='classic'] button:focus-visible, :root[data-experience='classic'] summary:focus-visible { outline: 2px solid var(--t2); outline-offset: 3px; }
 
 /* Classic retains the promoted Studio material, with bounded translucent chrome. */
 :root[data-experience=classic] .workspace-header { background: color-mix(in srgb, var(--bg) 76%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }

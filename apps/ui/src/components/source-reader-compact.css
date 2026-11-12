@@ -10,7 +10,7 @@
 .current-reader-options .source-go input{width:70px;min-width:0;min-height:32px;font:var(--text-xs) var(--mono)}
 .current-reader-options .source-go [role=status]:empty{display:none}
 .current-reader-options .source-go [role=status]{flex-basis:100%;font-size:var(--text-2xs);color:var(--bad)}
-.current-reader-options>summary:focus-visible{outline:1px solid var(--t2);outline-offset:-2px}
+:root:not([data-input-modality="pointer"]) .current-reader-options>summary:focus-visible{outline:1px solid var(--focus-ring);outline-offset:-2px}
 @media(max-width:1100px){
  :root[data-ui-version=modern] .file-peek-reader:has(.current-reader-options)>footer{display:none}
  :root[data-ui-version=modern] .file-peek-reader .current-source-tools{display:flex;flex:none;min-width:0;padding:5px 10px;gap:0}

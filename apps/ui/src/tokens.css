@@ -22,6 +22,8 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-strong: 600;
+
+  --focus-ring: color-mix(in srgb, var(--t2, #c1c1bd) 82%, transparent);
 }
 
 /* `<small>` otherwise shrinks relative to its parent, which lands off the scale. */
@@ -391,3 +393,4 @@ small { font-size: var(--text-2xs); }
 
 /* Git light is an illustrated material with its own dark backing in every palette. */
 :root { --git-haze-violet:#29144d; --git-haze-cyan:#082438; --git-canvas:#010102; }
+@media (forced-colors: active) { :root { --focus-ring: Highlight; } }

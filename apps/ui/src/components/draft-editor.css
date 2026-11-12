@@ -21,4 +21,4 @@
 :root[data-ui-version=modern] .draft-editor-host .cm-editor {font:var(--text-xs)/22px var(--mono);}
 :root[data-ui-version=modern] .draft-editor-host .cm-scroller {line-height:22px;}
 /* The legacy `.viewer :focus-visible` ring used to beat CodeMirror's own `outline: none` on source order; unlayered CodeMirror now beats the layered ring, so state it here. */
-.viewer .cm-content:focus-visible {outline:1px solid var(--focus);outline-offset:3px;}
+.viewer .cm-content:focus-visible {outline:none;}

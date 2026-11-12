@@ -15,7 +15,6 @@
 .browser-scrubber input{min-width:48px;flex:1;accent-color:var(--t1);height:18px}
 .browser-scrubber button{border:1px solid var(--line-2);background:transparent;color:var(--t1);border-radius:var(--round-xs);width:24px;height:24px;cursor:pointer}
 .browser-scrubber button:disabled{opacity:.35;cursor:default}
-.browser-scrubber :focus-visible,.browser-url:focus-visible{outline:1px solid var(--t1);outline-offset:3px}
 
 .browser-batch{margin:0;padding-left:18px;display:grid;gap:5px;font:var(--text-2xs)/1.5 var(--mono)}
 .browser-batch li{overflow-wrap:anywhere}

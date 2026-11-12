@@ -1,6 +1,5 @@
 .captured-data-choice{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;flex-basis:100%}
 .captured-data-choice select{min-width:0;max-width:100%;flex:1;border:1px solid var(--line);border-radius:var(--round-xs);background:var(--bg);color:var(--t2);font:var(--text-2xs)/1.5 var(--mono);padding:3px 5px;text-overflow:ellipsis}
-.captured-data-choice select:focus-visible{outline:1px solid var(--t2);outline-offset:2px}
 .captured-data-sources{min-width:0;max-width:100%;color:var(--t3);font:var(--text-2xs)/1.5 var(--sans)}
 .captured-data-sources>summary{cursor:pointer;padding:4px 0}
 .captured-data-sources[open]{flex-basis:100%}

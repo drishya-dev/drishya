@@ -7,7 +7,7 @@
 /* A real hit target and keyboard separator, with no resident decorative grip. */
 :root[data-ui-version=modern] .reading-resize::after {content:none;}
 :root[data-ui-version=modern] .reading-resize {background:transparent;border:0;box-shadow:none;}
-:root[data-ui-version=modern] .reading-resize:focus-visible {outline:1px solid var(--focus);outline-offset:-1px;}
+:root[data-ui-version=modern]:not([data-input-modality="pointer"]) .reading-resize:focus-visible {outline:1px solid var(--focus-ring);outline-offset:-1px;}
 @media(forced-colors:active) {
   :root[data-ui-version=modern] * {scrollbar-color:auto;}
   :root[data-ui-version=modern] .reading-resize:focus-visible {outline:2px solid Highlight;}
