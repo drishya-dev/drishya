@@ -168,6 +168,85 @@ describe('sanitize', () => {
   });
 });
 
+// SEC-2: synthetic token fixtures built at runtime so no literal token shape is committed.
+const PYPI = 'py' + 'pi-' + 'AgE' + rnd(80);
+const GL_PAT = 'gl' + 'pat-' + rnd(20);
+const GL_DEPLOY = 'gl' + 'dt-' + rnd(20);
+const DOCKER = 'dc' + 'kr_pat_' + rnd(27);
+const DO = 'do' + 'p_v1_' + '0123456789abcdef'.repeat(4);
+const SG = 'S' + 'G.' + rnd(22) + '.' + rnd(43);
+const TWILIO_HEX = 'SK' + '0123456789abcdef0123456789abcdef';
+const SHOPIFY_AT = 'sh' + 'pat_' + 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
+const SHOPIFY_SS = 'sh' + 'pss_' + 'f0e1d2c3b4a5968778695a4b3c2d1e0f';
+const AZURE_KEY = rnd(64) + '==';
+const DATABRICKS = 'da' + 'pi' + 'a1b2c3d4e5f60718293a4b5c6d7e8f90-2';
+const LINEAR = 'lin_' + 'api_' + rnd(40);
+const NOTION_SECRET = 'sec' + 'ret_' + rnd(43);
+const NOTION_NTN = 'nt' + 'n_' + rnd(46);
+const DISCORD = Buffer.from('123456789012345678', 'ascii').toString('base64url') + '.' + rnd(6) + '.' + rnd(32);
+
+describe('SEC-2 token formats and near-misses', () => {
+  it.each([
+    ['pypi-token', `poetry config pypi-token.pypi ${PYPI}`, PYPI],
+    ['pypi-token', `https://__token__:${PYPI}@test.pypi.org/legacy/`, PYPI],
+    ['gitlab-token', `git clone https://oauth2:${GL_PAT}@gitlab.example/repo`, GL_PAT],
+    ['gitlab-token', `DEPLOY=${GL_DEPLOY}`, GL_DEPLOY],
+    ['docker-token', `echo ${DOCKER} | docker login --password-stdin`, DOCKER],
+    ['digitalocean-token', `DIGITALOCEAN_ACCESS_TOKEN=${DO}`, DO],
+    ['sendgrid-key', `SENDGRID_API_KEY=${SG}`, SG],
+    ['twilio-key', `TWILIO_API_KEY=${TWILIO_HEX}`, TWILIO_HEX],
+    ['twilio-key', `curl -u ${TWILIO_HEX}:secret https://api.twilio.com/2010`, TWILIO_HEX],
+    ['shopify-token', `SHOPIFY_TOKEN="${SHOPIFY_AT}"`, SHOPIFY_AT],
+    ['shopify-token', `SHOPIFY_SECRET="${SHOPIFY_SS}"`, SHOPIFY_SS],
+    ['databricks-token', `DATABRICKS_TOKEN=${DATABRICKS}`, DATABRICKS],
+    ['linear-token', `LINEAR_API_KEY=${LINEAR}`, LINEAR],
+    ['notion-token', `NOTION_TOKEN=${NOTION_SECRET}`, NOTION_SECRET],
+    ['notion-token', `NOTION_KEY=${NOTION_NTN}`, NOTION_NTN],
+    ['discord-token', `DISCORD_BOT_TOKEN="${DISCORD}"`, DISCORD],
+  ])('redacts %s cleanly', (rule, input, token) => {
+    const r = redactText(input);
+    expect(r.text).toContain(`[REDACTED:${rule}]`);
+    expect(r.text).not.toContain(token);
+  });
+
+  it('redacts Azure storage AccountKey values inside connection strings', () => {
+    const conn = `DefaultEndpointsProtocol=https;AccountName=demo;AccountKey=${AZURE_KEY};EndpointSuffix=core.windows.net`;
+    const r = redactText(conn);
+    expect(r.text).toBe('DefaultEndpointsProtocol=https;AccountName=demo;AccountKey=[REDACTED:azure-storage-key];EndpointSuffix=core.windows.net');
+    expect(r.text).not.toContain(AZURE_KEY);
+  });
+
+  it.each([
+    'pypi-short123',
+    'pypi-release-github-action-workflow-publish',
+    'pypi-' + 'a'.repeat(48),
+    'gl' + 'pat-short',
+    'gl' + 'pat-your_example_token_placeholder',
+    'dc' + 'kr_pat_short',
+    'dc' + 'kr_pat_' + 'x'.repeat(27),
+    'do' + 'p_v1_short',
+    'do' + 'p_v1_' + '0'.repeat(64),
+    'S' + 'G.onlyonepart.short',
+    'S' + 'G.' + 'a'.repeat(20) + '.' + 'b'.repeat(20),
+    // Bare SK + 32 hex without Twilio / key context stays intact
+    'const digest = "' + TWILIO_HEX + '";',
+    'sh' + 'pat_short123',
+    'sh' + 'pat_' + '0'.repeat(32),
+    'DefaultEndpointsProtocol=https;AccountKey=your_account_key_here',
+    'AccountKey=short',
+    'da' + 'pi123456',
+    'da' + 'pi_' + 'a'.repeat(32),
+    'lin_' + 'api_short',
+    'sec' + 'ret_configuration_value_provider_factory_impl',
+    'sec' + 'ret_OnlyCamelCaseLettersWithoutDigitsInCodeName',
+    'nt' + 'n_short123',
+    // Three-part dotted identifier whose first segment is not a base64 Discord snowflake stays intact
+    'moduleIdentifierNameLongEnough.abcdef.propertyChainNameThatExceedsTwentySevenChars',
+  ])('keeps near-miss unredacted: %s', (nearMiss) => {
+    expect(redactText(nearMiss)).toEqual({ text: nearMiss, hits: [] });
+  });
+});
+
 describe('necessary-condition redaction fast paths', () => {
   it.each(['password', 'passwd', 'pwd', 'secret', 'token', 'api_key', 'api-key', 'apikey', 'access_key', 'access-key', 'accesskey', 'private_key', 'private-key', 'privatekey', 'client_secret', 'client-secret', 'clientsecret', 'auth'])('preserves assignment detection for %s within identifiers and mixed case', key => {
     const value = rnd(40);
