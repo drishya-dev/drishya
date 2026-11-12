@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| FILES-17 | @yash + Gemini 3.8 Flash (Antigravity) | gemini/files-17 | 2026-11-12 | pps/ui/src/components/FileIcon.tsx, pps/ui/src/components/file-icon.css, pps/ui/test/file-icon.test.ts, 	ests/browser/file-icons.spec.ts, TASKS/STATUS/review record. |
 | UI-32b | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32b` | 2026-11-12 | `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/recovered-surfaces.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/large-screens.css`, `History.tsx`, `Viewer.tsx`, `tests/browser/toolbox-window.spec.ts`, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
 | UI-30 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-30` | 2026-11-12 | `apps/ui/src/main.tsx` or `App.tsx` (input modality root attribute), new `focus-modality.ts`, CSS `:focus`/`:focus-visible` rules & shared focus-ring token across `apps/ui/src/`, `tests/browser/focus-rings.spec.ts`, units, TASKS/STATUS/review record. |
 | UI-31 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-31` | 2026-11-12 | `apps/ui/src/components/History.tsx` (turn capsule/heading), `apps/ui/src/modern/conversation.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/styles.css` (turn rules only), turn specs/units, TASKS/STATUS/review record; no MOTION-3/4 owners. |
