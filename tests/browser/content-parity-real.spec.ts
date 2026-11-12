@@ -197,7 +197,7 @@ test.describe('genuine cross-tool content parity',()=>{
         await expect.poll(()=>page.evaluate(original=>(window as any).parityCopied===original,original)).toBe(true);
        }
       }
-      const captured=sample.family==='missing'?material.locator('.muted,pre.output').filter({hasText:/not recorded|No .*captured|Waiting for/i}).last():material.locator('.question-text,.plan-text,.plan-document>h1,.plan-document>h2,.plan-document>p,.delegation-task,.ln-tx,.change-text,.query,.search-bead,pre.output,.browser-action,.web-results a,.op-image img,.path-image-path,.data-original,.result-fields dd,.structured-result td,[role=treeitem],.data-table td').filter({visible:true}).first();
+      const captured=sample.family==='missing'?material.locator('.muted,pre.output').filter({hasText:/not recorded|No .*captured|Waiting for/i}).last():material.locator('.question-text,.plan-text,.plan-document>h1,.plan-document>h2,.plan-document>p,.tool-markdown>h1,.tool-markdown>h2,.tool-markdown>p,.tool-markdown>pre,.tool-markdown>ul,.tool-markdown>ol,.delegation-task,.ln-tx,.change-text,.query,.search-bead,pre.output,.browser-action,.web-results a,.op-image img,.path-image-path,.data-original,.result-fields dd,.structured-result td,[role=treeitem],.data-table td').filter({visible:true}).first();
       await captured.waitFor();
       if(await captured.count()){
        await reveal(captured);

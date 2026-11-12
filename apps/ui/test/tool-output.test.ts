@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toolOutputText } from '../src/lib/tool-output';
+import { looksLikeMarkdown, toolOutputText } from '../src/lib/tool-output';
 describe('structured tool output display', () => {
   it('decodes nested MCP execution responses and arrays without dropping mixed evidence',()=>{
     const result={output:'first\nsecond',exit_code:0};
@@ -7,6 +7,40 @@ describe('structured tool output display', () => {
     expect(toolOutputText(JSON.stringify([result,result])).text).toBe('first\nsecond\nExit code: 0\n\nfirst\nsecond\nExit code: 0');
     const mixed=JSON.stringify([result,{important:'unrecognized'}]);
     expect(toolOutputText(mixed)).toEqual({text:mixed,decoded:false});
+  });
+  it('recursively unwraps nested and truncated MCP content[] envelopes without leaving escapes', () => {
+    const inner = JSON.stringify({ content: [{ type: 'text', text: '## Heading\n\n- **item**: `"quoted"`\n- line two' }] });
+    const nested = JSON.stringify({ content: [{ type: 'text', text: inner }] });
+    expect(toolOutputText(nested)).toEqual({
+      decoded: true,
+      text: '## Heading\n\n- **item**: `"quoted"`\n- line two',
+    });
+    const deep = JSON.stringify({ content: [{ type: 'text', text: nested }] });
+    expect(toolOutputText(deep)).toEqual({
+      decoded: true,
+      text: '## Heading\n\n- **item**: `"quoted"`\n- line two',
+    });
+    // Simulate PREVIEW truncation inside an outer and inner MCP content[] envelope.
+    const clipped = deep.slice(0, deep.length - 12);
+    const decodedClipped = toolOutputText(clipped);
+    expect(decodedClipped.decoded).toBe(true);
+    expect(decodedClipped.text).toContain('## Heading\n\n- **item**: `"quoted"`');
+    expect(decodedClipped.text).not.toContain('\\"');
+    expect(decodedClipped.text).not.toContain('\\n');
+  });
+  it('decodes text+image MCP content while leaving image-only or mixed resource_link untouched', () => {
+    const withImage = JSON.stringify({ content: [{ type: 'text', text: 'line one\nline two' }, { type: 'image', data: 'abc' }] });
+    expect(toolOutputText(withImage)).toEqual({ decoded: true, text: 'line one\nline two' });
+    const mixed = JSON.stringify({ content: [{ type: 'text', text: 'keep' }, { type: 'resource_link', uri: 'https://example.invalid', name: 'x' }] });
+    expect(toolOutputText(mixed)).toEqual({ text: mixed, decoded: false });
+  });
+  it('distinguishes unwrapped Markdown from JSON, patches and plain text', () => {
+    expect(looksLikeMarkdown('## Environment\n\n- **Display**: `1280x800`\n- Status: ok')).toBe(true);
+    expect(looksLikeMarkdown('# Page Snapshot\n- generic "Home"\n')).toBe(true);
+    expect(looksLikeMarkdown('| Col A | Col B |\n| --- | --- |\n| 1 | 2 |')).toBe(true);
+    expect(looksLikeMarkdown('{"rows":[{"id":1}]}')).toBe(false);
+    expect(looksLikeMarkdown('*** Begin Patch\n*** Update File: a.ts\n*** End Patch')).toBe(false);
+    expect(looksLikeMarkdown('Title: Home\nURL: http://127.0.0.1:8501\n---\nPlain prose')).toBe(false);
   });
   it('decodes native execution JSON strings once and retains outcome information', () => {
     const output = 'first line\nsecond line\nconst pattern = "\\n";';

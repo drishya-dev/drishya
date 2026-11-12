@@ -13,6 +13,7 @@ import { passageArtifacts, passageItems, samePassageContent, type PassageContent
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import { ReadingKeys } from './ReadingKeys.tsx';
 import { CommandText } from './CommandText.tsx';
+import { ExecPatchMaterial } from './ExecPatchMaterial.tsx';
 import {commandDisplay} from '../lib/command-display.ts';
 import {operationOutcome} from '../lib/operation-outcome.ts';
 import { reasoningGap } from '../lib/reasoning-gap.ts';
@@ -957,7 +958,7 @@ function ScriptDetails({ op, projection }: { op: Operation; projection: Projecti
   const parent = op.parentOperationId ? projection.operations.find(item => item.id === op.parentOperationId) : undefined;
   const script = projection.artifacts.find(artifact => op.artifactIds.includes(artifact.id) && artifact.id.endsWith('_script'));
   const relation = parent && projection.links.find(link => link.from === parent.id && link.to === op.id && link.relation === 'tool-result');
-  return parent || script ? <details className="captured-script" onClick={event => event.stopPropagation()}><summary>Script</summary><p className="insp-note">{parent ? `${relation?.explanation ?? 'Script reference.'} This relationship does not assert which instruction caused the work.` : 'The script containing this patch.'}</p>{parent ? <><ExpandedMaterial op={parent} />{parent.images?.length ? <OpImages key={parent.id} images={parent.images} /> : null}</> : <ArtifactReader key={script?.id} id={script?.id} kind="code" />}</details> : null;
+  return parent || script ? <details className="captured-script" onClick={event => event.stopPropagation()}><summary>Script</summary><p className="insp-note">{parent ? `${relation?.explanation ?? 'Script reference.'} This relationship does not assert which instruction caused the work.` : 'The script containing this patch.'}</p>{parent ? <><ExpandedMaterial op={parent} rawScript />{parent.images?.length ? <OpImages key={parent.id} images={parent.images} /> : null}</> : <ArtifactReader key={script?.id} id={script?.id} kind="code" />}</details> : null;
 }
 
 function ExpandedOperation({ op, image }: { op: Operation; image?: React.ReactNode }) {
@@ -965,7 +966,7 @@ function ExpandedOperation({ op, image }: { op: Operation; image?: React.ReactNo
   return <section aria-label="Operation detail">{image ? <div className="image-material-expanded">{image}</div> : <><ExpandedMaterial op={op} />{op.images?.length ? <OpImages key={op.id} images={op.images} /> : null}</>}{projection && <><ScriptDetails op={op} projection={projection} /><StepReading op={op} projection={projection} /></>}</section>;
 }
 
-function ExpandedMaterial({ op }: { op: Operation }) {
+function ExpandedMaterial({ op, rawScript = false }: { op: Operation; rawScript?: boolean }) {
   const d = op.detail;
   const input = op.artifactIds.find((id) => id.endsWith('_input'));
   if (browserStep(op)) return <div className="op-expanded mcp-material" onClick={e => e.stopPropagation()}><BrowserEvidence op={op} full/></div>;
@@ -990,7 +991,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       </div>;
     case 'test':
       return <div className="op-expanded test-material" onClick={(e) => e.stopPropagation()}>
-        <CommandText text={d.command}/>
+        {rawScript ? <CommandText text={d.command}/> : <ExecPatchMaterial id={`${op.id}/exec`} command={d.command} truncated={!!input} full/>}
         <FixChainPanel op={op} />
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} fallback={d.summary ? <div className="test-counts"><span className="good">{d.summary.passed} passed</span><span className={d.summary.failed ? 'bad' : 'muted'}>{d.summary.failed} failed</span>{d.summary.skipped > 0 && <span>{d.summary.skipped} skipped</span>}<span className="muted">computed from output</span></div> : <div className="muted">Exit {d.exitCode ?? 'not recorded'}</div>} />
@@ -1001,7 +1002,7 @@ function ExpandedMaterial({ op }: { op: Operation }) {
       </div>;
     case 'shell':
       return <div className="op-expanded shell-material" onClick={(e) => e.stopPropagation()}>
-        <CommandText text={d.command}/>
+        {rawScript ? <CommandText text={d.command}/> : <ExecPatchMaterial id={`${op.id}/exec`} command={d.command} truncated={!!input} full/>}
         <FixChainPanel op={op} />
         {input && <ArtifactReader id={input} kind="code" />}
         <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} />
@@ -1088,7 +1089,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       const s = d.summary;
       return (
         <div className="test">
-          <CommandText text={d.command} compact/>
+          <ExecPatchMaterial id={`${op.id}/exec`} command={d.command} truncated={op.artifactIds.some(id=>id.endsWith('_input'))} compact/>
           <ResultArea state={op.status} resolving={resolving}><CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} fallback={s ? (
             <VerificationStrip summary={s} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
           ) : op.status !== 'running' ? (
@@ -1108,7 +1109,7 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     case 'shell':
       return (
         <div className="shell">
-          <CommandText text={d.command} compact/>
+          <ExecPatchMaterial id={`${op.id}/exec`} command={d.command} truncated={op.artifactIds.some(id=>id.endsWith('_input'))} compact/>
           <ResultArea state={op.status} resolving={resolving}>
             <CapturedOutcomes artifactId={d.outputArtifactId} output={d.outputPreview} onFailure={() => set({ expandedOp: op.id, selectedOp: undefined })} />
             {d.outputPreview ? <TerminalPreview artifactId={d.outputArtifactId} text={d.outputPreview} failed={operationFailed(op)} /> : <span className="muted">{op.status === 'running' ? 'Waiting for output' : 'No output recorded'}</span>}

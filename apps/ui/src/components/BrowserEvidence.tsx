@@ -25,7 +25,7 @@ export function BrowserEvidence({ op, full = false }: { op: Operation; full?: bo
   const step = browserStep(op);
   if (!step) return null;
   return <div className="browser-evidence">
-    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No page URL captured</span>}</div>
+    <div className="browser-address">{step.url ? <><RecordedUrl url={step.url}/>{step.urlFromResult && <span className="browser-url-source" title="Taken from the returned page text; the call input did not record a URL">from result</span>}</> : <span className="muted">No page URL captured</span>}</div>
     <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not recorded'}</small></div>
     {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}

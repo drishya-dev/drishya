@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | SHIP-2h | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2h` | 2026-11-12 | `apps/ui/src/components/` & `apps/ui/src/` (dialogs, Session details, session menu, Usage, plurals, settings icons, grouped command palette, Changes empty This session), `tests/browser/ship-2h-surfaces.spec.ts`, `docs/review/ship-2h-surfaces.md`, `docs/STATUS.md`, `docs/TASKS.md`. |
 | SHIP-6f | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6f` | 2026-11-12 | `apps/ui/src/components/` & `apps/ui/src/modern/` (Notes empty route & Earlier reading notes disclosure), `tests/browser/ship-6f-notes.spec.ts`, `docs/review/ship-6f-notes.md`, `docs/STATUS.md`, `docs/TASKS.md`. |
-| SHIP-2g | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2g` | 2026-11-12 | `packages/capture-core/`, `packages/adapter-codex/`, `packages/adapter-claude-code/`, `packages/projection/`, `apps/ui/src/lib/`, `apps/ui/src/components/`, `tests/browser/ship-2g-tool-content.spec.ts`, `docs/review/ship-2g-tool-content.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -59,6 +58,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2g tool results read as content
+
+- Recursively unwrapped MCP `content[]` text items (including truncated preview and text + image envelopes) in `apps/ui/src/lib/tool-output.ts`, routing decoded JSON into `CapturedResultViews`/`InlineData`, Markdown into `.tool-markdown`, and unescaped text in `ToolOutput`, `StructuredResult`, and `StoredToolResult`.
+- Extended `literalPatch` in `packages/capture-core/src/code-mode.ts` (`r40`) to recognise static single-binding `const|let|var <id> = "..."; await tools.apply_patch(<id>);` wrappers in Codex `exec`, and added `extractExecPatches` + `ExecPatchMaterial` (`History.tsx`, `CapturedCommands.tsx`) so any remaining/truncated `apply_patch` payload renders in `DiffReader` / `DiffView` with a `Script` toggle.
+- Added `resultPageUrl` (`apps/ui/src/lib/browser-evidence.ts`, `BrowserEvidence.tsx`) to extract a safe `http(s)://` URL from leading returned page metadata lines when the call input omits `url`, labelled `from result`.
+- Verified with `typecheck`, workspace unit suites, `ui:build`, targeted Edge browser specs, `package:verify`, and real local sessions (`rec_7f72dcb0`, `rec_7cb1cda1`, `rec_8415940e`, `rec_45333698`, `rec_dac6d1d1`, `rec_64d5c199`) at `600` & `1440 px` across `jet`, `midnight`, and `paper` ([review record](review/ship-2g-tool-content.md)).
 
 ### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2f history differentiation
 
