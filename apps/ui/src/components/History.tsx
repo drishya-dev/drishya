@@ -3,11 +3,11 @@ import { SessionLineage } from './SessionLineage.tsx';
 import {desktopPrompt} from '../lib/desktop-prompt.ts';
 import {DesktopPromptAttachments} from './DesktopPromptAttachments.tsx';
 import {FileReadingActions,openCapturedFileReading} from './FileReadingActions.tsx';
-import { CompactionEvidence, CapturedContextReport, ContextEvidenceScope } from './ContextEvidence.tsx';
+import { CompactionEvidence, CapturedContextReport, ContextEvidenceScope, useHasVisibleCompaction } from './ContextEvidence.tsx';
 import { contextReport } from '../lib/context-report.ts';
 import {StoredToolResult} from './StoredToolResult.tsx';
 import { BrowserEvidence, BrowserStrip, WebEvidence } from './BrowserEvidence.tsx';
-import { injectedLine, injectedMessage } from '../lib/injected-messages.ts';
+import { injectedLine, injectedMessage, type InjectedKind, type InjectedMessage } from '../lib/injected-messages.ts';
 import { browserStep, groupBrowserSteps } from '../lib/browser-evidence.ts';
 import { passageArtifacts, passageItems, samePassageContent, type PassageContent } from '../lib/passage-content.ts';
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
@@ -257,6 +257,16 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const newestTurn = scene.passages.at(-1)?.inTurn;
   const stored = useMemo(() => new Set(storedFolds), [storedFolds]);
   const modern = typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern';
+  const turnBodies = useMemo(() => {
+    const bodies = new Set<number>();
+    for (const ps of scene.passages) {
+      if (ps.inTurn === undefined) continue;
+      if (ps.turnStep !== ps.inTurn || ps.ops.length > 0 || ps.prose.length > 0 || (ps.notices?.length ?? 0) > 0 || (ps.compactionIds?.length ?? 0) > 0 || (ps.compactionSummaryIds?.length ?? 0) > 0) {
+        bodies.add(ps.inTurn);
+      }
+    }
+    return bodies;
+  }, [scene.passages]);
   const folded = useMemo(() => mode === 'history' && modern
     ? foldedSteps(scene.passages, stored, new Set([targetTurn, expandedTurn, activeNow ? newestTurn : undefined].filter((n): n is number => n !== undefined)))
     : new Set<number>(), [scene.passages, stored, mode, modern, targetTurn, expandedTurn, activeNow, newestTurn]);
@@ -699,7 +709,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
               {fold !== 'hidden' && !unloaded && <SessionLineage projection={projection} passageId={ps.id} visibleStep={scene.step} />}
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
             </div>;
           }),
         ])}
@@ -723,7 +733,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
         for(const animation of foldAnimations.current)animation.finish();foldAnimations.current=[];foldMotion.current=undefined;
         const keep=targetTurn??expandedTurn??scene.passages.find(ps=>ps.id===readingAnchor.current?.id)?.inTurn;
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
-        setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
+        setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&turnBodies.has(ps.turnStep)&&!(ps.turnPrompt&&injectedMessage(ps.turnPrompt)&&!contextReport(ps.turnPrompt))&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
       {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const text = ps.turnPrompt ?? ''; const note = injectedMessage(text); return note ? injectedLine(note) : text; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
@@ -758,9 +768,15 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
 const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: PassageContent) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
+  const injectedPrompt = ps.turnPrompt ? injectedMessage(ps.turnPrompt) : undefined;
+  const isCompactPrompt = injectedPrompt?.kind === 'slash-command' && /^\/compact(?:\s|$)/.test(injectedPrompt.detail);
+  const hasVisibleCompaction = useHasVisibleCompaction(ps.compactionIds, ps.compactionSummaryIds);
+  const compactArgs = isCompactPrompt ? injectedPrompt.detail.replace(/^\/compact\s*/, '').trim() : '';
+  const compactNote = compactArgs ? `/compact ${compactArgs}` : undefined;
+  const suppressCompactNotice = !folded && isCompactPrompt && hasVisibleCompaction;
   return (
     <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {!!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} time={ps.turnTime} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!suppressCompactNotice && !!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} time={ps.turnTime} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -780,8 +796,8 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
           </div>
         </>
       )}
-      {!folded && ps.compactionIds?.map(id => <CompactionEvidence key={id} id={id} />)}
-      {!folded && ps.compactionSummaryIds?.map(id => <CompactionEvidence key={id} summaryId={id} />)}
+      {!folded && ps.compactionIds?.map((id, i) => <CompactionEvidence key={id} id={id} commandNote={i === 0 ? compactNote : undefined} />)}
+      {!folded && ps.compactionSummaryIds?.map((id, i) => <CompactionEvidence key={id} summaryId={id} commandNote={i === 0 && !ps.compactionIds?.length ? compactNote : undefined} />)}
       {!folded && ps.prose.map((p) => {
         const pr = prose.get(p.id);
         return pr ? <ProseView key={p.id} pr={pr} arriving={p.arriving} agent={agent} /> : null;
@@ -1136,6 +1152,44 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
  * a single line of what it did. The newest turn waits until the agent is quiet, and replay shows no ledger,
  * so nothing here tells the future.
  */
+function NoticeIcon({ kind }: { kind: InjectedKind }) {
+  const common = { className: 'turn-notice-icon', viewBox: '0 0 16 16', 'aria-hidden': true as const, fill: 'none', stroke: 'currentColor', strokeWidth: 1.4, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const };
+  switch (kind) {
+    case 'interrupted':
+      return <svg {...common}><circle cx="8" cy="8" r="5.5" /><path d="M4.2 4.2 11.8 11.8" /></svg>;
+    case 'background-task':
+      return <svg {...common}><circle cx="8" cy="8" r="5.5" /><path d="m5.5 8.1 1.7 1.7 3.3-3.5" /></svg>;
+    case 'slash-command':
+    case 'command-output':
+      return <svg {...common}><path d="m5 5.5 2.5 2.5L5 10.5M9 10.5h3" /></svg>;
+    case 'cross-session':
+      return <svg {...common}><path d="M3 8h9.5M9.5 5 12.5 8l-3 3" /></svg>;
+    case 'reminder':
+    default:
+      return <svg {...common}><circle cx="8" cy="8" r="5.5" /><path d="M8 7v4M8 4.8v.2" /></svg>;
+  }
+}
+
+function rawNoticeAddsInfo(raw: string, injected: InjectedMessage): boolean {
+  const trimmed = raw.trim();
+  if (injected.kind === 'interrupted') return !/^\[Request interrupted by user(?: for tool use)?\]$/.test(trimmed);
+  if (injected.kind === 'slash-command') {
+    const cmd = injected.detail.split(/\s+/)[0]?.replace(/^\//, '') ?? '';
+    const stripped = trimmed
+      .replace(/<command-name>[\s\S]*?<\/command-name>/g, '')
+      .replace(/<command-message>([\s\S]*?)<\/command-message>/g, (_, body) => body.trim() === cmd ? '' : body)
+      .replace(/<command-args>[\s\S]*?<\/command-args>/g, '')
+      .trim();
+    return stripped.length > 0 || injected.detail.length > 96;
+  }
+  if (injected.kind === 'command-output') {
+    const inner = trimmed.replace(/^<local-command-stdout>([\s\S]*?)<\/local-command-stdout>$/, '$1').trim();
+    return inner !== injected.detail || injected.detail.length > 96 || injected.detail.includes('\n');
+  }
+  if (injected.kind === 'reminder') return injected.detail.length > 96 || injected.detail.includes('\n');
+  return true;
+}
+
 function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: { prompt: string; time?: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
@@ -1144,28 +1198,43 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   const text = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useDisclosureChoice(`prompt/${step ?? 'first'}`, false);
   const [overflows, setOverflows] = useState(false);
+  // Claude Code writes some notices in the user role (a finished background task, a command echo); those are not the person's words.
+  const injected = injectedMessage(prompt);
+  const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
+  const report = contextReport(prompt);
+  const isNotice = !!injected && !report;
+  const envelope = !injected && !report ? desktopPrompt(prompt) : undefined;
+  const shown = report ? undefined : injected ? injected.detail : envelope?.request ?? prompt;
   useLayoutEffect(() => {
     const el = text.current;
-    if (!el) return;
+    if (!el || isNotice) { setOverflows(false); return; }
     const measure = () => { if (!expanded) setOverflows(el.scrollHeight > el.clientHeight + 1); };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [prompt, expanded]);
-  // Claude Code writes some notices in the user role (a finished background task, a command echo); those are not the person's words.
-  const injected = injectedMessage(prompt);
-  const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
-  const report = contextReport(prompt);
-  const envelope = !injected && !report ? desktopPrompt(prompt) : undefined;
-  const shown = report ? undefined : injected ? injected.detail : envelope?.request ?? prompt;
+  }, [prompt, expanded, isNotice]);
   const attachments = envelope ? <DesktopPromptAttachments files={envelope.attachments} hasImageBytes={!!images?.some(image=>image.sha)}/> : null;
-  const captured = injected && !report ? <details className="turn-captured"><summary>Text</summary><pre className="output">{prompt}</pre></details> : null;
+  const captured = isNotice && rawNoticeAddsInfo(prompt, injected) ? <details className="turn-captured"><summary>Original notice</summary><pre className="output">{prompt}</pre></details> : null;
   // The chapter treatment belongs to Modern; the retained UIs keep their original prompt block.
   if (typeof document === 'undefined' || document.documentElement.dataset.uiVersion !== 'modern') return <div className="turn">{who}{shown && <div className="turn-text">{shown}</div>}{attachments}{captured}{report && <CapturedContextReport report={report} time={time} />}{images?.length ? <div className="turn-images"><OpImages images={images} compact={!envelope} /></div> : null}</div>;
   const parts = ledger && mode === 'history' && !(newest && active) ? ledgerParts(ledger) : [];
   const basis = ledgerBasis(ledger);
   const settings = ledger?.recorded?.settingsChange && mode === 'history' ? settingsLine(ledger.recorded.settingsChange) : undefined;
+  if (isNotice) {
+    return (
+      <div className="turn turn-notice">
+        <div className="turn-notice-main">
+          <NoticeIcon kind={injected.kind} />
+          {who}
+          {shown && <span className="turn-text" title={shown.length > 80 ? shown : undefined}>{shown}</span>}
+        </div>
+        {captured}
+        {images?.length ? <div className="turn-images"><OpImages images={images} compact /></div> : null}
+        {parts.length > 0 && <div className="turn-ledger" title={basis}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
+      </div>
+    );
+  }
   return (
     <div className="turn">
       {who}
@@ -1182,7 +1251,7 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
         // The ledger line is the fold control: what the turn did is what stays when it folds.
         <button type="button" className="turn-ledger turn-fold" aria-expanded={!fold.folded} aria-label={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `: ${parts.map((part) => part.text).join(', ')}` : ''}`} title={`${fold.folded ? 'Unfold' : 'Fold'} this turn${parts.length ? `. ${basis}` : ''}`} onClick={(e) => { e.stopPropagation(); fold.toggle(); }}>
           <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          {parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}
+          {parts.length ? parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>) : <span className="turn-fold-label">{fold.folded ? 'Show reply' : 'Hide reply'}</span>}
         </button>
       ) : parts.length > 0 && <div className="turn-ledger" title={basis}>{parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</div>}
     </div>

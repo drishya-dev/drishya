@@ -68,22 +68,39 @@ function Metric({ label, tokens, maximum, reading }: { label: string; tokens?: n
     {reading && <small>{contextTime(reading.time)}{reading.window ? ` · ${number(reading.window)} context window` : ''}</small>}
   </div>;
 }
+function CompactionIcon() {
+  return <svg className="context-compaction-icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M2.5 8h11M8 2v3.5M6 3.5 8 5.5l2-2M8 14v-3.5M6 12.5 8 10.5l2 2" />
+  </svg>;
+}
+/** Whether this passage currently exposes at least one visible compaction boundary or unlinked summary. */
+export function useHasVisibleCompaction(compactionIds?: string[], summaryIds?: string[]): boolean {
+  const evidence = useContext(Evidence);
+  if (!evidence) return false;
+  const { projection: p, step, total } = evidence, atEnd = step >= total;
+  const available = (after: number) => atEnd || after <= step;
+  if (compactionIds?.some(id => p.compactions?.some(c => c.id === id && c.step < step))) return true;
+  return !!summaryIds?.some(id => {
+    const s = p.compactionSummaries?.find(item => item.id === id && available(item.availableAfterStep));
+    return !!s && !s.boundaryId;
+  });
+}
 /** Only references selected for this loaded passage are read, with an independent replay cutoff. */
-export function CompactionEvidence({ id, summaryId }: { id?: string; summaryId?: string }) {
+export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string; summaryId?: string; commandNote?: string }) {
   const evidence = useContext(Evidence);
   if (!evidence) return null;
   const { projection: p, step, total } = evidence, atEnd = step >= total;
   const available = (after: number, request = false) => atEnd || (request ? after < step : after <= step);
   const boundary = id ? p.compactions?.find(c => c.id === id && c.step < step) : undefined;
   const summary = p.compactionSummaries?.find(s => s.id === (boundary?.summaryId ?? summaryId) && available(s.availableAfterStep));
-  if (!boundary) return summary && !summary.boundaryId ? <div className="context-evidence context-unlinked" data-summary-id={summary.id}><small>Summary recorded nearby · link not recorded · {contextTime(summary.time)}</small><Summary summary={summary} unlinked /></div> : null;
+  if (!boundary) return summary && !summary.boundaryId ? <div className="context-evidence context-unlinked" data-summary-id={summary.id}><div className="context-heading"><CompactionIcon /><strong>Context compacted</strong><small>Summary recorded nearby · link not recorded · {contextTime(summary.time)}</small></div><Summary summary={summary} unlinked /></div> : null;
   const before = p.context?.readings.find(r => r.id === boundary.priorReadingId && available(r.availableAfterStep, true));
   const after = p.context?.readings.find(r => r.id === boundary.nextReadingId && available(r.availableAfterStep, true));
   const direct = p.agents.find(a => a.id === boundary.agentId)?.harness === 'claude-code';
   const left = direct ? boundary.beforeTokens : before?.input.tokens, right = direct ? boundary.afterTokens : after?.input.tokens;
   const maximum = Math.max(left ?? 0, right ?? 0);
   return <section className="context-evidence" aria-label="Compaction" data-compaction-id={boundary.id}>
-    <div className="context-heading"><strong>Context compacted</strong><small>{contextTime(boundary.time)}</small></div>
+    <div className="context-heading"><CompactionIcon /><strong>Context compacted</strong><small>{contextTime(boundary.time)}</small>{commandNote && <small className="context-command">{commandNote}</small>}</div>
     <small>{direct ? 'Before and after tokens · relative scale' : 'Request input readings around compaction · relative scale'}</small>
     <div className="context-pair"><Metric label={direct ? 'Before' : 'Last request before'} tokens={left} maximum={maximum} reading={direct ? undefined : before} /><Metric label={direct ? 'After' : 'First request after'} tokens={right} maximum={maximum} reading={direct ? undefined : after} /></div>
     <div className="context-foot"><span>Trigger · {boundary.trigger ?? 'Not recorded'}</span><span>Duration · {boundary.durationMs === undefined ? 'Not recorded' : `${number(boundary.durationMs)} ms`}</span></div>

@@ -92,7 +92,7 @@ test('UI-31: sent-prompt capsule keeps neutral contrast, 12px tight controls, qu
         const turnRect = more.closest('.turn')!.getBoundingClientRect();
         const moreRect = more.getBoundingClientRect();
         const moreSize = parseFloat(getComputedStyle(more).fontSize);
-        const noticeText = document.querySelector('.history .turn:has(.turn-source) .turn-capsule .turn-text')!;
+        const noticeText = document.querySelector('.history .turn:has(.turn-source) .turn-text')!;
         const csNotice = getComputedStyle(noticeText);
 
         return {

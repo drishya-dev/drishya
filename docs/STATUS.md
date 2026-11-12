@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | SHIP-2g | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2g` | 2026-11-12 | `packages/capture-core/`, `packages/adapter-codex/`, `packages/adapter-claude-code/`, `packages/projection/`, `apps/ui/src/lib/`, `apps/ui/src/components/`, `tests/browser/ship-2g-tool-content.spec.ts`, `docs/review/ship-2g-tool-content.md`, `STATUS.md`, `TASKS.md`. |
-| SHIP-2f | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2f` | 2026-11-12 | `apps/ui/src/components/History.tsx`, `apps/ui/src/components/Markdown.tsx`, `apps/ui/src/modern/conversation.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/stage.css`, `apps/ui/src/styles.css`, `packages/scene/`, `tests/browser/ship-2f-history.spec.ts`, `docs/review/ship-2f-history-parts.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -61,6 +60,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2f history differentiation
+
+- Made recorded thinking visually quieter than agent prose (`13 px`, `--text-secondary`, `1 px` `--agent`-tinted left rule vs full-strength `15 px` answers in `apps/ui/src/modern/large-screens.css`).
+- Converted injected user-role notices in Modern (`History.tsx`, `conversation.css`, `reading-windows.css`) into one quiet horizontal line with a per-kind `NoticeIcon` and labelled `12 px` `<summary>Original notice</summary>` (only mounted when raw text adds detail beyond the summary).
+- Eliminated orphan `⌄` fold buttons on body-less prompts/notices and added `Show reply`/`Hide reply` labels whenever `parts.length === 0`.
+- Turned `/compact` + `Context compacted` (`ContextEvidence.tsx`, `context-evidence.css`, `History.tsx`) into one full-width seam with icon + summary disclosure while suppressing duplicate `/compact` notice bubbles.
+- Expanded `600 px` operation cards and `.browser-strip` across the reading column width and mapped `-v1` derived plan slugs (`common.tsx`) to readable meanings (`Compared with the previous plan`, `Proposed plan from output`).
+- Verified across `typecheck`, `119` UI unit files (`587` passed), `ui:build`, `tests/browser/ship-2f-history.spec.ts`, `32/32` updated `prompt-capsule`/`product-workspace`/`conversation-chat` Edge specs, `799` parallel + `30` serial `check:affected` browser tests, and real local sessions (`42a5fd26`, `a1de5659`/`rec_4b4e6b7aaab91336`, `4b71dd98`, Codex `34365106`) at `600`/`1440 px` across `jet`, `midnight`, and `paper` ([review record](review/ship-2f-history-parts.md)).
 ### Yash with Gemini 3.8 Flash — 12 Nov: SHIP-6g layers stack correctly
 
 - Fixed Modern stacking order (`large-screens.css`, `reading-windows.css`, `recovered-surfaces.css`, `SessionWorkspace.tsx`, `QueuedInputs.tsx`, `queued-inputs.css`): open `details[open]` menus/popovers (`z-index: 70`) stay above fixed controls (`.follow-pill`, `.history-transport`, `.catalog-toggle` at `16`; Replay bar & floating queue pill at `22`), narrow `Files` overlay (<900 px) renders a pointer-dismissible `.files-scrim` (`34`) below `.folder-explorer` (`35–36`) while keeping `.workspace-header`/`.workspace-leading`/`.workspace-secondary` (`38`) interactive above it, and empty queues omit `Queued inputs` from the DOM while Replay `Queued inputs · 1` lifts to `bottom: 134px` above the Follow pill.
