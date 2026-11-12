@@ -74,6 +74,7 @@
 :root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:var(--text-md);font-weight:var(--weight-medium);line-height:1.5;margin:0;}
 @media(max-width:700px) {:root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:var(--text-sm);}}
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .history {right:0;padding-right:var(--stage-rail);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-prompt-marks {right:calc(14px + var(--stage-edge,0px));}
 :root[data-ui-version=modern] .developer-workspace-open .complete-prompt-rail {display:none;}
 .prompt-rail-preview>time {display:block;color:var(--t2);font:var(--text-2xs)/1.6 var(--mono);margin:3px 0 6px;}
 
@@ -95,9 +96,10 @@
 .session-line-branch[data-reading] {flex:0 0 var(--branch-reading-width);max-width:none;}
 .session-line-branch[data-reading] .session-branch-name {position:absolute;left:0;top:calc(100% + 6px);z-index:1;width:max-content;max-width:min(640px,calc(100vw - var(--branch-reading-left) - 12px));white-space:pre-wrap;overflow-wrap:anywhere;background:var(--s1);color:var(--t1);border:1px solid var(--line);border-radius:var(--round-sm);padding:6px 8px;}
 @media(max-width:700px) {.session-line-meta {display:flex;}.session-line-harness {display:none;}.session-line-branch {max-width:60%;}}
-/* UI-8 (Yash, 3 Nov). A minimised Toolbox waits at the middle of its edge, and the stage, with its prompt rail, widens into the room it gave back. */
+/* UI-8 / UI-33: a minimised Toolbox waits at the middle of its edge and History widens into the freed room; the prompt rail stays in its own outer lane. */
 @media (min-width: 821px) {
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-toolbox-minimized] { --stage-rail: 76px; }
+ /* padding-right:var(--stage-rail) keeps cards clear of the Toolbox without narrowing History below its 1280px 2-column measure. */
  :root[data-ui-version=modern][data-experience=classic] .modern-tool-station.toolbox-minimized { top:calc(50% - 21px); bottom:auto; }
 }
 /* UI-8: every header panel hangs from the cluster's right edge, 6 px below it: Search, the session menu and the Git menu share one edge. */
