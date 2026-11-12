@@ -142,3 +142,36 @@ test('with no sessions the opening still stands and there is no overview', async
   await expect(page.getByRole('region', { name: 'Overview' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Your agents. In view.' })).toBeInViewport();
 });
+
+// Yash, 12 Nov: the Resume pill's words were light on its light fill. Its words must read on the pill in every palette, at rest and hovered.
+test('the first action reads clearly as Resume and as Latest, in every palette, at rest and hovered', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await home(page, 6);
+  const contrast = (pill: string) => page.evaluate(selector => {
+    const rgb = (value: string) => { const c = document.createElement('canvas').getContext('2d')!; c.fillStyle = '#000'; c.fillStyle = value; c.fillRect(0, 0, 1, 1); const d = c.getImageData(0, 0, 1, 1).data; return [d[0]!, d[1]!, d[2]!]; };
+    const lum = (v: number[]) => { const [r, g, b] = v.map(x => { const s = x / 255; return s <= .03928 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; }) as [number, number, number]; return .2126 * r + .7152 * g + .0722 * b; };
+    const el = document.querySelector(selector)!, fill = lum(rgb(getComputedStyle(el).backgroundColor));
+    return [...el.querySelectorAll('small,strong')].map(text => { const ink = lum(rgb(getComputedStyle(text).color)); return +((Math.max(ink, fill) + .05) / (Math.min(ink, fill) + .05)).toFixed(2); });
+  }, pill);
+  const everyPalette = async (pill: string) => {
+    for (const [palette, theme] of [['jet', 'dark'], ['midnight', 'dark'], ['paper', 'light']] as const) {
+      await page.evaluate(([p, t]) => { document.documentElement.dataset.palette = p; document.documentElement.dataset.theme = t; }, [palette, theme]);
+      await page.mouse.move(5, 5);
+      for (const ratio of await contrast(pill)) expect(ratio, `${pill} at rest in ${palette}`).toBeGreaterThanOrEqual(4.5);
+      await page.locator(pill).hover();
+      for (const ratio of await contrast(pill)) expect(ratio, `${pill} hovered in ${palette}`).toBeGreaterThanOrEqual(4.5);
+    }
+    await page.evaluate(() => { document.documentElement.dataset.palette = 'jet'; document.documentElement.dataset.theme = 'dark'; });
+  };
+  await expect(page.locator('.mh-latest')).toBeVisible();
+  await everyPalette('.mh-latest');
+  // Open a session and come back: Home now offers to resume it.
+  await page.locator('.mh-latest').click();
+  await expect(page).toHaveURL(new RegExp(`#/r/${claudeId}`));
+  await expect(page.locator('.history')).toBeVisible();
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.mh-resume')).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('.mh-resume')).toContainText('Resume your last workspace');
+  await everyPalette('.mh-resume');
+});
