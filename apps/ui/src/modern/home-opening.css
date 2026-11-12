@@ -28,13 +28,15 @@
 .mh-opening-actions { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px 12px; min-width:0; max-width:100%; }
 :root[data-ui-version=modern][data-experience=classic] .home .mh-opening-facts { margin:18px 0 0; font:var(--text-2xs)/1.5 var(--mono); letter-spacing:.04em; color:var(--t4); }
 
-/* The first action: the website's light pill. Resume and latest share it. */
-.mh-opening :is(.mh-resume,.mh-latest) { display:flex; align-items:center; gap:10px; max-width:min(440px,100%); min-width:0; margin:0; padding:6px 22px 6px 6px; border:0; border-radius:var(--round-full); background:var(--mh-ink); color:var(--bg); text-align:left; }
-.mh-opening :is(.mh-resume,.mh-latest)>span:nth-child(2) { display:grid; min-width:0; }
-.mh-opening :is(.mh-resume,.mh-latest) small { font:var(--text-2xs)/1.4 var(--sans); color:color-mix(in srgb,var(--bg) 62%,var(--mh-ink)); }
-.mh-opening :is(.mh-resume,.mh-latest) strong { font:var(--weight-medium) var(--text-sm)/1.4 var(--sans); color:var(--bg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* The first action: the website's light pill. Resume and latest share it.
+   Each rule carries the shell's full prefix: older Home rules for .mh-resume and for text inside .home are that specific,
+   and without it the Resume pill kept their light text on this light pill (Yash, 12 Nov). */
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest) { display:flex; align-items:center; gap:10px; max-width:min(440px,100%); min-width:0; margin:0; padding:6px 22px 6px 6px; border:0; border-radius:var(--round-full); background:var(--mh-ink); color:var(--bg); text-align:left; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest)>span:nth-child(2) { display:grid; min-width:0; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest) small { font:var(--text-2xs)/1.4 var(--sans); color:color-mix(in srgb,var(--bg) 62%,var(--mh-ink)); }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest) strong { font:var(--weight-medium) var(--text-sm)/1.4 var(--sans); color:var(--bg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .mh-opening .mh-resume>span:nth-child(2)>span, .mh-opening .mh-resume>span:last-child { display:none; }
-.mh-opening .mh-resume-icon { display:grid; place-items:center; width:34px; height:34px; flex:none; border-radius:50%; background:var(--bg); color:var(--mh-ink); border:0; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening .mh-resume-icon { display:grid; place-items:center; width:34px; height:34px; flex:none; border-radius:50%; background:var(--bg); color:var(--mh-ink); border:0; }
 .mh-opening .mh-active { flex-basis:100%; justify-content:center; margin:0 0 2px; max-width:100%; }
 .mh-browse { display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:0 20px; border:1px solid var(--line-2); border-radius:var(--round-full); background:color-mix(in srgb,var(--s1) 86%,transparent); color:var(--t1); font:var(--weight-medium) var(--text-sm)/1.4 var(--sans); }
 .mh-browse svg { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.5; }
@@ -50,7 +52,7 @@
 /* Until the sheet is docked the page scrolls, not the lists inside it. */
 .mh-home-v2:not(.mh-docked) :is(.mh-session-list,.mh-workspace-list) { overflow:hidden; }
 
-@media(hover:hover) and (pointer:fine) { .mh-opening :is(.mh-resume,.mh-latest,.mh-browse) { transition:background-color 150ms ease,border-color 150ms ease,transform 150ms ease; } .mh-opening :is(.mh-resume,.mh-latest):hover { background:color-mix(in srgb,var(--mh-ink) 88%,var(--modern-accent)); } .mh-browse:hover { border-color:var(--t4); } }
+@media(hover:hover) and (pointer:fine) { .mh-opening :is(.mh-resume,.mh-latest,.mh-browse) { transition:background-color 150ms ease,border-color 150ms ease,transform 150ms ease; } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest):hover { background:color-mix(in srgb,var(--mh-ink) 88%,var(--modern-accent)); } .mh-browse:hover { border-color:var(--t4); } }
 .mh-opening :is(.mh-resume,.mh-latest,.mh-browse):active { transform:translateY(1px); }
 @media(prefers-reduced-motion:reduce) { .mh-opening :is(.mh-resume,.mh-latest,.mh-browse) { transition:none; } .mh-opening :is(.mh-resume,.mh-latest,.mh-browse):active { transform:none; } }
 @media(max-height:820px) { .mh-home-v2 .mh-opening-mark .brand-mark.brand-image { width:52px!important; height:52px!important; } :root[data-ui-version=modern][data-experience=classic] .home .mh-wordmark { font-size:clamp(48px,6.4vw,84px); } .mh-wordmark span { margin-top:8px; font-size:var(--text-md); } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening-line { margin:10px 0 18px; font-size:clamp(18px,1.9vw,24px); } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening-facts { margin-top:12px; } .mh-home-v2 { --mh-peek:124px; } }
