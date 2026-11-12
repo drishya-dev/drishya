@@ -92,45 +92,34 @@
       <div class="features-pin">
         <div class="wrap features-grid">
           <ol class="feat-steps">
-            <li data-img="footage/history.jpg" data-crop=".06,.02,.72,.72" data-click=""><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>The explorer stays open next to the session. Every file the agent touched is marked where it lives in your repository.</p></li>
-            <li data-img="footage/peek.jpg" data-crop=".01,.05,.98,.6" data-click=".031,.31"><span class="step-tag">Explorer</span><h3>Each file, with every action on it</h3><p>Open a file and see each read, search and edit on it in order. Step to an earlier change and see exactly what it was.</p></li>
-            <li data-img="footage/workspace.jpg" data-crop=".26,.07,.68,.62" data-click=""><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Read and edit the file as it is now, with your tree and tabs, a step away from the agent's work.</p></li>
-            <li data-img="footage/changes.jpg" data-crop=".26,.07,.68,.55" data-click=".471,.11"><span class="step-tag">Changes</span><h3>A branch or pull request against its base</h3><p>Changes shows what differs, files changed on both sides first, and under each file the agent that edited it.</p></li>
-            <li data-img="footage/git-graph.jpg" data-crop=".09,.05,.82,.88" data-click=".143,.368"><span class="step-tag">Git graph</span><h3>Branches and commits, with the agent's work</h3><p>Every branch, the commits on it, and which one holds the session's fix, read-only.</p></li>
-            <li data-img="footage/tool-read.jpg" data-crop=".8,.075,.13,.36" data-click=".877,.392"><span class="step-tag">Toolbox</span><h3>Step through every use of one tool</h3><p>The Toolbox counts each tool and MCP server. Pick one and step through every time it was used, with the rest of the session dimmed.</p></li>
-            <li data-img="footage/prompt-rail.jpg" data-crop=".595,.625,.24,.235" data-click=""><span class="step-tag">Prompts</span><h3>Every prompt, one move away</h3><p>The prompt rail keeps each prompt you sent. Hover one to see what it asked and what the agent did for it, then jump there.</p></li>
-            <li data-img="footage/composer.jpg" data-crop=".29,.815,.42,.175" data-click=".685,.944"><span class="step-tag">Composer</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
+            <li><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>The explorer stays open beside the session, with every file the agent added or edited marked where it lives.</p></li>
+            <li><span class="step-tag">Explorer</span><h3>Every action on a file, and each earlier edit</h3><p>Open a file to see each read and edit on it, step to an earlier change, and see the test runs that followed it.</p></li>
+            <li><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Open any file in Workspace with your tree and tabs, and edit it a step away from the agent's work.</p></li>
+            <li><span class="step-tag">Changes</span><h3>This session, a branch, or a pull request</h3><p>Switch between what this session changed, a branch against main, and an open pull request. Each file names the agent that edited it.</p></li>
+            <li><span class="step-tag">Git graph</span><h3>Every branch, and where the agents' work landed</h3><p>All local branches and commits as a graph, read-only, beside the session.</p></li>
+            <li><span class="step-tag">Toolbox</span><h3>Step through every use of one tool</h3><p>Pick a tool and step through each time it was used. The rest of the session dims around it.</p></li>
+            <li><span class="step-tag">Prompts</span><h3>Every prompt, and what it led to</h3><p>The prompt rail keeps each prompt. Hover one to see what it asked, how many actions followed and what failed, then jump there.</p></li>
+            <li><span class="step-tag">Composer</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
           </ol>
-          <div class="feat-stage"><div class="feat-window" data-feat-window><img src="footage/history.jpg" alt="" decoding="async" loading="lazy" data-for="history.jpg" /><img src="footage/peek.jpg" alt="" decoding="async" loading="lazy" data-for="peek.jpg" /><img src="footage/workspace.jpg" alt="" decoding="async" loading="lazy" data-for="workspace.jpg" /><img src="footage/changes.jpg" alt="" decoding="async" loading="lazy" data-for="changes.jpg" /><img src="footage/git-graph.jpg" alt="" decoding="async" loading="lazy" data-for="git-graph.jpg" /><img src="footage/tool-read.jpg" alt="" decoding="async" loading="lazy" data-for="tool-read.jpg" /><img src="footage/prompt-rail.jpg" alt="" decoding="async" loading="lazy" data-for="prompt-rail.jpg" /><img src="footage/composer.jpg" alt="" decoding="async" loading="lazy" data-for="composer.jpg" /><div class="feat-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div><span class="feat-ripple"></span></div></div>
+          <div class="feat-stage"><div class="feat-window" data-feat-window><div class="feat-camera" data-feat-camera></div><div class="feat-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div><span class="feat-ripple"></span></div></div>
         </div>
-      </div>
-    </section>
-
-    <section class="moment" aria-labelledby="moment-title">
-      <div class="moment-pin">
-        <h2 id="moment-title" class="moment-type"><span>Understand</span><span>every change</span><span>your agent makes</span></h2>
-        <div class="m-card c1" style="--img:url(footage/history.jpg);--x:0.29;--y:0.14;--w:0.23;--h:0.33" aria-hidden="true"></div>
-        <div class="m-card c2" style="--img:url(footage/changes.jpg);--x:0.48;--y:0.36;--w:0.45;--h:0.26" aria-hidden="true"></div>
-        <div class="m-card c3" style="--img:url(footage/tool-read.jpg);--x:0.806;--y:0.345;--w:0.118;--h:0.13" aria-hidden="true"></div>
-        <div class="m-card c4" style="--img:url(footage/prompt-rail.jpg);--x:0.607;--y:0.645;--w:0.208;--h:0.21" aria-hidden="true"></div>
-        <div class="m-card c5" style="--img:url(footage/git-graph.jpg);--x:0.21;--y:0.28;--w:0.2;--h:0.2" aria-hidden="true"></div>
       </div>
     </section>
 
     <section id="compare" class="compare" aria-labelledby="compare-title">
       <div class="wrap">
-        <h2 id="compare-title" data-split>Terminal and Drishya, side by side</h2>
+        <h2 id="compare-title" data-split>Working with an agent, with and without Drishya</h2>
         <p class="section-lead">Drishya does not replace your agent. It reads the session the agent already records and shows it in full.</p>
         <table class="compare-table">
-          <thead><tr><th></th><th>In the terminal</th><th>In Drishya</th></tr></thead>
+          <thead><tr><th></th><th>Without Drishya</th><th>With Drishya</th></tr></thead>
           <tbody>
-            <tr><th>Files the agent read</th><td>A one-line note</td><td>The exact lines it saw</td></tr>
+            <tr><th>Files the agent read</th><td>A one-line note in the CLI or app</td><td>The exact lines it saw</td></tr>
             <tr><th>Test and command output</th><td>Collapsed or scrolled away</td><td>The full output, kept</td></tr>
             <tr><th>Edits</th><td>A count of lines changed</td><td>The diff as written, before later edits</td></tr>
-            <tr><th>Where the work happened</th><td>Paths in text</td><td>Marked in your file tree and on the map</td></tr>
-            <tr><th>Branches and pull requests</th><td>Separate Git tools</td><td>Changes and the Git graph, with the agent behind each file</td></tr>
+            <tr><th>Where the work happened</th><td>Paths in text, a separate editor to look</td><td>Marked in your file tree and on the map</td></tr>
+            <tr><th>Branches and pull requests</th><td>A separate Git client, no link to the agent</td><td>Changes and the Git graph, with the agent behind each file</td></tr>
             <tr><th>Sub-agents and MCP tools</th><td>Mixed into one stream</td><td>Each kept with its own work and counted</td></tr>
-            <tr><th>Later</th><td>Scroll back, if it is still there</td><td>Replay any session, live or finished</td></tr>
+            <tr><th>Later</th><td>Scroll back through the chat, if it is still there</td><td>Replay any session, live or finished</td></tr>
           </tbody>
         </table>
       </div>

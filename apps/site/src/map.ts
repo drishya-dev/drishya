@@ -46,7 +46,7 @@ export function createMap(canvas: HTMLCanvasElement, labels: HTMLElement | null,
   const imports = graph.edges.filter(e => byId.has(e.from) && byId.has(e.to));
   const lit = new Map<string, Tone>();
   const labelEls = new Map<string, HTMLSpanElement>();
-  let reveal = options.still ? 1 : 0, angle = 0.6, spin = options.spin ?? true, running = false, visible = true, last = 0, w = 0, h = 0, dpr = 1;
+  let held = false, reveal = options.still ? 1 : 0, angle = 0.6, spin = options.spin ?? true, running = false, visible = true, last = 0, w = 0, h = 0, dpr = 1;
 
   function resize() {
     const box = canvas.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1);
@@ -100,7 +100,7 @@ export function createMap(canvas: HTMLCanvasElement, labels: HTMLElement | null,
     if (spin) angle += dt * 0.07;
     draw(); requestAnimationFrame(frame);
   }
-  function start() { if (running || options.still || !visible || document.hidden) return; running = true; last = performance.now(); requestAnimationFrame(frame); }
+  function start() { if (running || held || options.still || !visible || document.hidden) return; running = true; last = performance.now(); requestAnimationFrame(frame); }
   function stop() { running = false; }
 
   new ResizeObserver(resize).observe(canvas);
@@ -121,6 +121,8 @@ export function createMap(canvas: HTMLCanvasElement, labels: HTMLElement | null,
     unlight(path: string) { lit.delete(path); labelEls.get(path)?.remove(); labelEls.delete(path); if (!running) draw(); },
     clear() { lit.clear(); for (const el of labelEls.values()) el.remove(); labelEls.clear(); if (!running) draw(); },
     has: (path?: string) => !!path && byId.has(path),
+    pause() { held = true; stop(); },
+    resume() { held = false; start(); },
   };
 }
 export type RepoMap = ReturnType<typeof createMap>;
