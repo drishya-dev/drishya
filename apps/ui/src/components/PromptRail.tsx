@@ -24,7 +24,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
     const measure = () => {
       const controls=[...(viewer??document).querySelectorAll<HTMLElement>('.workspace-header,.workspace-leading,.workspace-secondary,.prompt-composer,.catalog-toggle,.workspace-follow,.follow-pill')];
       for(const control of controls) if(!observed.has(control)){observer.observe(control);observed.add(control);}
-      const bounds=node.getBoundingClientRect();let top=16,bottom=48;
+      const bounds=node.getBoundingClientRect();let top=16,bottom=58;
       for(const control of controls) {
         const r=control.getBoundingClientRect();
         // The composer is judged by its open width, whether it is open or collapsed to the pill, so the rail never moves when it toggles.
