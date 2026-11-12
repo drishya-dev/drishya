@@ -47,7 +47,9 @@ const fit = () => stage.style.setProperty('--s', String(viewport.clientWidth / 1
 new ResizeObserver(fit).observe(viewport); fit();
 let wantedStep = 0, frameReady = false;
 addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'drishya-ready') { frameReady = true; seek(wantedStep); } });
-function seek(step: number) { wantedStep = step; if (frameReady) frameEl.contentWindow?.postMessage({ type: 'drishya-seek', step }, location.origin); }
+// One seek per frame at most: a fast scroll asks for many steps, and only the last one needs rendering.
+let seekQueued = false;
+function seek(step: number) { wantedStep = step; if (!frameReady || seekQueued) return; seekQueued = true; requestAnimationFrame(() => { seekQueued = false; frameEl.contentWindow?.postMessage({ type: 'drishya-seek', step: wantedStep }, location.origin); }); }
 // The real app is about 340 KB compressed, so it loads only as the laptop comes near.
 new IntersectionObserver(([e], o) => { if (e!.isIntersecting) { frameEl.src = new URL('demo.html', location.href).pathname; o.disconnect(); } }, { rootMargin: '150% 0px' }).observe(viewport);
 
@@ -138,7 +140,7 @@ function animate() {
     [{ img: 'file-history', zoom: [0, .12, .5, .6], click: [.04, .52] }, { img: 'file-history' }],
     [{ img: 'workspace' }],
     [{ img: 'changes-session', click: [.418, .108] }, { img: 'changes-branch', click: [.471, .108] }, { img: 'changes-pr', click: [.524, .108] }],
-    [{ img: 'git-graph' }],
+    [{ img: 'git-graph' }, { img: 'git-graph-branch', click: [.148, .456] }],
     [{ img: 'tool', zoom: [.66, .3, .34, .42], click: [.875, .464] }, { img: 'tool-next' }],
     [{ img: 'prompt', click: [.838, .8] }],
     [{ img: 'composer', click: [.683, .9] }],
@@ -157,8 +159,10 @@ function animate() {
     let shown = FEATURES[0]![0]!.img, t = 0;
     FEATURES.forEach((frames, i) => {
       if (i > 0) { tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2); }
-      frames.forEach(f => {
-        if (f.img !== shown) { tl.to(img(shown), { opacity: 0, duration: 0.35 }, t).to(img(f.img), { opacity: 1, duration: 0.35 }, t); shown = f.img; }
+      frames.forEach((f, j) => {
+        // Inside a sequence a click causes the next screen: the cursor clicks on the screen still showing, then it changes.
+        const swapAt = j > 0 && f.click ? t + 0.95 : t;
+        if (f.img !== shown) { tl.to(img(shown), { opacity: 0, duration: 0.35 }, swapAt).to(img(f.img), { opacity: 1, duration: 0.35 }, swapAt); shown = f.img; }
         tl.to(cursorEl, { opacity: 0, duration: 0.12 }, t);
         tl.to(camera, { ...zoomTo(f.zoom), duration: 0.55 }, t + 0.1);
         if (f.click) {
@@ -181,7 +185,7 @@ function animate() {
     gsap.set(lines, { opacity: 0 });
     gsap.set(rows, { opacity: 0, y: 8 });
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
-    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 4}`, pin: '.tour-pin', scrub: 0.5 } });
+    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 4}`, pin: '.tour-pin', scrub: 0.5, invalidateOnRefresh: true } });
     const show = (i: number, t: number) => tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2);
     const replay = (from: number, to: number, t: number, duration: number) => tl.fromTo({ s: from }, { s: from }, { s: to, duration, ease: 'none', onUpdate() { const n = Math.round(this.targets()[0].s); if (n !== wantedStep) seek(n); } }, t);
 
@@ -189,7 +193,9 @@ function animate() {
     // At rest it sits in the right-hand column; while the three screens play it fills the screen.
     const wide = matchMedia('(min-width: 900px)').matches;
     const laptop = $('.laptop'), caption = $('.tour-steps'), slot = $('.laptop-slot');
-    const rest = () => { const r = slot.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - innerWidth / 2, y: r.top + r.height / 2 - innerHeight / 2 }; };
+    // Measured against the pin, not the viewport, so the resting place is the same at any scroll position (and on refresh).
+    const pin = $('.tour-pin');
+    const rest = () => { const r = slot.getBoundingClientRect(), p = pin.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - (p.left + p.width / 2), y: r.top + r.height / 2 - (p.top + p.height / 2) }; };
     // Centred vertically by GSAP's yPercent, so the scroll tweens own only the pixel offsets.
     if (wide) gsap.set(laptop, { yPercent: -50, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
     if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);

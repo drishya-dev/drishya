@@ -64,7 +64,12 @@ try{
   await page.getByText('Reading local history',{exact:false}).first().waitFor({state:'hidden',timeout:20000}).catch(()=>{});
   for(let i=0;i<3;i++){const retry=page.getByRole('button',{name:'Retry history'}).first();if(!(await visible(retry)))break;await retry.click();await wait(3000);}
   await wait(1200);await shot('r-graph');
-  const branch=page.locator('.git-atlas').getByRole('button').filter({hasText:/^(codex|gemini|claude)\//}).first();if(await visible(branch)){await branch.click();await page.getByText('Reading local history',{exact:false}).first().waitFor({state:'hidden',timeout:20000}).catch(()=>{});await wait(1500);await shot('r-graph-branch');}else console.log('graph: no branch row');
+  // The branch picker in the graph's own header: read one agent branch instead of all local history.
+  const pick=page.getByRole('combobox',{name:'Read local Git branch'}).first();let picked=false;
+  if(await visible(pick)){const labels=await pick.locator('option').allTextContents();console.log('graph branches:',labels.length);
+    const want=labels.find(l=>/^claude\/site-1/.test(l))??labels.find(l=>/^(gemini|codex|claude)\//.test(l));
+    if(want){await pick.selectOption({label:want});picked=true;}}
+  if(picked){await page.getByText('Reading local history',{exact:false}).first().waitFor({state:'hidden',timeout:20000}).catch(()=>{});for(let i=0;i<3;i++){const retry=page.getByRole('button',{name:'Retry history'}).first();if(!(await visible(retry)))break;await retry.click();await wait(3000);}await wait(1500);await shot('r-graph-branch');}else console.log('graph: no branch row');
   await page.keyboard.press('Escape');await wait(600);
   // Toolbox: one tool chosen, then the next use of it.
   await open();await goToPrompt(4);

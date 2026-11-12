@@ -154,7 +154,7 @@ main, .footer { position: relative; z-index: 1; }
 @media (max-width: 899px) {
   .nav-links, .nav .star { display: none; }
   .tour-grid { grid-template-columns: 1fr; }
-  .tour-steps li { grid-area: auto; margin-bottom: 18px; }
+  .tour-pin { padding-top: 64px; }
   .compare-table tbody th { width: auto; }
   .nav-inner { justify-content: space-between; }
   .install-grid { grid-template-columns: 1fr; gap: 40px; }
@@ -183,7 +183,7 @@ main, .footer { position: relative; z-index: 1; }
 .feat-cursor { position: absolute; left: 0; top: 0; width: 24px; height: 24px; opacity: 0; z-index: 3; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .7)); }
 .feat-cursor svg { width: 100%; height: 100%; fill: #fff; stroke: #000; stroke-width: 1.3; }
 .feat-ripple { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid rgba(122, 168, 255, .9); opacity: 0; z-index: 2; pointer-events: none; }
-@media (max-width: 899px) { .features-grid { grid-template-columns: 1fr; } .feat-steps li { grid-area: auto; margin-bottom: 18px; } .feat-stage { height: 52svh; } }
+@media (max-width: 899px) { .features-grid { grid-template-columns: 1fr; } .feat-stage { height: 52svh; } }
 
 
 /* ---------- why: the text beside the work it describes ---------- */
