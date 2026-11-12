@@ -199,3 +199,12 @@ export function githubRepoOf(url:string):string|undefined {
   const m=/^(?:https:\/\/(?:[^@/]+@)?github\.com\/|git@github\.com:|ssh:\/\/git@github\.com\/)([A-Za-z0-9][A-Za-z0-9-]{0,38})\/([A-Za-z0-9._-]{1,100}?)(?:\.git)?\/?$/.exec(url.trim());
   return m&&m[2]!=='.'&&m[2]!=='..'?`${m[1]}/${m[2]}`:undefined;
 }
+
+/** The GitHub repository of the first remote that points at github.com; Git only, no network. */
+export async function githubRepo(git:Git):Promise<string|undefined> {
+  const names=(await git(['remote']).catch(()=>'')).split('\n').map(name=>name.trim()).filter(Boolean);
+  for(const name of [...names.filter(name=>name==='origin'),...names.filter(name=>name!=='origin')].slice(0,4)){
+    const repo=githubRepoOf(await git(['remote','get-url',name]).catch(()=>''));
+    if(repo)return repo;
+  }
+}

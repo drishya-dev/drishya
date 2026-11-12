@@ -33,20 +33,23 @@ describe('file timeline', () => {
 
 describe('whole-session file timeline metadata', () => {
   const actions = [read('first'), ...Array.from({ length: 52 }, (_, n) => search(`s${n}`)), edit('last')];
-  it('counts the whole path without shipping every operation and skips search-only pages directly', () => {
-    const first = fileOperationPage(actions, PATH, 0, 24, '', 'first');
-    expect(first.total).toBe(54);
-    expect(first.operations).toHaveLength(24);
-    expect(first.timeline).toEqual({ total: 2, positions: { first: 1 }, first: { operationId: 'first', start: 0 }, last: { operationId: 'last', start: 48 }, selected: { operationId: 'first', position: 1, previous: undefined, next: { operationId: 'last', start: 48 } } });
-    const middle = fileOperationPage(actions, PATH, 24, 24, '', 'last');
+  it('lists newest actions first, counts the whole path and skips search-only pages in time order', () => {
+    const latest = fileOperationPage(actions, PATH, 0, 24, '', 'last');
+    expect(latest.total).toBe(54);
+    expect(latest.operations).toHaveLength(24);
+    expect(latest.operations[0]?.id).toBe('last');
+    expect(latest.operations[1]?.id).toBe('s51');
+    expect(latest.timeline).toEqual({ total: 2, positions: { last: 2 }, first: { operationId: 'first', start: 48 }, last: { operationId: 'last', start: 0 }, selected: { operationId: 'last', position: 2, previous: { operationId: 'first', start: 48 }, next: undefined } });
+    const middle = fileOperationPage(actions, PATH, 24, 24, '', 'first');
     expect(middle.timeline.positions).toEqual({});
-    expect(middle.timeline.selected).toMatchObject({ position: 2, previous: { operationId: 'first', start: 0 }, next: undefined });
+    expect(middle.timeline.selected).toMatchObject({ position: 1, previous: undefined, next: { operationId: 'last', start: 0 } });
   });
   it('counts only material of this exact path, not multi-path search hits or unavailable reads', () => {
     const missing = read('missing'); if (missing.detail.kind === 'read') delete missing.detail.excerptArtifactId;
     const unrelated = read('other'); if (unrelated.detail.kind === 'read') unrelated.detail.path = 'other.ts';
     const page = fileOperationPage([read('one'), missing, unrelated, search('match'), edit('two')], PATH, 0, 24);
     expect(page.total).toBe(5);
+    expect(page.operations.map(op => op.id)).toEqual(['two', 'match', 'other', 'missing', 'one']);
     expect(page.timeline.total).toBe(2);
     expect(page.timeline.positions).toEqual({ one: 1, two: 2 });
     expect(fileOperationPage([missing], PATH, 0, 24).timeline.total).toBe(0);

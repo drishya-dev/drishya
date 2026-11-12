@@ -21,7 +21,7 @@
 .usage-legend i { width:8px; height:8px; border-radius:2px; align-self:center; background:var(--focus); }
 .usage-legend i[data-tone=none] { background:transparent; }
 .usage-stack>span[data-tone="0"], .usage-legend i[data-tone="0"] { background:var(--focus); }
-.usage-stack>span[data-tone="1"], .usage-legend i[data-tone="1"] { background:color-mix(in srgb, var(--focus) 78%, var(--s3)); }
+.usage-stack>span[data-tone="1"], .usage-legend i[data-tone="1"] { background:var(--accent-partner, color-mix(in srgb, var(--focus) 78%, var(--s3))); }
 .usage-stack>span[data-tone="2"], .usage-legend i[data-tone="2"] { background:color-mix(in srgb, var(--focus) 60%, var(--s3)); }
 .usage-stack>span[data-tone="3"], .usage-legend i[data-tone="3"] { background:color-mix(in srgb, var(--focus) 45%, var(--s3)); }
 .usage-stack>span[data-tone="4"], .usage-legend i[data-tone="4"] { background:color-mix(in srgb, var(--focus) 32%, var(--s3)); }

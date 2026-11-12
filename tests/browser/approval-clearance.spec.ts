@@ -80,9 +80,9 @@ for (const width of [600, 1440]) test(`approval clearance ignores geometry sampl
 });
 
 for (const width of [600, 1440]) test(`a queue receipt keeps stable clearance when the Follow switch toggles at ${width}`, async ({page}) => {
-  const root = join(dir, 'repo'), journal = join(dir, 'queue-session.jsonl'), sessionId = '66666666-6666-4666-8666-666666666666';
-  const row = (n: number, type: string, extra: Record<string, unknown>) => JSON.stringify({type, uuid: `66666666-6666-4666-8666-${String(n).padStart(12, '0')}`, sessionId, cwd: root, timestamp: `2026-11-05T10:00:0${n}Z`, ...extra});
-  writeFileSync(journal, [row(1, 'user', {message: {role: 'user', content: 'Synthetic receipt prompt'}}), row(2, 'queue-operation', {operation: 'enqueue', content: 'Synthetic queued input'}), row(3, 'queue-operation', {operation: 'dequeue'})].join('\n') + '\n');
+  const root = join(dir, 'repo'), journal = join(dir, `queue-session-${width}.jsonl`), sessionId = `66666666-6666-4666-8666-${String(width).padStart(12, '0')}`;
+  const row = (n: number, type: string, extra: Record<string, unknown>) => JSON.stringify({type, uuid: `66666666-${String(width).padStart(4, '0')}-4666-8666-${String(n).padStart(12, '0')}`, sessionId, cwd: root, timestamp: `2026-11-05T10:00:0${n}Z`, ...extra});
+  writeFileSync(journal, [row(1, 'user', {message: {role: 'user', content: 'Synthetic receipt prompt'}}), row(2, 'queue-operation', {operation: 'enqueue', content: 'Synthetic queued input'})].join('\n') + '\n');
   const queued = (await app.ingest.importSource('claude-code', journal)).recordingId;
   const composer = await openComposer(page, queued, width);
   const follow = page.getByRole('switch', {name: 'Automatically follow new work'});
@@ -96,4 +96,10 @@ for (const width of [600, 1440]) test(`a queue receipt keeps stable clearance wh
   await expect(follow).toHaveAttribute('aria-checked', 'true');
   await expect(composer.getByRole('button', {name: 'Read queued inputs', exact: true})).toBeVisible();
   await expect.poll(() => raisedGap(page)).toBe(initialGap);
+  // SHIP-6g: when the queue empties, no Queued inputs control or text remains.
+  writeFileSync(journal, [row(1, 'user', {message: {role: 'user', content: 'Synthetic receipt prompt'}}), row(2, 'queue-operation', {operation: 'enqueue', content: 'Synthetic queued input'}), row(3, 'queue-operation', {operation: 'dequeue'})].join('\n') + '\n');
+  await app.ingest.sync(queued);
+  await expect(composer.getByRole('button', {name: 'Read queued inputs', exact: true})).toHaveCount(0);
+  await expect(page.getByText('Queued inputs')).toHaveCount(0);
+  await expect.poll(() => raisedGap(page)).toBe(0);
 });

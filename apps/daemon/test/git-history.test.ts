@@ -6,6 +6,7 @@ import {beforeAll,afterAll,it,expect} from 'vitest';
 import {App} from '../src/app.ts';
 import {WorkspaceAccess} from '../src/workspace.ts';
 import {GitReview,readGit} from '../src/git-review.ts';
+import {GithubLinks} from '../src/github-links.ts';
 import {startServer,type RunningServer} from '../src/server.ts';
 import {GitHistoryCache,gitHistory,gitCommit,gitRefGeneration} from '../src/git-history.ts';
 
@@ -148,6 +149,90 @@ it('caches history pages per root by generation, evicts LRU entries and drops st
   }finally{
     git('update-ref','-d','refs/heads/cache-generation-bump');
   }
+},20_000);
+
+it('provides patch-id and path-superset evidence when main drifts or branches merge main',async()=>{
+  const repo=join(dir,'squash-advanced');mkdirSync(repo);
+  const sh=(...args:string[])=>execFileSync('git',args,{cwd:repo,encoding:'utf8',windowsHide:true}).trim();
+  sh('init','-b','main');sh('config','user.name','Synthetic');sh('config','user.email','synthetic@example.invalid');
+  writeFileSync(join(repo,'shared.ts'),Array.from({length:20},(_,i)=>`export const s${i} = ${i};`).join('\n')+'\n');
+  writeFileSync(join(repo,'b.ts'),'export const b = 0;\n');
+  sh('add','.');sh('commit','-m','Base');
+  sh('switch','-c','patch-branch');
+  writeFileSync(join(repo,'shared.ts'),Array.from({length:20},(_,i)=>i===19?'export const s19 = 999;':`export const s${i} = ${i};`).join('\n')+'\n');
+  sh('add','.');sh('commit','-m','Edit bottom of shared');const pHead=sh('rev-parse','HEAD');
+  sh('switch','main');
+  writeFileSync(join(repo,'shared.ts'),Array.from({length:20},(_,i)=>i===0?'export const s0 = 100;':`export const s${i} = ${i};`).join('\n')+'\n');
+  sh('add','.');sh('commit','-m','Main edits top of shared');
+  sh('merge','--squash','patch-branch');sh('commit','-m','Patch branch (#10)');const pSquash=sh('rev-parse','HEAD');
+
+  sh('switch','-c','superset-branch','HEAD~1');
+  writeFileSync(join(repo,'b.ts'),'export const b = 1;\n');sh('add','.');sh('commit','-m','Update b');const sHead=sh('rev-parse','HEAD');
+  sh('switch','main');
+  writeFileSync(join(repo,'b.ts'),'export const b = 1;\n');writeFileSync(join(repo,'extra.ts'),'export const extra = 1;\n');
+  sh('add','.');sh('commit','-m','Superset squash (#11)');const sSquash=sh('rev-parse','HEAD');
+
+  const page=await gitHistory(args=>readGit(repo,args));
+  expect(page.branchSignatures?.[pHead]).not.toBe(page.changeSignatures?.[pSquash]);
+  expect(page.branchPatchIds?.[pHead]).toBeTruthy();
+  expect(page.changePatchIds?.[pSquash]).toBe(page.branchPatchIds?.[pHead]);
+
+  expect(page.branchSignatures?.[sHead]).not.toBe(page.changeSignatures?.[sSquash]);
+  expect(page.branchOwnFiles?.[sHead]?.['b.ts']).toBeTruthy();
+  expect(page.changeFiles?.[sSquash]?.['b.ts']).toBe(page.branchOwnFiles?.[sHead]?.['b.ts']);
+  expect(page.changeFiles?.[sSquash]?.['extra.ts']).toBeTruthy();
+},20_000);
+
+it('resolves opt-in GitHub PRs for Rule 2 and (#N) Rule 3 safely and never calls gh when disabled',async()=>{
+  const repo=join(dir,'gh-squash');mkdirSync(repo);
+  const sh=(...args:string[])=>execFileSync('git',args,{cwd:repo,encoding:'utf8',windowsHide:true}).trim();
+  sh('init','-b','main');sh('config','user.name','Synthetic');sh('config','user.email','synthetic@example.invalid');
+  sh('remote','add','origin','https://github.com/example/demo.git');
+  writeFileSync(join(repo,'a.ts'),'export const a = 0;\n');sh('add','.');sh('commit','-m','Base');
+  sh('switch','-c','rule2-branch');writeFileSync(join(repo,'a.ts'),'export const a = 1;\n');sh('add','.');sh('commit','-m','Rule 2 tip');const r2Tip=sh('rev-parse','HEAD');
+  sh('switch','main');
+  sh('switch','-c','rule3-branch');writeFileSync(join(repo,'b.ts'),'export const b = 1;\n');sh('add','.');sh('commit','-m','Rule 3 tip');const r3Tip=sh('rev-parse','HEAD');
+  sh('switch','main');
+  writeFileSync(join(repo,'a.ts'),'export const a = 2;\n');sh('add','.');sh('commit','-m','Merged two (#20)');const r2Squash=sh('rev-parse','HEAD');
+  writeFileSync(join(repo,'b.ts'),'export const b = 2;\n');sh('add','.');sh('commit','-m','Older subject (#21)');const r3Squash=sh('rev-parse','HEAD');
+  sh('switch','-c','reused-after');writeFileSync(join(repo,'c.ts'),'export const c = 1;\n');sh('add','.');sh('commit','-m','Post-merge work');const reusedTip=sh('rev-parse','HEAD');
+  sh('switch','main');
+
+  const j2=join(dir,'gh-squash.jsonl');
+  writeFileSync(j2,JSON.stringify({type:'user',uuid:'gh-u',sessionId:'gh-squash',cwd:repo,message:{role:'user',content:'Inspect'}})+'\n');
+  const ghRec=(await app.ingest.importSource('claude-code',j2)).recordingId;
+  let ghCalls=0;
+  const gh=new GithubLinks(app,async(args)=>{
+    ghCalls++;
+    if(args[0]==='--version')return 'gh version 2.0.0';
+    if(args[1]==='repos/example/demo/pulls?state=closed&per_page=100&sort=updated&direction=desc'){
+      return JSON.stringify([
+        {number:20,merged_at:'2026-11-12T10:00:00Z',head:{ref:'rule2-branch',sha:r2Tip},merge_commit_sha:r2Squash},
+        {number:22,merged_at:'2026-11-12T10:05:00Z',head:{ref:'reused-after',sha:'f'.repeat(40)},merge_commit_sha:r2Squash},
+      ]);
+    }
+    if(args[1]==='repos/example/demo/pulls/21'){
+      return JSON.stringify({number:21,merged_at:'2026-11-12T09:00:00Z',head:{ref:'rule3-branch',sha:r3Tip},merge_commit_sha:r3Squash});
+    }
+    throw new Error('Unexpected gh call: '+args.join(' '));
+  });
+  const ghReview=new GitReview(access,readGit,app.history,gh);
+  await access.approve(ghRec);await ghReview.approve(ghRec);
+
+  const offPage=await ghReview.history(ghRec);
+  expect(ghCalls).toBe(0);
+  expect(offPage.githubPulls).toBeUndefined();
+
+  gh.set(true);
+  const onPage=await ghReview.history(ghRec);
+  expect(ghCalls).toBeGreaterThan(0);
+  expect(onPage.githubPulls).toEqual(expect.arrayContaining([
+    expect.objectContaining({pr:20,headRef:'rule2-branch',mergeCommit:r2Squash,basis:'github-pr',eligibleTips:[r2Tip]}),
+    expect.objectContaining({pr:21,headRef:'rule3-branch',mergeCommit:r3Squash,basis:'github-subject-pr',eligibleTips:[r3Tip]}),
+  ]));
+  const reusedMatch=onPage.githubPulls?.find(p=>p.pr===22);
+  expect(reusedMatch?.eligibleTips).not.toContain(reusedTip);
+  gh.set(false);
 },20_000);
 
 it('serves /git/generation behind auth and Git consent with current ref digest',async()=>{

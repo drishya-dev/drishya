@@ -3,19 +3,8 @@ import type {App} from './app.ts';
 import type {GitReview} from './git-review.ts';
 import type {GithubLinks} from './github-links.ts';
 import {sessionLinks} from './git-session-links.ts';
-import {gitCompare,gitCompareFile,gitCompareRefs,githubCompareResult,githubRepoOf,resolvePulls} from './git-compare.ts';
+import {gitCompare,gitCompareFile,gitCompareRefs,githubCompareResult,githubRepo,resolvePulls} from './git-compare.ts';
 import type {CompareEvidence,ComparePulls,CompareSide,GitCompareResult} from './git-compare-types.ts';
-
-type Git=(args:string[])=>Promise<string>;
-
-/** The GitHub repository of the first remote that points at github.com; Git only, no network. */
-async function githubRepo(git:Git):Promise<string|undefined> {
-  const names=(await git(['remote']).catch(()=>'')).split('\n').map(name=>name.trim()).filter(Boolean);
-  for(const name of [...names.filter(name=>name==='origin'),...names.filter(name=>name!=='origin')].slice(0,4)){
-    const repo=githubRepoOf(await git(['remote','get-url',name]).catch(()=>''));
-    if(repo)return repo;
-  }
-}
 
 /** GIT-8 Compare, behind the Git consent (GIT-7). Reads only; the one network path is the person's own `gh`, opted in under Settings. */
 export class GitCompareService {

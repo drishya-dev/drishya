@@ -22,7 +22,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
     const viewer=node.closest('.viewer')??document.querySelector('.viewer');
     const observed=new Set<Element>();let observer:ResizeObserver;
     const measure = () => {
-      const controls=[...(viewer??document).querySelectorAll<HTMLElement>('.workspace-header,.workspace-leading,.workspace-secondary,.prompt-composer,.catalog-toggle,.workspace-follow,.follow-pill')];
+      const controls=[...(viewer??document).querySelectorAll<HTMLElement>('.workspace-header,.workspace-leading,.workspace-secondary,.prompt-composer,.catalog-toggle,.workspace-follow,.follow-pill,.modern-replay-transport')];
       for(const control of controls) if(!observed.has(control)){observer.observe(control);observed.add(control);}
       const bounds=node.getBoundingClientRect();let top=16,bottom=58;
       for(const control of controls) {
@@ -37,7 +37,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
           const rest=(parseFloat(getComputedStyle(viewer??document.documentElement).getPropertyValue('--composer-gap'))||158)-24; // the gap is written in px by SessionWorkspace
           if(control.matches('.open'))bottom=Math.max(bottom,innerHeight-r.bottom+rest+12);
         }
-        else if(control.matches('.catalog-toggle,.workspace-follow,.follow-pill')) bottom=Math.max(bottom,innerHeight-r.top+12);
+        else if(control.matches('.catalog-toggle,.workspace-follow,.follow-pill,.modern-replay-transport')) bottom=Math.max(bottom,innerHeight-r.top+12);
         else top=Math.max(top,r.bottom+14);
       }
       node.style.setProperty('--prompt-rail-bottom',`${bottom}px`);
@@ -57,8 +57,9 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
     node.scrollTop = Math.max(0, active * ROW - node.clientHeight / 2 + ROW / 2);
     setViewport({ top: node.scrollTop, height: node.clientHeight });
   }, [active, chapters.length]);
-  const first = Math.max(0, Math.floor(viewport.top / ROW) - 2);
-  const end = Math.min(chapters.length, Math.ceil((viewport.top + viewport.height) / ROW) + 2);
+  const fits = chapters.length * ROW <= viewport.height + 2;
+  const first = fits ? 0 : Math.max(0, Math.ceil(viewport.top / ROW));
+  const end = fits ? chapters.length : Math.min(chapters.length, Math.max(first, Math.floor((viewport.top + viewport.height) / ROW)));
   useLayoutEffect(()=>{
     if(pendingFocus.current===undefined)return;
     const target=rail.current?.querySelector<HTMLButtonElement>(`[data-prompt-ordinal="${pendingFocus.current+1}"]`);
@@ -88,7 +89,7 @@ export function PromptRail({ chapters, activeId, open }: { chapters: PromptChapt
           const ordinal = first + offset;
           const ledger=chapter.turnStep===undefined?undefined:ledgers.get(chapter.turnStep);
           const description=ledger?`${ledger.operations} operations${ledger.open?`, ${ledger.open} awaiting results`:''}. ${ledgerParts(ledger).map(p=>p.text).join(', ')}`:undefined;
-          return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW } as CSSProperties} data-turn-step={chapter.turnStep} data-operation-count={ledger?.operations} aria-description={description} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(undefined)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" /></button>;
+          return <button key={chapter.id} style={{ position: 'absolute', top: ordinal * ROW } as CSSProperties} data-turn-step={chapter.turnStep} data-operation-count={ledger?.operations} aria-description={description} data-prompt-ordinal={ordinal + 1} data-proximity={ordinal === nearest ? 'current' : Math.abs(ordinal - nearest) === 1 ? 'near' : 'normal'} aria-label={`Go to prompt: ${chapter.label}`} aria-current={chapter.id === activeId ? 'location' : undefined} onMouseEnter={e => show(ordinal, e.currentTarget)} onFocus={e => show(ordinal, e.currentTarget)} onBlur={() => setPreview(p => p?.ordinal === ordinal ? undefined : p)} onClick={() => open(chapter)}><span className="prompt-rail-tick" aria-hidden="true" /></button>;
         })}
       </div>
     </nav>
