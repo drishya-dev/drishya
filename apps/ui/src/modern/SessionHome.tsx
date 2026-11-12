@@ -10,7 +10,7 @@ import { foldTemporary, parentFolder, timeSection, workspaceGroups } from '../li
 import { useApp } from '../state.ts';
 import { useWorkspaceState, useWorkspaceMemory } from '../lib/workspace-memory-react.ts';
 import { GitHubStarLink } from './GitHubStarLink.tsx';
-import { HomeField, type FieldGroup } from './HomeField.tsx';
+import { HomeOverview } from './HomeOverview.tsx';
 import './session-home.css';
 import './home-active.css';
 import './home-opening.css';
@@ -95,7 +95,7 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
   const resume=inventory.find(s=>s.key===resumeId);
   const latest=[...inventory].filter(s=>!s.nested).sort((a,b)=>(Date.parse(b.time??'')||0)-(Date.parse(a.time??'')||0))[0];
   const writing=new Set(active.map(s=>s.key));
-  const field:FieldGroup[]=rail(inventory).filter(g=>g.key!=='subagents').map(g=>({key:g.key,name:g.name,minor:g.key==='temporary'||!g.root,sessions:[...g.items].sort((a,b)=>(Date.parse(b.time??'')||0)-(Date.parse(a.time??'')||0)).map(s=>({key:s.key,title:s.title,harness:s.harness,time:s.time,running:writing.has(s.key)}))}));
+  const projects=rail(inventory).filter(g=>g.key!=='subagents').map(g=>({key:g.key,name:g.name,minor:g.key==='temporary'||!g.root,count:g.items.length,latest:g.items.map(s=>s.time??'').sort().at(-1)||undefined}));
   // A row can gain its recording while the journal is still being read, so its key changes mid-import.
   const progressOf=(session:Session)=>opening[session.key]??(session.recording?.sourcePath?opening[session.recording.sourcePath]:undefined);
   const open=(session:Session)=>{if(session.recording){location.hash=`#/r/${session.key}`;void useApp.getState().openRecording(session.key);}else if(session.source)onOpen(session.source,false);};
@@ -136,11 +136,10 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
     if(row){row.focus({preventScroll:true});pendingFocus.current=undefined;}
   },[shown,listTop,rowHeight]);
   const first=Math.max(0,Math.floor(workspaceTop/64)-4),end=Math.min(groups.length,first+40);
-  return <div className={`home mh-home mh-home-v2${showIntro?'':' mh-home-compact'}${docked?' mh-docked':''}`} style={{'--mh-row-height':`${rowHeight}px`,'--mh-section-height':`${sectionHeight}px`} as CSSProperties}>
+  return <div className={`home mh-home mh-home-v2${showIntro?'':' mh-home-compact'}${docked?' mh-docked':''}`} onWheel={event=>{/* The header and footer sit outside the scroller: the wheel over them still moves the page. */if(!scroller.current?.contains(event.target as Node))scroller.current?.scrollBy({top:event.deltaY});}} style={{'--mh-row-height':`${rowHeight}px`,'--mh-section-height':`${sectionHeight}px`} as CSSProperties}>
     <header className="mh-header"><div className="brand static"><BrandMark/>Drishya<span>Local agent workspace</span></div><div>{localEvidence&&<button className="btn ghost" onClick={()=>window.dispatchEvent(new Event('drishya-search-library'))}><InterfaceGlyph name="search"/>Search sessions</button>}<button className="btn ghost" aria-label="Workspace settings" onClick={()=>useApp.setState({settingsOpen:true})}><SettingsGlyph/>Settings</button></div></header>
     <div className="mh-scroll" ref={scroller} onScroll={event=>{const node=event.currentTarget,next=node.scrollTop>=node.scrollHeight-node.clientHeight-2;if(next!==docked){setDocked(next);memory.set('home/docked',next);}}}>
     <section className="mh-opening" aria-label="Drishya">
-      <HomeField groups={field} now={now.getTime()} onOpen={key=>{const session=inventory.find(s=>s.key===key);if(session)open(session);}} onGroup={key=>{choose(key);dock(true);}}/>
       <div className="mh-opening-words">
         <span className="mh-opening-mark" aria-hidden="true"><BrandMark/></span>
         <p className="mh-wordmark" aria-hidden="true">drishya<span lang="hi">दृश्य</span></p>
@@ -151,10 +150,12 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
           {!resume&&!active.length&&latest&&<button className="mh-latest" onClick={()=>open(latest)}><span className="mh-resume-icon"><InterfaceGlyph name="arrow"/></span><span><small>Open your latest session</small><strong>{latest.title}</strong></span></button>}
           <button className="mh-browse" onClick={()=>dock(true)}>{inventory.length?`Browse ${inventory.filter(s=>!s.nested).length} sessions`:'Your sessions'}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></button>
         </div>
+        <p className="mh-opening-facts">Local · open source · no telemetry</p>
       </div>
     </section>
     <div className="mh-sheet">
     <section className="mh-intro"><div><span className="mh-eyebrow">Your work, in view</span><h1>{showIntro?'Your agents. In view.':'Your sessions.'}</h1>{showIntro&&<p id="home-introduction">Drishya brings agent work, code and review into one local workspace.</p>}</div><div className="mh-intro-actions"><button aria-expanded={showIntro} className="btn ghost mh-about" aria-label="About Drishya" onClick={()=>setIntro(!showIntro)}><svg className="mh-about-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg><span>{showIntro?'Less introduction':'About Drishya'}</span></button><button className="btn mh-refresh" onClick={()=>void refreshSessions()} disabled={refreshing} aria-busy={refreshing}><InterfaceGlyph name="refresh"/>{refreshing?'Refreshing…':'Refresh sessions'}</button></div></section>
+    <HomeOverview sessions={inventory.filter(s=>!s.nested)} groups={projects} now={now} onGroup={key=>{choose(key);dock(true);}}/>
     <section className="mh-library" aria-label="Session library"><div className="mh-filters"><label className="mh-search"><InterfaceGlyph name="search"/><input aria-label="Find sessions" placeholder="Search sessions or workspaces…" onFocus={()=>dock(true)} maxLength={200} value={query} onChange={e=>{setQuery(e.target.value);reset();}} onKeyDown={e=>{if(e.key==='Escape'&&query){e.preventDefault();e.stopPropagation();setQuery('');reset();}}}/>{query&&<button className="mh-clear-search icon-btn" aria-label="Clear session search" onClick={()=>{setQuery('');reset();}}>×</button>}</label><select aria-label="Harness" value={harness} onChange={e=>{setHarness(e.target.value);reset();}}><option value="all">All harnesses</option><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select><select aria-label="Session time range" value={days} onChange={e=>{setDays(Number(e.target.value));reset();}}><option value={0}>All time</option><option value={1}>Last day</option><option value={7}>Last week</option><option value={30}>Last month</option></select></div>
       {error&&<div className="mh-error" role="alert">{error}<button className="btn ghost" onClick={()=>void refreshSessions()} disabled={refreshing}>Retry</button></div>}
       <div className="mh-columns"><aside ref={workspaces} className="mh-workspaces" aria-label="Workspaces" onKeyDown={event=>{if(phone&&workspacesOpen&&event.key==='Escape'){event.preventDefault();event.stopPropagation();setWorkspacesOpen(false);workspaceTrigger.current?.focus({preventScroll:true});}}} onBlur={event=>{if(phone&&!event.currentTarget.contains(event.relatedTarget))setWorkspacesOpen(false);}}><button ref={workspaceTrigger} className="mh-workspace-trigger" aria-label="Choose workspace" aria-expanded={phone&&workspacesOpen} aria-controls="home-workspace-options" onClick={()=>setWorkspacesOpen(!workspacesOpen)}><InterfaceGlyph name="folder"/><span>{group?.name??'All workspaces'}</span><small>{group?selection.length:matches.length}</small><svg className="mh-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></button><header><span>Workspaces</span><span>{groups.length}</span></header><div id="home-workspace-options" className={`mh-workspace-options${workspacesOpen?' open':''}`}><button className={`mh-workspace${group?'':' selected'}`} onClick={()=>choose('all')} aria-pressed={!group}><InterfaceGlyph name="local"/><span><strong>All sessions</strong><small>Across your local workspaces</small></span><b>{matches.length}</b></button><div className="mh-workspace-list" tabIndex={0} aria-label="Scroll workspaces" onScroll={e=>setWorkspaceTop(e.currentTarget.scrollTop)}><div style={{height:groups.length*64,position:'relative'}}><div style={{position:'absolute',top:first*64,left:0,right:0}}>{groups.slice(first,end).map(g=><button key={g.key} className={`mh-workspace${workspace===g.key?' selected':''}`} onClick={()=>choose(g.key)} aria-pressed={workspace===g.key} title={g.root??'No workspace'}><InterfaceGlyph name="folder"/><span><strong>{g.name}</strong><small>{g.detail??(g.root?parentFolder(g.root):'No workspace recorded')}</small></span><b>{g.items.length}</b></button>)}</div></div></div></div></aside>
@@ -164,8 +165,8 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
           {ordered.length>shown&&<button className="btn mh-load" onClick={()=>setShown(n=>n+50)}>Load more sessions · {ordered.length-shown} remaining</button>}
         </div></div>
       </div>
-    </section><footer className="mh-footer"><span>Local capture. No telemetry.</span><GitHubStarLink/><span/></footer>
+    </section>
     </div>
-    </div>
+    </div><footer className="mh-footer"><span>Local capture. No telemetry.</span><GitHubStarLink/><span/></footer>
   </div>;
 }

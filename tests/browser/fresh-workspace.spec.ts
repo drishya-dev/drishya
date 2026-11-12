@@ -399,7 +399,7 @@ test('Modern home has one sessions list and no duplicate imported local session'
   await page.goto(`${server.url}/?experience=modern`);
   await expect(page.getByRole('heading',{name:'Recordings',exact:true})).toHaveCount(0);
   await expect(page.locator('#local-session-import')).toHaveCount(0);
-  await expect(page.getByText('Available local session',{exact:true})).toBeVisible();
+  await expect(page.locator('.mh-session-list').getByText('Available local session',{exact:true})).toBeVisible();
   await expect(page.getByText('Duplicate imported session',{exact:true})).toHaveCount(0);
 });
 
@@ -1473,7 +1473,7 @@ test('Home keeps workspace scope on empty filters and navigates all virtual sess
   await expect(page.locator('[data-session-index="179"] .mh-session-open')).toBeFocused();
   expect(await page.locator('.mh-session').count()).toBeLessThan(35);
   await page.keyboard.press('Home');await expect(page.locator('[data-session-index="0"] .mh-session-open')).toBeFocused();
-  await page.getByRole('button',{name:/alpha.*90/}).click();
+  await page.locator('.mh-workspaces').getByRole('button',{name:/alpha.*90/}).click();
   const search=page.getByRole('textbox',{name:'Find sessions',exact:true});await search.fill('Keyboard session 001');
   await expect(page.locator('.mh-empty h2')).toHaveText('No matching sessions');
   await expect(page.locator('.mh-results>header h2')).toHaveText('alpha');await expect(page.locator('.mh-session')).toHaveCount(0);

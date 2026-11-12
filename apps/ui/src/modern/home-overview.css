@@ -1,0 +1,38 @@
+/* SHIP-3: the overview above the session list. One quiet band: activity by day, four totals, the most recent workspaces. */
+.mh-overview { display:grid; grid-template-columns:auto auto minmax(0,1fr); align-items:center; gap:36px; flex:none; padding:2px 0 18px; min-width:0; }
+.mh-ov-activity { display:grid; gap:7px; }
+.mh-ov-activity small { font:var(--text-2xs)/1.4 var(--sans); color:var(--t4); }
+.mh-ov-grid { display:grid; grid-auto-flow:column; grid-template-rows:repeat(7,9px); grid-auto-columns:9px; gap:3px; }
+.mh-ov-grid i { border-radius:2px; background:color-mix(in srgb,var(--t1) 7%,transparent); }
+.mh-ov-grid i[data-level="1"] { background:color-mix(in srgb,var(--modern-accent) 30%,var(--bg)); }
+.mh-ov-grid i[data-level="2"] { background:color-mix(in srgb,var(--modern-accent) 52%,var(--bg)); }
+.mh-ov-grid i[data-level="3"] { background:color-mix(in srgb,var(--modern-accent) 76%,var(--bg)); }
+.mh-ov-grid i[data-level="4"] { background:var(--modern-accent); }
+
+.mh-ov-totals { display:grid; grid-template-columns:repeat(3,auto); column-gap:30px; row-gap:10px; margin:0; }
+.mh-ov-totals>div { display:grid; gap:1px; min-width:0; }
+.mh-ov-totals dt { font:var(--text-2xs)/1.5 var(--sans); color:var(--t3); white-space:nowrap; }
+.mh-ov-totals dd { margin:0; font:var(--weight-medium) var(--text-2xl)/1.15 var(--sans); letter-spacing:-.03em; color:var(--t1); font-variant-numeric:tabular-nums; }
+.mh-ov-totals .mh-ov-harness { grid-column:1 / -1; gap:6px; }
+.mh-ov-harness dt b { font-weight:var(--weight-medium); color:var(--t2); }
+.mh-ov-harness dd { display:flex; gap:2px; height:3px; border-radius:2px; overflow:hidden; }
+.mh-ov-harness dd span { min-width:2px; border-radius:2px; }
+.mh-ov-harness dd .claude-code { background:var(--agent-claude-ink,#e8956a); }
+.mh-ov-harness dd .codex { background:var(--agent-codex-ink,#6fb3ff); }
+
+.mh-ov-recent { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; min-width:0; }
+.mh-ov-recent button { display:grid; gap:2px; min-width:0; padding:11px 14px; border:1px solid var(--line); border-radius:var(--round-lg); background:var(--s1); text-align:left; }
+.mh-ov-recent strong { font:var(--weight-medium) var(--text-sm)/1.4 var(--sans); color:var(--t1); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mh-ov-recent span { font:var(--text-2xs)/1.5 var(--sans); color:var(--t3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+@media(hover:hover) and (pointer:fine) { .mh-ov-recent button { transition:background-color 150ms ease,border-color 150ms ease; } .mh-ov-recent button:hover { background:var(--s2); border-color:var(--line-2); } }
+@media(prefers-reduced-motion:reduce) { .mh-ov-recent button { transition:none; } }
+/* Short or narrow windows keep the list: the day grid and the cards go, the totals stay on one line. */
+@media(max-width:1180px) { .mh-ov-recent button:nth-child(n+4) { display:none; } }
+@media(max-width:1000px) { .mh-ov-recent button:nth-child(n+3) { display:none; } }
+@media(max-height:820px), (max-width:760px) {
+  .mh-overview { grid-template-columns:minmax(0,1fr); gap:0; padding-bottom:12px; }
+  .mh-ov-activity, .mh-ov-recent, .mh-ov-totals .mh-ov-harness { display:none; }
+  .mh-ov-totals { display:flex; gap:22px; }
+  .mh-ov-totals>div { display:flex; align-items:baseline; gap:7px; }
+  .mh-ov-totals dd { font-size:var(--text-md); order:-1; }
+}
