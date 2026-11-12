@@ -30,9 +30,13 @@ async function home(page: Page, count: number) {
   }));
   await page.route('**/v1/recordings', route => route.fulfill({ json: { recordings } }));
   await page.route('**/v1/sources', route => route.fulfill({ json: { sources: [], errors: [] } }));
+  // Reading positions are kept by the server, so a session opened by one test would turn the next test's Latest into Resume.
+  // Each test starts with none; the Resume case removes this route to use the real ones.
+  await page.route(locations, route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
   await page.goto(server.launchUrl);
   await expect(page.locator('.mh-home')).toBeVisible();
 }
+const locations = '**/v1/working-locations';
 const docked = (page: Page) => page.evaluate(() => document.querySelector('.mh-home')!.classList.contains('mh-docked'));
 
 for (const [width, height] of [[1440, 900], [600, 900], [1280, 720]] as const) test(`${width}x${height}: the opening fills the first screen and the top of the sheet shows in it`, async ({ page }) => {
@@ -166,7 +170,8 @@ test('the first action reads clearly as Resume and as Latest, in every palette, 
   };
   await expect(page.locator('.mh-latest')).toBeVisible();
   await everyPalette('.mh-latest');
-  // Open a session and come back: Home now offers to resume it.
+  // Open a session and come back, with the server keeping the reading position: Home now offers to resume it.
+  await page.unroute(locations);
   await page.locator('.mh-latest').click();
   await expect(page).toHaveURL(new RegExp(`#/r/${claudeId}`));
   await expect(page.locator('.history')).toBeVisible();
