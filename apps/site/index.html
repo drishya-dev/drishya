@@ -8,6 +8,14 @@
   <meta name="theme-color" content="#0a0b0d" />
   <link rel="icon" href="/mark.svg" type="image/svg+xml" />
   <link rel="preload" href="/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
+  <style>
+    html, body { background: #0a0b0d; color: #eceae4; }
+    html:not([data-app-ready]) body { visibility: hidden; }
+    html[data-app-ready] body { visibility: visible; animation: site-reveal 240ms ease-out both; }
+    @keyframes site-reveal { from { opacity: 0; } to { opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { html[data-app-ready] body { animation: none; } }
+  </style>
   <script>
     // Decide the motion level before first paint, so reduced motion never flashes the animated start state.
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.dataset.motion = 'reduced';
@@ -71,8 +79,8 @@
           <div class="laptop-slot" aria-hidden="true"></div>
         </div>
         <div class="laptop" aria-hidden="true">
-          <div class="laptop-lid"><div class="laptop-screen" data-viewport></div></div>
-          <div class="laptop-base"></div>
+          <div class="laptop-lid"><div class="laptop-screen" data-viewport></div><div class="laptop-hinge-shadow"></div></div>
+          <div class="laptop-base"><div class="laptop-keyboard"></div><div class="laptop-trackpad"></div></div>
         </div>
       </div>
     </section>

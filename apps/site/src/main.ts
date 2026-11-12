@@ -18,6 +18,7 @@ const SITE = {
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 const reduced = document.documentElement.dataset.motion === 'reduced';
+const revealSite = () => { document.documentElement.dataset.appReady = 'true'; };
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
 const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
 type Op = (typeof sample.operations)[number];
@@ -298,6 +299,7 @@ if (reduced) {
   $$('.screen').forEach(el => (el.style.display = 'none'));
   frameEl.src = new URL('demo.html', location.href).pathname;
   $$('.tour-steps li').forEach(li => li.classList.add('on'));
+  revealSite();
 } else {
   animate();
 }
@@ -309,7 +311,7 @@ function animate() {
   gsap.ticker.lagSmoothing(0);
   for (const a of $$<HTMLAnchorElement>('a[href^="#"]')) a.addEventListener('click', e => { const id = a.getAttribute('href')!; if (id.length > 1) { e.preventDefault(); lenis.scrollTo(id === '#top' ? 0 : id, { offset: 0, duration: 1.4 }); } });
 
-  document.fonts.ready.then(() => { intro(); scrollScenes(); ScrollTrigger.refresh(); });
+  document.fonts.ready.then(() => { intro(); scrollScenes(); ScrollTrigger.refresh(); revealSite(); });
 
   function intro() {
     const ribbons = $$('.hero-mark .ribbon');
@@ -410,7 +412,7 @@ function animate() {
     // The laptop is laid out at its full-screen size and shown smaller at rest, so growing never upscales pixels.
     // At rest it sits in the right-hand column; while the three screens play it fills the screen.
     const wide = matchMedia('(min-width: 900px)').matches;
-    const laptop = $('.laptop'), lid = $('.laptop-lid'), screen = $('.laptop-screen'), base = $('.laptop-base'), caption = $('.tour-steps'), slot = $('.laptop-slot');
+    const laptop = $('.laptop'), lid = $('.laptop-lid'), screen = $('.laptop-screen'), hinge = $('.laptop-hinge-shadow'), base = $('.laptop-base'), caption = $('.tour-steps'), slot = $('.laptop-slot');
     // Measured against the pin, not the viewport, so the resting place is the same at any scroll position (and on refresh).
     const pin = $('.tour-pin');
     const rest = () => { const r = slot.getBoundingClientRect(), p = pin.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - (p.left + p.width / 2), y: r.top + r.height / 2 - (p.top + p.height / 2) }; };
@@ -426,13 +428,17 @@ function animate() {
     // Centred vertically by GSAP's yPercent, so the scroll tweens own only the pixel offsets.
     gsap.set(lid, { transformOrigin: '50% 100%', rotateX: -78 });
     gsap.set(screen, { opacity: .18 });
+    gsap.set(hinge, { scaleX: .64, opacity: .42, transformOrigin: '50% 50%' });
     gsap.set(base, { y: 8, scaleX: .98, transformOrigin: '50% 0' });
+    gsap.set(laptop, { transformPerspective: 1200, rotateY: -2.5, rotateX: 1.1 });
     if (wide) gsap.set(laptop, { yPercent: -50, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
     if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: () => activeLaptop().scale, x: () => activeLaptop().x, y: () => activeLaptop().y, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
     if (wide) tl.to(caption, { x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 50%', duration: 0.6, ease: 'power3.inOut' }, 0);
     tl.to(lid, { rotateX: 0, duration: .5, ease: 'power4.out' }, 0);
     tl.to(base, { y: 0, scaleX: 1, duration: .5, ease: 'power3.out' }, .08);
+    tl.to(hinge, { scaleX: 1, opacity: 1, duration: .4, ease: 'power2.out' }, .08);
     tl.to(screen, { opacity: 1, duration: .28, ease: 'power2.out' }, .3);
+    tl.to(laptop, { rotateY: 0, rotateX: 0, duration: .62, ease: 'power3.out' }, .12);
     // 1: the CLI, one line per action, scrolling past.
     tl.to(lines, { opacity: 1, stagger: 0.07, duration: 0.15, ease: 'none' }, 0.6);
     // 2: the desktop app, the same session as a chat with tools folded into rows.
