@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| UI-36 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-36` | 2026-11-12 | `apps/ui/src/components/ContextEvidence.tsx`, `apps/ui/src/components/context-evidence.css`, `tests/browser/compaction.spec.ts`, `docs/STATUS.md`, `docs/TASKS.md`. |
 | SHIP-2h | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2h` | 2026-11-12 | `apps/ui/src/components/` & `apps/ui/src/` (dialogs, Session details, session menu, Usage, plurals, settings icons, grouped command palette, Changes empty This session), `tests/browser/ship-2h-surfaces.spec.ts`, `docs/review/ship-2h-surfaces.md`, `docs/STATUS.md`, `docs/TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
