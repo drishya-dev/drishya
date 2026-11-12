@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-6g | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6g` | 2026-11-12 | `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/modern/recovered-surfaces.css`, `apps/ui/src/modern/workspace-chrome.css`, `apps/ui/src/developer-workspace.css`, `apps/ui/src/components/SessionWorkspace.tsx`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/stage.css`, `tests/browser/ship-6g-layers.spec.ts`, `docs/review/ship-6g-layers.md`, `STATUS.md`, `TASKS.md`. |
 | SHIP-6e | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6e` | 2026-11-12 | `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/components/SessionWorkspace.tsx`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/workspace-chrome.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/stage.css`, `tests/browser/chrome-reading-edge.spec.ts`, `tests/browser/palette-contrast.spec.ts`, `docs/review/ship-6e-reading-edges.md`, `STATUS.md`, `TASKS.md`. |
 | UI-33 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-33` | 2026-11-12 | `apps/ui/src/components/PromptRail.tsx`, `apps/ui/src/stage.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `tests/browser/toolbox-window.spec.ts`, `tests/browser/prompt-timeline.spec.ts`, `docs/review/ui-33-prompt-rail-lane.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
@@ -59,6 +58,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash — 12 Nov: SHIP-6g layers stack correctly
+
+- Fixed Modern stacking order (`large-screens.css`, `reading-windows.css`, `recovered-surfaces.css`, `SessionWorkspace.tsx`, `QueuedInputs.tsx`, `queued-inputs.css`): open `details[open]` menus/popovers (`z-index: 70`) stay above fixed controls (`.follow-pill`, `.history-transport`, `.catalog-toggle` at `16`; Replay bar & floating queue pill at `22`), narrow `Files` overlay (<900 px) renders a pointer-dismissible `.files-scrim` (`34`) below `.folder-explorer` (`35–36`) while keeping `.workspace-header`/`.workspace-leading`/`.workspace-secondary` (`38`) interactive above it, and empty queues omit `Queued inputs` from the DOM while Replay `Queued inputs · 1` lifts to `bottom: 134px` above the Follow pill.
+- Verified via `typecheck`, `apps/ui/test` (`119` files, `587` passed / `1` skipped), `packages/` + `apps/daemon/` (`118` files, `894` passed), 9 Edge browser specs (`147` passed / `1` existing fixture skip / `0` failures, including new `ship-6g-layers.spec.ts`), and real local sessions (`claude` `rec_1f7f` 3.51 MB & `codex` `rec_1394` 0.83 MB) at `600` & `1440` px across Jet Black, Midnight, and Paper (`12/12` checks passed; private frames in `.local/ship-6g/`). [Review record](review/ship-6g-layers.md).
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: UI-35 woven aperture logo and favicons (PR #430)
 

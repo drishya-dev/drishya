@@ -28,7 +28,6 @@ function notificationFields(text: string): {name: string; value: string}[] | und
 export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
   const source = useApp(s => s.source), id = useApp(s => s.recordingId), mode = useApp(s => s.mode);
   // Past receipts are for the end of the session; while reading back they would sit on top of the text.
-  const following = useApp(s => s.follow);
   const projection = useApp(s => s.projection), page = useApp(s => s.historyPage), step = useApp(s => s.step);
   const revision = useApp(s => s.recording?.revision);
   const [loaded, setLoaded] = useState<{key: string; page: QueuePage}>(), [open, setOpen] = useState(false), [history, setHistory] = useState(false);
@@ -90,12 +89,12 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
     } catch {if (active.current && token === reading.current) setError('The complete input could not be read or copied. Retry the reading.');}
     finally {if (active.current && token === reading.current) setBusy(false);}
   };
-  if (!source?.queue || !owner || mode === 'replay' && !through || !totals?.total && !error && !open) return null;
-  const latest = data?.items[0], pending = totals?.pendingTotal ?? totals?.items.filter(item=>item.state==='recorded').length ?? 0, waiting = pending > 0;
+  const latest = data?.items[0], pending = totals?.pendingTotal ?? totals?.items.filter(item => item.state === 'recorded').length ?? 0, waiting = pending > 0;
+  if (!source?.queue || !owner || mode === 'replay' && !through || !waiting && !error && !open) return null;
   // Replay hides the composer, so its receipts sit on the page itself, like an exported bundle's.
   const floating = standalone || mode === 'replay';
-  const view = <div className="queued-input-receipts" data-waiting={waiting || undefined} style={floating ? {position: 'fixed', right: 20, bottom: 72, zIndex: 12} : {position: 'absolute', left: 0, bottom: 'calc(100% + 8px)', padding: '0 4px'}}>
-    <button type="button" className="btn ghost small" aria-label="Read queued inputs" style={floating || waiting || following ? undefined : {visibility: 'hidden'}} onClick={() => {setOpen(true); const first = data?.items.find(item => !textless(item) && !/^\s*</.test(item.preview ?? '')) ?? data?.items.find(item => !textless(item)) ?? latest; if (first) select(first);}}>
+  const view = <div className="queued-input-receipts" data-waiting={waiting || undefined} data-floating={floating || undefined}>
+    <button type="button" className="queued-input-trigger" aria-label="Read queued inputs" onClick={() => {setOpen(true); const first = data?.items.find(item => !textless(item) && !/^\s*</.test(item.preview ?? '')) ?? data?.items.find(item => !textless(item)) ?? latest; if (first) select(first);}}>
       <span aria-live="polite">{`Queued inputs${pending ? ` · ${pending}` : ''}`}</span>
     </button>
     {open && <ReadingDialog title="Queued inputs" close={() => {setOpen(false); select(undefined); setError('');}} className="queue-input-reader" style={{width: 'min(880px, calc(100vw - 32px))'}}>
