@@ -103,10 +103,11 @@ export class GitReview {
     const page=await gitHistory(git,query);
     if(!this.historyService||id.includes('+'))return page;
     const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001));
-    const evidence=await this.historyService.gitSessionEvidence(id,context.query);
+    const evidenceQuery={commits:context.query.commits.map(commit=>({...commit,paths:commit.paths.map(path=>this.workspace.evidencePath(id,path))})),working:context.query.working.map(file=>({...file,path:this.workspace.evidencePath(id,file.path)}))};
+    const evidence=await this.historyService.gitSessionEvidence(this.workspace.evidenceId(id),evidenceQuery);
     // Check refs again after reading patches and captured evidence.
     await verifyGitHistoryGeneration(git,page.generation);
-    return {...page,sessionLinks:evidence.links,...(page.start===0?{workingTree:{files:evidence.working,omitted:context.omitted}}:{})};
+    return {...page,sessionLinks:evidence.links,...(page.start===0?{workingTree:{files:evidence.working.map(file=>({...file,path:this.workspace.currentPath(id,file.path)})),omitted:context.omitted}}:{})};
   });}
   ref(id:string,rev:string) {return this.readHistory(id,git=>gitRefSummary(git,rev));}
   commit(id:string,hash:string,parent=0,start=0,generation?:string) {return this.readHistory(id,git=>gitCommit(git,hash,parent,start,generation));}

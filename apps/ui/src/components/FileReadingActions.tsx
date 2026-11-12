@@ -4,7 +4,7 @@ import {useApp} from '../state.ts';
 import {useFileRoots} from '../lib/use-file-roots.ts';
 import {rememberCurrentFileOrigin} from '../lib/current-file-origin.ts';
 import {capturedFileEvidence,currentReadingTarget,recordedFileIdentity} from '../lib/file-reading.ts';
-import {useSessionWorkspace} from './SessionWorkspace.tsx';
+import {useReadingWorkspace} from './SessionWorkspace.tsx';
 import {WorkspaceOptions} from './WorkspaceOptions.tsx';
 
 export function openCapturedFileReading(path:string,op?:Operation) {
@@ -15,10 +15,11 @@ export function openCapturedFileReading(path:string,op?:Operation) {
 /** One navigation contract for captured material; current bytes never stand in for it. */
 export function FileReadingActions({path,op,capturedKnown=false,hideCaptured=false,hideReveal=false,compact=false,onNavigate,beforeWorkspace,workspaceLabel='Open in Workspace',unavailableReason,hideWorkspace=false,copyPath=true,explain=true}:{path:string;op?:Operation;capturedKnown?:boolean;hideCaptured?:boolean;hideReveal?:boolean;compact?:boolean;onNavigate?:()=>void;beforeWorkspace?:()=>void;workspaceLabel?:string;unavailableReason?:string;hideWorkspace?:boolean;explain?:boolean;copyPath?:boolean}) {
   const source=useApp(s=>s.source),id=useApp(s=>s.recordingId),mode=useApp(s=>s.mode),projection=useApp(s=>s.projection),graph=useApp(s=>s.graph);
-  const roots=useFileRoots(projection?.observationCount??0),{workspace}=useSessionWorkspace();
+  const roots=useFileRoots(projection?.observationCount??0),{workspace}=useReadingWorkspace();
   const files=projection?.files.map(file=>file.path)??[],root=workspace?.root??projection?.workspaceRoot;
   const identity=recordedFileIdentity(path,files,roots,root),target=currentReadingTarget(identity,roots,root);
-  const reason=unavailableReason??(source?.kind!=='daemon'?'This bundle holds the session only, not your files.':id?.includes('+')?'Choose one session to read current files.':mode!=='history'?'Leave replay to read current files.':target.reason);
+  const browsingCheckout=useApp(s=>!!s.checkoutId);
+  const reason=unavailableReason??(browsingCheckout?'Workspace edits belong to the session checkout; return there to edit.':source?.kind!=='daemon'?'This bundle holds the session only, not your files.':id?.includes('+')?'Choose one session to read current files.':mode!=='history'?'Leave replay to read current files.':target.reason);
   const known=capturedKnown||files.includes(identity)||!!op?.paths.some(item=>item.path===identity);
   const step=useApp(s=>s.mode==='replay'?s.step:undefined),revision=useApp(s=>id?s.renderedRevisions[id]:undefined);
   const [checked,setChecked]=useState<{source:typeof source;id:typeof id;path:string;step:typeof step;revision:typeof revision;found:boolean}>();

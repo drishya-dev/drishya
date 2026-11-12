@@ -21,7 +21,7 @@ import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { ReadingDialog } from './ProductShell.tsx';
 import { VerificationPanel } from './Verification.tsx';
 import { CapturedTime } from './common.tsx';
-import { useSessionWorkspace } from './SessionWorkspace.tsx';
+import { useReadingWorkspace } from './SessionWorkspace.tsx';
 import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { CodeView, Output } from './common.tsx';
@@ -53,8 +53,9 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
   const preferred = useApp(s => s.filePanelEvidence);
   const requestedLine = useApp(s => s.filePanelLine);
   const explore = useApp(s => s.explore);
-  const { workspace, approve } = useSessionWorkspace();
-  const diskPath=currentReadingTarget(path,roots,workspace?.root).path;
+  const { workspace, approve } = useReadingWorkspace();
+  const checkoutId=useApp(s=>s.checkoutId);
+  const diskPath=checkoutId&&!path.startsWith('worktree-')?undefined:currentReadingTarget(path,roots,workspace?.root).path;
   const [diskError, setDiskError] = useState<string>();
   const source = useApp((s) => s.source);
   const recordingId = useApp((s) => s.recordingId)!;
@@ -189,7 +190,7 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
     trail.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [first?.key]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
-  const readDiskAction=source?.kind === 'daemon' && workspace?.root && diskPath!==undefined && !reason && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId || useApp.getState().source !== source) return; rememberCurrentFileOrigin(source,recordingId,diskPath,path); useApp.getState().set({ currentFile: diskPath, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>;
+  const readDiskAction=source?.kind === 'daemon' && workspace?.root && diskPath!==undefined && !reason && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId || useApp.getState().source !== source) return; rememberCurrentFileOrigin(source,recordingId,diskPath,path); useApp.getState().set({ currentFile: checkoutId?path:diskPath, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>;
   const content=<>
 
     <div className="file-reading-context">{(!modern||(embedded&&!reason))&&<EvidenceNavigation compact={modern} hideEmpty={modern} />}
