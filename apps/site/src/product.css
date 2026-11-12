@@ -1,0 +1,27 @@
+/* The laptop's screens: a fixed 1440×900 stage scaled to fit, so the real app and the two agent screens share one frame. */
+.dr-stage { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; transform: scale(var(--s, .5)); }
+.screen { position: absolute; inset: 0; overflow: hidden; }
+.dr-frame { position: absolute; inset: 0; width: 1440px; height: 900px; border: 0; background: #000; }
+.screen-label { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 50; padding: 8px 16px; border-radius: 999px; background: rgba(10, 11, 13, .82); border: 1px solid rgba(241, 238, 228, .14); font: 500 20px var(--sans); color: #eceae4; white-space: nowrap; }
+
+/* 1 · the agent's CLI */
+.term { background: #0c0c0c; font: 400 21px/1.75 var(--mono); color: #d0d0d0; z-index: 3; }
+.term-bar { height: 46px; display: flex; align-items: center; gap: 14px; padding: 0 16px; background: #1a1a1a; color: #9a9a9a; font-size: 17px; }
+.term-lines { padding: 26px 34px; }
+.tl.p { color: #fff; margin-bottom: 14px; } .tl.b { color: #e8e8e8; } .tl.r { color: #808080; } .tl.t { color: #fff; margin-top: 14px; }
+
+/* 2 · the agent's desktop app: a chat, tools collapsed to one row each */
+.app { display: grid; grid-template-columns: 300px 1fr; background: #1f1e1c; color: #ecebe6; font: 400 19px/1.55 var(--sans); z-index: 2; }
+.ap-side { display: grid; align-content: start; gap: 6px; padding: 28px 18px; background: #191917; border-right: 1px solid #2c2b28; font-size: 17px; color: #a9a79f; }
+.ap-side b { color: #ecebe6; margin-bottom: 14px; font-size: 19px; }
+.ap-side span { padding: 9px 12px; border-radius: 10px; } .ap-side .on { background: #2c2b28; color: #ecebe6; }
+.ap-chat { position: relative; padding: 44px 140px 0; }
+.ap-user { margin-left: auto; max-width: 720px; padding: 16px 20px; border-radius: 18px; background: #2f2e2b; }
+.ap-tools { margin-top: 28px; border: 1px solid #34332f; border-radius: 14px; overflow: hidden; }
+.ap-group { padding: 12px 18px; font-size: 16px; color: #a9a79f; border-bottom: 1px solid #34332f; }
+.ap-tool { display: flex; align-items: center; gap: 12px; padding: 10px 18px; font-size: 17px; color: #c9c7bf; border-bottom: 1px solid #2a2926; }
+.ap-tool b { font: 400 15px var(--mono); color: #ecebe6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ap-tool em { font-style: normal; font-size: 14px; padding: 2px 8px; border-radius: 6px; } .ap-tool em.failed { color: #ff8a7d; background: rgba(255, 106, 92, .12); } .ap-tool em.passed { color: #6fd6a0; background: rgba(70, 201, 139, .12); }
+.ap-ic { width: 22px; color: #a9a79f; font: 400 15px var(--mono); } .ap-chev { margin-left: auto; color: #77756d; }
+.ap-reply { margin-top: 26px; max-width: 900px; }
+.ap-input { position: absolute; left: 140px; right: 140px; bottom: 36px; padding: 18px 22px; border-radius: 18px; background: #2a2926; color: #8a887f; }

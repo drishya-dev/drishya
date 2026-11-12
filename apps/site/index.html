@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en" data-motion="full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Drishya · Live replay for Claude Code and Codex sessions</title>
+  <meta name="description" content="Drishya shows what your coding agent read, ran, saw fail and changed: the real files, output and diffs, on a map of your own repository. Free, open source, runs on your machine." />
+  <meta name="theme-color" content="#0a0b0d" />
+  <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+  <link rel="preload" href="/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
+  <script>
+    // Decide the motion level before first paint, so reduced motion never flashes the animated start state.
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.dataset.motion = 'reduced';
+  </script>
+</head>
+<body>
+  <a class="skip" href="#why">Skip to content</a>
+
+  <header class="nav" data-nav>
+    <div class="wrap nav-inner">
+      <a class="brand" href="#top" aria-label="Drishya, back to top">
+        <span class="brand-mark" data-logo="small"></span>
+        <span class="brand-word">Drishya</span>
+      </a>
+      <nav class="nav-links" aria-label="Sections">
+        <a href="#tour">How it works</a>
+        <a href="#features">Features</a>
+        <a href="#compare">Compare</a>
+        <a href="#privacy">Privacy</a>
+        <a data-repo-link href="#">GitHub</a>
+      </nav>
+      <a class="button ghost small star" data-star-link href="#"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.5 2.3 4.7 5.2.8-3.8 3.7.9 5.2L10 14.4l-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z"/></svg>Star on GitHub</a>
+      <a class="button primary small" href="#install">Install Drishya</a>
+    </div>
+  </header>
+
+  <div class="backdrop" aria-hidden="true"><div class="glow"></div><div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div><canvas class="hero-map" data-map="hero"></canvas><div class="hero-labels" data-map-labels="hero"></div></div>
+  <main>
+    <section id="top" class="hero" aria-labelledby="hero-title">
+      <div class="wrap hero-inner">
+        <div class="hero-mark" data-logo="hero" aria-hidden="true"></div>
+        <p class="wordmark" aria-hidden="true">drishya<span lang="hi">दृश्य</span></p>
+        <h1 id="hero-title" data-split>Live replay for Claude Code and Codex sessions</h1>
+        <p class="lead" data-rise>See what your coding agent read, ran, saw fail and changed: the real files, output and diffs, on a map of your own repository. It runs on your machine.</p>
+        <div class="hero-actions" data-rise>
+          <div class="command" data-command>
+            <code data-install-command>npx drishya</code>
+            <button class="copy" type="button" data-copy aria-label="Copy the install command">Copy</button>
+          </div>
+          <a class="button ghost" data-repo-link href="#">View source on GitHub</a>
+        </div>
+        <p class="facts" data-rise>Free and open source · Apache-2.0 · Node 24 or later</p>
+        <p class="ticker" data-ticker aria-live="off"></p>
+      </div>
+    </section>
+
+    <section id="why" class="why" aria-labelledby="why-title">
+      <div class="why-pin">
+        <div class="wrap why-grid">
+          <div>
+          <h2 id="why-title" class="eyebrow-title">Why a replay of agent work</h2>
+          <p class="why-text" data-words>You give an agent a task and look away. It reads forty files, runs the tests, sees one fail and edits three of them. Then it writes a summary. The work that led there scrolled past in a terminal, or never showed at all.</p>
+          <p class="why-answer" data-words>Drishya keeps that work and shows it to you while it happens, so you understand the change and the codebase, not only the summary.</p>
+          </div>
+          <div class="why-stream" aria-hidden="true"><div class="why-lines" data-why-lines></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tour" class="tour" aria-labelledby="tour-title">
+      <h2 id="tour-title" class="sr-only">How Drishya shows an agent session</h2>
+      <div class="tour-pin">
+        <div class="wrap tour-grid">
+          <ol class="tour-steps" data-tour-steps>
+            <li><span class="step-tag">Claude Code · CLI</span><h3>In the CLI, each action is one line</h3><p>The source it read, the failing output and the diff scroll past and are gone.</p></li>
+            <li><span class="step-tag">Desktop app</span><h3>In the app, the tools fold into a list</h3><p>A chat with the answer. What the agent read and ran sits in collapsed rows you open one at a time.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>In Drishya, you see the work itself</h3><p>The same session. Each action arrives in order with its real output, on a map of your repository.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>Sub-agents keep their own work</h3><p>The Explore sub-agent's reads stay with that agent, so you can tell who did what.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>The failing test, then the fix</h3><p>The test output in full, the edit that answered it, and the run that passed.</p></li>
+            <li><span class="step-tag">Drishya</span><h3>And the answer, beneath the work</h3><p>The agent's own words, under the work that led to them. Scroll back to replay any step.</p></li>
+          </ol>
+          <div class="laptop-slot" aria-hidden="true"></div>
+        </div>
+        <div class="laptop" aria-hidden="true">
+          <div class="laptop-lid"><div class="laptop-screen" data-viewport></div></div>
+          <div class="laptop-base"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="features" class="features" aria-label="Features">
+      <div class="features-pin">
+        <div class="wrap features-grid">
+          <ol class="feat-steps">
+            <li><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>Open files from your tree into a reader beside the session, one tab each, while the agent's work stays in view. Files the agent added or edited are marked.</p></li>
+            <li><span class="step-tag">File history</span><h3>Every action on a file, and each earlier edit</h3><p>Every read and edit the agent made to a file. Choose an earlier edit to read exactly that change, and the test runs that followed it.</p></li>
+            <li><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Open any file in Workspace with your tree and tabs, and edit it a step away from the agent's work.</p></li>
+            <li><span class="step-tag">Changes</span><h3>This session, a branch, or a pull request</h3><p>What this session changed, any branch against main, or an open pull request, each chosen from a list. Every file names the agent that edited it.</p></li>
+            <li><span class="step-tag">Git graph</span><h3>Every branch, and where the agents' work landed</h3><p>Every local branch and commit as a graph, read-only, beside the session. Choose one branch to read only its own commits.</p></li>
+            <li><span class="step-tag">Toolbox</span><h3>Step through every use of one tool</h3><p>Pick a tool and step through each time it was used. The rest of the session dims around it.</p></li>
+            <li><span class="step-tag">Prompts</span><h3>Every prompt, and what it led to</h3><p>The prompt rail keeps each prompt. Hover one to see what it asked, how many actions followed and what failed, then jump there.</p></li>
+            <li><span class="step-tag">Composer</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
+          </ol>
+          <div class="feat-stage"><div class="feat-window" data-feat-window><div class="feat-camera" data-feat-camera></div><div class="feat-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div><span class="feat-ripple"></span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare" class="compare" aria-labelledby="compare-title">
+      <div class="wrap">
+        <h2 id="compare-title" data-split>Working with an agent, with and without Drishya</h2>
+        <p class="section-lead">Drishya does not replace your agent. It reads the session the agent already records and shows it in full.</p>
+        <table class="compare-table">
+          <thead><tr><th></th><th>Without Drishya</th><th>With Drishya</th></tr></thead>
+          <tbody>
+            <tr><th>Files the agent read</th><td>A one-line note in the CLI or app</td><td>The exact lines it saw</td></tr>
+            <tr><th>Test and command output</th><td>Collapsed or scrolled away</td><td>The full output, kept</td></tr>
+            <tr><th>Edits</th><td>A count of lines changed</td><td>The diff as written, before later edits</td></tr>
+            <tr><th>Where the work happened</th><td>Paths in text, a separate editor to look</td><td>Marked in your file tree and on the map</td></tr>
+            <tr><th>Branches and pull requests</th><td>A separate Git client, no link to the agent</td><td>Changes and the Git graph, with the agent behind each file</td></tr>
+            <tr><th>Sub-agents and MCP tools</th><td>Mixed into one stream</td><td>Each kept with its own work and counted</td></tr>
+            <tr><th>Later</th><td>Scroll back through the chat, if it is still there</td><td>Replay any session, live or finished</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="install" class="install" aria-labelledby="install-title">
+      <div class="wrap install-grid">
+        <div>
+          <h2 id="install-title" data-split>Run it with one command</h2>
+          <p class="section-lead"><code>npx drishya</code> downloads and runs Drishya without installing it. To keep it, install it once with <code>npm install -g drishya</code>, then run <code>drishya</code>. It opens in your browser and finds the Claude Code and Codex sessions already on this machine.</p>
+          <ol class="install-steps">
+            <li><strong>Run it.</strong> Needs Node 24 or later. Nothing to sign up for.</li>
+            <li><strong>Pick a session.</strong> Running sessions show as live; finished ones replay.</li>
+            <li><strong>Read the work.</strong> Open any file, output or diff the agent touched.</li>
+          </ol>
+        </div>
+        <div class="terminal" aria-label="Terminal">
+          <div class="frame-bar"><span class="dot-row" aria-hidden="true"><i></i><i></i><i></i></span><span class="frame-title">Terminal</span></div>
+          <pre class="terminal-body"><span class="muted"># run once, without installing</span>
+<span class="prompt">$</span> <span data-install-command>npx drishya</span>
+
+<span class="muted"># or install it, then run it any time</span>
+<span class="prompt">$</span> npm install -g drishya
+<span class="prompt">$</span> drishya</pre>
+          <button class="button primary" type="button" data-copy>Copy the install command</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy" class="privacy" aria-labelledby="privacy-title">
+      <div class="wrap">
+        <h2 id="privacy-title" data-split>Local, private, no telemetry</h2>
+        <div class="privacy-rows">
+          <div><h3>Reads, never writes</h3><p>Agent session files are opened read-only and copied into Drishya's own store on your disk.</p></div>
+          <div><h3>Secrets removed first</h3><p>Keys and tokens are redacted before anything is saved, searched or shown.</p></div>
+          <div><h3>No telemetry at all</h3><p>Drishya sends nothing anywhere. There is no account, no cloud and nothing to opt out of.</p></div>
+          <div><h3>You decide when it acts</h3><p>Prompting an agent from Drishya is opt-in, per repository, and only sends what you submit.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="open-source" class="close" aria-labelledby="close-title">
+      <div class="wrap close-inner">
+        <div class="close-mark" data-logo="close" aria-hidden="true"></div>
+        <h2 id="close-title" data-split>Free and open source</h2>
+        <p class="section-lead">Apache-2.0. Built in the open for developers who work with coding agents. Works with Claude Code and Codex today.</p>
+        <div class="hero-actions">
+          <a class="button primary" href="#install">Install Drishya</a>
+          <a class="button ghost star" data-star-link href="#"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.5 2.3 4.7 5.2.8-3.8 3.7.9 5.2L10 14.4l-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z"/></svg>Star on GitHub</a>
+        </div>
+        <nav class="close-links" aria-label="Project">
+          <a data-repo-link href="#">Source code</a><a data-link="docs" href="#">Documentation</a><a data-link="discussions" href="#">Discussions</a><a data-link="changelog" href="#">Changelog</a><a data-link="issues" href="#">Report an issue</a>
+        </nav>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <a class="brand" href="#top"><span class="brand-mark" data-logo="small"></span><span class="brand-word">Drishya</span></a>
+      <p><span lang="hi">दृश्य</span>, “that which is seen”.</p>
+      <nav aria-label="Footer">
+        <a href="#install">Install</a><a href="#privacy">Privacy</a><a data-link="docs" href="#">Docs</a><a data-link="changelog" href="#">Changelog</a><a data-repo-link href="#">GitHub</a>
+      </nav>
+      <p class="legal">The sessions shown on this page are examples. Claude Code and Codex are trademarks of their owners.</p>
+    </div>
+  </footer>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
