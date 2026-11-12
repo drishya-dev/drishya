@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-2e | @yash + Gemini 3.8 Flash (Antigravity; taken over from Codex Luna 6, 12 Nov) | `codex/ship-2e` | 2026-11-12 | `FencedCode.tsx`, its CSS, `highlight.tsx` only if needed, one browser spec and units; TASKS/STATUS/review record. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -56,6 +55,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2e code and text blocks in agent prose
+
+- Dedicated `FencedCode.css` (content-sized to prose measure up to `100ch`, `80ch` left-aligned in `.desk-markdown`, quiet `--s1` header with hover/focus-revealed `Wrap`/`Copy` and in-place confirmation, `--s2` mono body scrolling inside the block without page overflow across Jet Black, Daylight and Midnight) and updated `FencedCode.tsx` + `highlight.tsx` (unlabelled, `text`, `txt`, `plaintext` and unknown languages never coloured; `Wrap` ON for prose text and OFF for code; JSON keys vs strings, dedicated diff and shell prompt/command/binary tokenization). [Completion record](review/ship-2e-code-blocks.md).
+- Checked on genuine local sessions at 600 and 1440 px across all three palettes (`rec_ab67986c`, `rec_39af3c94`, `rec_73cbf2eb`, `rec_58787f2c`, `rec_aca34202`), plus `corepack pnpm check:affected` (52 related units + `fenced-code.spec.ts`), `palette-contrast` + `palette-paint-policy` units and 87 targeted Edge browser passes (15 existing skips, 0 failures).
 
 ### Harsh with Codex — 7 November: LAND-1 landing page plan
 
