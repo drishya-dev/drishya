@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | FILES-17 | @yash + Gemini 3.8 Flash (Antigravity) | gemini/files-17 | 2026-11-12 | pps/ui/src/components/FileIcon.tsx, pps/ui/src/components/file-icon.css, pps/ui/test/file-icon.test.ts, 	ests/browser/file-icons.spec.ts, TASKS/STATUS/review record. |
-| UI-31 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-31` | 2026-11-12 | `apps/ui/src/components/History.tsx` (turn capsule/heading), `apps/ui/src/modern/conversation.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/styles.css` (turn rules only), turn specs/units, TASKS/STATUS/review record; no MOTION-3/4 owners. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -58,6 +57,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: UI-31 sent-prompt capsule, PR #426
+
+- Refined Modern history .turn-capsule in [apps/ui/src/modern/conversation.css](../apps/ui/src/modern/conversation.css) using existing tokens only: moved from the accent-tinted box and asymmetric tail to neutral --s2 surface, px solid var(--line) hairline, px symmetric radius, calm medium prompt type (line-height: 1.58, -0.005em tracking), column alignment (ow-gap: 6px), 
+px tight Show full prompt / Show less control, flush right-aligned .turn-images / .attachment-chip, wrapping .turn-mode / .turn-ledger, and quiet --text-sm regular styling for unboxed 	urn-source notices. Updated NativeTurn in [apps/ui/src/components/SessionWorkspace.tsx](../apps/ui/src/components/SessionWorkspace.tsx) so live submitted prompts share .turn-capsule.
+- Checked on real local sessions in scratch storage (before/after frames in .local/ui-31/ at 600 and 1440 px in jet, midnight, and paper): Claude Code ec_69977fa0 (0.9 MB, 42 ops, 12 person turns) and Codex ec_aca34202 (0.3 MB, 11 ops, 7 person turns); [completion record](review/ui-31-prompt-capsule.md). Running-turn submission verified via connected-workspace.spec.ts:598 (no live turn active on disk during capture).
+- Checks: corepack pnpm typecheck, corepack pnpm ui:build, pps/ui/test (116 files / 570 passed / 1 skip), and 12 Edge browser specs including new 	ests/browser/prompt-capsule.spec.ts (56 passed / 0 failed / 0 retries).
 
 ### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: UI-30 Focus rings only where they help
 
