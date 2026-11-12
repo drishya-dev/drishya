@@ -66,6 +66,7 @@ if (dottedContext) {
   let height = 0;
   let pointerX = -1;
   let pointerY = -1;
+  let dotsFrame = 0;
   const resizeDots = () => {
     const dpr = Math.min(Math.max(1, devicePixelRatio || 1), 2);
     width = innerWidth;
@@ -107,13 +108,17 @@ if (dottedContext) {
     }
     dottedContext.globalAlpha = 1;
     dottedContext.shadowBlur = 0;
-    if (!reduced && !document.hidden) requestAnimationFrame(drawDots);
+    dotsFrame = 0;
+    if (!reduced && !document.hidden) dotsFrame = requestAnimationFrame(drawDots);
   };
   resizeDots();
   addEventListener('resize', resizeDots);
   addEventListener('pointermove', updatePointer, { passive: true });
   addEventListener('pointerleave', clearPointer, { passive: true });
-  requestAnimationFrame(drawDots);
+  addEventListener('visibilitychange', () => {
+    if (!document.hidden && !dotsFrame) dotsFrame = requestAnimationFrame(drawDots);
+  });
+  dotsFrame = requestAnimationFrame(drawDots);
 }
 // The why section's stream: the same CLI lines the laptop shows, scrolling past as they do in a terminal.
 $('[data-why-lines]').innerHTML = Array.from({ length: 3 }, () => $$('.tl', $('[data-screen="cli"]')).map(l => `<div class="${l.classList.contains('r') ? 'r' : ''}">${l.innerHTML}</div>`).join('')).join('');
@@ -135,7 +140,7 @@ const proofs: Record<string, { title: string; source: string; body: string }> = 
   output: { title: failureChapter.title, source: failureChapter.provenance, body: failureChapter.text },
   edits: { title: editChapter.title, source: editChapter.provenance, body: editChapter.text },
   location: { title: 'Repository map · working set', source: `Captured graph · ${sample.graph.nodes.length} nodes`, body: graphPaths },
-  branches: { title: 'The work stays linked', source: 'Captured session metadata', body: `Harnesses: ${sample.harnesses.join(' · ')}\n\nAgents\n${sample.agents.map(a => `• ${a.label} · ${a.model}`).join('\n')}\n\nGraph edges: ${sample.graph.edges.length}` },
+  branches: { title: 'The work stays linked', source: 'Captured session metadata · no PR record in sample', body: `Branch and pull-request records are not included in this sample.\n\nHarnesses: ${sample.harnesses.join(' · ')}\n\nAgents\n${sample.agents.map(a => `• ${a.label} · ${a.model}`).join('\n')}\n\nGraph edges: ${sample.graph.edges.length}` },
   subagents: { title: 'Parallel work stays visible', source: 'Captured operations · agents and tools', body: subagentOps },
   replay: { title: 'Replay the whole session', source: `Captured timeline · ${sample.operations.length} operations`, body: sample.chapters.map(c => `${c.status.padEnd(18)} ${c.title}`).join('\n') },
 };
@@ -172,7 +177,10 @@ const refreshProofExpansion = () => {
   compareProof.classList.toggle('is-expanded', expanded);
   proofExpand.setAttribute('aria-expanded', String(expanded));
   proofExpand.setAttribute('aria-label', expanded ? 'Collapse evidence' : 'Expand evidence');
-  if (openCompareRow) requestAnimationFrame(() => positionProof(openCompareRow!));
+  if (openCompareRow) {
+    const row = openCompareRow;
+    requestAnimationFrame(() => { if (openCompareRow === row) positionProof(row); });
+  }
 };
 const showCompareProof = (row: HTMLTableRowElement) => {
   window.clearTimeout(hideCompareTimer);
@@ -182,6 +190,8 @@ const showCompareProof = (row: HTMLTableRowElement) => {
   proofExpansionHover = false;
   proofExpansionFocus = false;
   openCompareRow = row;
+  for (const candidate of compareRows) candidate.setAttribute('aria-expanded', String(candidate === row));
+  proofExpand.tabIndex = 0;
   renderProof(row);
   compareProof.classList.add('is-open');
   compareProof.setAttribute('aria-hidden', 'false');
@@ -194,6 +204,9 @@ const hideCompareProof = () => {
   proofExpansionPinned = false;
   proofExpansionHover = false;
   proofExpansionFocus = false;
+  if (document.activeElement === proofExpand) proofExpand.blur();
+  proofExpand.tabIndex = -1;
+  for (const candidate of compareRows) candidate.setAttribute('aria-expanded', 'false');
   openCompareRow = undefined;
   compareProof.classList.remove('is-open');
   compareProof.setAttribute('aria-hidden', 'true');
@@ -212,7 +225,7 @@ const scheduleShowCompareProof = (row: HTMLTableRowElement) => {
 const queueHideCompareProof = () => {
   window.clearTimeout(hideCompareTimer);
   hideCompareTimer = window.setTimeout(() => {
-    if (!activePointerRow && !pointerInProof) hideCompareProof();
+    if (!activePointerRow && !pointerInProof && !proofExpansionFocus && !proofExpansionPinned) hideCompareProof();
   }, compareHideGrace);
 };
 const selectCompareRow = (row: HTMLTableRowElement) => {
@@ -265,6 +278,7 @@ proofExpand.addEventListener('focus', () => {
 proofExpand.addEventListener('blur', () => {
   proofExpansionFocus = false;
   refreshProofExpansion();
+  queueHideCompareProof();
 });
 proofExpand.addEventListener('click', () => {
   proofExpansionPinned = !proofExpansionPinned;
