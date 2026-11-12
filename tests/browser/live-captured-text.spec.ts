@@ -190,13 +190,12 @@ test('paged replay retains its physical queue boundary when every queue event is
 });
 
 test('an exported bundle retains queue text and ambiguous outcomes without controller authority', async ({page}) => {
-  await append([queue('enqueue', 'Synthetic exported queue\n@literal'), queue('dequeue')]);
+  await append([queue('enqueue', 'Synthetic exported queue\n@literal'), queue('dequeue'), queue('enqueue', 'Synthetic pending export\n@literal')]);
   const bundle = await app.exportBundle(id), bundlePath = join(dir, 'bundle.json'); writeFileSync(bundlePath, JSON.stringify(bundle));
   await page.route('**/synthetic-queue-bundle.json', route => route.fulfill({status: 200, contentType: 'application/json', body: readFileSync(bundlePath, 'utf8')}));
   await page.goto(`${server.url}/?bundle=/synthetic-queue-bundle.json&motion=0`);
   await expect(page.locator('.history')).toBeVisible(); const dialog = await openReceipts(page);
-  await expect(dialog.getByText('No inputs waiting.',{exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs');
+  await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveText('Queued inputs · 1');
   await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
   await dialog.getByRole('button',{name:/Synthetic exported queue/}).click();
   await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic exported queue\n@literal');
@@ -235,8 +234,9 @@ for(const width of [600,1440])test(`completed turns clear pending without invent
  await dialog.getByRole('button',{name:'Earlier receipts · history',exact:true}).click();
  await dialog.getByRole('button',{name:/Synthetic not observed as a prompt/}).click();
  await expect(dialog.locator('[data-queued-input-text]')).toHaveText('Synthetic not observed as a prompt');
- await page.reload();await openReceipts(page);
- await expect(receipts(page).getByText('No inputs waiting.',{exact:true})).toBeVisible();
+ await page.reload();
+ await expect(page.getByRole('button',{name:'Read queued inputs',exact:true})).toHaveCount(0);
+ await expect(page.getByText('Queued inputs')).toHaveCount(0);
  await open(page,queuedStep);await openReceipts(page);
  await expect(receipts(page).getByRole('button',{name:/Synthetic not observed as a prompt/})).toBeVisible();
  expect((await apiQueue(page,`?step=${queuedStep}`)).pendingTotal).toBe(1);

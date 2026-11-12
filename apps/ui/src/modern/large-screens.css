@@ -35,7 +35,7 @@
     /* The map reader is a panel of the stage, not of the screen. */
     .product-dialog.map-reader { right: calc(20px + var(--stage-edge)); width: min(calc(46vw - 32px), 880px); }
     /* Queued inputs are placed inline by the component. */
-    .queued-input-receipts { right: calc(20px + var(--stage-edge)) !important; }
+    .queued-input-receipts[data-floating] { right: calc(12px + var(--stage-edge)) !important; }
 }
 
 /* Yash, 10 Nov: the world scrolls from the screen's top under floating controls.
@@ -114,3 +114,23 @@
 :root[data-ui-version=modern][data-experience=classic] .history .prose table {
   font-family:var(--sans);
 }
+
+/* SHIP-6g: one stacking order across Modern: fixed bottom controls stay below Files overlay and its scrim, and all open menus/dropdowns sit above both. */
+:root[data-ui-version=modern] .connected-workspace .history-transport,
+:root[data-ui-version=modern] .connected-workspace .follow-pill,
+:root[data-ui-version=modern] .connected-workspace .catalog-toggle { z-index:16; }
+:root[data-ui-version=modern] .connected-workspace .history-transport .follow-pill { z-index:auto; }
+:root[data-ui-version=modern] .connected-workspace .transport.modern-replay-transport { z-index:22; }
+:root[data-ui-version=modern] .connected-workspace .prompt-composer { z-index:12; }
+:root[data-ui-version=modern] .connected-workspace.file-peek-open :is(.history-transport,.follow-pill,.catalog-toggle) { z-index:16; }
+:root[data-ui-version=modern] .connected-workspace .product-dialog.map-reader { z-index:30; }
+:root[data-ui-version=modern] .origins { z-index:45; }
+:root[data-ui-version=modern] .connected-workspace .workspace-header { z-index:38; }
+:root[data-ui-version=modern] .connected-workspace:has(.files-scrim) :is(.workspace-leading,.workspace-secondary) { z-index:38; }
+:root[data-ui-version=modern] .files-scrim { position:fixed; inset:0; z-index:34; background:color-mix(in srgb,var(--bg) 53.333%,transparent); }
+:root[data-ui-version=modern] .connected-workspace .folder-explorer:has(:is(.checkout-picker,.tree-evidence-filter)[open]) { overflow:visible; z-index:36; }
+:root[data-ui-version=modern] .connected-workspace .folder-explorer .tree-evidence-filter-menu { z-index:20; }
+:root[data-ui-version=modern] .connected-workspace .workspace-header:has(details[open]),
+:root[data-ui-version=modern] .connected-workspace :is(.workspace-leading,.workspace-secondary,.modern-review-control):has(details[open]),
+:root[data-ui-version=modern] .connected-workspace .prompt-composer:has(details[open],.composer-add-menu:not([hidden])) { z-index:70; }
+:root[data-ui-version=modern] .connected-workspace .workspace-header:has(details[open]) .studio-actions { z-index:5; }

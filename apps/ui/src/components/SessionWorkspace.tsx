@@ -236,7 +236,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   useEffect(() => { const resize = () => setViewport(innerWidth); window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize); }, []);
   const maximumWidth = Math.max(220*interfaceScale, Math.min(420*interfaceScale, Math.floor(viewport * .32)));
   const readingWidth = Math.max(220*interfaceScale, Math.min(maximumWidth, width*interfaceScale));
+
   const shown = !hidden && (!narrow || hidden === false);
+  const overlay = modern && shown && !developerWorkspace && narrow;
   const explorer = useRef<HTMLElement>(null);
   const closeExplorer = (returnFocus = false) => {
     useApp.setState({ foldersHidden: true });
@@ -463,7 +465,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     </div>
   </details>);
   if (!shown) return null;
-  return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
+  return <>{overlay && <div className="files-scrim" aria-hidden="true" onPointerDown={event => { event.preventDefault(); closeExplorer(true); }} />}<aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(260)} label="Resize Files reading space" />}
     <header><div className="folder-root" title={workspace?.root}>{checkoutPicker||rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
 
@@ -507,7 +509,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
-  </aside>;
+  </aside></>;
 }
 
 export function CurrentFileReader() {
