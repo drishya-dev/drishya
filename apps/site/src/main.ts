@@ -55,6 +55,49 @@ new IntersectionObserver(([e], o) => { if (e!.isIntersecting) { frameEl.src = ne
 // ---------- hero ----------
 const toneOf = (o: Op): Tone => o.kind === 'edit' ? 'edit' : o.kind === 'read' ? 'read' : o.outcome === 'failed' ? 'fail' : o.outcome === 'passed' ? 'pass' : 'search';
 const heroMap = createMap($<HTMLCanvasElement>('[data-map="hero"]'), null, sample.graph, { scale: 0.5, still: reduced, offsetY: -0.06 });
+const dottedGlow = $<HTMLCanvasElement>('[data-dotted-glow]');
+const dottedContext = dottedGlow.getContext('2d');
+if (dottedContext) {
+  const gap = 18;
+  let dots: { x: number; y: number; phase: number; speed: number }[] = [];
+  let width = 0;
+  let height = 0;
+  const resizeDots = () => {
+    const dpr = Math.min(Math.max(1, devicePixelRatio || 1), 2);
+    width = innerWidth;
+    height = innerHeight;
+    dottedGlow.width = Math.floor(width * dpr);
+    dottedGlow.height = Math.floor(height * dpr);
+    dottedGlow.style.width = `${width}px`;
+    dottedGlow.style.height = `${height}px`;
+    dottedContext.setTransform(dpr, 0, 0, dpr, 0, 0);
+    dots = [];
+    for (let x = -gap; x < width + gap; x += gap) {
+      for (let y = -gap; y < height + gap; y += gap) dots.push({ x, y, phase: Math.random() * Math.PI * 2, speed: .35 + Math.random() * .8 });
+    }
+  };
+  const drawDots = (now: number) => {
+    dottedContext.clearRect(0, 0, width, height);
+    dottedContext.fillStyle = 'rgba(241, 238, 228, .3)';
+    const time = now / 1000;
+    for (const dot of dots) {
+      const wave = (time * dot.speed + dot.phase) % (Math.PI * 2);
+      const brightness = .24 + .56 * ((Math.sin(wave) + 1) / 2);
+      dottedContext.globalAlpha = brightness;
+      dottedContext.shadowColor = 'rgba(79, 156, 255, .85)';
+      dottedContext.shadowBlur = brightness > .62 ? 7 * (brightness - .62) / .38 : 0;
+      dottedContext.beginPath();
+      dottedContext.arc(dot.x, dot.y, 1.35, 0, Math.PI * 2);
+      dottedContext.fill();
+    }
+    dottedContext.globalAlpha = 1;
+    dottedContext.shadowBlur = 0;
+    if (!reduced && !document.hidden) requestAnimationFrame(drawDots);
+  };
+  resizeDots();
+  addEventListener('resize', resizeDots);
+  requestAnimationFrame(drawDots);
+}
 // The why section's stream: the same CLI lines the laptop shows, scrolling past as they do in a terminal.
 $('[data-why-lines]').innerHTML = Array.from({ length: 3 }, () => $$('.tl', $('[data-screen="cli"]')).map(l => `<div class="${l.classList.contains('r') ? 'r' : ''}">${l.innerHTML}</div>`).join('')).join('');
 if (reduced) {
@@ -98,8 +141,7 @@ function animate() {
       .to(words.words, { opacity: 1, stagger: 0.05, ease: 'none' }, 0)
       .to('[data-why-lines]', { yPercent: -55, ease: 'none', duration: words.words.length * 0.05 }, 0);
     gsap.to('.backdrop .hero-map', { opacity: 0.38, ease: 'none', scrollTrigger: { trigger: '.why', start: 'top bottom', end: 'top top', scrub: true } });
-    ScrollTrigger.create({ trigger: '.why', start: 'bottom top', onEnter: () => { heroMap.pause(); $('.aurora').classList.add('rest'); }, onLeaveBack: () => { heroMap.resume(); $('.aurora').classList.remove('rest'); } });
-    gsap.to('.glow', { opacity: 0.45, ease: 'none', scrollTrigger: { trigger: '.why', start: 'top bottom', end: 'top top', scrub: true } });
+    ScrollTrigger.create({ trigger: '.why', start: 'bottom top', onEnter: () => { heroMap.pause(); }, onLeaveBack: () => { heroMap.resume(); } });
 
     for (const h of $$('[data-split]')) {
       const s = new SplitText(h, { type: 'lines', mask: 'lines' });
