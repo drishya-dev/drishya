@@ -33,6 +33,8 @@ const count = (value: unknown) => typeof value === 'number' && Number.isSafeInte
 
 export class GithubLinks {
   private cache = new Map<string, GithubReply>();
+  private mergedCache = new Map<string, { at: number; pulls: { number: number; headRef: string; headOid: string; mergeCommit: string }[] }>();
+  private pullCache = new Map<string, { status: 'ready' | 'not-found'; pull?: { number: number; headRef: string; headOid: string; mergeCommit?: string; merged: boolean } }>();
   private available: boolean | undefined;
   private app: App;
   private run: GhRun;
@@ -44,7 +46,7 @@ export class GithubLinks {
   }
   set(enabled: boolean) {
     this.app.store.db.prepare('INSERT INTO meta(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(META_KEY, enabled ? '1' : '0');
-    if (!enabled) this.cache.clear();
+    if (!enabled) { this.cache.clear(); this.mergedCache.clear(); this.pullCache.clear(); }
     return this.status();
   }
   /** `gh` is not run at all until the person opts in; its `--version` is local and never touches the network. */
@@ -57,6 +59,65 @@ export class GithubLinks {
   private failure(error: unknown): 'gh-missing' | 'gh-unauthenticated' | 'failed' {
     const stderr = String((error as { stderr?: string }).stderr ?? '');
     return (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'gh-missing' : /not logged in|authentication|auth login|GH_TOKEN|HTTP 401/i.test(stderr) ? 'gh-unauthenticated' : 'failed';
+  }
+  /** GIT-11: recently merged PRs of a repository, through the same opt-in, read-only `gh api` as open PRs. */
+  async mergedPulls(repo: string): Promise<{ status: 'ready' | 'disabled' | 'gh-missing' | 'gh-unauthenticated' | 'failed'; pulls: { number: number; headRef: string; headOid: string; mergeCommit: string }[] }> {
+    if (!this.enabled) return { status: 'disabled', pulls: [] };
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/.test(repo)) return { status: 'failed', pulls: [] };
+    const cached = this.mergedCache.get(repo.toLowerCase());
+    if (cached && Date.now() - cached.at < 60_000) return { status: 'ready', pulls: cached.pulls };
+    if (!(await this.status()).available) return { status: 'gh-missing', pulls: [] };
+    try {
+      const out = await this.run(['api', `repos/${repo}/pulls?state=closed&per_page=100&sort=updated&direction=desc`], AbortSignal.timeout(15_000), 4 * 1024 * 1024);
+      const rows = JSON.parse(out) as Record<string, unknown>[];
+      const pulls = rows.flatMap(row => {
+        if (typeof row.merged_at !== 'string' || !row.merged_at) return [];
+        const head = row.head as { sha?: unknown; ref?: unknown } | undefined;
+        const number = count(row.number);
+        const headOid = typeof head?.sha === 'string' && /^[a-f0-9]{40,64}$/.test(head.sha) ? head.sha : undefined;
+        const mergeCommit = typeof row.merge_commit_sha === 'string' && /^[a-f0-9]{40,64}$/.test(row.merge_commit_sha) ? row.merge_commit_sha : undefined;
+        const headRef = text(head?.ref, 200);
+        if (!number || !headOid || !mergeCommit || !headRef) return [];
+        return [{ number, headRef, headOid, mergeCommit }];
+      });
+      if (this.mergedCache.size > 32) this.mergedCache.clear();
+      this.mergedCache.set(repo.toLowerCase(), { at: Date.now(), pulls });
+      return { status: 'ready', pulls };
+    } catch (error) { return { status: this.failure(error), pulls: [] }; }
+  }
+  /** GIT-11: single PR lookup for `(#N)` squash commit subjects when not already present in recent merged PRs. */
+  async pull(repo: string, number: number): Promise<{ status: 'ready' | 'disabled' | 'gh-missing' | 'gh-unauthenticated' | 'not-found' | 'failed'; pull?: { number: number; headRef: string; headOid: string; mergeCommit?: string; merged: boolean } }> {
+    if (!this.enabled) return { status: 'disabled' };
+    if (!/^[A-Za-z0-9][A-Za-z0-9-]{0,38}\/[A-Za-z0-9._-]{1,100}$/.test(repo) || !Number.isSafeInteger(number) || number < 1 || number > 999_999_999) return { status: 'failed' };
+    const key = `${repo.toLowerCase()}#${number}`;
+    const cached = this.pullCache.get(key);
+    if (cached) return cached;
+    if (!(await this.status()).available) return { status: 'gh-missing' };
+    try {
+      const out = await this.run(['api', `repos/${repo}/pulls/${number}`], AbortSignal.timeout(15_000), 1024 * 1024);
+      const row = JSON.parse(out) as Record<string, unknown>;
+      const head = row.head as { sha?: unknown; ref?: unknown } | undefined;
+      const headOid = typeof head?.sha === 'string' && /^[a-f0-9]{40,64}$/.test(head.sha) ? head.sha : undefined;
+      const mergeCommit = typeof row.merge_commit_sha === 'string' && /^[a-f0-9]{40,64}$/.test(row.merge_commit_sha) ? row.merge_commit_sha : undefined;
+      const headRef = text(head?.ref, 200);
+      const merged = typeof row.merged_at === 'string' && !!row.merged_at;
+      if (!headOid || !headRef) return { status: 'failed' };
+      const reply = { status: 'ready' as const, pull: { number, headRef, headOid, ...(mergeCommit ? { mergeCommit } : {}), merged } };
+      if (merged) {
+        if (this.pullCache.size > 500) this.pullCache.clear();
+        this.pullCache.set(key, reply);
+      }
+      return reply;
+    } catch (error) {
+      const stderr = String((error as { stderr?: string }).stderr ?? '');
+      if (/Could not resolve|HTTP 404|Not Found/i.test(stderr)) {
+        const nf = { status: 'not-found' as const };
+        if (this.pullCache.size > 500) this.pullCache.clear();
+        this.pullCache.set(key, nf);
+        return nf;
+      }
+      return { status: this.failure(error) };
+    }
   }
   /** Open pull requests of one repository, through the same opt-in, read-only `gh` as the hover cards. */
   async pulls(repo: string): Promise<{ status: 'ready' | 'disabled' | 'gh-missing' | 'gh-unauthenticated' | 'failed'; pulls: { number: number; title: string; author?: string; draft?: boolean; url: string; baseName: string; headName: string; headOid: string }[] }> {

@@ -2,7 +2,7 @@ import type {GitCommit} from '../../../daemon/src/git-types.ts';
 import {commitRail} from './commit-rail.ts';
 
 export interface NetworkNode {hash: string; x: number; y: number; lane: number; main: boolean}
-export interface NetworkEdge {from: string; to: string; lane: number; main: boolean; path: string}
+export interface NetworkEdge {from: string; to: string; lane: number; main: boolean; path: string; squash?: boolean}
 export interface NetworkLayout {nodes: NetworkNode[]; edges: NetworkEdge[]; width: number; height: number; lanes: number}
 
 /**
@@ -10,7 +10,7 @@ export interface NetworkLayout {nodes: NetworkNode[]; edges: NetworkEdge[]; widt
  * and every other lane sits below it. Lanes come from actual parent IDs (commitRail), never from branch names.
  * Edges between lanes leave the parent straight down (a branch starting) or rise into the child (a merge), with rounded corners.
  */
-export function gitNetworkLayout(commits: Pick<GitCommit, 'hash' | 'parents'>[], mainTip = commits[0]?.hash, {step = 44, laneGap = 34, pad = 28, radius = 8} = {}): NetworkLayout {
+export function gitNetworkLayout(commits: Pick<GitCommit, 'hash' | 'parents'>[], mainTip = commits[0]?.hash, {step = 44, laneGap = 34, pad = 28, radius = 8, squash}: {step?: number; laneGap?: number; pad?: number; radius?: number; squash?: ReadonlyMap<string, string>} = {}): NetworkLayout {
   const main = new Set<string>(), byHash = new Map(commits.map(commit => [commit.hash, commit]));
   for (let cursor = mainTip; cursor && byHash.has(cursor) && !main.has(cursor);) {main.add(cursor); cursor = byHash.get(cursor)!.parents[0];}
   const rail = commitRail(commits);
@@ -44,6 +44,24 @@ export function gitNetworkLayout(commits: Pick<GitCommit, 'hash' | 'parents'>[],
         : `M${from.x},${from.y} H${to.x - r} Q${to.x},${from.y} ${to.x},${from.y + down * r} V${to.y}`;
     }
     edges.push({from: parent, to: commit.hash, lane: Math.max(from.lane, to.lane), main: from.main && to.main, path});
+  }
+  if (squash) {
+    for (const [head, target] of squash) {
+      const from = at.get(head), to = at.get(target);
+      if (!from || !to || from.hash === to.hash) continue;
+      let path: string;
+      if (from.y === to.y) path = `M${from.x},${from.y} H${to.x}`;
+      else if (to.x >= from.x) {
+        const r = Math.min(radius, Math.abs(to.y - from.y) / 2, Math.abs(to.x - from.x) / 2), down = to.y > from.y ? 1 : -1;
+        path = to.lane > from.lane
+          ? `M${from.x},${from.y} V${to.y - down * r} Q${from.x},${to.y} ${from.x + r},${to.y} H${to.x}`
+          : `M${from.x},${from.y} H${to.x - r} Q${to.x},${from.y} ${to.x},${from.y + down * r} V${to.y}`;
+      } else {
+        const midX = (from.x + to.x) / 2;
+        path = `M${from.x},${from.y} C${midX},${from.y} ${midX},${to.y} ${to.x},${to.y}`;
+      }
+      edges.push({from: from.hash, to: to.hash, lane: Math.max(from.lane, to.lane), main: false, path, squash: true});
+    }
   }
   return {nodes, edges, width, height, lanes};
 }

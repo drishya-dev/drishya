@@ -314,3 +314,52 @@ test('the header keeps 4.5:1 over the map and over passing cards on every palett
   await sweep('over passing cards');
   expect(found).toEqual([]);
 });
+
+
+test('UI-34: Jet Black resolves azure accent, hover, pressed and focus contrast >= 4.5:1 / 3:1 in live DOM', async ({ page }) => {
+  await openSession(page, await freshWorkspace());
+  await page.evaluate(() => { document.documentElement.dataset.palette = 'jet'; });
+  await settled(page);
+
+  const report = await page.evaluate(() => {
+    const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    const rgb = (value: string) => {
+      canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = value; canvas.fillRect(0, 0, 1, 1);
+      return [...canvas.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    };
+    const luma = (c: number[]) => c.map(v => { const s = v / 255; return s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i]!, 0);
+    const ratio = (a: number[], b: number[]) => { const x = luma(a), y = luma(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+    const probe = (expr: string) => { const el = document.createElement('i'); el.style.color = expr; document.documentElement.append(el); const c = getComputedStyle(el).color; el.remove(); return c; };
+    const cs = getComputedStyle(document.documentElement);
+    const focus = rgb(probe('var(--focus)')), source = rgb(probe('var(--source)')), bg = rgb(probe('var(--bg)')), s3 = rgb(probe('var(--s3)'));
+    const hover = rgb(probe('var(--accent-hover)')), pressed = rgb(probe('var(--accent-pressed)')), partner = rgb(probe('var(--accent-partner)')), focusRing = rgb(probe('var(--focus-ring)'));
+    return {
+      focusColor: probe('var(--focus)'),
+      activeColor: probe('var(--palette-active)'),
+      partnerColor: probe('var(--accent-partner)'),
+      sourceDiffers: focus.join(',') !== source.join(','),
+      accentTextOnBg: ratio(focus, bg),
+      accentTextOnS3: ratio(focus, s3),
+      partnerTextOnS3: ratio(partner, s3),
+      primaryTextContrast: ratio(bg, focus),
+      primaryHoverContrast: ratio(bg, hover),
+      primaryPressedContrast: ratio(bg, pressed),
+      focusOnS3: ratio(focus, s3),
+      focusRingOnS3: ratio(focusRing, s3),
+      swatchHex: cs.getPropertyValue('--swatch-accent').trim(),
+    };
+  });
+
+  expect(report.focusColor).toBe('rgb(79, 156, 255)');
+  expect(report.activeColor).toBe('rgb(79, 156, 255)');
+  expect(report.partnerColor).toBe('rgb(52, 214, 230)');
+  expect(report.sourceDiffers).toBe(true);
+  expect(report.accentTextOnBg).toBeGreaterThanOrEqual(4.5);
+  expect(report.accentTextOnS3).toBeGreaterThanOrEqual(4.5);
+  expect(report.partnerTextOnS3).toBeGreaterThanOrEqual(4.5);
+  expect(report.primaryTextContrast).toBeGreaterThanOrEqual(4.5);
+  expect(report.primaryHoverContrast).toBeGreaterThanOrEqual(4.5);
+  expect(report.primaryPressedContrast).toBeGreaterThanOrEqual(4.5);
+  expect(report.focusOnS3).toBeGreaterThanOrEqual(3);
+  expect(report.focusRingOnS3).toBeGreaterThanOrEqual(3);
+});
