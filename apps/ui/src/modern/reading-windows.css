@@ -77,8 +77,10 @@
 :root:not([data-input-modality="pointer"]) :is(.file-peek-reader>header,.file-peek-reader>.reading-window-tabs):focus-visible{outline:1px solid var(--focus-ring);outline-offset:-2px;}
 /* Narrow desktop widths: the right controls share one row and the history starts below them,
    so cards and prose never scroll underneath the buttons. Phones keep their own layout. */
-@media(min-width:601px) and (max-width:1100px){
+@media(max-width:1100px){
  :root[data-ui-version=modern][data-experience=classic] .workspace-secondary {flex-direction:row;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:7px;}
+}
+@media(min-width:601px) and (max-width:1100px){
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {top:var(--workspace-tools-bottom,134px);}
 }
 

@@ -55,6 +55,7 @@ import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
 import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
+import { measureReadingEdges, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -84,6 +85,7 @@ function WorkspaceViewer() {
   const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
   const foldersHidden = useApp(s => s.foldersHidden);
+  const viewer = useRef<HTMLDivElement>(null);
   const main = useRef<HTMLDivElement>(null);
   const currentFile=useApp(s=>s.currentFile);
   const filePeek=!!currentFile&&!explore&&!developerWorkspace&&document.documentElement.dataset.uiVersion==='modern';
@@ -193,6 +195,45 @@ function WorkspaceViewer() {
     return () => ro.disconnect();
   }, [!!projection, foldersHidden, explore, experience]);
 
+  useLayoutEffect(() => {
+    const el = viewer.current;
+    if (!el) return;
+    const update = () => {
+      const edges = measureReadingEdges(el);
+      const topValue = `${edges.top}px`;
+      const bottomValue = `${edges.bottom}px`;
+      if (el.style.getPropertyValue('--reading-edge-top') !== topValue) el.style.setProperty('--reading-edge-top', topValue);
+      if (el.style.getPropertyValue('--reading-edge-bottom') !== bottomValue) el.style.setProperty('--reading-edge-bottom', bottomValue);
+    };
+    const resize = new ResizeObserver(update);
+    const observed = new Set<Element>();
+    const mutation = new MutationObserver(update);
+    const bind = () => {
+      resize.disconnect();
+      mutation.disconnect();
+      observed.clear();
+      const watchResize = (target: Element | null) => {
+        if (target && !observed.has(target)) { observed.add(target); resize.observe(target); }
+      };
+      watchResize(el);
+      for (const node of el.querySelectorAll(READING_EDGE_OBSERVED_SELECTORS)) watchResize(node);
+      for (const subtree of el.querySelectorAll('.workspace-header, .workspace-bar, .modern-native-composer, .history-transport, .queued-input-receipts')) {
+        mutation.observe(subtree, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open', 'data-waiting', 'aria-expanded'] });
+      }
+    };
+    const rootMutation = new MutationObserver(() => { bind(); update(); });
+    rootMutation.observe(el, { childList: true });
+    bind();
+    update();
+    return () => {
+      resize.disconnect();
+      mutation.disconnect();
+      rootMutation.disconnect();
+      el.style.removeProperty('--reading-edge-top');
+      el.style.removeProperty('--reading-edge-bottom');
+    };
+  }, [!!projection && !!scene && !!historical, foldersHidden, explore, experience, workingWindow, catalogOpen, historyMode]);
+
   if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading history…'}</div>;
   // Keep the viewport and finite arrivals alive across paged forward steps.
   // A backward seek must conceal later evidence until its as-of page arrives.
@@ -201,7 +242,7 @@ function WorkspaceViewer() {
 
   return (
     <><CapturedCommands/><ReviewInsights/><GitHistory/>
-    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${workingWindow ? ' developer-workspace-open' : ''}${filePeek?' file-peek-open':''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div ref={viewer} inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${workingWindow ? ' developer-workspace-open' : ''}${filePeek?' file-peek-open':''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       {catchupError&&<div className="notice bad" role="alert">Local journal refresh failed: {catchupError} <button className="btn" onClick={()=>setCatchupRetry(n=>n+1)}>Retry journal refresh</button></div>}
@@ -214,6 +255,8 @@ function WorkspaceViewer() {
         {!workingWindow && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
+      <div className="reading-edge reading-edge-top" aria-hidden="true" />
+      <div className="reading-edge reading-edge-bottom" aria-hidden="true" />
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} followSlot={setFollowSlot} />

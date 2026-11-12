@@ -59,6 +59,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-6e reading edges over fixed chrome
+
+- Added `measureReadingEdges` (`apps/ui/src/lib/reading-edges.ts`) + live resize/DOM observation in `Viewer.tsx`, mounting `.reading-edge-top` and `.reading-edge-bottom` masked backdrop veils (`large-screens.css`, with `[data-low-resource]` / `prefers-reduced-motion` blur fallbacks and `<= 1100px` `.workspace-secondary` row alignment in `reading-windows.css`) and updating `readingClearance` in `History.tsx` so prose, cards, and scroll destinations stay clear of fixed controls at `600` & `1440 px`.
+- Verified across `ui:build`, `typecheck`, 119 UI unit files (587 passed / 1 skip), 9 Edge browser specs including new `tests/browser/ship-6e-reading-edges.spec.ts` (**143 passed, 0 failures, 0 retries**), and real scratch sessions (`claude-code rec_cc00` 24.04 MB, `codex rec_7cb1` 15.02 MB) at `600` & `1440 px` across Jet Black, Midnight, and Paper (`uncovered=0`, `overlaps=0`; private screenshots in `.local/ship-6e/`). [Review record](review/ship-6e-reading-edges.md).
+
 ### Yash with Gemini 3.8 Flash — 12 Nov: UI-35 woven aperture logo and favicons (PR #430)
 
 - Replaced the legacy faceted crystal PNGs and favicon (`apps/ui/public/brand/drishya*.png`, `favicon.ico`) with crisp supersampled rasterizations (`32`, `180`, `192`, `512` px + multi-size `favicon.ico` + normalized square `drishya.svg`) of the cream `#ece9dd` woven aperture mark on matte `#0b0c0f` backing.
