@@ -72,11 +72,11 @@
 /* A whole new file is text, not a change against anything: the sign says so without flooding the page. */
 :root[data-ui-version=modern] .diff-reader[data-new-file] .diff .add { background:transparent; }
 @media(max-width:899px) {
- :root[data-ui-version=modern] .file-workspace .file-evidence-reading { grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto auto minmax(0,1fr); }
- :root[data-ui-version=modern] .file-workspace .file-evidence-reading>.file-timeline-steps { grid-column:1;grid-row:2; }
- :root[data-ui-version=modern] .file-workspace .file-evidence-actions { grid-column:2;grid-row:2; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-reading { grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto auto minmax(0,1fr); }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-reading>.file-timeline-steps { grid-column:1;grid-row:2;flex-wrap:wrap; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-actions { grid-column:1;grid-row:3;flex-wrap:wrap; }
  :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-choice { grid-column:1/-1; }
- :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-material,:root[data-ui-version=modern] .file-workspace .file-evidence-columns.paired { grid-row:3; }
+ :root[data-ui-version=modern] .file-workspace .file-evidence-columns:not(.paired) .file-evidence-material,:root[data-ui-version=modern] .file-workspace .file-evidence-columns.paired { grid-row:4; }
 }
 :root[data-ui-version=modern] .file-workspace>header h2 { display:flex;align-items:center;gap:10px;min-width:0; }
 :root[data-ui-version=modern] .file-workspace>header .evidence-navigation { padding:0;gap:2px; }

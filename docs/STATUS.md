@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-18 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-18` | 2026-11-12 | `apps/ui/src/components/FileHistory.tsx`, `apps/ui/src/components/FileReadingActions.tsx`, file-history helpers/units, browser specs (`file-timeline-steps.spec.ts`, `file-timeline-pages.spec.ts`, `fresh-workspace.spec.ts`, `product-workspace.spec.ts`), `docs/review/files-18-newest-first.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -57,6 +56,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash — 12 Nov: FILES-18 newest-first file history
+
+- Reversed matching file actions to newest-first order in [file-timeline.ts](../packages/scene/src/file-timeline.ts) and kept chronological ordinals / `Previous change` / `Next change` time direction in [FileHistory.tsx](../apps/ui/src/components/FileHistory.tsx), plus stacked `max-width: 899px` toolbar rows in [file-reader-controls.css](../apps/ui/src/components/file-reader-controls.css) so narrow widths (`600 px`) keep `Previous change` clickable and clear of workspace notices.
+- Verified on synthetic suites (`typecheck`, UI unit tests, `ui:build`, `file-timeline-steps`, `file-timeline-pages`, `files-navigation-roles`, `product-workspace` **41/41** and `b2-live` **3/3** in Edge) and real sessions in scratch storage at `600` & `1440` px across Jet Black, Midnight, and Paper (Claude Code `rec_be806b25` 8.4 MB, 14 actions; Codex `rec_7cb1cda1` 14.7 MB, 12 actions / 10 steps; frames kept privately in `.local/files-18/`). Review record: [files-18-newest-first.md](review/files-18-newest-first.md).
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: FILES-17 file and folder icons (PR #427)
 
