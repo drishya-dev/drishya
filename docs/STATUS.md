@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| FILES-16b | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-16b` | 2026-11-12 | `SessionWorkspace.tsx` (checkout picker), `worktree-files.ts` / picker helper, `worktree-evidence.css`, units, `tests/browser/files-16b-picker.spec.ts`, TASKS/STATUS/review record; no MOTION-4 owners. |
 | GIT-10 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/git-10` | 2026-11-12 | `apps/daemon/src/git-history.ts`, `apps/daemon/src/git-review.ts`, `apps/daemon/src/server.ts`, `apps/ui/src/components/GitHistory.tsx`, `apps/ui/src/components/GitNetworkGraph.tsx`, UI git history cache/layout modules, `tests/browser/git-*.spec.ts`, units, TASKS/STATUS/review record; no MOTION-4 dialog owners. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | UI-32 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32` | 2026-11-12 | Toolbox window & bottom-right jump/Follow CSS/TSX (root-cause confirmed before edits), browser spec, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
