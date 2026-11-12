@@ -3,20 +3,18 @@
    font size must not resize the product, and every computed length equals LAYOUT-1's px. --ui-scale is always 1. */
 :root[data-ui-version=modern] { font-size: calc(16px * var(--ui-scale, 1)); }
 
-/* LAYOUT-1 · Large screens and browser zoom.
-   Zooming out (67 % on a laptop is 2150 CSS px) and large monitors both give the page more CSS pixels. The reading column
-   already stops growing at 1280 px, but the docks, the header groups and the Workspace stayed pinned to the screen edges,
-   so the space between the divisions grew without limit. Decision: the whole working composition (header groups, Files,
-   history column, Toolbox, Workspace, peek) is one stage that stops at --stage-max and is centred. The map stays full
-   width behind it, so extra width becomes more map, never a wider gap between a dock and the thing it belongs to.
-   Nothing here applies at or below --stage-max, so 600 to 1920 px are exactly as before. No motion is involved. */
+/* LAYOUT-1c: a 2560-device-pixel stage fills laptop/desktop windows at every browser zoom.
+   Only a genuinely wider physical window centres the working composition; text remains browser-sized. */
 :root[data-ui-version=modern] {
-  --stage-max: 1920px;
+  --stage-max: calc(2560px / var(--device-ratio, 1));
   --stage-edge: max(0px, calc((100vw - var(--stage-max)) / 2));
 }
+/* Extra zoom-out space goes to passages, not longer prose lines. The existing 1280 CSS-px measure stays at 100%. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner {
+  max-width:max(1280px, calc(1280px / var(--device-ratio, 1)));
+}
 
-@media (min-width: 1921px) {
-  :root[data-ui-version=modern][data-experience=classic] {
+:root[data-ui-version=modern][data-experience=classic][data-stage-limited] {
     /* Header groups: identity at the stage's left edge, actions at its right. */
     .workspace-header .modern-session-header { padding-inline: calc(24px + var(--stage-edge)); }
     .workspace-leading { left: calc(18px + var(--stage-edge)); }
@@ -37,7 +35,6 @@
     .product-dialog.map-reader { right: calc(20px + var(--stage-edge)); width: min(calc(46vw - 32px), 880px); }
     /* Queued inputs are placed inline by the component. */
     .queued-input-receipts { right: calc(20px + var(--stage-edge)) !important; }
-  }
 }
 
 /* Yash, 10 Nov: the world scrolls from the screen's top under floating controls.
