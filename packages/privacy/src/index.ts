@@ -66,9 +66,10 @@ function looksDiscordBotToken(secret: string): boolean {
   const [p1, p2, p3] = parts;
   if (!p1 || !p2 || !p3 || p1.startsWith('eyJ')) return false;
   try {
-    const id = Buffer.from(p1, 'base64url').toString('ascii');
+    const pad = p1.length % 4 ? '='.repeat(4 - (p1.length % 4)) : '';
+    const id = atob(p1.replace(/-/g, '+').replace(/_/g, '/') + pad);
     if (!/^\d{17,22}$/.test(id)) return false;
-    if (Buffer.from(id, 'ascii').toString('base64url') !== p1) return false;
+    if (btoa(id).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') !== p1) return false;
   } catch { return false; }
   return looksSecret(p3);
 }
