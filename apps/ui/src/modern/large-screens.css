@@ -18,7 +18,7 @@
     /* Header groups: identity at the stage's left edge, actions at its right. */
     .workspace-header .modern-session-header { padding-inline: calc(24px + var(--stage-edge)); }
     .workspace-leading { left: calc(18px + var(--stage-edge)); }
-    .toolbox-rail { left: calc(18px + var(--stage-edge)); right: calc(18px + var(--stage-edge)); }
+    .toolbox-rail { left: calc(18px + var(--stage-edge)); right: calc(50px + var(--stage-edge)); }
     .connected-workspace .folder-explorer { left: calc(18px + var(--stage-edge)); }
     .connected-workspace .history { margin-inline: var(--stage-edge); }
     .connected-workspace .developer-workspace {

@@ -68,7 +68,7 @@
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace.developer-workspace-open>.workspace-bar>.workspace-secondary {display:none;}
 
 /* The independent prompt rail uses the free screen edge while a peek owns the right lane. */
-:root[data-ui-version=modern] .file-peek-open .complete-prompt-rail {right:8px;}
+:root[data-ui-version=modern] .file-peek-open .complete-prompt-rail {right:calc(14px + var(--stage-edge,0px));}
 
 /* Keep scroll/virtual slots in screen coordinates; only their real passage contents compact. */
 @media(min-width:1101px) and (pointer:fine){
