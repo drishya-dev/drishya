@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-2f | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2f` | 2026-11-12 | `apps/ui/src/components/History.tsx`, `apps/ui/src/components/Markdown.tsx`, `apps/ui/src/modern/conversation.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/stage.css`, `apps/ui/src/styles.css`, `packages/scene/`, `tests/browser/ship-2f-history.spec.ts`, `docs/review/ship-2f-history-parts.md`, `STATUS.md`, `TASKS.md`. |
 | SHIP-6g | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6g` | 2026-11-12 | `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/modern/recovered-surfaces.css`, `apps/ui/src/modern/workspace-chrome.css`, `apps/ui/src/developer-workspace.css`, `apps/ui/src/components/SessionWorkspace.tsx`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/stage.css`, `tests/browser/ship-6g-layers.spec.ts`, `docs/review/ship-6g-layers.md`, `STATUS.md`, `TASKS.md`. |
 | SHIP-6e | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6e` | 2026-11-12 | `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/components/SessionWorkspace.tsx`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/workspace-chrome.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/modern/finishing.css`, `apps/ui/src/stage.css`, `tests/browser/chrome-reading-edge.spec.ts`, `tests/browser/palette-contrast.spec.ts`, `docs/review/ship-6e-reading-edges.md`, `STATUS.md`, `TASKS.md`. |
 | UI-33 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-33` | 2026-11-12 | `apps/ui/src/components/PromptRail.tsx`, `apps/ui/src/stage.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `tests/browser/toolbox-window.spec.ts`, `tests/browser/prompt-timeline.spec.ts`, `docs/review/ui-33-prompt-rail-lane.md`, `STATUS.md`, `TASKS.md`. |
@@ -60,6 +59,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2f history differentiation
+
+- Made recorded thinking visually quieter than agent prose (`13 px`, `--text-secondary`, `1 px` `--agent`-tinted left rule vs full-strength `15 px` answers in `apps/ui/src/modern/large-screens.css`).
+- Converted injected user-role notices in Modern (`History.tsx`, `conversation.css`, `reading-windows.css`) into one quiet horizontal line with a per-kind `NoticeIcon` and labelled `12 px` `<summary>Original notice</summary>` (only mounted when raw text adds detail beyond the summary).
+- Eliminated orphan `⌄` fold buttons on body-less prompts/notices and added `Show reply`/`Hide reply` labels whenever `parts.length === 0`.
+- Turned `/compact` + `Context compacted` (`ContextEvidence.tsx`, `context-evidence.css`, `History.tsx`) into one full-width seam with icon + summary disclosure while suppressing duplicate `/compact` notice bubbles.
+- Expanded `600 px` operation cards and `.browser-strip` across the reading column width and mapped `-v1` derived plan slugs (`common.tsx`) to readable meanings (`Compared with the previous plan`, `Proposed plan from output`).
+- Verified across `typecheck`, `119` UI unit files (`587` passed), `ui:build`, `tests/browser/ship-2f-history.spec.ts`, `32/32` updated `prompt-capsule`/`product-workspace`/`conversation-chat` Edge specs, `799` parallel + `30` serial `check:affected` browser tests, and real local sessions (`42a5fd26`, `a1de5659`/`rec_4b4e6b7aaab91336`, `4b71dd98`, Codex `34365106`) at `600`/`1440 px` across `jet`, `midnight`, and `paper` ([review record](review/ship-2f-history-parts.md)).
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: UI-35 woven aperture logo and favicons (PR #430)
 

@@ -86,8 +86,8 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     await page.locator('.history').evaluate((el) => { el.scrollTop = el.scrollHeight; }); // prose is shown whole (SHIP-15), so the notice is far below
     await expect(notice).toBeVisible();
     await expect(notice.locator('.turn-who')).toContainText('Claude Code');
-    expect(await notice.locator('.turn-capsule').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
-    const nBox = (await notice.locator('.turn-capsule').boundingBox())!;
+    expect(await notice.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    const nBox = (await notice.locator('.turn-notice-main').boundingBox())!;
     expect(nBox.x).toBeLessThan(width / 2);
   }
 });

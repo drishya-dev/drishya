@@ -76,3 +76,34 @@
 :root[data-ui-version=modern][data-experience=classic] .history .prose table {
   font-family:var(--sans);
 }
+
+/* SHIP-2f: agent reasoning is secondary ink, slightly smaller and bounded by a thin left rule; answers stay full strength. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose.prose-reasoning:not(.reasoning-gap) {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  padding-left: 12px;
+  border-left: 1px solid color-mix(in srgb, var(--agent, var(--line-3)) 40%, var(--line));
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose.prose-reasoning :is(.md-h, h1, h2, h3, h4, strong, b) {
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose.prose-reasoning .prose-label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  margin-bottom: 6px;
+}
+
+/* SHIP-2f: at narrow laptop widths (600 px), operation cards expand across the reading column rather than leaving half the row empty. */
+@media (max-width: 720px) {
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history .ops-row {
+    margin-right: 26px;
+  }
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history .op:not([data-hover-reading]),
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history .browser-strip {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+}

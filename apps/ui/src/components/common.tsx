@@ -157,10 +157,26 @@ export function Output({ text, maxLines }: { text: string; maxLines?: number }) 
 
 // ─── provenance ──────────────────────────────────────────────────────────────────────────
 
+const DERIVED_RULE_MEANING: Record<string, string> = {
+  'claude-desktop-update-plan-v1': 'Compared with the previous plan',
+  'claude-task-result-v1': 'Tasks matched across tool updates',
+  'claude-exit-plan-mode-v1': 'Plan proposal from the session',
+  'claude-native-plan-file-v1': 'Plan file written by the agent',
+  'codex-literal-plan-v1': 'Checklist captured from output',
+  'codex-proposed-plan-v1': 'Proposed plan from output',
+  'codex-literal-patch-v1': 'Patch extracted from script',
+  'apply-hunks-verified-v1': 'Verified by applying patch',
+  'apply-edit-verified-v1': 'Verified against earlier file content',
+  'shell-read-output-v1': 'Read inferred from shell command',
+  'shell-classify-v1': 'Command classified from shell call',
+  'captured-structured-json-v1': 'Structured tool output',
+};
+
 export function ProvenanceBadge({ p, artifact }: { p?: Provenance; artifact?: Artifact }) {
   const prov = artifact?.provenance ?? p;
   if (!prov) return null;
   const label = prov.kind === 'captured' ? 'Captured' : prov.kind === 'derived' ? 'Derived' : 'Generated';
+  const derivedMeaning = prov.kind === 'derived' ? (DERIVED_RULE_MEANING[prov.rule] ?? prov.rule) : undefined;
   const title =
     prov.kind === 'captured'
       ? 'The harness recorded these exact bytes (after redaction).'
@@ -170,7 +186,7 @@ export function ProvenanceBadge({ p, artifact }: { p?: Provenance; artifact?: Ar
   return (
     <span className={`prov prov-${prov.kind}`} title={title}>
       {label}
-      {prov.kind === 'derived' && <span className="prov-rule"> · {prov.rule}</span>}
+      {derivedMeaning && <span className="prov-rule"> · {derivedMeaning}</span>}
       {artifact?.redacted && <span className="prov-rule"> · redacted</span>}
     </span>
   );

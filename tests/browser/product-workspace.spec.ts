@@ -425,7 +425,9 @@ test('substantial external results retain structured evidence and adapt to narro
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-desktop.png') });
   await page.setViewportSize({ width: 600, height: 1000 });
   await external.scrollIntoViewIfNeeded();
-  expect((await external.boundingBox())!.width).toBeLessThan(390);
+  const narrowBox = (await external.boundingBox())!;
+  expect(narrowBox.width).toBeGreaterThan(450);
+  expect(narrowBox.width).toBeLessThan(600);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect((await external.locator('table').boundingBox())!.width).toBeLessThan((await external.boundingBox())!.width);
   expect(await external.locator('.op-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
@@ -923,7 +925,7 @@ test('full-height world sits beneath progressive edge chrome and prompt typograp
   await expect(page.locator('article.op-test').last()).toBeVisible();
   await page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button').first().click();
   await expect(page.locator('.turn-text').first()).toBeVisible();
-  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose')!).fontSize, blur: getComputedStyle(document.querySelector('.workspace-header')!).backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
+  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose:not(.prose-reasoning)')!).fontSize, blur: getComputedStyle(document.querySelector('.workspace-header')!).backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
   expect(sizes.prompt).toBe('15px'); expect(sizes.response).toBe(sizes.prompt);
   expect(sizes.blur).toBe('none'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
   const headerBottom = await page.locator('.workspace-header').evaluate(el => el.getBoundingClientRect().bottom);
