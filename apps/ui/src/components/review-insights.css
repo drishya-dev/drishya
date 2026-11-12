@@ -28,9 +28,8 @@
 
 .finding-member-intro>span {flex:1;min-width:0;}
 .finding-member-intro>.finding-refresh {flex:none;margin:0;display:grid;place-items:center;width:32px;height:32px;padding:0;font:var(--text-lg) var(--sans);}
-.finding-member-intro input:focus-visible {outline:2px solid var(--line-2);outline-offset:2px;border-color:var(--t3);}
+.finding-member-intro input:focus-visible {border-color:var(--t3);}
 
 
 .finding-category {display:flex;align-items:center;gap:8px;flex-basis:100%;color:var(--t3);font:var(--text-2xs) var(--sans);}.finding-category select {min-width:0;flex:1;padding:7px 10px;background:var(--bg);border:1px solid var(--line);border-radius:var(--round-sm);color:var(--t1);font:var(--text-xs) var(--sans);}
 
-.finding-category select:focus-visible {outline:2px solid var(--line-2);outline-offset:2px;}

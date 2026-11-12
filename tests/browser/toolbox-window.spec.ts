@@ -69,8 +69,12 @@ async function assertDockBounds(dock: Locator) {
     const composerNode = stage.querySelector('.prompt-composer');
     const inFront = composerNode && Number(getComputedStyle(node.parentElement!).zIndex)>Number(getComputedStyle(composerNode).zIndex);
     const sharesWidth = composer && composer.right>box.left && composer.left<box.right;
+    // bounds
+    const minMidY = rail.top + box.height / 2, maxMidY = rail.bottom - box.height / 2;
+    const expectedMidY = Math.max(minMidY, Math.min(maxMidY, innerHeight / 2));
     return Math.max(
-      Math.abs((box.top + box.bottom) / 2 - (rail.top + rail.bottom) / 2),
+    // bounds
+      Math.abs((box.top + box.bottom) / 2 - expectedMidY),
       header.bottom - box.top, box.bottom - (sharesWidth&&!inFront?composer!.top:innerHeight),
       rail.top - box.top, box.bottom - rail.bottom,
     );
@@ -229,7 +233,7 @@ async function measureBottomControls(page: Page) {
 for (const palette of ["dark", "light", "midnight"] as const) {
   test(`UI-32 Toolbox preserves its complete outer border, scroll cues, and reachable footer in ${palette} palette`, async ({ page }) => {
     await page.addInitScript((v) => { try { localStorage.setItem("drishya.theme", v); } catch {} }, palette);
-    await page.setViewportSize({ width: 1440, height: 620 });
+    await page.setViewportSize({ width: 1440, height: 500 });
     const dock = await open(page, "modern", "claude-code");
     await dock.locator(".tool-list > summary").press("Enter");
     await expect(dock.locator(".tool-list")).not.toHaveAttribute("open", "");
@@ -262,7 +266,7 @@ for (const palette of ["dark", "light", "midnight"] as const) {
     const footerRect = await footerSummary.evaluate((el) => el.getBoundingClientRect());
     const dockRect = await dock.evaluate((el) => el.getBoundingClientRect());
     expect(footerRect.bottom).toBeLessThanOrEqual(dockRect.bottom + 0.5);
-    expect(footerRect.bottom).toBeLessThanOrEqual(620);
+    expect(footerRect.bottom).toBeLessThanOrEqual(500);
   });
 }
 
@@ -310,6 +314,7 @@ test("UI-32 jump-to-latest pill and Follow switch group without overlap across w
   app.store.appendObservations(liveId, liveSource, { offset: 2, generation: 0, fingerprint: "ui32-2" }, [
     { id: "u32-2", recordingId: liveId, source: { adapterId: "claude-code", adapterVersion: "synthetic", sourceId: liveSource, generation: 0, byteOffset: 2, part: 0 }, observedAt: "2026-11-12T00:00:02Z", workspaceRoot: dir, agentId: "main", kind: "message.assistant", payload: { text: "Second live response" }, privacyPolicyVersion: PRIVACY_POLICY_VERSION, redactions: [], availability: "complete" },
   ]);
+  app.ingest.emit("change", { type: "recording", recordingId: liveId, revision: app.store.getRecording(liveId)?.revision ?? 0, observationCount: app.store.countObservations(liveId), added: 1, live: true });
   await expect(page.locator(".follow-pill small")).toHaveText("1");
   const badgeMetrics = await checkAligned(page, "600px with unread count badge");
   expect(badgeMetrics.pill!.width).toBeGreaterThan(34);
@@ -364,5 +369,114 @@ test("UI-32 jump-to-latest pill and Follow switch group without overlap across w
     await checkAligned(zp, "demo no-composer 67% zoom");
   } finally {
     await zoomCtx.close();
+  }
+});
+
+
+// UI-32b: Toolbox sits centered on viewport Y center when unconstrained, and Follow toggles never shift History, Toolbox or chrome.
+test("UI-32b Toolbox centers on viewport Y axis and Follow controls never shift layout or scroll", async ({ page }) => {
+  const shiftId = "synthetic-ui32b-shift", shiftSrc = "ui32b-src", shiftJournal = join(dir, "ui32b-shift.jsonl");
+  writeFileSync(shiftJournal, "");
+  app.store.upsertRecording({ id: shiftId, adapterId: "claude-code", harness: "claude-code", sourcePath: shiftJournal, title: "Synthetic UI-32b shift", workspaceRoot: dir });
+  const obs: import("../../packages/contracts/src/index.ts").Observation[] = [];
+  let seq = 0;
+  const push = (kind: import("../../packages/contracts/src/index.ts").Observation["kind"], payload: Record<string, unknown>) => {
+    obs.push({
+      id: `ui32b-${seq}`, recordingId: shiftId,
+      source: { adapterId: "claude-code", adapterVersion: "synthetic", sourceId: shiftSrc, generation: 0, byteOffset: seq++, part: 0 },
+      observedAt: `2026-11-12T00:00:${String(seq % 60).padStart(2, "0")}Z`,
+      workspaceRoot: dir, agentId: "main", kind, payload: payload as never,
+      privacyPolicyVersion: PRIVACY_POLICY_VERSION, redactions: [], availability: "complete",
+    });
+  };
+  push("session.meta", { harness: "claude-code" });
+  push("message.user", { text: "Synthetic UI-32b prompt" });
+  push("queue.receipt", { state: "recorded", preview: "Queued receipt" });
+  push("queue.receipt", { state: "delivered", preview: "Queued receipt" });
+  for (let i = 0; i < 30; i++) push("message.assistant", { text: `Assistant paragraph ${i}. `.repeat(10) });
+  app.store.appendObservations(shiftId, shiftSrc, { offset: seq, generation: 0, fingerprint: "ui32b-1" }, obs);
+
+  const snapshot = () => page.evaluate(() => {
+    const pick = (s: string) => {
+      const el = document.querySelector(s);
+      if (!el || !el.getClientRects().length) return null;
+      const r = el.getBoundingClientRect();
+      return { left: +r.left.toFixed(1), top: +r.top.toFixed(1), right: +r.right.toFixed(1), bottom: +r.bottom.toFixed(1), midY: +((r.top + r.bottom) / 2).toFixed(1) };
+    };
+    const h = document.querySelector<HTMLElement>(".history")!;
+    const firstVisible = [...document.querySelectorAll<HTMLElement>(".passage-slot[data-passage-id]")].find(n => n.getBoundingClientRect().bottom > 0);
+    return {
+      vh: innerHeight,
+      scrollTop: Math.round(h.scrollTop),
+      scrollHeight: Math.round(h.scrollHeight),
+      firstSlotTop: firstVisible ? +firstVisible.getBoundingClientRect().top.toFixed(1) : null,
+      station: pick(".modern-tool-station"),
+      rail: pick(".toolbox-rail"),
+      followSwitch: pick(".workspace-follow"),
+      composer: pick(".prompt-composer"),
+      promptRail: pick(".history-prompt-marks"),
+      folder: pick(".folder-explorer"),
+    };
+  });
+
+  for (const [width, height] of [[1440, 900], [1280, 760], [600, 900]] as const) {
+    await page.setViewportSize({ width, height });
+    await page.goto(server.launchUrl);
+    await expect(page.locator(".home")).toBeVisible();
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${shiftId}`);
+    await expect(page.locator(".history")).toBeVisible();
+    const toolsBtn = page.getByRole("button", { name: "Tools", exact: true });
+    if (await toolsBtn.isVisible()) await toolsBtn.click();
+    const dock = page.locator(".modern-tool-station");
+    await expect(dock).toBeVisible();
+    await assertDockBounds(dock);
+
+    const before = await snapshot();
+    if (width >= 1020) {
+      expect(Math.abs(before.station!.midY - height / 2), `${width}x${height} centered on Y axis`).toBeLessThanOrEqual(1);
+    } else {
+      // Narrow 600px view with composer-setup constrains the lower rail for the full Toolbox;
+      // verify its minimized pill (whose compact height fits freely inside the rail) centers on viewport Y axis.
+      await dock.locator(".toolbox-collapse").click();
+      await expect(dock).toHaveClass(/toolbox-minimized/);
+      await assertDockBounds(dock);
+      const compact = await snapshot();
+      expect(Math.abs(compact.station!.midY - height / 2), `${width}x${height} minimized Toolbox centered on Y axis`).toBeLessThanOrEqual(1);
+      await dock.locator(".toolbox-collapse").click();
+      await expect(dock).not.toHaveClass(/toolbox-minimized/);
+      await assertDockBounds(dock);
+    }
+
+    // Toggling Follow latest off/on must not move history scroll, passages, Toolbox or chrome.
+    await page.locator(".workspace-follow").click();
+    await expect(page.locator(".follow-pill")).toBeVisible();
+    await page.waitForTimeout(150);
+    const afterOff = await snapshot();
+    expect(afterOff.scrollTop, `${width}x${height} scrollTop unchanged on Follow OFF`).toBe(before.scrollTop);
+    expect(afterOff.scrollHeight, `${width}x${height} scrollHeight unchanged on Follow OFF`).toBe(before.scrollHeight);
+    expect(afterOff.firstSlotTop, `${width}x${height} first visible passage unchanged on Follow OFF`).toBe(before.firstSlotTop);
+    expect(afterOff.station, `${width}x${height} Toolbox unchanged on Follow OFF`).toEqual(before.station);
+    expect(afterOff.followSwitch, `${width}x${height} Follow switch unchanged on Follow OFF`).toEqual(before.followSwitch);
+    expect(afterOff.composer, `${width}x${height} composer unchanged on Follow OFF`).toEqual(before.composer);
+    expect(afterOff.promptRail, `${width}x${height} prompt rail unchanged on Follow OFF`).toEqual(before.promptRail);
+
+    // Clicking Back to latest from bottom leaves every layout surface unmoved.
+    await page.locator(".follow-pill").click();
+    await expect(page.locator(".follow-pill")).toHaveCount(0);
+    await page.waitForTimeout(150);
+    const afterOn = await snapshot();
+    expect(afterOn.scrollTop, `${width}x${height} scrollTop unchanged on Back to latest`).toBe(before.scrollTop);
+    expect(afterOn.firstSlotTop, `${width}x${height} passage unchanged on Back to latest`).toBe(before.firstSlotTop);
+    expect(afterOn.station, `${width}x${height} Toolbox unchanged on Back to latest`).toEqual(before.station);
+    expect(afterOn.followSwitch, `${width}x${height} Follow switch unchanged on Back to latest`).toEqual(before.followSwitch);
+
+    if (width >= 1020) {
+      await dock.locator(".toolbox-collapse").click();
+      await expect(dock).toHaveClass(/toolbox-minimized/);
+      await assertDockBounds(dock);
+      const mini = await snapshot();
+      expect(Math.abs(mini.station!.midY - height / 2), `${width}x${height} minimized Toolbox centered on Y axis`).toBeLessThanOrEqual(1);
+      await dock.locator(".toolbox-collapse").click();
+    }
   }
 });

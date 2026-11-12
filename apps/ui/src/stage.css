@@ -32,7 +32,7 @@
 .connected-workspace .dock .server-name { font-size: var(--text-2xs); }
 .connected-workspace .dock .tool-mark { width: 21px; height: 21px; }
 .dock .instrument:hover, .dock .server-tool:hover, .dock .instrument.on { border-color: transparent; outline: none; background: color-mix(in srgb,var(--focus) 2.745%,transparent); }
-.dock .instrument:focus-visible, .dock .server-tool:focus-visible { outline: 1px solid var(--t2); outline-offset: -1px; }
+:root:not([data-input-modality="pointer"]) .dock .instrument:focus-visible, :root:not([data-input-modality="pointer"]) .dock .server-tool:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: -1px; }
 .dock .instrument:hover .op-kind, .dock .server-tool:hover { color: var(--t1); }
 :root[data-palette] .dock .instrument:hover .tool-mark, :root[data-palette] .dock .instrument.on .tool-mark { border-color: var(--line-2); background: transparent; }
 .connected-workspace .history .ops-row { gap: 18px; }
@@ -569,7 +569,6 @@
 .review-item small { display: block; color: var(--t2); margin-top: 3px; font-size: var(--text-2xs); }
 .review-note { margin-top: 18px; }
 .review-layout .muted { font-size: var(--text-xs); }
-.review-open:focus-visible, .review-files button:focus-visible, .review-item button:focus-visible { outline: 1px solid var(--t2); outline-offset: 3px; }
 .current-file-reader[open] { display: flex; flex-direction: column; height: min(820px, 88dvh); }
 .current-file-reader > header, .current-file-meta, .current-source-tools, .current-file-reader footer { flex: none; }
 .current-source-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 18px; padding: 10px 20px; border-bottom: 1px solid var(--line); }

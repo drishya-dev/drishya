@@ -33,7 +33,6 @@
 .path-image-current figcaption {color:var(--t3);font:var(--text-xs)/1.5 var(--sans);}
 .path-image-reader-open {justify-self:start;max-width:100%;padding:0;border:0;background:none;cursor:zoom-in;}
 .path-image-reader-open img {display:block;}
-.path-image-reader-open:focus-visible {outline:2px solid var(--t2);outline-offset:3px;border-radius:var(--round-sm);}
 
 /* Image operations spend their surface on the material; raw requests remain one disclosure away. */
 .op-body > .op-images:not(.compact), .image-material-expanded > .op-images {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));}

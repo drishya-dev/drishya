@@ -8,7 +8,6 @@
 .delegation-scope {margin-top:8px;color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);}
 .delegation-thread{margin:10px 0;font:var(--text-xs)/1.5 var(--sans);color:var(--t2)}
 .delegation-thread>summary{cursor:pointer;width:fit-content;color:var(--t2)}
-.delegation-thread>summary:focus-visible{outline:1px solid var(--t2);outline-offset:4px;border-radius:var(--round-xs)}
 .delegation-thread ol{list-style:none;margin:10px 0;padding:0;max-height:280px;overflow:auto}
 .delegation-thread li{display:flex;gap:10px;position:relative;padding:0 0 12px 2px;min-width:0}
 .delegation-thread li:not(:last-child):before{content:'';position:absolute;left:4px;top:10px;bottom:0;width:1px;background:var(--line)}
