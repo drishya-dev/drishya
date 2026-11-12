@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
-| UI-32 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32` | 2026-11-12 | Toolbox window & bottom-right jump/Follow CSS/TSX (root-cause confirmed before edits), browser spec, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
 | SHIP-2e | @yash + Gemini 3.8 Flash (Antigravity; taken over from Codex Luna 6, 12 Nov) | `codex/ship-2e` | 2026-11-12 | `FencedCode.tsx`, its CSS, `highlight.tsx` only if needed, one browser spec and units; TASKS/STATUS/review record. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -59,6 +58,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash — 12 Nov: UI-32 Toolbox window end and bottom-right controls (PR #420)
+
+- **Causal finding:** `#409` (`15b0582e`, LAYOUT-1b revert) exposed the pre-existing `#359` clipping defect (`bottom: max(24px, ...)` with outer scrolling `.modern-tool-station` and inner `.modern-toolbox` border/radius, clipping borders/rows and sitting behind `.workspace-follow`); `#418` (`34925da1`, LAYOUT-1c) moved `.follow-pill` by `--stage-edge` via hardcoded `128px` without shifting `.history-transport`, detaching them on ultrawide/zoomed viewports (`#416` only removed `.modern-git-drawer` rules).
+- **Fix:** outer frame/border moved onto `.workbench-station.modern-tool-station:not(.toolbox-minimized)` with sticky top/bottom scroll fades keyed by `data-scroll-top`/`data-scroll-bottom` (`scrollEdgeCue`), `.toolbox-rail` raised above bottom-right controls, `.follow-pill` portaled inline beside `.workspace-follow` in `.history-transport` (`8px` gap, matching `34px` height, centered alignment) with replay-mode offset under `[data-stage-limited]`.
+- **Checks:** real long Claude Code (`rec_210973b8` / `c757fa6a`, 234.53 MB, 5,044 ops, 29 MCP servers, 176 tools) and Codex (`rec_fa9e37da` / `01a1b6ba`, 39.24 MB, 459 ops, 5 MCPs, 14 tools) sessions verified across 36 checks (600/1440/3840 widths, short/tall heights, 100%/67% zoom, jet/paper/midnight palettes, drawers closed/open, footer visible, composer open/closed/absent); typecheck, UI build, 3 `scroll-edge-cue` units (+ 6 geometry/bounds units) and browser specs (`toolbox-window` 10/10 plus related suites) pass. Screenshots in `.local/ui-32/`.
 ### Harsh with Codex — 7 November: LAND-1 landing page plan
 
 - [Design proposal](superpowers/plans/2026-11-07-drishya-landing-page.md) uses Sui's visual rhythm and Linear's product-first presentation. Its central visual links the sample repository map to a readable investigation. The plan covers public pages, UI states, motion, a static sample replay, authenticated local setup and release verification under REL-4.

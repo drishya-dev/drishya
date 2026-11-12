@@ -2,6 +2,7 @@ import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { useCallback, useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
 import { useSurfaceReflow } from '../lib/use-surface-reflow.ts';
+import { scrollEdgeCue } from '../lib/scroll-edge-cue.ts';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { ModernTools } from './ModernTools';
 import { useApp } from '../state';
@@ -39,15 +40,10 @@ export function ModernToolStation({ projection, scene, agents }: {
       node?.removeAttribute('data-scroll-bottom');
       return;
     }
-    const max = Math.max(0, node.scrollHeight - node.clientHeight);
-    if (max <= 2) {
-      node.removeAttribute('data-scroll-top');
-      node.removeAttribute('data-scroll-bottom');
-      return;
-    }
-    if (node.scrollTop > 2) node.setAttribute('data-scroll-top', '1');
+    const cue = scrollEdgeCue({ scrollTop: node.scrollTop, scrollHeight: node.scrollHeight, clientHeight: node.clientHeight });
+    if (cue.top) node.setAttribute('data-scroll-top', '1');
     else node.removeAttribute('data-scroll-top');
-    if (node.scrollTop < max - 2) node.setAttribute('data-scroll-bottom', '1');
+    if (cue.bottom) node.setAttribute('data-scroll-bottom', '1');
     else node.removeAttribute('data-scroll-bottom');
   }, [collapsed]);
 
