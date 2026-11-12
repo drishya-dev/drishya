@@ -34,10 +34,9 @@
     </div>
   </header>
 
+  <div class="backdrop" aria-hidden="true"><div class="glow"></div><canvas class="hero-map" data-map="hero"></canvas><div class="hero-labels" data-map-labels="hero"></div></div>
   <main>
     <section id="top" class="hero" aria-labelledby="hero-title">
-      <canvas class="hero-map" data-map="hero" aria-hidden="true"></canvas>
-      <div class="hero-labels" data-map-labels="hero" aria-hidden="true"></div>
       <div class="wrap hero-inner">
         <div class="hero-mark" data-logo="hero" aria-hidden="true"></div>
         <p class="wordmark" aria-hidden="true">drishya<span lang="hi">दृश्य</span></p>
@@ -57,10 +56,13 @@
 
     <section id="why" class="why" aria-labelledby="why-title">
       <div class="why-pin">
-        <div class="wrap">
+        <div class="wrap why-grid">
+          <div>
           <h2 id="why-title" class="eyebrow-title">Why a replay of agent work</h2>
           <p class="why-text" data-words>You give an agent a task and look away. It reads forty files, runs the tests, sees one fail and edits three of them. Then it writes a summary. The work that led there scrolled past in a terminal, or never showed at all.</p>
           <p class="why-answer" data-words>Drishya keeps that work and shows it to you while it happens, so you understand the change and the codebase, not only the summary.</p>
+          </div>
+          <div class="why-stream" aria-hidden="true"><div class="why-lines" data-why-lines></div></div>
         </div>
       </div>
     </section>
