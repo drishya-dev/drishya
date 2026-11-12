@@ -77,9 +77,11 @@ function animate() {
 
   function intro() {
     const ribbons = $$('.hero-mark .ribbon');
+    const word = new SplitText('.wordmark', { type: 'chars' });
     gsap.timeline({ defaults: { ease: 'expo.out' } })
       .from(ribbons, { rotate: (i: number) => Number(ribbons[i]!.dataset.angle) - 70, scale: 0.35, opacity: 0, transformOrigin: '0 0', duration: 1.5, stagger: 0.07 }, 0)
       .from('.hero-mark .aperture', { attr: { r: 0 }, duration: 1.2, ease: 'power3.out' }, 0.35)
+      .from(word.chars, { yPercent: 70, opacity: 0, filter: 'blur(8px)', duration: 1.1, stagger: 0.035 }, 0.5)
       .from('.nav', { y: -16, opacity: 0, duration: 0.8 }, 1.1)
       .to({ p: 0 }, { p: 1, duration: 2, ease: 'power2.out', onUpdate() { heroMap.setReveal(this.targets()[0].p); } }, 0.7);
   }
