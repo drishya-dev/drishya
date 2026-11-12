@@ -414,10 +414,18 @@ function animate() {
     // Measured against the pin, not the viewport, so the resting place is the same at any scroll position (and on refresh).
     const pin = $('.tour-pin');
     const rest = () => { const r = slot.getBoundingClientRect(), p = pin.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - (p.left + p.width / 2), y: r.top + r.height / 2 - (p.top + p.height / 2) }; };
+    // Keep a readable annotation rail beside the laptop while the pinned scene expands.
+    // On narrower desktop windows, shift the laptop right and scale it just enough to preserve the rail.
+    const activeLaptop = () => {
+      const full = laptop.offsetWidth;
+      const rail = caption.offsetWidth + 40;
+      const scale = Math.min(1, Math.max(.62, (pin.clientWidth - rail) / full));
+      return { scale, x: scale < 1 ? rail / 2 : 0, y: 0 };
+    };
     // Centred vertically by GSAP's yPercent, so the scroll tweens own only the pixel offsets.
     if (wide) gsap.set(laptop, { yPercent: -50, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
-    if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
-    if (wide) tl.to(caption, { y: () => innerHeight * 0.26, x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 100%', duration: 0.6, ease: 'power3.inOut' }, 0);
+    if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: () => activeLaptop().scale, x: () => activeLaptop().x, y: () => activeLaptop().y, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
+    if (wide) tl.to(caption, { x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 50%', duration: 0.6, ease: 'power3.inOut' }, 0);
     // 1: the CLI, one line per action, scrolling past.
     tl.to(lines, { opacity: 1, stagger: 0.07, duration: 0.15, ease: 'none' }, 0.6);
     // 2: the desktop app, the same session as a chat with tools folded into rows.
