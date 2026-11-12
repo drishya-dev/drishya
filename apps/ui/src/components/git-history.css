@@ -1,3 +1,6 @@
+.atlas-scrim {position:fixed;inset:0;z-index:190;background:color-mix(in srgb,var(--bg) 53.333%,transparent);}
+.git-atlas.product-dialog[open] {position:fixed;inset:0;margin:auto;z-index:191;max-width:calc(100vw - 32px);}
+.git-atlas.product-dialog:focus {outline:none;}
 .git-atlas {height:min(820px,calc(100dvh - 36px));max-height:calc(100dvh - 36px);display:flex;flex-direction:column;overflow:hidden;}
 .git-atlas>header {flex:none;padding:10px 16px;min-height:46px;}.git-atlas>header h2 {font:var(--weight-medium) var(--text-md)/1.5 var(--sans);}
 :root[data-ui-version=modern][data-experience=classic] .git-atlas>header {padding:8px 16px;min-height:46px;}

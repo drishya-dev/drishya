@@ -1,0 +1,212 @@
+/* SHIP-2e: content-sized, quiet fenced code and plain-text material. */
+
+.fenced-material.fenced-material {
+  display: block;
+  width: fit-content;
+  min-width: 0;
+  max-width: min(100%, 100ch);
+  margin: 12px 0;
+  border: 1px solid var(--line);
+  border-radius: var(--round-md);
+  background: var(--s1);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* Workspace document preview centres children to an 80ch reading measure; align compact blocks with its left edge. */
+:root[data-ui-version=modern] .desk-markdown > .fenced-material.fenced-material {
+  max-width: min(100%, 80ch);
+  margin-left: max(0px, calc((100% - 80ch) / 2));
+  margin-right: 0;
+}
+
+.fenced-material > .fenced-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 5px 8px 5px 14px;
+  background: var(--s1);
+  border-bottom: 1px solid var(--line);
+  font: var(--text-2xs)/1.4 var(--sans);
+  color: var(--text-muted, var(--t3));
+}
+
+.fenced-material > .fenced-header > .fenced-language {
+  margin-right: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--weight-medium);
+  color: var(--text-muted, var(--t3));
+}
+
+.fenced-material > .fenced-header .fenced-status.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.fenced-material > .fenced-header .fenced-status.is-error {
+  color: var(--fail);
+}
+
+.fenced-material > .fenced-header .fenced-status:empty {
+  display: none;
+}
+
+.fenced-material > .fenced-header > .fenced-actions {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.fenced-material > .fenced-header .fenced-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--control-sm);
+  min-width: var(--control-sm);
+  padding: 2px 7px;
+  border: 0;
+  border-radius: var(--round-xs);
+  background: transparent;
+  color: var(--text-secondary, var(--t2));
+  font: inherit;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.fenced-material > .fenced-header .fenced-actions .fenced-copy-btn {
+  min-width: 48px;
+}
+
+.fenced-material:focus-within > .fenced-header .fenced-actions button,
+.fenced-material[data-copy-status] > .fenced-header .fenced-actions button {
+  opacity: 1;
+}
+
+@media (hover: hover) {
+  .fenced-material:hover > .fenced-header .fenced-actions button {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .fenced-material > .fenced-header .fenced-actions button {
+    opacity: 1;
+  }
+}
+
+.fenced-material > .fenced-header .fenced-actions button:hover,
+.fenced-material > .fenced-header .fenced-actions button:focus-visible {
+  background: var(--s2);
+  color: var(--text-primary, var(--t1));
+}
+
+.fenced-material > .fenced-header .fenced-actions button[aria-pressed=true] {
+  background: var(--s3);
+  color: var(--text-primary, var(--t1));
+}
+
+.fenced-material > .fenced-header .fenced-actions button:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: -1px;
+}
+
+.fenced-material > .fenced-header .fenced-actions button:active {
+  transform: scale(.97);
+}
+
+.fenced-material > .fenced-header .fenced-actions button[data-copied=true],
+.fenced-material > .fenced-header .fenced-actions button[data-copied=true]:hover {
+  color: var(--pass);
+}
+
+:root .fenced-material .md-code.md-code {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--s1);
+  color: var(--text-primary, var(--t1));
+  padding: 12px 14px;
+  font: var(--text-xs)/1.65 var(--mono);
+  max-width: 100%;
+  max-height: 65vh;
+  overflow: auto;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+
+:root .fenced-material .md-code.md-code:focus-visible {
+  outline: 1px solid var(--focus);
+  outline-offset: -1px;
+}
+
+.fenced-material .md-code > div {
+  min-height: 1.65em;
+}
+
+.fenced-material .md-code.code-wrap,
+.fenced-material .md-code.code-wrap > div {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.fenced-material .md-code.code-nowrap,
+.fenced-material .md-code.code-nowrap > div {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.fenced-material .md-code.code-nowrap > div {
+  min-width: 100%;
+  width: max-content;
+  box-sizing: border-box;
+}
+
+:root .fenced-material .md-code.md-code-diff {
+  padding: 10px 0;
+}
+
+:root .fenced-material .md-code.md-code-diff > div {
+  padding: 0 14px;
+}
+
+.fenced-material .fenced-diff-add {
+  background: var(--diff-added-wash, var(--pass-wash));
+  color: var(--diff-added, var(--pass));
+}
+
+.fenced-material .fenced-diff-add .tk-str {
+  color: var(--diff-added, var(--pass));
+}
+
+.fenced-material .fenced-diff-del {
+  background: var(--diff-removed-wash, var(--fail-wash));
+  color: var(--diff-removed, var(--fail));
+}
+
+.fenced-material .fenced-diff-del .tk-kw {
+  color: var(--diff-removed, var(--fail));
+}
+
+.fenced-material .fenced-diff-hunk,
+.fenced-material .fenced-diff-meta {
+  color: var(--text-muted, var(--t3));
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-ui-motion]:not([data-low-resource]) .fenced-material > .fenced-header .fenced-actions button {
+    transition: opacity 120ms var(--ease-out), background-color 120ms var(--ease-out), color 120ms var(--ease-out), transform 120ms var(--ease-out);
+  }
+}
