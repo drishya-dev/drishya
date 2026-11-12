@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | UI-32 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32` | 2026-11-12 | Toolbox window & bottom-right jump/Follow CSS/TSX (root-cause confirmed before edits), browser spec, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
 | SHIP-2e | @yash + Gemini 3.8 Flash (Antigravity; taken over from Codex Luna 6, 12 Nov) | `codex/ship-2e` | 2026-11-12 | `FencedCode.tsx`, its CSS, `highlight.tsx` only if needed, one browser spec and units; TASKS/STATUS/review record. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
