@@ -71,23 +71,28 @@ test('investigation finishing: encrypted recovery previews and restores exact dr
   expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).not.toContain('recoveryOnly');expect(submissions).toBe(0);
 });
 
-test('empty Notes returns focus to the exact selected step', async ({ page }) => {
+test('empty Notes offers Add a note to the selected step or Choose a step with a hint', async ({ page }) => {
   await open(page);
   const notes = page.getByRole('dialog', { name: 'Notes', exact: true });
-  const returnToStep = notes.getByRole('button', { name: 'Return to selected step', exact: true });
+  const addSelected = notes.getByRole('button', { name: 'Add a note to the selected step', exact: true });
+  const chooseStep = notes.getByRole('button', { name: 'Choose a step', exact: true });
   await command(page, 'Notes');
-  await expect(notes).toContainText('No notes yet. Open a step and add one.');
-  await expect(returnToStep).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  await expect(notes).toContainText('No notes yet.');
+  await expect(chooseStep).toBeVisible();
+  await expect(addSelected).toHaveCount(0);
+  await chooseStep.click();
+  await expect(notes).toHaveCount(0);
+  await expect(page.locator('.history-note-hint')).toContainText('Add a note');
   await selectAction(page);
+  await expect(page.locator('.history-note-hint')).toHaveCount(0);
   const card = page.locator(`article[data-op-id="${operationId}"]`);
   await expect(card).toHaveClass(/\bselected\b/);
   await command(page, 'Notes');
-  await returnToStep.press('Enter');
+  await addSelected.press('Enter');
   await expect(notes).toHaveCount(0);
-  await expect(card).toBeFocused();
-  await expect(card).toBeInViewport();
-  await expect(card.getByText('Add a note', { exact: true })).toBeVisible();
+  const field = card.getByRole('textbox', { name: 'Note on this step', exact: true });
+  await expect(field).toBeVisible();
+  await expect(field).toBeFocused();
 });
 
 test('investigation finishing: selected saved moments produce an exact portable packet and survive reload',async({page})=>{

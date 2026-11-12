@@ -3,7 +3,8 @@ import {createPortal} from 'react-dom';
 import type {Operation} from '@drishya/contracts';
 import {useApp} from '../state.ts';
 import {FileReadingActions} from './FileReadingActions.tsx';
-import {copyCardMaterial} from './ReadingKeys.tsx';
+import { copyCardMaterial } from './ReadingKeys.tsx';
+import { openStepNoteEditor } from './StepNotes.tsx';
 import './product-menu.css';
 
 type Target={kind:'file';path:string;op?:undefined}|{kind:'step';op:Operation;path?:string};
@@ -69,7 +70,7 @@ export function ProductMenu() {
   return createPortal(<div ref={menu} className="product-menu" role="menu" aria-label={step?`Actions for ${step.title}`:`Actions for ${target.path}`} style={{left:open.x,top:open.y}} onKeyDown={move}>
     {step&&<>
       <button type="button" className="btn ghost" onClick={run(()=>state().set({expandedOp:expanded?undefined:step.id,follow:false}))}>{expanded?'Close':'Expand'}</button>
-      <button type="button" className="btn ghost" onClick={run(()=>{state().set({expandedOp:step.id,follow:false});requestAnimationFrame(()=>requestAnimationFrame(()=>{const editor=document.querySelector<HTMLDetailsElement>(`article[data-op-id="${CSS.escape(step.id)}"] .review-question-editor`);if(editor){editor.open=true;editor.querySelector('textarea')?.focus();}}));})}>Add a note</button>
+      <button type="button" className="btn ghost" onClick={run(()=>{state().set({expandedOp:step.id,follow:false});openStepNoteEditor(step.id);})}>Add a note</button>
       <button type="button" className="btn ghost" onClick={()=>{copyCardMaterial(document.querySelector(`article[data-op-id="${CSS.escape(step.id)}"]`),message=>{setStatus(message);});close(false);}}>Copy</button>
     </>}
     {target.path&&<><FileReadingActions path={target.path} op={step} explain={false} copyPath={false} onNavigate={()=>close(false)}/><button type="button" className="btn ghost" onClick={copyPath(target.path)}>Copy path</button></>}

@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-6f | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-6f` | 2026-11-12 | `apps/ui/src/components/` & `apps/ui/src/modern/` (Notes empty route & Earlier reading notes disclosure), `tests/browser/ship-6f-notes.spec.ts`, `docs/review/ship-6f-notes.md`, `docs/STATUS.md`, `docs/TASKS.md`. |
 | SHIP-2g | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2g` | 2026-11-12 | `packages/capture-core/`, `packages/adapter-codex/`, `packages/adapter-claude-code/`, `packages/projection/`, `apps/ui/src/lib/`, `apps/ui/src/components/`, `tests/browser/ship-2g-tool-content.spec.ts`, `docs/review/ship-2g-tool-content.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
@@ -60,6 +59,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-6f Notes gives the route
+
+- Empty Notes with a selected or expanded step (`expandedOp ?? selectedOp`) now offers `Add a note to the selected step` and opens/focuses `textarea[aria-label="Note on this step"]` in one click (`openStepNoteEditor` in `StepNotes.tsx`, shared with `ProductMenu.tsx` and shortcut `a` in `ReadingKeys.tsx`).
+- Empty Notes with no step selected offers `Choose a step`, returning from History or Workspace to History with a centered, dismissible one-line `.history-note-hint` mounted in `Viewer.tsx` (`workflow-finishing.css`) clearly above the bottom composer (`y=788` at 600 & 1440 px) and auto-clearing on step selection, note open, mode/session switch, or `a`.
+- Styled `Earlier reading notes` as an outlined disclosure control (`.earlier-notes-toggle`) with rotating chevron SVG and `Show`/`Hide` indicator (`aria-hidden="true"` preserving accessible button name).
+- Verified via `typecheck`, UI units (`119` files, `587` passed / `1` skip), `ui:build`, 5 Edge browser specs (`20` passed / `1` skip / `0` failures, including `ship-6f-notes.spec.ts` for Claude Code & Codex at `600` & `1440` px), and real local scratch sessions (`claude-code rec_ff1113cf`, `codex rec_aba0ec58`) at `600` & `1440` px in Jet Black, Midnight, and Paper ([review record](review/ship-6f-notes.md)).
 ### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2f history differentiation
 
 - Made recorded thinking visually quieter than agent prose (`13 px`, `--text-secondary`, `1 px` `--agent`-tinted left rule vs full-strength `15 px` answers in `apps/ui/src/modern/large-screens.css`).
