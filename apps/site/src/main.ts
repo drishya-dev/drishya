@@ -1,29 +1,35 @@
 import './site.css';
+import './product.css';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
 import sample from './generated/sample.json';
 import { mountLogos } from './logo.ts';
-import { createMap, type RepoMap, type Tone } from './map.ts';
+import { createMap, type Tone } from './map.ts';
+import { productScreen, terminalScreen } from './product.ts';
 
-// One place for what SHIP-9 decides at release: the install command and the public repository.
-const SITE = { install: 'npx drishya', repo: 'https://github.com/drishya-dev/drishya' };
+// One place for what SHIP-9 and the builders decide at release. Links without a page yet stay on '#'.
+const SITE = {
+  install: 'npx drishya',
+  repo: 'https://github.com/drishya-dev/drishya',
+  links: { docs: '#', discussions: '#', changelog: '#', issues: '#' } as Record<string, string>,
+};
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 const reduced = document.documentElement.dataset.motion === 'reduced';
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
 const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
 const esc = (v: unknown) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-type Chapter = (typeof sample.chapters)[number];
 type Op = (typeof sample.operations)[number];
 
-// ---------- static content from the sample ----------
+// ---------- links, copy ----------
 mountLogos();
-for (const a of $$<HTMLAnchorElement>('[data-repo-link]')) { a.href = SITE.repo; a.rel = 'noopener'; }
+const external = (a: HTMLAnchorElement, href: string) => { a.href = href; if (href.startsWith('http')) { a.target = '_blank'; a.rel = 'noopener'; } };
+for (const a of $$<HTMLAnchorElement>('[data-repo-link]')) external(a, SITE.repo);
+for (const a of $$<HTMLAnchorElement>('[data-star-link]')) external(a, SITE.repo);
+for (const a of $$<HTMLAnchorElement>('[data-link]')) external(a, SITE.links[a.dataset.link!] ?? '#');
 for (const el of $$('[data-install-command]')) el.textContent = SITE.install;
-$('[data-sample-title]').textContent = sample.title;
-
 for (const b of $$<HTMLButtonElement>('[data-copy]')) {
   const label = b.textContent;
   b.addEventListener('click', async () => {
@@ -32,59 +38,33 @@ for (const b of $$<HTMLButtonElement>('[data-copy]')) {
   });
 }
 
-const verb: Record<string, string> = { read: 'Read', search: 'Searched', edit: 'Edited', test: 'Ran', shell: 'Ran', mcp: 'Asked', spawn: 'Started' };
-const toneOf = (o: Op): Tone => o.kind === 'edit' ? 'edit' : o.kind === 'read' ? 'read' : o.outcome === 'failed' ? 'fail' : o.outcome === 'passed' ? 'pass' : 'search';
-const kindLabel: Record<string, string> = { read: 'Read', search: 'Search', edit: 'Edit', test: 'Test', shell: 'Shell', mcp: 'MCP', spawn: 'Agent' };
-
-function codeLines(c: Chapter) {
-  return c.text.split('\n').slice(0, 22).map((line, i) => {
-    const tone = c.kind === 'edit' ? (line.startsWith('+') ? 'add' : line.startsWith('-') ? 'del' : '') : /\bfail|✗|×|FAIL/i.test(line) ? 'del' : /\bpass|✓/i.test(line) ? 'add' : '';
-    return `<span class="ln ${tone}"><i>${i + 1}</i>${esc(line) || ' '}</span>`;
-  }).join('');
+// ---------- the laptop: a fixed 1440×900 product stage scaled into the screen ----------
+const viewport = $('[data-viewport]');
+viewport.innerHTML = `<div class="dr-stage" data-stage>${productScreen()}${terminalScreen()}</div>`;
+const stage = $('[data-stage]');
+const fit = () => stage.style.setProperty('--s', String(viewport.clientWidth / 1440));
+new ResizeObserver(fit).observe(viewport); fit();
+const camera = $('[data-dr-camera]'), cursor = $('[data-dr-cursor]'), term = $('[data-term]');
+// Camera framing for a region of the 1440×900 stage, as a transform on the camera.
+function frame(x: number, y: number, w: number, h: number) {
+  const s = Math.min(1440 / w, 900 / h) * 0.94;
+  return { x: (1440 - w * s) / 2 - x * s, y: (900 - h * s) / 2 - y * s, scale: s };
 }
-// The file a test chapter points at, only when its own captured output names it.
-const testedFile = (c: Chapter) => sample.graph.nodes.map(n => n.path).find(p => p.startsWith('test/') && c.text.includes(p.split('/').pop()!));
+// Where an element sits inside the camera, in stage pixels (offsets are unaffected by transforms).
+function at(el: HTMLElement) { let x = 0, y = 0, n: HTMLElement | null = el; while (n && n !== camera) { x += n.offsetLeft; y += n.offsetTop; n = n.offsetParent as HTMLElement | null; } return { x, y, w: el.offsetWidth, h: el.offsetHeight }; }
 
-const cardsEl = $('[data-cards]'), stepsEl = $('[data-steps]');
-cardsEl.innerHTML = sample.chapters.map((c, i) => `
-  <article class="card" data-card="${i}" data-kind="${c.kind}">
-    <header><span class="chip ${c.key === 'failure' ? 'fail' : c.key === 'retest' ? 'pass' : c.kind}">${esc(c.short)}</span><span class="card-path">${esc(c.path ?? c.command)}</span><span class="status ${c.key === 'failure' ? 'fail' : c.key === 'retest' ? 'pass' : ''}">${esc(c.status)}</span></header>
-    <h3>${esc(c.title)}</h3>
-    <pre class="code">${codeLines(c)}</pre>
-    <p class="provenance">${esc(c.provenance)}</p>
-  </article>`).join('');
-stepsEl.innerHTML = sample.chapters.map((c, i) => `<li data-step="${i}"><span>${String(i + 1).padStart(2, '0')}</span>${esc(c.title)}</li>`).join('');
-
-// Feature cards: each fragment is drawn from the same synthetic sample, never a mock-up.
-const files = new Map<string, Set<string>>();
-for (const o of sample.operations) if (o.path) files.set(o.path, new Set([...(files.get(o.path) ?? []), o.kind]));
-const editChapter = sample.chapters.find(c => c.kind === 'edit')!, failure = sample.chapters.find(c => c.key === 'failure')!, retest = sample.chapters.find(c => c.key === 'retest')!;
-const max = Math.max(...Object.values(sample.counts));
-const tools = [
-  ['Follows every action in order', 'Each read, search, test and edit as it happened, with its result.',
-    `<ul class="mini-history">${sample.operations.slice(0, 7).map(o => `<li><span class="chip ${o.kind}">${kindLabel[o.kind]}</span><span>${esc(o.target)}</span>${o.outcome ? `<b class="${o.outcome === 'failed' ? 'fail' : 'pass'}">${o.outcome}</b>` : ''}</li>`).join('')}</ul>`],
-  ['Shows each file and its changes', 'Files the agent read or edited are marked in your own tree.',
-    `<ul class="mini-tree">${sample.graph.nodes.slice(0, 9).map(n => { const k = files.get(n.path); return `<li style="--depth:${n.path.split('/').length - 1}"><span>${esc(n.path.split('/').pop())}</span>${k?.has('edit') ? '<b class="edit">E</b>' : k?.has('read') ? '<b class="read">R</b>' : ''}</li>`; }).join('')}</ul>`],
-  ['Keeps the exact diff', 'The change as the agent wrote it, before any later edit.',
-    `<pre class="code small">${codeLines(editChapter)}</pre>`],
-  ['Shows the test run, not a summary', 'The failing output, then the next run, as captured.',
-    `<div class="mini-tests"><div><span class="chip fail">npm test</span><b class="fail">${esc(failure.status)}</b></div><div><span class="chip pass">npm test</span><b class="pass">${esc(retest.status)}</b></div></div>`],
-  ['Counts every tool the agent used', 'Built-in tools and MCP servers, from one session or many.',
-    `<ul class="mini-bars">${Object.entries(sample.counts).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<li><span>${kindLabel[k] ?? k}</span><i style="--w:${(v / max) * 100}%"></i><b>${v}</b></li>`).join('')}</ul>`],
-  ['Tracks sub-agents separately', 'Work a sub-agent did stays with that agent.',
-    `<ul class="mini-agents">${sample.agents.map((a, i) => `<li class="${a.parent ? 'child' : ''}"><i class="agent-dot ${i === 2 ? 'codex' : ''}"></i>${esc(a.label)}<span>${i === 2 ? 'Codex' : 'Claude Code'}</span></li>`).join('')}</ul>`],
-];
-$('[data-tools]').innerHTML = tools.map(([title, body, fragment]) => `<article class="tool"><div class="tool-visual">${fragment}</div><h3>${title}</h3><p>${body}</p></article>`).join('');
-
-// ---------- maps ----------
+// ---------- hero ----------
+const verb: Record<string, string> = { read: 'Read', search: 'Searched', edit: 'Edited', test: 'Ran', shell: 'Ran', mcp: 'Asked', spawn: 'Started' };
+const kindLabel: Record<string, string> = { read: 'Read', search: 'Search', edit: 'Edit', test: 'Test', shell: 'Shell', mcp: 'MCP', spawn: 'Agent' };
+const toneOf = (o: Op): Tone => o.kind === 'edit' ? 'edit' : o.kind === 'read' ? 'read' : o.outcome === 'failed' ? 'fail' : o.outcome === 'passed' ? 'pass' : 'search';
 const heroMap = createMap($<HTMLCanvasElement>('[data-map="hero"]'), $('[data-map-labels="hero"]'), sample.graph, { scale: 0.5, still: reduced, offsetY: -0.06 });
-const replayMap = createMap($<HTMLCanvasElement>('[data-map="replay"]'), $('[data-map-labels="replay"]'), sample.graph, { scale: 0.7, still: reduced });
+const retest = sample.chapters.find(c => c.key === 'retest')!;
 
-// ---------- reduced motion: composed still frames, everything visible ----------
 if (reduced) {
   for (const o of sample.operations) heroMap.light(o.path, toneOf(o), false);
-  sample.chapters.forEach((c, i) => { replayMap.light(c.path ?? testedFile(c), c.key === 'failure' ? 'fail' : c.key === 'retest' ? 'pass' : c.kind === 'edit' ? 'edit' : 'read'); stepsEl.children[i]?.classList.add('done'); });
   $('[data-ticker]').textContent = `${sample.operations.length} recorded actions in this sample`;
+  term.style.display = 'none';
+  $$('.tour-steps li').forEach(li => li.classList.add('on'));
 } else {
   animate();
 }
@@ -96,17 +76,13 @@ function animate() {
   gsap.ticker.lagSmoothing(0);
   for (const a of $$<HTMLAnchorElement>('a[href^="#"]')) a.addEventListener('click', e => { const id = a.getAttribute('href')!; if (id.length > 1) { e.preventDefault(); lenis.scrollTo(id === '#top' ? 0 : id, { offset: -64 }); } });
 
-  document.fonts.ready.then(() => {
-    intro();
-    scrollScenes();
-    ScrollTrigger.refresh();
-  });
+  document.fonts.ready.then(() => { intro(); scrollScenes(); ScrollTrigger.refresh(); });
 
   function intro() {
     const ribbons = $$('.hero-mark .ribbon');
     const word = new SplitText('.wordmark', { type: 'chars' }), title = new SplitText('#hero-title', { type: 'lines', mask: 'lines' });
-    const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
-    tl.from(ribbons, { rotate: (i: number) => Number(ribbons[i]!.dataset.angle) - 70, scale: 0.35, opacity: 0, transformOrigin: '0 0', duration: 1.5, stagger: 0.07 }, 0)
+    gsap.timeline({ defaults: { ease: 'expo.out' } })
+      .from(ribbons, { rotate: (i: number) => Number(ribbons[i]!.dataset.angle) - 70, scale: 0.35, opacity: 0, transformOrigin: '0 0', duration: 1.5, stagger: 0.07 }, 0)
       .from('.hero-mark .aperture', { attr: { r: 0 }, duration: 1.2, ease: 'power3.out' }, 0.35)
       .from(word.chars, { yPercent: 70, opacity: 0, filter: 'blur(8px)', duration: 1.1, stagger: 0.035 }, 0.5)
       .from(title.lines, { yPercent: 100, duration: 0.9, stagger: 0.08 }, 0.9)
@@ -118,69 +94,92 @@ function animate() {
 
   // The hero replays the sample once, in its real order, lighting each file the agent touched. It then rests.
   function playSession() {
-    const ticker = $('[data-ticker]');
-    const tl = gsap.timeline();
-    sample.operations.forEach((o, i) => {
-      tl.call(() => {
-        ticker.innerHTML = `<span class="chip ${o.kind}">${kindLabel[o.kind]}</span>${esc(verb[o.kind])} ${esc(o.target)}${o.outcome ? ` · <b class="${o.outcome === 'failed' ? 'fail' : 'pass'}">${o.outcome}</b>` : ''}<span class="ticker-agent">${esc(o.agent)} · ${esc(o.harness)}</span>`;
-        gsap.fromTo(ticker, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' });
-        heroMap.light(o.path, toneOf(o), i < 6 || o.kind === 'edit');
-      }, [], i * 0.62);
-    });
+    const ticker = $('[data-ticker]'), tl = gsap.timeline();
+    sample.operations.forEach((o, i) => tl.call(() => {
+      ticker.innerHTML = `<span class="chip ${o.kind}">${kindLabel[o.kind]}</span>${esc(verb[o.kind])} ${esc(o.target)}${o.outcome ? ` · <b class="${o.outcome === 'failed' ? 'fail' : 'pass'}">${o.outcome}</b>` : ''}<span class="ticker-agent">${esc(o.agent)} · ${esc(o.harness)}</span>`;
+      gsap.fromTo(ticker, { opacity: 0, y: 6 }, { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' });
+      heroMap.light(o.path, toneOf(o), i < 6 || o.kind === 'edit');
+    }, [], i * 0.62));
     tl.call(() => { ticker.innerHTML = `${sample.operations.length} recorded actions · ${sample.harnesses.join(' and ')} · <b class="pass">${esc(retest.status)}</b>`; gsap.fromTo(ticker, { opacity: 0 }, { opacity: 1, duration: 0.5 }); }, [], sample.operations.length * 0.62 + 0.3);
   }
 
   function scrollScenes() {
-    // Leaving the hero: the mark recedes and the map turns with the scroll.
     gsap.timeline({ scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
       .to('.hero-inner', { y: -80, opacity: 0.15, ease: 'none' }, 0)
       .to('.hero-mark', { scale: 0.7, ease: 'none' }, 0)
       .to({ a: 0.6 }, { a: 1.6, ease: 'none', onUpdate() { heroMap.setAngle(this.targets()[0].a); } }, 0);
 
-    // Why: the paragraph resolves word by word while the section holds still.
     const words = new SplitText('[data-words]', { type: 'words' });
     gsap.set(words.words, { opacity: 0.14 });
     gsap.timeline({ scrollTrigger: { trigger: '.why', start: 'top top', end: '+=140%', pin: '.why-pin', scrub: 0.6 } })
       .to(words.words, { opacity: 1, stagger: 0.05, ease: 'none' });
 
-    // Section headings rise in once, line by line, when they first come into view.
     for (const h of $$('[data-split]').filter(h => h.id !== 'hero-title')) {
       const s = new SplitText(h, { type: 'lines', mask: 'lines' });
       gsap.from(s.lines, { yPercent: 100, duration: 0.9, stagger: 0.08, ease: 'expo.out', scrollTrigger: { trigger: h, start: 'top 85%', once: true } });
     }
-    gsap.from('.close-mark .ribbon', { rotate: (i: number, el: HTMLElement) => Number(el.dataset.angle) - 70, scale: 0.4, opacity: 0, transformOrigin: '0 0', duration: 1.4, stagger: 0.06, ease: 'expo.out', scrollTrigger: { trigger: '.close', start: 'top 70%', once: true } });
+    gsap.from('.close-mark .ribbon', { rotate: (_: number, el: HTMLElement) => Number(el.dataset.angle) - 70, scale: 0.4, opacity: 0, transformOrigin: '0 0', duration: 1.4, stagger: 0.06, ease: 'expo.out', scrollTrigger: { trigger: '.close', start: 'top 70%', once: true } });
 
-    replayScene();
+    tourScene();
   }
 
-  // The signature scene: the four chapters emit from the map one by one, earlier ones settle back, the outcome resolves.
-  // Scroll drives it both ways, so scrolling back rewinds it exactly.
-  function replayScene() {
-    const mm = gsap.matchMedia();
-    mm.add('(min-width: 900px)', () => {
-      const cards = $$('[data-card]'), stepWord = $('[data-step-word]'), n = cards.length;
-      gsap.set(cards, { autoAlpha: 0, xPercent: -18, scale: 0.92, filter: 'blur(6px)' });
-      replayMap.setReveal(1);
-      let shown = -1;
-      const show = (i: number) => {
-        if (i === shown) return; shown = i;
-        replayMap.clear();
-        sample.chapters.slice(0, i + 1).forEach((c, k) => replayMap.light(c.path ?? testedFile(c), c.key === 'failure' ? 'fail' : c.key === 'retest' ? 'pass' : c.kind === 'edit' ? 'edit' : 'read', k === i));
-        $$('[data-step]').forEach((li, k) => { li.classList.toggle('active', k === i); li.classList.toggle('done', k < i); });
-        if (i >= 0) gsap.fromTo(stepWord, { yPercent: 40, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.6, ease: 'expo.out', overwrite: true, onStart: () => { stepWord.textContent = sample.chapters[i]!.short; } });
-      };
-      const tl = gsap.timeline({ scrollTrigger: { trigger: '.replay', start: 'top top', end: () => `+=${innerHeight * 3.2}`, pin: '.replay-pin', scrub: 0.7, onUpdate: s => show(Math.min(n - 1, Math.floor(s.progress * n * 0.999))) } });
-      cards.forEach((card, i) => {
-        tl.to(card, { autoAlpha: 1, xPercent: 0, scale: 1, filter: 'blur(0px)', duration: 0.6, ease: 'power3.out' }, i);
-        cards.slice(0, i).forEach((prev, k) => tl.to(prev, { y: -26 * (i - k), scale: 1 - 0.05 * (i - k), autoAlpha: i - k > 2 ? 0 : 0.42 / (i - k), filter: 'blur(1.5px)', duration: 0.6, ease: 'power3.out' }, i));
-        tl.to({}, { duration: 0.4 }, i + 0.6);
-      });
-      show(0);
-      return () => { gsap.set(cards, { clearProps: 'all' }); replayMap.clear(); };
-    });
-    mm.add('(max-width: 899px)', () => {
-      replayMap.setReveal(1);
-      sample.chapters.forEach(c => replayMap.light(c.path ?? testedFile(c), c.key === 'failure' ? 'fail' : c.key === 'retest' ? 'pass' : c.kind === 'edit' ? 'edit' : 'read', false));
-    });
+  // The tour: one pinned timeline, scrubbed by scroll, so every step plays forward and rewinds exactly.
+  function tourScene() {
+    const steps = $$('.tour-steps li'), cards = $$('[data-dr-card]'), lines = $$('.tl', term);
+    const layer = (name: string) => $(`[data-dr-layer="${name}"]`);
+    const file = $('[data-dr-file]'), files = $('.dr-files'), toolbox = $('.dr-toolbox'), passages = $$('.dr-passage');
+    const whole = { x: 0, y: 0, scale: 1 };
+    const region = (el: HTMLElement, pad = 24) => { const r = at(el); return frame(r.x - pad, r.y - pad, r.w + pad * 2, r.h + pad * 2); };
+    const fileAt = at(file);
+
+    gsap.set(lines, { opacity: 0, y: 6 });
+    gsap.set(cards, { opacity: 0, y: 22, scale: 0.96 });
+    gsap.set('[data-dr-prose]', { opacity: 0 });
+    gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
+
+    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 8}`, pin: '.tour-pin', scrub: 0.8 } });
+    const show = (i: number, at: number) => { tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, at).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, at + 0.2); };
+
+    // 0 · the terminal: each action is one line, and the lines scroll past.
+    tl.to(lines, { opacity: 1, y: 0, stagger: 0.12, duration: 0.2 }, 0.1);
+    // 1 · switch to Drishya, then the actions arrive one after another, left to right.
+    show(1, 2.2);
+    tl.to(term, { clipPath: 'inset(0 0 100% 0)', duration: 0.7, ease: 'power3.inOut' }, 2.1);
+    tl.to(cards.slice(0, 3), { opacity: 1, y: 0, scale: 1, stagger: 0.35, duration: 0.45, ease: 'power3.out' }, 2.8);
+    // 2 · the failure, the fix and the passing run, closer.
+    show(2, 4.2);
+    tl.to(camera, { ...region(passages[1]!, 30), duration: 0.8 }, 4.2);
+    tl.to(cards.slice(3), { opacity: 1, y: 0, scale: 1, stagger: 0.35, duration: 0.45, ease: 'power3.out' }, 4.6);
+    tl.to('[data-dr-prose]', { opacity: 1, duration: 0.4 }, 5.6);
+    // 3 · Files beside the work.
+    show(3, 6.3);
+    tl.to(camera, { ...frame(80, 60, 760, 760), duration: 0.9 }, 6.3);
+    // 4 · a cursor hovers the edited file, and its history opens.
+    show(4, 7.6);
+    tl.fromTo(cursor, { left: 640, top: 640, opacity: 0 }, { left: fileAt.x + 150, top: fileAt.y + 10, opacity: 1, duration: 0.7, ease: 'power3.inOut' }, 7.6);
+    tl.to(file, { backgroundColor: 'rgba(122,168,255,.18)', duration: 0.2 }, 8.3);
+    tl.to(layer('peek'), { autoAlpha: 1, x: 0, duration: 0.4, ease: 'power3.out' }, 8.4).from(layer('peek'), { x: -14, duration: 0.4 }, 8.4);
+    // 5 · Workspace.
+    show(5, 9.4);
+    tl.to([layer('peek'), cursor], { autoAlpha: 0, duration: 0.3 }, 9.4);
+    tl.to(camera, { ...whole, duration: 0.8 }, 9.4);
+    tl.fromTo(layer('workspace'), { autoAlpha: 0, scale: 0.97 }, { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'power3.out' }, 9.7);
+    // 6 · Changes for a branch.
+    show(6, 10.9);
+    tl.to(layer('workspace'), { autoAlpha: 0, duration: 0.3 }, 10.9);
+    tl.fromTo(layer('changes'), { autoAlpha: 0, scale: 0.97 }, { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'power3.out' }, 11.1);
+    tl.to(camera, { ...region(layer('changes'), 10), duration: 0.8 }, 11.4);
+    // 7 · the Git graph.
+    show(7, 12.6);
+    tl.to(layer('changes'), { autoAlpha: 0, duration: 0.3 }, 12.6);
+    tl.fromTo(layer('graph'), { autoAlpha: 0, scale: 0.97 }, { autoAlpha: 1, scale: 1, duration: 0.5, ease: 'power3.out' }, 12.8);
+    tl.from('.dr-graph-body path', { strokeDasharray: 600, strokeDashoffset: 600, duration: 0.8, stagger: 0.1 }, 12.9);
+    // 8 · the Toolbox.
+    show(8, 14.2);
+    tl.to(layer('graph'), { autoAlpha: 0, duration: 0.3 }, 14.2);
+    tl.to(camera, { ...region(toolbox, 40), duration: 0.9 }, 14.3);
+    tl.to(camera, { ...whole, duration: 0.9 }, 15.6);
+    tl.to({}, { duration: 0.4 }, 16.5);
+    void files;
   }
 }
