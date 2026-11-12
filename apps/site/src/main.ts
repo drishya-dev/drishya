@@ -158,15 +158,19 @@ function animate() {
     gsap.set(lines, { opacity: 0 });
     gsap.set(rows, { opacity: 0, y: 8 });
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
-    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 7}`, pin: '.tour-pin', scrub: 0.6 } });
+    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 4}`, pin: '.tour-pin', scrub: 0.5 } });
     const show = (i: number, t: number) => tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2);
     const replay = (from: number, to: number, t: number, duration: number) => tl.fromTo({ s: from }, { s: from }, { s: to, duration, ease: 'none', onUpdate() { const n = Math.round(this.targets()[0].s); if (n !== wantedStep) seek(n); } }, t);
 
-    // The laptop grows to fill the screen while the three screens play; the captions float over it.
-    const laptop = $('.laptop'), caption = $('.tour-steps');
-    const grow = () => { const r = laptop.getBoundingClientRect(), s = Math.min(innerWidth * 0.94 / r.width, innerHeight * 0.9 / r.height); return { scale: s, x: innerWidth / 2 - (r.left + r.width / 2), y: innerHeight / 2 - (r.top + r.height / 2) + 6 }; };
-    tl.to(laptop, { scale: () => grow().scale, x: () => grow().x, y: () => grow().y, duration: 0.6, ease: 'power3.inOut' }, 0);
-    tl.to(caption, { y: () => innerHeight * 0.26, x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 100%', duration: 0.6, ease: 'power3.inOut' }, 0);
+    // The laptop is laid out at its full-screen size and shown smaller at rest, so growing never upscales pixels.
+    // At rest it sits in the right-hand column; while the three screens play it fills the screen.
+    const wide = matchMedia('(min-width: 900px)').matches;
+    const laptop = $('.laptop'), caption = $('.tour-steps'), slot = $('.laptop-slot');
+    const rest = () => { const r = slot.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - innerWidth / 2, y: r.top + r.height / 2 - innerHeight / 2 }; };
+    // Centred vertically by GSAP's yPercent, so the scroll tweens own only the pixel offsets.
+    if (wide) gsap.set(laptop, { yPercent: -50, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
+    if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
+    if (wide) tl.to(caption, { y: () => innerHeight * 0.26, x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 100%', duration: 0.6, ease: 'power3.inOut' }, 0);
     // 1: the CLI, one line per action, scrolling past.
     tl.to(lines, { opacity: 1, stagger: 0.07, duration: 0.15, ease: 'none' }, 0.6);
     // 2: the desktop app, the same session as a chat with tools folded into rows.
@@ -180,7 +184,7 @@ function animate() {
     show(3, 5.4); replay(12, 21, 5.5, 1.3);
     show(4, 6.9); replay(21, 29, 7.0, 1.4);
     show(5, 8.5); replay(29, 45, 8.6, 1.6);
-    tl.to([laptop, caption], { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut' }, 10.2);
+    if (wide) { tl.to(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y, duration: 0.6, ease: 'power3.inOut' }, 10.2); tl.to(caption, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut' }, 10.2); }
     tl.to({}, { duration: 0.3 }, 10.8);
   }
 }

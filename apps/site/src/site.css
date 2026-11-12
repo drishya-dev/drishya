@@ -97,7 +97,9 @@ main, .footer, .nav { position: relative; z-index: 1; }
 .tour-steps li { grid-area: 1 / 1; }
 .tour-steps h3 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.08; letter-spacing: -.03em; font-weight: 600; }
 .tour-steps p { margin-top: 16px; color: var(--t2); font-size: 17px; }
-.laptop { position: relative; }
+.laptop-slot { aspect-ratio: 16 / 10.9; }
+.tour-pin { position: relative; }
+.laptop { position: absolute; left: 50%; top: 50%; width: min(94vw, 88svh * 1.47); margin-left: calc(min(94vw, 88svh * 1.47) / -2); }
 .laptop-lid { padding: 1.6% 1.6% 2.2%; border-radius: 22px 22px 8px 8px; background: linear-gradient(#2a2c30, #1b1d20); border: 1px solid #34373c; box-shadow: 0 50px 120px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06); }
 .laptop-screen { position: relative; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; background: #000; }
 .laptop-base { height: 14px; margin: 0 -6%; border-radius: 2px 2px 14px 14px; background: linear-gradient(#3a3d42, #1e2023); box-shadow: 0 18px 40px rgba(0,0,0,.5); }
@@ -191,4 +193,5 @@ main, .footer, .nav { position: relative; z-index: 1; }
 /* the tour's captions float over the laptop while it fills the screen */
 .tour-steps { position: relative; z-index: 3; padding: 24px 26px; border-radius: 16px; background: rgba(10, 11, 13, .74); border: 1px solid var(--line-2); backdrop-filter: blur(14px); }
 .laptop { z-index: 2; transform-origin: 50% 50%; }
+@media (max-width: 899px) { .laptop { position: relative; left: auto; top: auto; margin: 0; width: 100%; } .laptop-slot { display: none; } }
 @media (max-width: 899px) { .why-grid { grid-template-columns: 1fr; } .why-stream { height: 320px; } }
