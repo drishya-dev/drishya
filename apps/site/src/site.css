@@ -75,7 +75,7 @@ main, .footer { position: relative; z-index: 1; }
 .map-label { position: absolute; left: 0; top: 0; font: 500 11px/1 var(--mono); color: var(--tone, var(--t2)); padding: 4px 6px; border-radius: 5px; background: rgba(10, 11, 13, .72); border: 1px solid var(--line); opacity: 0; transition: opacity .5s var(--ease); white-space: nowrap; }
 .map-label.on { opacity: 1; }
 .hero-inner { position: relative; text-align: center; display: grid; justify-items: center; }
-.hero-mark { width: clamp(84px, 9vw, 120px); aspect-ratio: 460 / 430; margin-bottom: 18px; filter: drop-shadow(0 18px 40px rgba(0, 0, 0, .55)); }
+.hero-mark { width: clamp(84px, 9vw, 120px); aspect-ratio: 460 / 430; filter: drop-shadow(0 18px 40px rgba(0, 0, 0, .55)); }
 .hero-mark .mark, .close-mark .mark { width: 100%; height: 100%; display: block; overflow: visible; }
 .wordmark { font-size: clamp(64px, 12vw, 176px); font-weight: 600; letter-spacing: -.055em; line-height: .9; color: var(--ivory); }
 .wordmark span { display: block; font-size: .16em; letter-spacing: .02em; font-weight: 500; color: var(--t3); margin-top: .5em; }
