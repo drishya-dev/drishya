@@ -44,7 +44,7 @@ test('completed evidence links keep full history and the chosen live-demo design
   await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
   await expect(detail).toContainText('canCheckout');
   await expect(detail).not.toContainText('Result has not arrived');
-  await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeEnabled();
+  await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeEnabled();
   await page.keyboard.press('Escape');
   await page.goto(new URL('/?demo=live', server.launchUrl).href);
   await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
@@ -137,7 +137,7 @@ test('failed shell preview surfaces buried errors and preserves the full preview
 test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
   await page.goto(demoUrl());
   await openSessionReview(page);
-  const review = page.getByRole('dialog', { name: 'Changes', exact: true });
+  const review = page.getByRole('dialog', { name: 'Session review', exact: true });
   await expect(review.getByRole('region', { name: 'Files with changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
   await expect(review).toContainText('Whole session');
@@ -158,9 +158,9 @@ test('first-visit evidence review opens exact file work without a reading mark a
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(600);
   await page.screenshot({ path: resolve('.local/evidence-review-narrow.png') });
-  await review.getByRole('button', { name: 'Close Changes' }).click();
+  await review.getByRole('button', { name: 'Close Session review' }).click();
   await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
-  await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeDisabled();
+  await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeDisabled();
 });
 
 test('returning from an authenticated demo retains local workspace access', async ({ page }) => {

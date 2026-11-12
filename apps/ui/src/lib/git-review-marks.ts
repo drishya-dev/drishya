@@ -25,3 +25,15 @@ export function updateReviewMark(mark: ReviewMark | undefined, fingerprint: stri
     previous: previousReviewNote(mark, fingerprint),
   };
 }
+
+/** GIT-9: the marks that Git review stored before Changes absorbed it live under this same key, so a mark made then still counts when its fingerprint matches. */
+export const reviewMarkKey = (recordingId: string) => `drishya-git-review-v1:${recordingId}`;
+/** A mark belongs to a path in one view of the changes. The working tree keeps the bare path (what Git review used); a comparison adds which two sides it reads. */
+export const reviewMarkId = (scope: string, path: string) => scope ? `${scope}\u0001${path}` : path;
+export function loadReviewMarks(recordingId: string): Record<string, ReviewMark> {
+  try { return readReviewMarks(localStorage.getItem(reviewMarkKey(recordingId)) ?? '{}'); } catch { return {}; }
+}
+/** False when the browser refused the write; the caller says so. */
+export function saveReviewMarks(recordingId: string, marks: Record<string, ReviewMark>): boolean {
+  try { localStorage.setItem(reviewMarkKey(recordingId), JSON.stringify(Object.fromEntries(Object.entries(marks).slice(-100)))); return true; } catch { return false; }
+}

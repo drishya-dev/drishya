@@ -56,12 +56,17 @@ function pairs(raw:string,expect:number):string[][] {
   return rows;
 }
 
-interface SideChange {status:string;added?:number;removed?:number;binary:boolean}
+interface SideChange {status:string;added?:number;removed?:number;binary:boolean;/** Identity of this side's change: the blobs it goes from and to. A patch is a pure function of them, so reviewed marks can key on it without reading the patch. */fingerprint:string}
+const blobFingerprint=(path:string,before:string,after:string)=>hash(`${before}\0${after}\0${path}`);
 async function sideChanges(git:Git,from:string,to:string):Promise<Map<string,SideChange>> {
   const flags=['diff',...gitDiffFlags];
-  const [names,numbers]=await Promise.all([git([...flags,'--name-status','-z',from,to,'--']),git([...flags,'--numstat','-z',from,to,'--'])]);
+  const [names,numbers]=await Promise.all([git([...flags,'--raw','--no-abbrev','-z',from,to,'--']),git([...flags,'--numstat','-z',from,to,'--'])]);
   const result=new Map<string,SideChange>();
-  for(const [status,path] of pairs(names,2))result.set(path!,{status:status!.slice(0,1),binary:false});
+  // raw -z: ":<old mode> <new mode> <old blob> <new blob> <status>\0path\0"
+  for(const [meta,path] of pairs(names,2)){
+    const [,,before='',after='',status='M']=meta!.split(' ');
+    result.set(path!,{status:status.slice(0,1),binary:false,fingerprint:blobFingerprint(path!,before,after)});
+  }
   // numstat -z (no renames): "added\tremoved\tpath\0"
   for(const field of numbers.split('\0').filter(Boolean)){
     const [added,removed,...rest]=field.split('\t'),path=rest.join('\t'),entry=result.get(path);
@@ -108,7 +113,9 @@ export async function gitCompare(git:Git,query:{base:string;head:string}):Promis
     files.push({
       path:clean(path),group,
       ...(own?{headStatus:own.status}:{}),...(other?{baseStatus:other.status}:{}),
+      fingerprint:shown.fingerprint,
       ...(shown.binary?{binary:true}:{added:shown.added,removed:shown.removed}),
+      ...(group==='both'&&other?{baseFingerprint:other.fingerprint}:{}),
       ...(group==='both'&&other&&!other.binary?{baseAdded:other.added,baseRemoved:other.removed}:{}),
     });
   }
@@ -134,10 +141,13 @@ export async function gitCompareFile(git:Git,query:{base:string;head:string;path
   const from=oid.test(mergeBase)?mergeBase:base.tip,to=side==='head'?head.tip:base.tip;
   // Unrelated histories have no merge-base; the base side then has nothing to show.
   const raw=!oid.test(mergeBase)&&side==='base'?'':await git(['diff',...gitDiffFlags,'-p',from,to,'--',path]);
+  // The same identity the file list carries: the blobs this change goes from and to.
+  const blobs=!oid.test(mergeBase)&&side==='base'?'':await git(['diff',...gitDiffFlags,'--raw','--no-abbrev','-z',from,to,'--',path]);
+  const [,,fromBlob='',toBlob='']=(blobs.split('\0')[0]??'').split(' ');
   const binary=/^Binary files .* differ$/m.test(raw)||/^GIT binary patch$/m.test(raw);
   const patch=clean('Commit changes\n'+(raw||'No textual patch available (submodule, binary or metadata-only change).\n'));
   if((await gitRefState(git)).generation!==before.generation)throw changed();
-  return {path,side,patch,fingerprint:hash(`${from}\0${to}\0${path}\0${raw}`),binary};
+  return {path,side,patch,fingerprint:blobFingerprint(path,fromBlob,toBlob),binary};
 }
 
 /** GitHub's own compare, for a pull request whose head is not here. Only the compare side's changes exist in it. */
@@ -153,7 +163,7 @@ export function githubCompareResult(raw:unknown,base:CompareSide,head:CompareSid
     const text=typeof entry.patch==='string'?clean(`Commit changes\ndiff --git a/${path} b/${path}\n--- a/${path}\n+++ b/${path}\n${entry.patch}\n`):undefined;
     const bytes=text?Buffer.byteLength(text):0;
     const keep=text!==undefined&&bytes<=budget;if(keep)budget-=bytes;
-    files.push({path:clean(path),group:'head',headStatus:status,...(text===undefined?{binary:true}:{added:number(entry.additions),removed:number(entry.deletions)}),...(keep?{patch:text}:{})});
+    files.push({path:clean(path),group:'head',headStatus:status,fingerprint:hash(`github\0${path}\0${text??''}`),...(text===undefined?{binary:true}:{added:number(entry.additions),removed:number(entry.deletions)}),...(keep?{patch:text}:{})});
   }
   files.sort((a,b)=>a.path.localeCompare(b.path));
   const mergeBase=(value.merge_base_commit as {sha?:unknown}|undefined)?.sha;

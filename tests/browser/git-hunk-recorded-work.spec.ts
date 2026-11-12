@@ -1,4 +1,4 @@
-import { openGitDestination, gitEntry } from './git-navigation.ts';
+import { readUncommitted } from './git-navigation.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -51,26 +51,19 @@ async function openReview(page: Page) {
   await page.goto(`${server.url}/?experience=modern&motion=0#token=${server.token}`);
   await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-  await expect(gitEntry(page, 'Git review')).toBeVisible();
+  await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeVisible();
   await closeRestoredWork(page);
-  await openGitDestination(page, 'Git review');
-  const review = page.getByRole('dialog', { name: 'Git review', exact: true });
-  await expect(review).toBeVisible();
-  const gitConsent = review.getByRole('button', { name: 'Approve read-only Git' });
-  const refresh = review.getByRole('button', { name: 'Refresh changes' });
-  await expect(gitConsent.or(refresh)).toBeVisible();
-  if (await gitConsent.isVisible()) await gitConsent.click(); else await refresh.click();
-  return review;
+  return readUncommitted(page);
 }
 
-test('a Git hunk the agent wrote exactly links to that edit; a hand change does not', async ({ page }) => {
+test('a hunk in Changes that the agent wrote exactly links to that edit; a hand change does not', async ({ page }) => {
   const review = await openReview(page);
-  const files = review.getByRole('complementary', { name: 'Git changed files' });
+  const files = review.getByRole('complementary', { name: 'Changed files' });
   await files.getByRole('button', { name: /manual\.ts/ }).click();
-  await expect(review.locator('.git-patch')).toContainText('changed by hand');
+  await expect(review.locator('.compare-patch')).toContainText('changed by hand');
   await expect(review.locator('.hunk-recorded')).toHaveCount(0);
   await files.getByRole('button', { name: /total\.ts/ }).click();
-  await expect(review.locator('.git-patch')).toContainText('cart.items.reduce');
+  await expect(review.locator('.compare-patch')).toContainText('cart.items.reduce');
   const recorded = review.locator('.hunk-recorded');
   await expect(recorded).toHaveCount(1);
   await expect(recorded).toHaveText('Agent work');
@@ -83,10 +76,10 @@ test('a Git hunk the agent wrote exactly links to that edit; a hand change does 
   await expect(work).toContainText('Patch');
 });
 
-test('several edits wrote a hunk: Agent work is a keyboard menu, newest first, inside a phone viewport', async ({ page }) => {
+test('several edits wrote a hunk: Agent work is a keyboard menu, newest first, inside the narrowest supported window', async ({ page }) => {
   const review = await openReview(page);
-  await review.getByRole('complementary', { name: 'Git changed files' }).getByRole('button', { name: /twice\.ts/ }).click();
-  await expect(review.locator('.git-patch')).toContainText('values.map');
+  await review.getByRole('complementary', { name: 'Changed files' }).getByRole('button', { name: /twice\.ts/ }).click();
+  await expect(review.locator('.compare-patch')).toContainText('values.map');
   const trigger = review.locator('.recorded-work-menu > summary');
   await expect(trigger).toHaveText('Agent work · 2 edits');
   const items = review.locator('.recorded-work-menu .desk-options-body button');
@@ -112,16 +105,16 @@ test('several edits wrote a hunk: Agent work is a keyboard menu, newest first, i
   await expect(review).toBeVisible();
   await page.keyboard.press('Space');
   await expect(items.first()).toBeVisible();
-  await review.getByRole('heading').first().click({ force: true });
+  await review.locator('.compare-header > strong').click({ force: true });
   await expect(items.first()).toBeHidden();
-  // 390 px: the opened list stays inside the viewport.
-  await page.setViewportSize({ width: 390, height: 844 });
+  // 600 px (the narrowest supported window): the opened list stays inside the viewport.
+  await page.setViewportSize({ width: 600, height: 844 });
   await trigger.scrollIntoViewIfNeeded(); await trigger.click();
   await expect(items.first()).toBeVisible();
   for (const box of [await review.locator('.recorded-work-menu .desk-options-body').boundingBox(), await trigger.boundingBox()]) {
-    expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(390);
+    expect(box!.x).toBeGreaterThanOrEqual(0); expect(box!.x + box!.width).toBeLessThanOrEqual(600);
   }
-  await page.screenshot({ path: resolve('.local/git-hunk-recorded-menu-390.png') });
+  await page.screenshot({ path: resolve('.local/git-hunk-recorded-menu-600.png') });
   await page.setViewportSize({ width: 1440, height: 900 });
   // Choosing the older edit opens that edit's captured patch, not the latest.
   await items.nth(1).focus(); await page.keyboard.press('Enter');

@@ -7,7 +7,7 @@ import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 import {openSessionReview} from './session-review.ts';
 
-// GIT-8: Compare replaces the header's Changes. A real repository with `main` and `topic`: one file both sides changed, one only
+// GIT-8 (named Changes by GIT-9): Changes replaces the header's old Changes view. A real repository with `main` and `topic`: one file both sides changed, one only
 // topic changed (and the session edited), one only main changed. Compare is read-only, so every ref is checked before and after.
 const git=(root:string,...args:string[])=>execFileSync('git',args,{cwd:root,windowsHide:true,encoding:'utf8',stdio:['pipe','pipe','pipe']}).trim();
 const remove=(dir:string)=>{if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe scratch directory');rmSync(dir,{recursive:true,force:true});};
@@ -37,8 +37,8 @@ async function openCompare(page:Page,width:number){
   await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await expect(page.locator('.history')).toBeVisible();
-  await page.locator('.modern-session-header').getByRole('button',{name:'Compare',exact:true}).click();
-  const compare=page.getByRole('region',{name:'Compare',exact:true});await expect(compare).toBeVisible();
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  const compare=page.getByRole('region',{name:'Changes',exact:true});await expect(compare).toBeVisible();
   const approve=compare.getByRole('button',{name:'Approve read-only Git',exact:true});
   await expect(approve.or(compare.locator('.compare-body'))).toBeVisible();if(await approve.isVisible())await approve.click();
   await expect(compare.locator('.compare-body')).toBeVisible();
@@ -48,8 +48,9 @@ async function openCompare(page:Page,width:number){
 for(const width of [1440,600])test(`chooses two sides, shows the three file groups and opens a file at ${width}px`,async({page})=>{
   const before=state(root);
   const compare=await openCompare(page,width);
-  // The header carries Compare, not Changes.
-  await expect(page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true})).toHaveCount(0);
+  // The header carries Changes and the Git icon; no Compare and no Git review anywhere.
+  await expect(page.locator('.modern-session-header').getByRole('button',{name:'Compare',exact:true})).toHaveCount(0);
+  await expect(page.getByText('Git review')).toHaveCount(0);
   // This session: the branch the journal recorded against the default branch, with the files the session edited.
   await expect(compare.locator('.compare-counts')).toContainText('1 ahead');await expect(compare.locator('.compare-counts')).toContainText('1 behind');
   await expect(compare.locator('.compare-sides')).toContainText('topic');
@@ -83,14 +84,14 @@ for(const width of [1440,600])test(`chooses two sides, shows the three file grou
   await expect(files.getByRole('group',{name:'Only on topic'}).locator('.compare-evidence')).toContainText('1 edit');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await files.getByRole('group',{name:'Only on topic'}).locator('.compare-evidence .compare-link').click();
-  await expect(page.getByRole('region',{name:'Compare',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'Changes',exact:true})).toHaveCount(0);
 
   // Reading place: reopening shows the same sides and file, and nothing in the repository moved.
-  await page.locator('.modern-session-header').getByRole('button',{name:'Compare',exact:true}).click();
-  await expect(page.getByRole('region',{name:'Compare',exact:true}).getByRole('button',{name:'Branch',exact:true})).toHaveAttribute('aria-pressed','true');
-  await expect(page.getByRole('region',{name:'Compare',exact:true}).locator('.compare-file[data-active]')).toContainText('shared.ts');
-  await page.getByRole('region',{name:'Compare',exact:true}).getByRole('button',{name:'Back to agent',exact:true}).click();
-  await expect(page.getByRole('region',{name:'Compare',exact:true})).toHaveCount(0);
+  await page.locator('.modern-session-header').getByRole('button',{name:'Changes',exact:true}).click();
+  await expect(page.getByRole('region',{name:'Changes',exact:true}).getByRole('button',{name:'Branch',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(page.getByRole('region',{name:'Changes',exact:true}).locator('.compare-file[data-active]')).toContainText('shared.ts');
+  await page.getByRole('region',{name:'Changes',exact:true}).getByRole('button',{name:'Back to agent',exact:true}).click();
+  await expect(page.getByRole('region',{name:'Changes',exact:true})).toHaveCount(0);
   await expect(page.locator('.history')).toBeVisible();
   expect(state(root)).toBe(before);
 });
@@ -104,7 +105,7 @@ test('uncommitted changes read the working tree and the old Changes view stays r
   await expect(compare.locator('.compare-patch')).toContainText('uncommitted');
   await compare.getByRole('button',{name:'Back to agent',exact:true}).click();
   await openSessionReview(page);
-  await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toBeVisible();
+  await expect(page.getByRole('dialog',{name:'Session review',exact:true})).toBeVisible();
   git(root,'checkout','--','c.ts');
 });
 

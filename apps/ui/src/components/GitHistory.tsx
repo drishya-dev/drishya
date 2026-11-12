@@ -32,13 +32,14 @@ function enqueueGitRead<T>(id:string,read:()=>Promise<T>):Promise<T> {
 }
 export function GitHistory() {
   const checkoutId=useApp(s=>s.checkoutId);
-  const [open,setOpen]=useState(false),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode);
+  const [open,setOpen]=useState(false),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),changesOpen=useApp(s=>s.compareOpen);
   useEffect(()=>{
-    const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;state.set({developerWorkspace:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});setOpen(true);};
-    const close=()=>setOpen(false);
-    window.addEventListener('drishya-git-history',show);window.addEventListener('drishya-git-review',close);return()=>{window.removeEventListener('drishya-git-history',show);window.removeEventListener('drishya-git-review',close);};
+    const show=()=>{const state=useApp.getState();if(state.source?.kind!=='daemon'||!state.recordingId||state.recordingId.includes('+')||state.mode!=='history')return;state.set({developerWorkspace:false,compareOpen:false,currentFile:undefined,filePanel:undefined,selectedOp:undefined,follow:false,held:true});setOpen(true);};
+    window.addEventListener('drishya-git-history',show);return()=>window.removeEventListener('drishya-git-history',show);
   },[]);
   useEffect(()=>setOpen(false),[id,source,mode]);
+  // Changes and Git graph are two windows over the same place; opening one puts the other away.
+  useEffect(()=>{if(changesOpen)setOpen(false);},[changesOpen]);
   return open&&id?<GitHistoryReader key={`${id}:${checkoutId??"main"}`} id={id} close={()=>{setOpen(false);requestAnimationFrame(()=>document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({preventScroll:true}));}}/>:null;
 }
 

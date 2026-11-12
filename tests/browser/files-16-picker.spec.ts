@@ -1,6 +1,6 @@
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,realpathSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';import {execFileSync} from 'node:child_process';
-import {test,expect} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';import {openGitDestination} from './git-navigation.ts';
+import {test,expect} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';import {openChanges} from './git-navigation.ts';
 let dir:string,main:string,worker:string,app:App,server:RunningServer;const ids:Record<string,string>={};
 const git=(root:string,...args:string[])=>execFileSync('git',args,{cwd:root,encoding:'utf8',windowsHide:true});
 test.beforeAll(async()=>{
@@ -45,8 +45,8 @@ for(const harness of ['claude-code','codex'])for(const width of [600,1440])test(
  await expect(captured).toContainText('captured = true');await captured.getByLabel('File actions',{exact:true}).click();
  await captured.getByRole('button',{name:'Read file on disk',exact:true}).click();
  await expect(page.locator('.current-file-reader')).toContainText('checkout = "worker"');
- await openGitDestination(page,'Git review');const review=page.getByRole('dialog',{name:'Git review',exact:true});const gitStatus=await (await page.request.get(`${server.url}/v1/recordings/${encodeURIComponent(chosen.id)}/git`)).json();
- if(!gitStatus.approved)await review.getByRole('button',{name:'Approve read-only Git',exact:true}).click();
+ const review=await openChanges(page,'Uncommitted');const gitStatus=await (await page.request.get(`${server.url}/v1/recordings/${encodeURIComponent(chosen.id)}/git`)).json();
+ if(!gitStatus.approved)await review.getByRole('button',{name:'Approve read-only Git',exact:true}).click();await expect(review.locator('.compare-body')).toBeVisible();
  await expect(review).toContainText('feature/worker');await expect(review).toContainText('worker-only.ts');await page.keyboard.press('Escape');
  if(await show.getAttribute('aria-pressed')!=='true')await show.click();await files.getByLabel('Choose browsing checkout',{exact:true}).click();await choices.getByRole('button',{name:'Session checkout',exact:true}).click();await expect(page.locator('.current-file-reader')).toContainText('checkout = "main"');
  if(await show.getAttribute('aria-pressed')!=='true')await show.click();await expect(query).toHaveValue('shared');

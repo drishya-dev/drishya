@@ -64,7 +64,7 @@ async function load(target: LinkTarget, recording: string | undefined, local: bo
       ? { heading: `Commit · ${short}`, title: ref.subject, facts: [ref.author ?? '', date(ref.date) ?? ''].filter(Boolean), stat: stat(ref.additions, ref.deletions, ref.files) }
       : { heading: `Branch · ${ref.name}`, title: ref.subject, facts: [`Tip ${short}`, ref.author ?? '', date(ref.date) ?? ''].filter(Boolean) };
   } catch (error) {
-    if (/approve/i.test(String((error as Error).message))) return { heading: target.kind === 'commit' ? `Commit · ${target.value.slice(0, 10)}` : `Branch · ${target.value}`, note: 'Approve read-only Git inspection in Git review to see this here.' };
+    if (/approve/i.test(String((error as Error).message))) return { heading: target.kind === 'commit' ? `Commit · ${target.value.slice(0, 10)}` : `Branch · ${target.value}`, note: 'Approve read-only Git inspection in Changes to see this here.' };
     return null;
   }
 }

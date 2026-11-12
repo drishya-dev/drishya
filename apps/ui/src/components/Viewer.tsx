@@ -47,7 +47,7 @@ import { TurnsWatcher } from './TurnsWatcher.tsx';
 import { ContextReportWatcher } from './ContextReportWatcher.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
 import { CompareButton, CompareWindow } from './CompareWindow.tsx';
-import { GitReviewEntry } from './GitReview.tsx';
+import { GitEntry } from './GitEntry.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
 import { ago } from '../lib/git-commit-rows.ts';
@@ -377,7 +377,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
           );
         })}
       </div>}
-      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><GitReviewEntry /><UsagePeek />
+      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><GitEntry /><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true })}>Settings</button>
         <button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>

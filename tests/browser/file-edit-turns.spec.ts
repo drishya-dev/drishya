@@ -33,7 +33,7 @@ test('the Changes view lists each edit with its turn, +/- and next test run, and
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
  await expect(page.locator('article.op-edit').first()).toBeVisible();
  await openSessionReview(page);
- const dialog=page.getByRole('dialog',{name:'Changes',exact:true});
+ const dialog=page.getByRole('dialog',{name:'Session review',exact:true});
  await dialog.locator('.review-file-more>summary').first().click();
  const edits=dialog.getByRole('list',{name:'Edits of this file'}).getByRole('listitem');
  await expect(edits).toHaveCount(3);

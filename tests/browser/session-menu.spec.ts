@@ -28,7 +28,7 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const) for (const har
     for (const heading of ['This session', 'Move around', 'Share']) await expect(list.getByText(heading, { exact: true })).toBeVisible();
     // Nothing the header already offers: Changes lives in the header only.
     await expect(list.getByRole('button', { name: 'Changes', exact: true })).toHaveCount(0);
-    await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Compare', exact: true })).toBeVisible();
+    await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeVisible();
     await expect(list.getByRole('button', { name:'Notes', exact:true })).toBeVisible();
     await expect(list.getByRole('button', { name:'Replay this session', exact:true })).toHaveCount(0);
     await expect(list.getByText('Session details', { exact: true })).toBeVisible();

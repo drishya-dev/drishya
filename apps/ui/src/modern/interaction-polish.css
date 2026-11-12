@@ -46,7 +46,7 @@
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.modern-attachment,.composer-minimize,.toolbox-collapse,.desk-tab>button){transition:transform 130ms var(--ease-out),background-color 130ms var(--ease-out);}
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.modern-attachment,.composer-minimize,.toolbox-collapse,.desk-tab>button):active:not(:disabled){transform:translateY(1px);}
 }
-:root[data-ui-version=modern] .product-dialog:not(.settings-dialog):not(.git-review-dialog)>header .icon-btn {
+:root[data-ui-version=modern] .product-dialog:not(.settings-dialog)>header .icon-btn {
   display:grid;place-items:center;min-width:32px;min-height:32px;padding:6px;flex:none;
 }
 @media(hover:hover) and (pointer:fine) {

@@ -63,7 +63,7 @@
 :root[data-ui-version=modern] .modern-session-header .studio-actions svg {fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
 /* The Changes entry is a word, not an icon: it keeps the label's width instead of spilling out of a 34 px square. */
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.review-open {width:auto;min-width:34px;padding:0 9px;}
-/* UI-1: Workspace, Git review and Git graph join the one navigation cluster as icons; their names stay in aria-label and title. */
+/* UI-1: Workspace and Git graph join the one navigation cluster as icons; their names stay in aria-label and title. */
 :root[data-ui-version=modern] .modern-session-header .workspace-view-slot>:is(.git-open,.workspace-open) {font-size:0;gap:0;}
 /* UI-11: their hidden label is a text node; in the grid it became a second row and lifted the icon 4 px above its neighbours. A flex box centres the glyph alone. */
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.workspace-view-slot>:is(.git-open,.workspace-open) {display:flex;align-items:center;justify-content:center;}
@@ -95,11 +95,6 @@
 .session-line-branch[data-reading] {flex:0 0 var(--branch-reading-width);max-width:none;}
 .session-line-branch[data-reading] .session-branch-name {position:absolute;left:0;top:calc(100% + 6px);z-index:1;width:max-content;max-width:min(640px,calc(100vw - var(--branch-reading-left) - 12px));white-space:pre-wrap;overflow-wrap:anywhere;background:var(--s1);color:var(--t1);border:1px solid var(--line);border-radius:var(--round-sm);padding:6px 8px;}
 @media(max-width:700px) {.session-line-meta {display:flex;}.session-line-harness {display:none;}.session-line-branch {max-width:60%;}}
-:root[data-ui-version=modern] .git-entry-choices {position:fixed;inset:auto;margin:0;width:224px;max-width:calc(100vw - 16px);padding:4px;border:1px solid var(--line);border-radius:var(--round-md);background:var(--s1);color:var(--t1);box-shadow:0 8px 24px #0003;}
-.git-entry-choices:popover-open {display:grid;gap:2px;}
-.git-entry-choices>button {display:grid;gap:2px;justify-items:start;padding:9px 10px;min-height:48px;border:0;border-radius:var(--round-sm);background:none;color:var(--t1);text-align:left;font:var(--text-xs)/1.4 var(--sans);cursor:pointer;}
-.git-entry-choices>button:is(:hover,:focus-visible) {background:var(--s3);}
-.git-entry-choices>button>strong {font-weight:var(--weight-medium);}.git-entry-choices>button>small {color:var(--t3);font-size:var(--text-2xs);}
 /* UI-8 (Yash, 3 Nov). A minimised Toolbox waits at the middle of its edge, and the stage, with its prompt rail, widens into the room it gave back. */
 @media (min-width: 821px) {
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-toolbox-minimized] { --stage-rail: 76px; }
