@@ -18,6 +18,7 @@ const SITE = {
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 const reduced = document.documentElement.dataset.motion === 'reduced';
+const revealSite = () => { document.documentElement.dataset.appReady = 'true'; };
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
 const $$ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
 type Op = (typeof sample.operations)[number];
@@ -298,6 +299,7 @@ if (reduced) {
   $$('.screen').forEach(el => (el.style.display = 'none'));
   frameEl.src = new URL('demo.html', location.href).pathname;
   $$('.tour-steps li').forEach(li => li.classList.add('on'));
+  revealSite();
 } else {
   animate();
 }
@@ -309,7 +311,7 @@ function animate() {
   gsap.ticker.lagSmoothing(0);
   for (const a of $$<HTMLAnchorElement>('a[href^="#"]')) a.addEventListener('click', e => { const id = a.getAttribute('href')!; if (id.length > 1) { e.preventDefault(); lenis.scrollTo(id === '#top' ? 0 : id, { offset: 0, duration: 1.4 }); } });
 
-  document.fonts.ready.then(() => { intro(); scrollScenes(); ScrollTrigger.refresh(); });
+  document.fonts.ready.then(() => { intro(); scrollScenes(); ScrollTrigger.refresh(); revealSite(); });
 
   function intro() {
     const ribbons = $$('.hero-mark .ribbon');
