@@ -109,7 +109,6 @@
 .history .material-external { border-left: 1px solid color-mix(in srgb,var(--line-2) 35%,transparent); }
 .history .passage.settled .ops-row { position: relative; }
 .history .passage.settled .ops-row::before { content: ''; position: absolute; left: 0; right: 12px; top: -4px; border-top: 1px solid var(--line); pointer-events: none; }
-.viewer :focus-visible { outline: 1px solid var(--focus); outline-offset: 3px; }
 @container passage (min-width: 880px) {
   .diff-auto .split-change { display: block; }
   .diff-auto .unified-change { display: none; }

@@ -13,7 +13,6 @@
   background:linear-gradient(110deg,transparent 35%,color-mix(in srgb,var(--t1) 15%,transparent) 50%,transparent 65%);
   transform:translateX(-110%);
 }
-.home-github-star:focus-visible { outline:2px solid var(--focus); outline-offset:3px; }
 @media (hover:hover) and (pointer:fine) {
   .home-github-star:hover { color:var(--t1); border-color:var(--t3); box-shadow:0 0 0 2px var(--bg),0 0 0 3px var(--line); }
   .home-github-star:hover svg { color:var(--modern-accent,var(--t1)); fill:color-mix(in srgb,currentColor 20%,transparent); }

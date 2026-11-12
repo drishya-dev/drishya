@@ -2,7 +2,7 @@
 .library-search-body {display:flex;flex-direction:column;gap:12px;min-height:0;padding:18px;max-height:calc(90dvh - 76px);box-sizing:border-box;}
 .library-search input,.library-search select {min-width:0;max-width:100%;font:inherit;color:var(--t1);background:var(--s1);border:1px solid var(--line);border-radius:var(--round-md);padding:10px;}
 .library-search input[type=search] {width:100%;}
-.product-dialog.library-search :is(input,select):focus-visible {outline:1px solid var(--t2);outline-offset:2px;box-shadow:none;border-color:var(--line-3);}
+.product-dialog.library-search :is(input,select):focus-visible {box-shadow:none;border-color:var(--line-3);}
 .library-search-filters summary {cursor:pointer;color:var(--t2);font-size:var(--text-xs);}
 .library-search-filters>div {display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;padding-top:12px;}
 .library-search-filters label {display:flex;flex-direction:column;gap:6px;min-width:0;font-size:var(--text-2xs);color:var(--t2);}

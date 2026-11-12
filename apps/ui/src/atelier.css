@@ -47,7 +47,6 @@ body { font-size: var(--text-md); letter-spacing: -.01em; }
 :root .btn.primary { background: var(--focus); border-color: transparent; color: var(--bg); font-weight: var(--weight-medium); }
 :root .btn.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--focus) 86%, var(--t1)); }
 :root .btn.ghost { background: transparent; }
-:root :is(button, summary, input, select, textarea):focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
 :root .brand { font-weight: var(--weight-medium); letter-spacing: -.025em; } :root:where(:not([data-ui-skin=clarity])) .brand-image { width: 25px !important; height: 25px !important; }
 :root .brand-image img { width: 100%; height: 100%; object-fit: contain; }
 
@@ -73,7 +72,7 @@ body { font-size: var(--text-md); letter-spacing: -.01em; }
 .home .home-filters { display: grid; grid-template-columns: minmax(0, 1fr) 180px 150px; gap: 12px; margin: 22px 0 32px; max-width: none; }
 .home-search { min-width: 0; display: flex; align-items: center; gap: 10px; padding: 0 13px; border: 1px solid var(--line-2); border-radius: var(--round-md); background: var(--s1); color: var(--t3); }
 .home .home-search .filter { width: 100%; min-width: 0; height: 42px; border: 0; border-radius: 0; padding: 0; background: transparent; color: var(--t1); font-size: var(--text-md); }
-.home-search:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+.home-search:focus-within { outline: 1px solid var(--focus-ring); outline-offset: 1px; }
 .home .home-search .filter:focus-visible { outline: none; }
 .home .home-filters select { height: 44px; padding: 0 12px; background: var(--s1); border-color: var(--line-2); font-size: var(--text-sm); color: var(--t2); }
 .home .home-grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 38px; max-width: none; }

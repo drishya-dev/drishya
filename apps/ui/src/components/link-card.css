@@ -1,7 +1,7 @@
 /* LINK-1 hover card. Existing surface and text tokens only; one quiet fade, off for reduced motion and low resource. */
 .link-card-anchor { display: inline; }
 .link-card-anchor[data-link-kind="commit"], .link-card-anchor[data-link-kind="branch"] { border-radius: var(--round-sm, 4px); }
-.link-card-anchor[data-link-kind="commit"]:focus-visible, .link-card-anchor[data-link-kind="branch"]:focus-visible { outline: 1px solid var(--focus); outline-offset: 1px; }
+:root:not([data-input-modality="pointer"]) .link-card-anchor[data-link-kind="commit"]:focus-visible, :root:not([data-input-modality="pointer"]) .link-card-anchor[data-link-kind="branch"]:focus-visible { outline: 1px solid var(--focus-ring); outline-offset: 1px; }
 a.md-link.md-url { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; text-decoration-color: var(--line-2); cursor: pointer; overflow-wrap: anywhere; }
 a.md-link.md-url:hover, a.md-link.md-url:focus-visible { text-decoration-color: currentColor; }
 

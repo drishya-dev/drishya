@@ -11,7 +11,7 @@
 .commit-row time {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);text-align:right;white-space:nowrap;}
 .commit-row[data-hover] {background:var(--s2);}
 .commit-row[aria-pressed=true] {background:var(--s3);box-shadow:inset 2px 0 var(--source);}
-.commit-row:focus-visible {outline:1px solid var(--t3);outline-offset:-2px;}
+:root:not([data-input-modality="pointer"]) .commit-row:focus-visible {outline:1px solid var(--focus-ring);outline-offset:-2px;}
 @media(hover:hover) and (pointer:fine){.commit-row:hover {background:var(--s2);}}
 @media(prefers-reduced-motion:reduce){.commit-row {transition:none;}}
 @media(max-width:1000px){.commit-row {grid-template-columns:54px minmax(0,1fr) auto auto 74px;}.commit-row-author {display:none;}}

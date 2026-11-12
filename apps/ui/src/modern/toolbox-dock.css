@@ -5,7 +5,7 @@
     max(58px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px))) 18px;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: flex-end;
   pointer-events: none;
   z-index: 9;
@@ -19,6 +19,8 @@
   height: auto;
   min-height: 0;
   max-height: 100%;
+  margin-top: var(--toolbox-center-top, auto);
+  margin-bottom: auto;
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -48,6 +50,15 @@
   min-width: 0;
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+@media (min-width: 1020px) {
+  :root[data-ui-version=modern][data-experience=classic] .toolbox-rail {
+    bottom: 58px;
+  }
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:has(.modern-replay-transport) .toolbox-rail {
+    bottom: 96px;
+  }
 }
 
 @media (max-width: 820px) {

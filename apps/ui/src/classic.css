@@ -231,7 +231,6 @@
 .navigation-command-icon { color: var(--t2); width: 20px; flex-shrink: 0; }
 .workspace-navigation-open { display: flex; justify-content: space-between; gap: 8px; width: 100%; font-size: var(--text-2xs); }
 .workspace-navigation-open kbd { color: var(--t3); font: var(--text-2xs) var(--mono); }
-.product-dialog :is(input, textarea, select):focus-visible, .home :is(input, select):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }
 
 /* Integrated reading: one viewport owns both axes, not a scrollbar under 120 lines. */
 .source-find { gap: 6px; align-items: center; }
@@ -244,8 +243,6 @@
 :is(.product-dialog,.history .op.expanded) .source-reading > .code,
 .current-file-code.source-reading { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
 .current-file-code.source-reading > .code { max-height: none; overflow: visible; }
-.source-reading > .code:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }
-.git-raw-scroll:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }
 /* Input focus belongs to the whole material; avoid a second frame inside it. */
 .connected-workspace .prompt-composer:focus-within { border-color: var(--line-3); }
 .connected-workspace .prompt-composer textarea { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
@@ -270,8 +267,6 @@
 .product-dialog .btn[aria-pressed=true] { background: var(--s3); color: var(--t1); border-color: transparent; }
 .product-dialog :is(input:not([type=checkbox]),textarea,select) { font-family: var(--sans); color: var(--t1); background-color: var(--bg); border: 1px solid var(--line); border-radius: var(--control-radius); }
 .product-dialog textarea { line-height: 1.6; }
-.product-dialog :is(input,textarea,select):focus-visible { outline: 1px solid var(--line-3); outline-offset: 1px; }
-:root[data-ui-press] .product-dialog :is(button,input,textarea,select):focus-visible { outline: none; }
 .product-dialog .source-find { align-items: center; gap: 4px; }
 .product-dialog .source-find input { height: 32px; padding: 6px 10px; font-size: var(--text-xs); }
 .product-dialog .source-find [role=status] { padding-inline: 6px; }
