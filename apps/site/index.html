@@ -42,31 +42,53 @@
     </div>
   </header>
 
-  <div class="backdrop" aria-hidden="true"><canvas class="dotted-glow" data-dotted-glow></canvas><canvas class="hero-map" data-map="hero"></canvas></div>
+  <div class="backdrop" data-backdrop-context="hero" aria-hidden="true"><canvas class="dotted-glow" data-dotted-glow></canvas><canvas class="hero-map" data-map="hero"></canvas></div>
+  <nav class="chapter-rail" data-chapter-rail aria-label="Page chapters">
+    <a data-chapter-link="why" href="#why"><span class="chapter-dot"></span><span>Why</span></a>
+    <a data-chapter-link="tour" href="#tour"><span class="chapter-dot"></span><span>Tour</span></a>
+    <a data-chapter-link="features" href="#features"><span class="chapter-dot"></span><span>Features</span></a>
+    <a data-chapter-link="compare" href="#compare"><span class="chapter-dot"></span><span>Compare</span></a>
+    <a data-chapter-link="install" href="#install"><span class="chapter-dot"></span><span>Install</span></a>
+    <a data-chapter-link="privacy" href="#privacy"><span class="chapter-dot"></span><span>Privacy</span></a>
+    <a data-chapter-link="open-source" href="#open-source"><span class="chapter-dot"></span><span>Open source</span></a>
+  </nav>
   <main>
-    <section id="top" class="hero" aria-hidden="true">
+    <section id="top" class="hero" data-chapter="top" aria-labelledby="hero-title">
       <div class="wrap hero-inner">
         <div class="hero-mark" data-logo="hero" aria-hidden="true"></div>
         <p class="wordmark" aria-hidden="true">drishya<span lang="hi">दृश्य</span></p>
+        <h1 id="hero-title">See the work behind the change.</h1>
+        <p class="hero-lead">Drishya replays what your coding agent read, ran, changed and learned—on a map of your repository.</p>
+        <div class="hero-actions">
+          <a class="button primary button--snail" href="#tour">See the replay</a>
+          <a class="button ghost button--snail" href="#install">Install Drishya</a>
+        </div>
+        <p class="hero-facts">Local · open source · no telemetry</p>
       </div>
     </section>
 
-    <section id="why" class="why" aria-labelledby="why-title">
+    <section id="why" class="why" data-chapter="why" aria-labelledby="why-title">
       <div class="why-pin">
         <div class="wrap why-grid">
           <div>
-          <h2 id="why-title" class="eyebrow-title">Why a replay of agent work</h2>
-          <p class="why-text" data-words>You give an agent a task and look away. It reads forty files, runs the tests, sees one fail and edits three of them. Then it writes a summary. The work that led there scrolled past in a terminal, or never showed at all.</p>
-          <p class="why-answer" data-words>Drishya keeps that work and shows it to you while it happens, so you understand the change and the codebase, not only the summary.</p>
+          <h2 id="why-title" data-split>When the terminal scrolls away, the evidence shouldn't.</h2>
+          <p class="why-text" data-words>An agent's summary is the last frame. Drishya keeps the reads, output and edits that made it true.</p>
+          <p class="why-answer" data-words>Follow the work while it happens, then replay any step when you need to understand the change.</p>
+          <div class="why-beats" aria-label="What Drishya keeps">
+            <div><strong>Read</strong><span>Files and context</span></div>
+            <div><strong>Run</strong><span>Output and failures</span></div>
+            <div><strong>Change</strong><span>Diffs and outcomes</span></div>
+          </div>
           </div>
           <div class="why-stream" aria-hidden="true"><div class="why-lines" data-why-lines></div></div>
         </div>
       </div>
     </section>
 
-    <section id="tour" class="tour" aria-labelledby="tour-title">
+    <section id="tour" class="tour" data-chapter="tour" aria-labelledby="tour-title">
       <h2 id="tour-title" class="sr-only">How Drishya shows an agent session</h2>
       <div class="tour-pin">
+        <div class="tour-progress" data-tour-progress aria-label="Replay progress"><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <div class="wrap tour-grid">
           <ol class="tour-steps" data-tour-steps>
             <li><span class="step-tag">Claude Code · CLI</span><h3>In the CLI, each action is one line</h3><p>The source it read, the failing output and the diff scroll past and are gone.</p></li>
@@ -85,28 +107,34 @@
       </div>
     </section>
 
-    <section id="features" class="features" aria-label="Features">
+    <section id="features" class="features" data-chapter="features" aria-labelledby="features-title">
       <div class="features-pin">
+        <div class="wrap feature-heading">
+          <h2 id="features-title">Five ways to stay with the work.</h2>
+          <p>One replay, viewed through the parts of a repository that matter when an agent is moving fast.</p>
+          <div class="feature-lenses" aria-hidden="true"><span>Repository</span><span>Workspace</span><span>Git</span><span>Tools</span><span>Control</span></div>
+        </div>
         <div class="wrap features-grid">
           <ol class="feat-steps">
-            <li><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>Open files from your tree into a reader beside the session, one tab each, while the agent's work stays in view. Files the agent added or edited are marked.</p></li>
-            <li><span class="step-tag">File history</span><h3>Every action on a file, and each earlier edit</h3><p>Every read and edit the agent made to a file. Choose an earlier edit to read exactly that change, and the test runs that followed it.</p></li>
+            <li><span class="step-tag">Repository</span><h3>Your files beside the agent's work</h3><p>Open files from your tree into a reader beside the session, one tab each, while the agent's work stays in view. Files the agent added or edited are marked.</p></li>
+            <li><span class="step-tag">Repository</span><h3>Every action on a file, and each earlier edit</h3><p>Every read and edit the agent made to a file. Choose an earlier edit to read exactly that change, and the test runs that followed it.</p></li>
             <li><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Open any file in Workspace with your tree and tabs, and edit it a step away from the agent's work.</p></li>
-            <li><span class="step-tag">Changes</span><h3>This session, a branch, or a pull request</h3><p>What this session changed, any branch against main, or an open pull request, each chosen from a list. Every file names the agent that edited it.</p></li>
-            <li><span class="step-tag">Git graph</span><h3>Every branch, and where the agents' work landed</h3><p>Every local branch and commit as a graph, read-only, beside the session. Choose one branch to read only its own commits.</p></li>
-            <li><span class="step-tag">Toolbox</span><h3>Step through every use of one tool</h3><p>Pick a tool and step through each time it was used. The rest of the session dims around it.</p></li>
-            <li><span class="step-tag">Prompts</span><h3>Every prompt, and what it led to</h3><p>The prompt rail keeps each prompt. Hover one to see what it asked, how many actions followed and what failed, then jump there.</p></li>
-            <li><span class="step-tag">Composer</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
+            <li><span class="step-tag">Git</span><h3>This session, a branch, or a pull request</h3><p>What this session changed, any branch against main, or an open pull request, each chosen from a list. Every file names the agent that edited it.</p></li>
+            <li><span class="step-tag">Git</span><h3>Every branch, and where the agents' work landed</h3><p>Every local branch and commit as a graph, read-only, beside the session. Choose one branch to read only its own commits.</p></li>
+            <li><span class="step-tag">Tools</span><h3>Step through every use of one tool</h3><p>Pick a tool and step through each time it was used. The rest of the session dims around it.</p></li>
+            <li><span class="step-tag">Control</span><h3>Every prompt, and what it led to</h3><p>The prompt rail keeps each prompt. Hover one to see what it asked, how many actions followed and what failed, then jump there.</p></li>
+            <li><span class="step-tag">Control</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
           </ol>
           <div class="feat-stage"><div class="feat-window" data-feat-window><div class="feat-camera" data-feat-camera></div><div class="feat-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div><span class="feat-ripple"></span></div></div>
         </div>
       </div>
     </section>
 
-    <section id="compare" class="compare" aria-labelledby="compare-title">
+    <section id="compare" class="compare" data-chapter="compare" aria-labelledby="compare-title">
       <div class="wrap">
         <h2 id="compare-title" data-split>Working with an agent, with and without Drishya</h2>
         <p class="section-lead">Drishya does not replace your agent. It reads the session the agent already records and shows it in full.</p>
+        <p class="compare-hint">Select a row to open the captured evidence behind the claim.</p>
         <table class="compare-table">
           <thead><tr><th></th><th>Without Drishya</th><th>With Drishya</th></tr></thead>
           <tbody>
@@ -121,13 +149,13 @@
         </table>
       <div id="compare-proof" class="compare-proof" data-compare-proof aria-live="polite" aria-hidden="true">
         <button class="compare-proof-expand" type="button" data-proof-expand aria-controls="compare-proof-body" aria-expanded="false" aria-label="Expand evidence" tabindex="-1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M3 3l6 6M16 3h5v5M21 3l-6 6M8 21H3v-5M3 21l6-6M16 21h5v-5M21 21l-6-6" /></svg></button>
-        <div class="compare-proof-head"><div><span class="compare-proof-kicker">Captured evidence</span><h3 data-proof-title></h3></div><span class="compare-proof-source" data-proof-source></span></div>
+        <div class="compare-proof-head"><div><span class="compare-proof-kicker" data-proof-state>Selected evidence</span><h3 data-proof-title></h3></div><span class="compare-proof-source" data-proof-source></span></div>
         <pre id="compare-proof-body" class="compare-proof-body" data-proof-body></pre>
         </div>
       </div>
     </section>
 
-    <section id="install" class="install" aria-labelledby="install-title">
+    <section id="install" class="install" data-chapter="install" aria-labelledby="install-title">
       <div class="wrap install-grid">
         <div>
           <h2 id="install-title" data-split>Run it with one command</h2>
@@ -137,6 +165,7 @@
             <li><strong>Pick a session.</strong> Running sessions show as live; finished ones replay.</li>
             <li><strong>Read the work.</strong> Open any file, output or diff the agent touched.</li>
           </ol>
+          <p class="install-result"><span class="status-dot" aria-hidden="true"></span><strong>What opens next</strong> A local browser view of the sessions already on your machine.</p>
         </div>
         <div class="terminal" aria-label="Terminal">
           <div class="frame-bar"><span class="dot-row" aria-hidden="true"><i></i><i></i><i></i></span><span class="frame-title">Terminal</span></div>
@@ -146,28 +175,32 @@
 <span class="muted"># or install it, then run it any time</span>
 <span class="prompt">$</span> npm install -g drishya
 <span class="prompt">$</span> drishya</pre>
-          <button class="button primary button--snail" type="button" data-copy>Copy the install command</button>
+          <div class="copy-row"><button class="button primary button--snail" type="button" data-copy>Copy the install command</button><span class="copy-status" data-copy-status aria-live="polite"></span></div>
         </div>
       </div>
     </section>
 
-    <section id="privacy" class="privacy" aria-labelledby="privacy-title">
+    <section id="privacy" class="privacy" data-chapter="privacy" aria-labelledby="privacy-title">
       <div class="wrap">
         <h2 id="privacy-title" data-split>Local, private, no telemetry</h2>
-        <div class="privacy-rows">
-          <div><h3>Reads, never writes</h3><p>Agent session files are opened read-only and copied into Drishya's own store on your disk.</p></div>
-          <div><h3>Secrets removed first</h3><p>Keys and tokens are redacted before anything is saved, searched or shown.</p></div>
-          <div><h3>No telemetry at all</h3><p>Drishya sends nothing anywhere. There is no account, no cloud and nothing to opt out of.</p></div>
-          <div><h3>You decide when it acts</h3><p>Prompting an agent from Drishya is opt-in, per repository, and only sends what you submit.</p></div>
+        <p class="section-lead privacy-lead">The session stays on your machine. Drishya reads the harness, removes secrets, and gives you a replay without sending telemetry anywhere.</p>
+        <div class="privacy-pipeline" aria-label="How Drishya keeps sessions local">
+          <div class="privacy-node"><span>Harness journal</span><h3>Read</h3><p>Session files open read-only.</p></div>
+          <div class="privacy-connector" aria-hidden="true">→</div>
+          <div class="privacy-node"><span>Before storage</span><h3>Redact</h3><p>Keys and tokens are removed first.</p></div>
+          <div class="privacy-connector" aria-hidden="true">→</div>
+          <div class="privacy-node"><span>On your machine</span><h3>Keep local</h3><p>Evidence is copied into your store.</p></div>
+          <div class="privacy-connector" aria-hidden="true">→</div>
+          <div class="privacy-node"><span>In the replay</span><h3>Replay</h3><p>You decide when it acts.</p></div>
         </div>
       </div>
     </section>
 
-    <section id="open-source" class="close" aria-labelledby="close-title">
+    <section id="open-source" class="close" data-chapter="open-source" aria-labelledby="close-title">
       <div class="wrap close-inner">
         <div class="close-mark" data-logo="close" aria-hidden="true"></div>
-        <h2 id="close-title" data-split>Free and open source</h2>
-        <p class="section-lead">Apache-2.0. Built in the open for developers who work with coding agents. Works with Claude Code and Codex today.</p>
+        <h2 id="close-title" data-split>Keep the work. Understand the change.</h2>
+        <p class="section-lead">Free and open source under Apache-2.0. Built for developers who work with Claude Code and Codex.</p>
         <div class="hero-actions">
           <a class="button primary button--snail" href="#install">Install Drishya</a>
           <a class="button ghost star button--snail" data-star-link href="#"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.5 2.3 4.7 5.2.8-3.8 3.7.9 5.2L10 14.4l-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z"/></svg>Star on GitHub</a>
