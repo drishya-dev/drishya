@@ -7,7 +7,7 @@
 .queue-row { display:grid; gap:2px; width:100%; padding:7px 8px; border:0; border-radius:var(--round-sm); background:transparent; color:var(--t1); text-align:left; cursor:pointer; }
 .queue-row:hover { background:var(--s2); }
 .queue-row[aria-pressed=true] { background:var(--s2); box-shadow:inset 2px 0 var(--modern-accent,var(--t2)); }
-.queue-row:focus-visible { outline:1px solid var(--t2); outline-offset:1px; }
+:root:not([data-input-modality="pointer"]) .queue-row:focus-visible { outline:1px solid var(--focus-ring); outline-offset:1px; }
 .queue-row-text { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font:var(--text-sm)/1.5 var(--sans); }
 .queue-row>small { color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
 .queue-textless { display:block; padding:6px 8px; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }

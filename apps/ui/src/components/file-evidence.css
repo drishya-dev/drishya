@@ -22,7 +22,6 @@
 .folder-explorer .tree-evidence-filter-menu button[aria-pressed=true] { background: color-mix(in srgb, currentColor 9%, transparent); }
 .folder-explorer .tree-evidence-filter-menu small { display: block; padding: 8px 10px; color: var(--t2); line-height: 1.4; white-space: normal; }
 .folder-explorer .tree-evidence-filter-menu button:hover { background: color-mix(in srgb, currentColor 12%, transparent); }
-.folder-explorer .tree-evidence-filter summary:focus-visible, .folder-explorer .tree-evidence-filter-menu button:focus-visible { outline: 1px solid currentColor; outline-offset: 2px; }
 
 
 .folder-explorer:has(.tree-evidence-filter[open]) { overflow: visible; }

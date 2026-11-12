@@ -7,7 +7,7 @@
 .review-file-edits {list-style:none;margin:0;padding:0 0 10px 26px;border-bottom:1px solid var(--line);display:grid;gap:2px;}
 .review-file-edits li {display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;font:var(--text-2xs)/1.6 var(--mono);color:var(--t3);}
 .review-file-edits button {font:inherit;color:var(--t2);text-align:left;padding:2px 0;}
-.review-file-edits button:hover {color:var(--source);}.review-file-edits button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
+.review-file-edits button:hover {color:var(--source);}
 .review-file-edits .add {font-weight:var(--weight-regular);color:var(--pass);}.review-file-edits .del {font-weight:var(--weight-regular);color:var(--fail);}
 .review-edit-test.passed>span {color:var(--pass);}.review-edit-test.failed>span {color:var(--fail);}
 
@@ -26,7 +26,6 @@
 .review-net-source button {font:inherit;color:var(--t2);text-align:left;}
 .review-net-source button:hover,.review-net-toggle:hover {color:var(--source);}
 .review-net-source .passed {color:var(--pass);}.review-net-source .failed {color:var(--fail);}
-.review-net button:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
 /* REVIEW-6: one list. Rows off screen cost no layout or paint, and keep their room for a focus ring. */
 .review-file,.review-item {content-visibility:auto;contain-intrinsic-block-size:auto 56px;margin-inline:-4px;padding-inline:4px;}
 .review-file:has(.desk-options[open]) {content-visibility:visible;}
@@ -48,7 +47,6 @@
 :root[data-ui-version=modern] .review-file-more>summary::before {content:'▸';display:inline-block;width:1.2em;}
 :root[data-ui-version=modern] .review-file-more[open]>summary::before {content:'▾';}
 :root[data-ui-version=modern] .review-file-more>summary:hover {color:var(--t1);}
-:root[data-ui-version=modern] .review-file-more>summary:focus-visible {outline:1px solid var(--t2);outline-offset:3px;}
 :root[data-ui-version=modern] .review-file-more>.review-file-edits {padding:4px 0 6px;border-bottom:0;}
 :root[data-ui-version=modern] .review-file-more>.review-net {padding:0 0 4px;}
 :root[data-ui-version=modern] .review-file-more>.review-net-note {margin:4px 0;}

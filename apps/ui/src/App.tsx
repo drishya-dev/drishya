@@ -12,6 +12,7 @@ import { localPreviewId } from './lib/local-preview.ts';
 import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
 import { restoreWorkingLocations, useWorkingRecovery } from './lib/working-recovery.ts';
 import { workspaceMemory } from './lib/workspace-memory.ts';
+import { installFocusModality } from './lib/focus-modality.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -39,6 +40,8 @@ async function openBundle(url: string, growing = false) {
 export function App() {
   const screen = useApp((s) => s.screen);
   const error = useApp((s) => s.error);
+
+  useEffect(() => installFocusModality(), []);
 
   // Boot: a replay bundle if asked for; otherwise the local daemon; otherwise the demo.
   useEffect(() => {

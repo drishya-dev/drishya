@@ -22,7 +22,7 @@
 .network-graph .network-commit.linked::before { box-shadow:0 0 0 2px var(--bg),0 0 0 3.5px var(--focus); }
 .network-graph .network-commit:hover::before { background:var(--t1); }
 .network-graph .network-commit[aria-pressed=true]::before { width:12px; height:12px; background:var(--t1); box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--focus); }
-.thread-graph.network-graph .network-commit:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
+:root:not([data-input-modality="pointer"]) .thread-graph.network-graph .network-commit:focus-visible { outline:1px solid var(--focus-ring); outline-offset:1px; }
 .network-graph .network-commit.muted { opacity:.35; }
 .network-label { position:absolute; transform:translate(-50%,10px); padding:1px 6px; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s2); color:var(--t2); font:var(--text-2xs)/1.5 var(--mono); white-space:nowrap; max-width:160px; overflow:hidden; text-overflow:ellipsis; pointer-events:none; }
 .network-label.main { transform:translate(-50%,calc(-100% - 10px)); color:var(--t1); border-color:var(--line-3); }

@@ -118,8 +118,8 @@
   color: var(--text-primary, var(--t1));
 }
 
-.fenced-material > .fenced-header .fenced-actions button:focus-visible {
-  outline: 1px solid var(--focus);
+:root:not([data-input-modality="pointer"]) .fenced-material > .fenced-header .fenced-actions button:focus-visible {
+  outline: 1px solid var(--focus-ring);
   outline-offset: -1px;
 }
 
@@ -145,11 +145,6 @@
   overflow: auto;
   box-sizing: border-box;
   scrollbar-width: thin;
-}
-
-:root .fenced-material .md-code.md-code:focus-visible {
-  outline: 1px solid var(--focus);
-  outline-offset: -1px;
 }
 
 .fenced-material .md-code > div {

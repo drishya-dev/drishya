@@ -1,6 +1,5 @@
 /* GIT-8 Compare: a focused working window that docks exactly where the Workspace does (it shares .developer-workspace for geometry and
    entrance). Hierarchy is ink and weight; no labelled boxes, hairlines only between the three regions. */
-.compare-window button:focus-visible,.compare-window input:focus-visible,.compare-window summary:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
 .compare-header { display:flex; align-items:center; gap:18px; padding:9px 14px; border-bottom:1px solid var(--line); flex:none; min-width:0; }
 .compare-header>strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); }
 .compare-presets { display:flex; gap:2px; min-width:0; overflow-x:auto; scrollbar-width:none; }
@@ -115,7 +114,6 @@
 .compare-note-box { padding:0 14px 8px; border-bottom:1px solid var(--line); }
 .compare-note-box textarea,.compare-handoff textarea { display:block; width:100%; box-sizing:border-box; resize:vertical; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s1); color:var(--t1); font:var(--text-xs)/1.6 var(--sans); padding:8px 10px; }
 .compare-note-box textarea { min-height:64px; max-height:30vh; }
-.compare-note-box textarea:focus-visible,.compare-handoff textarea:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
 .compare-previous { margin-top:8px; color:var(--t3); font:var(--text-2xs)/1.6 var(--sans); }
 .compare-previous summary { cursor:pointer; }
 .compare-previous p { margin:6px 0; }
