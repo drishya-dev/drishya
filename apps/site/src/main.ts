@@ -126,29 +126,50 @@ function animate() {
 
     tourScene();
     featureScenes();
+    // The moment: the type holds while the real cards drift past at different depths, then everything moves on.
+    const words2 = new SplitText('.moment-type span', { type: 'chars' });
+    const mt = gsap.timeline({ scrollTrigger: { trigger: '.moment', start: 'top top', end: () => `+=${innerHeight * 1.4}`, pin: '.moment-pin', scrub: 0.6 } });
+    mt.from(words2.chars, { yPercent: 60, opacity: 0, filter: 'blur(10px)', stagger: 0.015, duration: 0.5, ease: 'power3.out' }, 0);
+    $$('.m-card').forEach((card, i) => mt.fromTo(card, { y: 260 + i * 90, opacity: 0, scale: 0.9 }, { y: -220 - i * 60, opacity: 1, scale: 1, duration: 1.6, ease: 'none' }, 0.1 + i * 0.08));
   }
 
-  // Features: each real frame starts whole, then zooms into the part the text describes. Files adds a cursor
-  // that moves to the edited file, then the frame changes to that file's history.
+  // Features: one window. Each step crops the real frame to the panel that matters, the window takes that panel's
+  // shape, and when a step is about one control a cursor moves to it and clicks. Scroll drives it both ways.
   function featureScenes() {
-    for (const shot of $$('.shot')) {
-      const [rx, ry, rw, rh] = shot.dataset.zoom!.split(',').map(Number) as [number, number, number, number];
-      const scale = 0.92 / Math.max(rw, rh), x = (0.5 - (rx + rw / 2) * scale) * 100, y = (0.5 - (ry + rh / 2) * scale) * 100;
-      const main = $('.shot-main', shot), swap = shot.querySelector<HTMLElement>('.shot-swap'), cursorEl = shot.querySelector<HTMLElement>('.shot-cursor');
-      const section = shot.closest('.feature')!;
-      const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: section, start: 'top top', end: () => `+=${innerHeight * (swap ? 1.6 : 0.9)}`, pin: section.querySelector('.feature-pin'), scrub: 0.6 } });
-      tl.to(main, { scale, xPercent: x, yPercent: y, duration: 1 }, 0.1);
-      if (cursorEl) {
-        const [cx, cy] = cursorEl.dataset.cursor!.split(',').map(Number) as [number, number];
-        tl.fromTo(cursorEl, { left: '78%', top: '86%', opacity: 0 }, { left: `${x + cx * scale * 100}%`, top: `${y + cy * scale * 100}%`, opacity: 1, duration: 0.7 }, 1.2);
+    const win = $('[data-feat-window]'), stageEl = $('.feat-stage'), steps = $$('.feat-steps li');
+    const cursorEl = $('.feat-cursor', win), ripple = $('.feat-ripple', win);
+    const FRAME = 2880 / 1800;
+    const layout = (li: HTMLElement) => {
+      const [rx, ry, rw, rh] = li.dataset.crop!.split(',').map(Number) as [number, number, number, number];
+      const box = stageEl.getBoundingClientRect(), aspect = (rw * FRAME) / rh;
+      const w = Math.min(box.width, box.height * aspect), h = w / aspect, imgW = w / rw;
+      return { w, h, imgW, imgH: imgW / FRAME, x: -rx * imgW, y: -ry * imgH(imgW), rx, ry };
+      function imgH(v: number) { return v / FRAME; }
+    };
+    const imgOf = (li: HTMLElement) => $(`img[data-for="${li.dataset.img!.split('/').pop()}"]`, win);
+    gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
+    const first = layout(steps[0]!);
+    gsap.set(win, { width: first.w, height: first.h });
+    gsap.set(imgOf(steps[0]!), { opacity: 1, width: first.imgW, height: first.imgH, x: first.x, y: first.y });
+    const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' }, scrollTrigger: { trigger: '.features', start: 'top top', end: () => `+=${innerHeight * (steps.length * 0.8)}`, pin: '.features-pin', scrub: 0.5, invalidateOnRefresh: true } });
+    steps.forEach((li, i) => {
+      const t = i * 1.2;
+      if (i > 0) {
+        const prev = steps[i - 1]!, same = prev.dataset.img === li.dataset.img;
+        tl.to(prev, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(li, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2);
+        tl.to(cursorEl, { opacity: 0, duration: 0.15 }, t);
+        tl.to(win, { width: () => layout(li).w, height: () => layout(li).h, duration: 0.6 }, t);
+        if (!same) tl.to(imgOf(prev), { opacity: 0, duration: 0.35 }, t);
+        tl.to(imgOf(li), { opacity: 1, width: () => layout(li).imgW, height: () => layout(li).imgH, x: () => layout(li).x, y: () => layout(li).y, duration: 0.6 }, t);
       }
-      if (swap) {
-        tl.to(main, { scale: 1, xPercent: 0, yPercent: 0, duration: 0.6 }, 2.1);
-        tl.to(cursorEl, { opacity: 0, duration: 0.2 }, 2.1);
-        tl.to(swap, { opacity: 1, duration: 0.5 }, 2.3);
+      if (li.dataset.click) {
+        const [cx, cy] = li.dataset.click.split(',').map(Number) as [number, number];
+        const px = () => cx * layout(li).imgW + layout(li).x, py = () => cy * layout(li).imgH + layout(li).y;
+        tl.fromTo(cursorEl, { left: () => layout(li).w * 0.8, top: () => layout(li).h * 0.85, opacity: 0 }, { left: px, top: py, opacity: 1, duration: 0.45, ease: 'power2.out' }, t + 0.55);
+        tl.fromTo(ripple, { left: px, top: py, scale: 0.4, opacity: 0.9 }, { scale: 1.6, opacity: 0, duration: 0.35, ease: 'power1.out' }, t + 1.0);
       }
-      tl.to({}, { duration: 0.3 });
-    }
+    });
+    tl.to({}, { duration: 0.4 });
   }
 
   // The tour: one pinned timeline, scrubbed by scroll, so every step plays forward and rewinds exactly.

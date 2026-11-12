@@ -167,23 +167,22 @@ main, .footer, .nav { position: relative; z-index: 1; }
 /* Reduced motion: every section is a composed still frame. */
 .step-tag { display: inline-block; margin-bottom: 16px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); font: 500 12px var(--mono); color: var(--t2); }
 
-/* ---------- features: text beside a real product frame ---------- */
-.feature-pin { min-height: 100svh; display: grid; align-items: center; padding: 80px 0 40px; }
-.feature-grid { display: grid; grid-template-columns: minmax(260px, 380px) 1fr; gap: clamp(28px, 4vw, 72px); align-items: center; }
-.feature.flip .feature-grid { grid-template-columns: 1fr minmax(260px, 380px); }
-.feature.flip .feature-copy { order: 2; }
-.feature .wrap { width: min(1400px, 100% - 2 * var(--gutter)); }
-.feature-copy h2 { font-size: clamp(28px, 3vw, 44px); line-height: 1.06; letter-spacing: -.032em; font-weight: 600; }
-.feature-copy p { margin-top: 18px; color: var(--t2); font-size: 17px; }
-.shot { position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-radius: 14px; background: #000; border: 1px solid var(--line-2); box-shadow: 0 40px 110px rgba(0, 0, 0, .55); }
-.shot img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; transform-origin: 0 0; }
-.shot-swap { opacity: 0; }
-.shot-cursor { position: absolute; left: 70%; top: 80%; width: 26px; height: 26px; opacity: 0; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .7)); z-index: 2; }
-.shot-cursor svg { width: 100%; height: 100%; fill: #fff; stroke: #000; stroke-width: 1.3; }
-@media (max-width: 899px) {
-  .feature-grid, .feature.flip .feature-grid { grid-template-columns: 1fr; }
-  .feature.flip .feature-copy { order: 0; }
-}
+/* ---------- features: one window, the text beside it, scrolling changes what it shows ---------- */
+.features-pin { min-height: 100svh; display: grid; align-items: center; padding: 72px 0 32px; }
+.features .wrap { width: min(1400px, 100% - 2 * var(--gutter)); }
+.features-grid { display: grid; grid-template-columns: minmax(260px, 360px) 1fr; gap: clamp(28px, 4vw, 72px); align-items: center; }
+.feat-steps { list-style: none; margin: 0; padding: 0; display: grid; }
+.feat-steps li { grid-area: 1 / 1; }
+.feat-steps h3 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.08; letter-spacing: -.03em; font-weight: 600; }
+.feat-steps p { margin-top: 16px; color: var(--t2); font-size: 17px; }
+.feat-stage { height: min(78svh, 720px); display: grid; place-items: center; }
+.feat-window { position: relative; overflow: hidden; border-radius: 14px; background: #000; border: 1px solid var(--line-2); box-shadow: 0 40px 110px rgba(0, 0, 0, .55), 0 0 0 1px rgba(56, 104, 214, .08); }
+.feat-window img { position: absolute; left: 0; top: 0; opacity: 0; max-width: none; }
+.feat-cursor { position: absolute; left: 0; top: 0; width: 24px; height: 24px; opacity: 0; z-index: 3; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, .7)); }
+.feat-cursor svg { width: 100%; height: 100%; fill: #fff; stroke: #000; stroke-width: 1.3; }
+.feat-ripple { position: absolute; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%; border: 2px solid rgba(122, 168, 255, .9); opacity: 0; z-index: 2; pointer-events: none; }
+@media (max-width: 899px) { .features-grid { grid-template-columns: 1fr; } .feat-steps li { grid-area: auto; margin-bottom: 18px; } .feat-stage { height: 52svh; } }
+
 
 /* ---------- why: the text beside the work it describes ---------- */
 .why-grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(32px, 5vw, 80px); align-items: center; }
@@ -195,3 +194,12 @@ main, .footer, .nav { position: relative; z-index: 1; }
 .laptop { z-index: 2; transform-origin: 50% 50%; }
 @media (max-width: 899px) { .laptop { position: relative; left: auto; top: auto; margin: 0; width: 100%; } .laptop-slot { display: none; } }
 @media (max-width: 899px) { .why-grid { grid-template-columns: 1fr; } .why-stream { height: 320px; } }
+
+/* ---------- the moment: very large type, real product cards floating at different depths ---------- */
+.moment-pin { position: relative; height: 100svh; overflow: hidden; display: grid; place-items: center; }
+.moment-type { display: grid; justify-items: center; text-align: center; font-size: clamp(56px, 9.5vw, 156px); line-height: .94; letter-spacing: -.05em; font-weight: 600; color: var(--ivory); position: relative; z-index: 1; }
+.moment-type span:nth-child(2) { color: transparent; -webkit-text-stroke: 1px rgba(241, 238, 228, .55); }
+/* A card shows one crop of a 2880x1800 frame: its size follows the crop, its background is positioned to it. */
+.m-card { --cw: calc(var(--w) * 1180px); position: absolute; width: var(--cw); aspect-ratio: calc(var(--w) * 16) / calc(var(--h) * 10); border-radius: 14px; border: 1px solid var(--line-2); background-color: #000; background-image: var(--img); background-repeat: no-repeat; background-size: calc(var(--cw) / var(--w)) auto; background-position: calc(var(--x) / (1 - var(--w)) * 100%) calc(var(--y) / (1 - var(--h)) * 100%); box-shadow: 0 30px 80px rgba(0, 0, 0, .6); z-index: 2; }
+.c1 { left: 6%; top: 14%; } .c2 { right: 4%; top: 10%; } .c3 { left: 10%; bottom: 10%; } .c4 { right: 8%; bottom: 8%; } .c5 { left: 40%; bottom: -4%; }
+@media (max-width: 899px) { .m-card { --cw: calc(var(--w) * 640px); } }

@@ -88,38 +88,34 @@
       </div>
     </section>
 
-    <div class="features" id="features">
-      <section class="feature" id="feature-files" aria-labelledby="feature-files-title">
-        <div class="feature-pin"><div class="wrap feature-grid">
-          <div class="feature-copy"><span class="step-tag">Files</span><h2 id="feature-files-title">Every file the agent touched, marked in your tree</h2><p>Read, edited, added or deleted: each file carries its mark. Open one to see every action on it, in order, with the source the agent saw.</p></div>
-          <div class="shot" data-zoom=".068,.15,.18,.28" data-swap="footage/peek.jpg"><img class="shot-main" src="footage/files-hover.jpg" alt="" loading="lazy" decoding="async" /><img class="shot-swap" src="footage/peek.jpg" alt="" loading="lazy" decoding="async" /><div class="shot-cursor" data-cursor=".157,.386"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div></div>
-        </div></div>
-      </section>
-      <section class="feature flip" id="feature-workspace" aria-labelledby="feature-workspace-title">
-        <div class="feature-pin"><div class="wrap feature-grid">
-          <div class="feature-copy"><span class="step-tag">Workspace</span><h2 id="feature-workspace-title">Read and edit the current code beside the agent</h2><p>Open any file in Workspace with your tree, tabs and an editor. The agent's edits stay one step away.</p></div>
-          <div class="shot" data-zoom=".27,.2,.62,.45"><img class="shot-main" src="footage/workspace.jpg" alt="" loading="lazy" decoding="async" /></div>
-        </div></div>
-      </section>
-      <section class="feature" id="feature-changes" aria-labelledby="feature-changes-title">
-        <div class="feature-pin"><div class="wrap feature-grid">
-          <div class="feature-copy"><span class="step-tag">Changes</span><h2 id="feature-changes-title">Changes for branches and pull requests</h2><p>Compare a branch with main, or a pull request with its base. Files changed on both come first, and each one names the agent that edited it.</p></div>
-          <div class="shot" data-zoom=".26,.14,.68,.48"><img class="shot-main" src="footage/changes.jpg" alt="" loading="lazy" decoding="async" /></div>
-        </div></div>
-      </section>
-      <section class="feature flip" id="feature-graph" aria-labelledby="feature-graph-title">
-        <div class="feature-pin"><div class="wrap feature-grid">
-          <div class="feature-copy"><span class="step-tag">Git graph</span><h2 id="feature-graph-title">The Git graph, with the session's commits</h2><p>Branches, commits and where the agent's work landed, read-only, without leaving the session.</p></div>
-          <div class="shot" data-zoom=".21,.16,.72,.66"><img class="shot-main" src="footage/git-graph.jpg" alt="" loading="lazy" decoding="async" /></div>
-        </div></div>
-      </section>
-      <section class="feature" id="feature-toolbox" aria-labelledby="feature-toolbox-title">
-        <div class="feature-pin"><div class="wrap feature-grid">
-          <div class="feature-copy"><span class="step-tag">Toolbox</span><h2 id="feature-toolbox-title">Every tool the agent used, counted</h2><p>Built-in tools, MCP servers and sub-agents, and which tools were available but never used.</p></div>
-          <div class="shot" data-zoom=".79,.07,.15,.68"><img class="shot-main" src="footage/history.jpg" alt="" loading="lazy" decoding="async" /></div>
-        </div></div>
-      </section>
-    </div>
+    <section id="features" class="features" aria-label="Features">
+      <div class="features-pin">
+        <div class="wrap features-grid">
+          <ol class="feat-steps">
+            <li data-img="footage/history.jpg" data-crop=".06,.02,.72,.72" data-click=""><span class="step-tag">Files</span><h3>Your files beside the agent's work</h3><p>The explorer stays open next to the session. Every file the agent touched is marked where it lives in your repository.</p></li>
+            <li data-img="footage/peek.jpg" data-crop=".01,.05,.98,.6" data-click=".031,.31"><span class="step-tag">Explorer</span><h3>Each file, with every action on it</h3><p>Open a file and see each read, search and edit on it in order. Step to an earlier change and see exactly what it was.</p></li>
+            <li data-img="footage/workspace.jpg" data-crop=".26,.07,.68,.62" data-click=""><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Read and edit the file as it is now, with your tree and tabs, a step away from the agent's work.</p></li>
+            <li data-img="footage/changes.jpg" data-crop=".26,.07,.68,.55" data-click=".471,.11"><span class="step-tag">Changes</span><h3>A branch or pull request against its base</h3><p>Changes shows what differs, files changed on both sides first, and under each file the agent that edited it.</p></li>
+            <li data-img="footage/git-graph.jpg" data-crop=".09,.05,.82,.88" data-click=".143,.368"><span class="step-tag">Git graph</span><h3>Branches and commits, with the agent's work</h3><p>Every branch, the commits on it, and which one holds the session's fix, read-only.</p></li>
+            <li data-img="footage/tool-read.jpg" data-crop=".8,.075,.13,.36" data-click=".877,.392"><span class="step-tag">Toolbox</span><h3>Step through every use of one tool</h3><p>The Toolbox counts each tool and MCP server. Pick one and step through every time it was used, with the rest of the session dimmed.</p></li>
+            <li data-img="footage/prompt-rail.jpg" data-crop=".595,.625,.24,.235" data-click=""><span class="step-tag">Prompts</span><h3>Every prompt, one move away</h3><p>The prompt rail keeps each prompt you sent. Hover one to see what it asked and what the agent did for it, then jump there.</p></li>
+            <li data-img="footage/composer.jpg" data-crop=".29,.815,.42,.175" data-click=".685,.944"><span class="step-tag">Composer</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
+          </ol>
+          <div class="feat-stage"><div class="feat-window" data-feat-window><img src="footage/history.jpg" alt="" decoding="async" loading="lazy" data-for="history.jpg" /><img src="footage/peek.jpg" alt="" decoding="async" loading="lazy" data-for="peek.jpg" /><img src="footage/workspace.jpg" alt="" decoding="async" loading="lazy" data-for="workspace.jpg" /><img src="footage/changes.jpg" alt="" decoding="async" loading="lazy" data-for="changes.jpg" /><img src="footage/git-graph.jpg" alt="" decoding="async" loading="lazy" data-for="git-graph.jpg" /><img src="footage/tool-read.jpg" alt="" decoding="async" loading="lazy" data-for="tool-read.jpg" /><img src="footage/prompt-rail.jpg" alt="" decoding="async" loading="lazy" data-for="prompt-rail.jpg" /><img src="footage/composer.jpg" alt="" decoding="async" loading="lazy" data-for="composer.jpg" /><div class="feat-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div><span class="feat-ripple"></span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="moment" aria-labelledby="moment-title">
+      <div class="moment-pin">
+        <h2 id="moment-title" class="moment-type"><span>Understand</span><span>every change</span><span>your agent makes</span></h2>
+        <div class="m-card c1" style="--img:url(footage/history.jpg);--x:0.29;--y:0.14;--w:0.23;--h:0.33" aria-hidden="true"></div>
+        <div class="m-card c2" style="--img:url(footage/changes.jpg);--x:0.48;--y:0.36;--w:0.45;--h:0.26" aria-hidden="true"></div>
+        <div class="m-card c3" style="--img:url(footage/tool-read.jpg);--x:0.806;--y:0.345;--w:0.118;--h:0.13" aria-hidden="true"></div>
+        <div class="m-card c4" style="--img:url(footage/prompt-rail.jpg);--x:0.607;--y:0.645;--w:0.208;--h:0.21" aria-hidden="true"></div>
+        <div class="m-card c5" style="--img:url(footage/git-graph.jpg);--x:0.21;--y:0.28;--w:0.2;--h:0.2" aria-hidden="true"></div>
+      </div>
+    </section>
 
     <section id="compare" class="compare" aria-labelledby="compare-title">
       <div class="wrap">

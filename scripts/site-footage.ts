@@ -60,6 +60,7 @@ try{
   await page.evaluate(()=>{const h=document.querySelector('.history');if(h)h.scrollTop=0;});await page.waitForTimeout(1000);await shot('history-start');
   await approve();await page.waitForTimeout(900);
   // Files: reveal the edited file through the tree's own find box, hover it, then open it to read its history.
+  const enable=page.getByText('Enable workspace reading',{exact:true}).first();if(await enable.isVisible().catch(()=>false)){await enable.click();await page.waitForTimeout(900);}
   const findFiles=page.getByPlaceholder('Find files…').or(page.getByPlaceholder('Find files...')).first();
   if(await findFiles.isVisible().catch(()=>false)){await findFiles.fill('guard');await page.waitForTimeout(700);}
   await shot('files');
@@ -83,7 +84,16 @@ try{
   await page.getByRole('button',{name:'Branch',exact:true}).first().click().catch(()=>{});await page.waitForTimeout(1500);await shot('changes');
   await page.keyboard.press('Escape');await page.waitForTimeout(400);
   await page.getByRole('button',{name:'Git',exact:true}).first().click().catch(()=>{});await approve();await page.waitForTimeout(1800);await shot('git-graph');
+  const branch=page.getByText('feature/refunds',{exact:true}).first();if(await branch.isVisible().catch(()=>false)){await branch.click();await page.waitForTimeout(1500);await shot('graph-branch');}
   await page.keyboard.press('Escape');
+
+  await openRecording(claude);
+  const tool=page.getByRole('button',{name:/^Read\b/}).last();
+  if(await tool.isVisible().catch(()=>false)){await tool.click();await page.waitForTimeout(1200);await shot('tool-read',300);await page.keyboard.press('Escape');await page.waitForTimeout(400);}else console.log('toolbox: Read row not found');
+  const tick=page.locator('.prompt-rail-tick').first();
+  if(await tick.isVisible().catch(()=>false)){await tick.hover();await page.waitForTimeout(900);if(!only.length||only.includes('prompt-rail')){await page.screenshot({path:join(out,'prompt-rail.jpg'),type:'jpeg',quality:86});shots.push('prompt-rail');}}else console.log('prompt rail: no tick visible');
+  const ask=page.getByText('Ask your agent',{exact:false}).first();
+  if(await ask.isVisible().catch(()=>false)){await ask.click();await page.waitForTimeout(900);const box=page.getByRole('textbox',{name:'Prompt for selected harness session'}).first();if(await box.isVisible().catch(()=>false))await box.fill('Also handle charge() for free orders, and add a test for it.');await page.waitForTimeout(500);await shot('composer',200);}
   if(codex){await openRecording(codex);await shot('codex-history',1500);}
 }finally{
   await browser.close();await server.close();await app.close();
