@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| FILES-17 | @yash + Gemini 3.8 Flash (Antigravity) | gemini/files-17 | 2026-11-12 | pps/ui/src/components/FileIcon.tsx, pps/ui/src/components/file-icon.css, pps/ui/test/file-icon.test.ts, 	ests/browser/file-icons.spec.ts, TASKS/STATUS/review record. |
 | UI-32b | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32b` | 2026-11-12 | `apps/ui/src/modern/toolbox-dock.css`, `apps/ui/src/modern/recovered-surfaces.css`, `apps/ui/src/modern/hud.css`, `apps/ui/src/modern/large-screens.css`, `History.tsx`, `Viewer.tsx`, `tests/browser/toolbox-window.spec.ts`, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
 | UI-30 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-30` | 2026-11-12 | `apps/ui/src/main.tsx` or `App.tsx` (input modality root attribute), new `focus-modality.ts`, CSS `:focus`/`:focus-visible` rules & shared focus-ring token across `apps/ui/src/`, `tests/browser/focus-rings.spec.ts`, units, TASKS/STATUS/review record. |
 | UI-31 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-31` | 2026-11-12 | `apps/ui/src/components/History.tsx` (turn capsule/heading), `apps/ui/src/modern/conversation.css`, `apps/ui/src/modern/reading-windows.css`, `apps/ui/src/modern/large-screens.css`, `apps/ui/src/styles.css` (turn rules only), turn specs/units, TASKS/STATUS/review record; no MOTION-3/4 owners. |
@@ -61,6 +60,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash — 12 Nov: FILES-17 file and folder icons (PR #427)
+
+- Replaced the minimal `FileIcon.tsx` labels with custom inline geometric vector icons in Drishya's own minimal line style (zero external icon packages or license notices required): 55+ file types by extension and exact filename plus open/closed folder states with calm bottom-right badge marks for 11 well-known folder categories (`.git`, `.github`, `.claude`/`.codex`/`.agents`, `src`/`apps`/`packages`/`lib`, `docs`, `tests`/`spec`, `scripts`/`tools`, `dist`/`build`, `node_modules`/`vendor`, `public`/`assets`, `fixtures`/`mocks`).
+- Added `apps/ui/src/components/file-icon.css` scoped to `:root[data-ui-version=modern]`: muted language-family colors (`color-mix` into `--t2`/`--t3`) across Jet Black, Midnight, and Paper (overriding `classic.css`'s `brightness(.65)` light-mode filter) so evidence marks (`E`/`A`/`D`) always remain the strongest color in a row. Preserved `width="18" height="18" viewBox="0 0 20 20"` so row heights stay identical across Explorer, peek tabs, Workspace tabs, Command Search (`Ctrl+K`), Changes, and Git history.
+- Verified with `check:affected` (`msedge`), `ui:build`, 116 unit files / 573 passed / 1 existing skip (`apps/ui/test`), 10 Edge browser specs (36 passed / 1 opt-in skip / 0 failed / 0 retries including new `tests/browser/file-icons.spec.ts`), and before/after real-session frames across 600 and 1440 px in Jet, Midnight, and Paper (`rec_5ee6b391` Claude Code 8.5 MB, `rec_8415940e` Codex 0.8 MB) in `.local/files-17/` ([review record](review/files-17-icons.md)).
 
 ### Yash with Gemini 3.8 Flash — 12 Nov: GIT-10 complete for Opus review, PR #422
 
