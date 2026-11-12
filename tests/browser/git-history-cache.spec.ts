@@ -110,6 +110,7 @@ for(const width of [1440,600])test(`keeps graph cached across close/reopen and u
     await page.keyboard.press('Shift+Tab');
     const inDialog=await page.evaluate(()=>!!document.activeElement?.closest('dialog.git-atlas'));
     expect(inDialog).toBe(true);
+    if(width===600)await warmDialog.locator('.atlas-references>summary').click();
     const branchFind=warmDialog.getByRole('textbox',{name:'Find Git branches and tags'});
     await branchFind.focus();
     await page.keyboard.press('Escape');

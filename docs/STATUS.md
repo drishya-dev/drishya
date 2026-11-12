@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| GIT-10 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/git-10` | 2026-11-12 | `apps/daemon/src/git-history.ts`, `apps/daemon/src/git-review.ts`, `apps/daemon/src/server.ts`, `apps/ui/src/components/GitHistory.tsx`, `apps/ui/src/components/GitNetworkGraph.tsx`, UI git history cache/layout modules, `tests/browser/git-*.spec.ts`, units, TASKS/STATUS/review record; no MOTION-4 dialog owners. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review) | `claude/site-1` | 2026-11-12 | New `apps/site` only (its own Vite app, styles, scenes), a build script `scripts/build-site.ts` reusing `build-landing.ts`'s synthetic chapters read-only, its own specs. Never `apps/landing` or `apps/ui`. |
 | UI-32 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-32` | 2026-11-12 | Toolbox window & bottom-right jump/Follow CSS/TSX (root-cause confirmed before edits), browser spec, TASKS/STATUS/review record; no MOTION-4 motion/dialog owners. |
 | SHIP-2e | @yash + Gemini 3.8 Flash (Antigravity; taken over from Codex Luna 6, 12 Nov) | `codex/ship-2e` | 2026-11-12 | `FencedCode.tsx`, its CSS, `highlight.tsx` only if needed, one browser spec and units; TASKS/STATUS/review record. |
@@ -59,6 +58,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash — 12 Nov: GIT-10 complete for Opus review, PR #422
+
+- Added LRU history page caching (`GitHistoryCache`, 64 entries) keyed by `(root, generation, reference, referenceStart, query, start)` with generation-change invalidation per repo root, parallelized ref snapshot helpers, cached commit path lookups (`git-session-context.ts`), and `GET /v1/recordings/:id/git/generation` behind read-only Git consent. Shared `GitReview.historyCache` preserves session-specific overlays without mutating cached pages.
+- Added outside-component UI snapshot caching (`GitHistoryCacheStore` LRU 16 per `${recordingId}:${checkoutId ?? "main"}`, per-commit detail cache LRU 24, branch/zoom/scroll retention) and structural layout reuse (`GitNetworkLayoutCache` LRU 32). Reopening renders cached pages and graph geometry immediately, revalidates `/git/generation` in the background, updates silently in place on changes, preserves selected commit when still present, and falls back to `all` when a selected branch is deleted. Kept `ReadingDialog` `modeless floating` with local `.atlas-scrim` + `aria-modal` / `Tab` trap inside `GitHistory.tsx` / `git-history.css` so no `MOTION-4` dialog owner (`ProductShell.tsx`, `ReadingWindow.tsx`, `product.css`) was touched.
+- Measurements ([git-10-cached-graph.md](review/git-10-cached-graph.md)): `drishya` (873 refs) cold `1,485.1 ms` -> warm **`87.3 ms`** / **`58.3 ms`** (`0` `/git/history`, `1` `/git/generation`, `exactGraphMatch: true`); clean shallow-free `vite` (1,156 refs / 10,907 commits) cold `1,037.7 ms` -> warm **`60.3 ms`** / **`33.6 ms`** (`0` `/git/history`, `1` `/git/generation`, `exactGraphMatch: true`). Real local sessions at `1440` & `600` px in `jet`, `midnight`, and `paper` (`0` overflow, private `.local/` frames): Claude Code `rec_cc002c1f` (24.0 MB, 732 ops) `7,250.1/9,182.5 ms` -> **`56.8/36.7 ms`**; Codex `rec_45333698` (5.4 MB, 75 ops) `1,639.3/1,010.4 ms` -> **`66.9/52.6 ms`**.
+- Checks: `typecheck`, `ui:build`, 40 unit test files / 251 tests, `check:real -- local-branches`, 11 Edge browser specs (30 passed / 16 opt-in skipped / 0 failed / 0 retries) plus `fresh-workspace.spec.ts` (`-g Git` 3 passed; `-g "Modern reading windows"` 31 passed). Not run: full gate, hosted CI, `package:verify` (ingest/store/packaging untouched).
 
 ### Harsh with Codex — 7 November: LAND-1 landing page plan
 
