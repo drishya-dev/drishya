@@ -25,6 +25,7 @@ import { DelegationDetail, DelegationLine } from './DelegationDetail.tsx';
 import { StepReading } from './StepReading.tsx';
 import { CapturedPath } from './CapturedPath.tsx';
 import { createContext, Fragment, memo, useCallback, useContext, useDeferredValue, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Agent, Hunk, Notice, Operation, OperationImage, Projection, Prose } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import type { PinnedPlan, Scene, SceneOp, ScenePassage } from '@drishya/scene';
@@ -83,9 +84,9 @@ function readingClearance(history: HTMLElement): number {
 // Reading-window remounts do not repeat an outcome already shown in this live view.
 const OutcomeMotion = createContext<Set<string> | undefined>(undefined);
 
-type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void> };
+type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void>; followSlot?: HTMLElement | null };
 
-export function History({ scene, projection, onWindow }: HistoryProps) {
+export function History({ scene, projection, onWindow, followSlot }: HistoryProps) {
   const mode = useApp(s => s.mode);
   const selectedOp = useApp(s => s.selectedOp);
   const focusObservationId = useApp(s => s.focusObservationId);
@@ -105,10 +106,10 @@ export function History({ scene, projection, onWindow }: HistoryProps) {
   const shown = liveArrival ? deferred : pair;
   const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
   const outcomes = useMemo(() => new Set<string>(), [projection.recordingId, mode, mode === 'replay' ? shown.scene.step : undefined]);
-  return <OutcomeMotion.Provider value={outcomes}><StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider></OutcomeMotion.Provider>;
+  return <OutcomeMotion.Provider value={outcomes}><StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} followSlot={followSlot} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider></OutcomeMotion.Provider>;
 }
 
-const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: HistoryProps) {
+const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, followSlot }: HistoryProps) {
   const mode = useApp((s) => s.mode);
   const compareAgents = useApp((s) => s.compareAgents);
   const explore = useApp((s) => s.explore);
@@ -732,8 +733,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
           setScrollTop(layout.prefix[index]!);
           if (onWindow && ps.unloaded) void onWindow({ start: Math.max(0, index - 8), count: 32, pinnedPassageIds: [ps.id] }).catch(error => set({ error: error.message }));
         }} />}
-      {(!follow || navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection) && (
-        <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {
+      {(!follow || navigationBoundary.current?.step === scene.step && navigationBoundary.current.projection === projection) && (() => {
+        const followPill = <button className="follow-pill" aria-label={`${mode === 'history' && scene.total > seenThrough.current ? `${scene.total - seenThrough.current} new steps · ` : ''}Back to latest`} title="Back to latest" onClick={() => {
           userScrollUntil.current = 0;
           navigationBoundary.current = undefined; readingAnchor.current = undefined; readingAtStart.current = false;
           setFocusedPassageId(undefined);
@@ -742,8 +743,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow }: H
           // Return the camera to the current replay/live edge, without stopping its clock.
         }}>
           ↓{mode === 'history' && scene.total > seenThrough.current && <small>{scene.total - seenThrough.current}</small>}
-        </button>
-      )}
+        </button>;
+        return modern && followSlot ? createPortal(followPill, followSlot) : followPill;
+      })()}
     </>
   );
 });

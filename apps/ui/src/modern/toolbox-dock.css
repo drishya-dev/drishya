@@ -2,7 +2,7 @@
 :root[data-ui-version=modern][data-experience=classic] .toolbox-rail {
   position: absolute;
   inset: calc(var(--workspace-header-h, 70px) + 14px) 18px
-    max(24px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px))) 18px;
+    max(58px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px))) 18px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -15,11 +15,14 @@
   position: relative;
   inset: auto;
   flex: none;
+  box-sizing: border-box;
   height: auto;
   min-height: 0;
   max-height: 100%;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   overscroll-behavior: contain;
+  scrollbar-gutter: auto;
 }
 
 .toolbox-rail > .modern-tool-station {
@@ -50,7 +53,7 @@
 @media (max-width: 820px) {
   :root[data-ui-version=modern][data-experience=classic] .toolbox-rail {
     inset-inline: 12px;
-    top: calc(var(--workspace-header-h, 70px) + 62px);
-    bottom: max(70px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px)));
+    top: calc(var(--workspace-header-h, 70px) + 66px);
+    bottom: max(96px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px) + 48px));
   }
 }

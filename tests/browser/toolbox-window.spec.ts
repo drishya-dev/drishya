@@ -185,3 +185,184 @@ test('tall foreground Toolbox stays scrollable and reachable above the open comp
   expect(await last.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);
   expect(await dock.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
 });
+
+// UI-32: Toolbox keeps its complete outer frame across heights/palettes with scroll edge cues, and never overlaps Follow controls.
+async function measureBottomControls(page: Page) {
+  return page.evaluate(() => {
+    const rect = (s: string) => {
+      const el = document.querySelector(s);
+      if (!el || !el.getClientRects().length) return null;
+      const r = el.getBoundingClientRect();
+      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height };
+    };
+    const overlaps = (a: ReturnType<typeof rect>, b: ReturnType<typeof rect>) =>
+      !!(a && b && a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5);
+    const dock = rect(".modern-tool-station");
+    const pill = rect(".follow-pill");
+    const follow = rect(".workspace-follow");
+    const toggle = rect(".catalog-toggle");
+    const transport = rect(".modern-replay-transport");
+    const dockEl = document.querySelector(".modern-tool-station");
+    const toolboxEl = document.querySelector(".modern-toolbox");
+    const dockStyle = dockEl ? getComputedStyle(dockEl) : null;
+    const innerStyle = toolboxEl ? getComputedStyle(toolboxEl) : null;
+    return {
+      innerWidth, innerHeight, dock, pill, follow, toggle, transport,
+      gap: pill && follow ? follow.left - pill.right : null,
+      centerDeltaY: pill && follow ? Math.abs((pill.top + pill.height / 2) - (follow.top + follow.height / 2)) : null,
+      overlapPillFollow: overlaps(pill, follow),
+      overlapDockFollow: overlaps(dock, follow),
+      overlapDockPill: overlaps(dock, pill),
+      overlapDockToggle: overlaps(dock, toggle),
+      overlapPillTransport: overlaps(pill, transport),
+      dockBorders: dockStyle ? [dockStyle.borderTopWidth, dockStyle.borderRightWidth, dockStyle.borderBottomWidth, dockStyle.borderLeftWidth] : null,
+      dockRadius: dockStyle ? parseFloat(dockStyle.borderBottomRightRadius) : 0,
+      innerBorders: innerStyle ? [innerStyle.borderTopWidth, innerStyle.borderRightWidth, innerStyle.borderBottomWidth, innerStyle.borderLeftWidth] : null,
+      scrollTop: dockEl?.scrollTop ?? 0,
+      scrollMax: dockEl ? Math.max(0, dockEl.scrollHeight - dockEl.clientHeight) : 0,
+      cueTop: dockEl?.getAttribute("data-scroll-top") ?? null,
+      cueBottom: dockEl?.getAttribute("data-scroll-bottom") ?? null,
+    };
+  });
+}
+
+for (const palette of ["dark", "light", "midnight"] as const) {
+  test(`UI-32 Toolbox preserves its complete outer border, scroll cues, and reachable footer in ${palette} palette`, async ({ page }) => {
+    await page.addInitScript((v) => { try { localStorage.setItem("drishya.theme", v); } catch {} }, palette);
+    await page.setViewportSize({ width: 1440, height: 620 });
+    const dock = await open(page, "modern", "claude-code");
+    await dock.locator(".tool-list > summary").press("Enter");
+    await expect(dock.locator(".tool-list")).not.toHaveAttribute("open", "");
+    // Pressing Enter scrolled the summary into view; return to top before asserting top/bottom cues.
+    await dock.evaluate((el) => { el.scrollTop = 0; });
+    await expect.poll(() => dock.getAttribute("data-scroll-top")).toBeNull();
+
+    const closedTop = await measureBottomControls(page);
+    expect(closedTop.dockBorders).toEqual(["1px", "1px", "1px", "1px"]);
+    expect(closedTop.dockRadius).toBeGreaterThan(0);
+    expect(closedTop.innerBorders).toEqual(["0px", "0px", "0px", "0px"]);
+    expect(closedTop.scrollMax).toBeGreaterThan(0);
+    expect(closedTop.cueTop).toBeNull();
+    expect(closedTop.cueBottom).toBe("1");
+    expect(closedTop.dock!.bottom).toBeLessThanOrEqual(closedTop.innerHeight - 10);
+
+    const mcpTrigger = dock.locator("summary[data-mcp-server=\"synthetic\"]");
+    await mcpTrigger.press("Enter");
+    await expect(dock.locator(".md-server[open]")).toHaveCount(1);
+    await dock.evaluate((el) => { el.scrollTop = Math.floor((el.scrollHeight - el.clientHeight) / 2); });
+    await expect.poll(() => dock.getAttribute("data-scroll-top")).toBe("1");
+    await expect.poll(() => dock.getAttribute("data-scroll-bottom")).toBe("1");
+
+    const footerSummary = dock.locator(".tool-list > summary");
+    await footerSummary.scrollIntoViewIfNeeded();
+    const atBottom = await dock.evaluate((el) => { el.scrollTop = el.scrollHeight; return el.scrollTop; });
+    expect(atBottom).toBeGreaterThan(0);
+    await expect.poll(() => dock.getAttribute("data-scroll-bottom")).toBeNull();
+    await expect(footerSummary).toBeInViewport();
+    const footerRect = await footerSummary.evaluate((el) => el.getBoundingClientRect());
+    const dockRect = await dock.evaluate((el) => el.getBoundingClientRect());
+    expect(footerRect.bottom).toBeLessThanOrEqual(dockRect.bottom + 0.5);
+    expect(footerRect.bottom).toBeLessThanOrEqual(620);
+  });
+}
+
+test("UI-32 jump-to-latest pill and Follow switch group without overlap across widths, zoom, modes and composer", async ({ browser, page }) => {
+  const liveId = "synthetic-window-ui32-live", liveSource = "ui32-live-src", liveJournal = join(dir, "ui32-live.jsonl");
+  writeFileSync(liveJournal, "");
+  app.store.upsertRecording({ id: liveId, adapterId: "claude-code", harness: "claude-code", sourcePath: liveJournal, title: "Live UI-32 test", workspaceRoot: dir });
+  app.store.appendObservations(liveId, liveSource, { offset: 1, generation: 0, fingerprint: "ui32-1" }, [
+    { id: "u32-0", recordingId: liveId, source: { adapterId: "claude-code", adapterVersion: "synthetic", sourceId: liveSource, generation: 0, byteOffset: 0, part: 0 }, observedAt: "2026-11-12T00:00:00Z", workspaceRoot: dir, agentId: "main", kind: "session.meta", payload: { harness: "claude-code" }, privacyPolicyVersion: PRIVACY_POLICY_VERSION, redactions: [], availability: "complete" },
+    { id: "u32-1", recordingId: liveId, source: { adapterId: "claude-code", adapterVersion: "synthetic", sourceId: liveSource, generation: 0, byteOffset: 1, part: 0 }, observedAt: "2026-11-12T00:00:01Z", workspaceRoot: dir, agentId: "main", kind: "message.user", payload: { text: "Start UI-32 live test" }, privacyPolicyVersion: PRIVACY_POLICY_VERSION, redactions: [], availability: "complete" },
+  ]);
+
+  const checkAligned = async (targetPage: Page, label: string) => {
+    const followBtn = targetPage.locator(".workspace-follow");
+    await expect(followBtn).toBeVisible();
+    if ((await followBtn.getAttribute("aria-checked")) === "true") await followBtn.click();
+    await expect(targetPage.locator(".follow-pill")).toBeVisible();
+    const m = await measureBottomControls(targetPage);
+    expect(m.overlapPillFollow, `${label}: pill/follow overlap`).toBe(false);
+    expect(m.gap, `${label}: standard gap`).toBeGreaterThanOrEqual(6);
+    expect(m.gap, `${label}: standard gap`).toBeLessThanOrEqual(12);
+    expect(m.centerDeltaY, `${label}: vertical alignment`).toBeLessThanOrEqual(1.5);
+    expect(m.pill!.right, `${label}: pill inside viewport`).toBeLessThanOrEqual(m.innerWidth);
+    expect(m.follow!.right, `${label}: follow inside viewport`).toBeLessThanOrEqual(m.innerWidth);
+    expect(m.follow!.bottom, `${label}: follow above bottom edge`).toBeLessThanOrEqual(m.innerHeight);
+    if (m.dock) {
+      expect(m.overlapDockFollow, `${label}: toolbox above follow`).toBe(false);
+      expect(m.overlapDockPill, `${label}: toolbox above pill`).toBe(false);
+      expect(m.overlapDockToggle, `${label}: toolbox above toggle`).toBe(false);
+    }
+    return m;
+  };
+
+  // 1. 600px narrow + expanded composer + Toolbox open + live unread step badge widening .follow-pill.
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.goto(server.launchUrl);
+  await expect(page.locator(".home")).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${liveId}`);
+  await expect(page.locator(".history")).toBeVisible();
+  const toolsBtn = page.getByRole("button", { name: "Tools", exact: true });
+  if (await toolsBtn.isVisible()) await toolsBtn.click();
+  await expect(page.locator(".modern-tool-station")).toBeVisible();
+  await checkAligned(page, "600px live minimized composer");
+
+  app.store.appendObservations(liveId, liveSource, { offset: 2, generation: 0, fingerprint: "ui32-2" }, [
+    { id: "u32-2", recordingId: liveId, source: { adapterId: "claude-code", adapterVersion: "synthetic", sourceId: liveSource, generation: 0, byteOffset: 2, part: 0 }, observedAt: "2026-11-12T00:00:02Z", workspaceRoot: dir, agentId: "main", kind: "message.assistant", payload: { text: "Second live response" }, privacyPolicyVersion: PRIVACY_POLICY_VERSION, redactions: [], availability: "complete" },
+  ]);
+  await expect(page.locator(".follow-pill small")).toHaveText("1");
+  const badgeMetrics = await checkAligned(page, "600px with unread count badge");
+  expect(badgeMetrics.pill!.width).toBeGreaterThan(34);
+
+  const expandBtn = page.getByRole("button", { name: "Expand prompt", exact: true });
+  if (await expandBtn.isVisible()) await expandBtn.click();
+  await expect(page.locator(".modern-native-composer.open")).toBeVisible();
+  await checkAligned(page, "600px live expanded composer");
+
+  // 2. 1440px & 3840px ultrawide stage with composer, plus Settings -> Replay sequence -> Exit replay.
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.get("claude-code")}`);
+  await expect(page.locator(".modern-tool-station")).toBeVisible();
+  await checkAligned(page, "1440px history with composer");
+
+  await page.setViewportSize({ width: 3840, height: 1440 });
+  const ultrawide = await checkAligned(page, "3840px ultrawide stage");
+  expect(ultrawide.follow!.right).toBeLessThan(3840 - 600);
+
+  // 3. Replay transport keeps floating .follow-pill inside the ultrawide stage and above the transport bar, and exiting restores the grouped controls.
+  await page.getByRole("button", { name: "Workspace settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Playback", exact: true }).click();
+  await page.getByRole("button", { name: "Replay sequence", exact: true }).click();
+  await expect(page.locator(".modern-replay-transport")).toBeVisible();
+  await page.locator(".history").hover();
+  await page.mouse.wheel(0, -120);
+  await expect(page.locator(".follow-pill")).toBeVisible();
+  const diag = await measureBottomControls(page);
+  expect(diag.pill).not.toBeNull();
+  expect(diag.overlapPillTransport).toBe(false);
+  expect(diag.pill!.bottom).toBeLessThanOrEqual(diag.transport!.top);
+  expect(diag.pill!.right).toBeLessThan(3840 - 600);
+  await page.getByRole("button", { name: "Exit replay", exact: true }).click();
+  await checkAligned(page, "3840px after exit replay");
+
+  // 4. Without composer (?demo) at 1440px, 600px and 67% zoom context (dpr: 0.67).
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+  await expect(page.locator(".modern-tool-station")).toBeVisible();
+  await expect(page.locator(".prompt-composer")).toHaveCount(0);
+  await checkAligned(page, "demo no-composer 1440px");
+  await page.setViewportSize({ width: 600, height: 900 });
+  const demoTools = page.getByRole("button", { name: "Tools", exact: true });
+  if (await demoTools.isVisible()) await demoTools.click();
+  await checkAligned(page, "demo no-composer 600px");
+  const zoomCtx = await browser.newContext({ viewport: { width: 2149, height: 1343 }, deviceScaleFactor: 0.67 });
+  try {
+    const zp = await zoomCtx.newPage();
+    await zp.goto(`${server.url}/?demo&experience=modern&motion=0`);
+    await expect(zp.locator(".modern-tool-station")).toBeVisible();
+    await expect(zp.locator(".prompt-composer")).toHaveCount(0);
+    await checkAligned(zp, "demo no-composer 67% zoom");
+  } finally {
+    await zoomCtx.close();
+  }
+});
