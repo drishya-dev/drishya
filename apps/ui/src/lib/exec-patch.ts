@@ -48,7 +48,8 @@ export function extractExecPatches(source: string, truncated = false): ExecPatch
         if (!closed) {
           // Drop a trailing partial line at a preview truncation boundary.
           const lastNl = value.lastIndexOf('\n');
-          if (lastNl > 0) value = value.slice(0, lastNl + 1);
+          // The newline goes too: left in place it parses as one more, blank, context line.
+          if (lastNl > 0) value = value.slice(0, lastNl);
         }
         literals.push({ value, truncated: !closed });
       }
