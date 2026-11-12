@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-35 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-35` | 2026-11-12 | `apps/ui/public/brand/`, `apps/ui/public/favicon.ico`, `apps/ui/index.html`, `apps/ui/src/components/BrandMark.tsx`, `apps/ui/src/classic.css`, `apps/ui/src/atelier.css`, `docs/review/ui-35-woven-logo.md`, `TASKS.md`, `STATUS.md`. |
 | SEC-2 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/sec-2` | 2026-11-12 | `packages/privacy/src/index.ts`, `packages/privacy/test/privacy.test.ts`, `packages/privacy/test/assignment-differential.test.ts`, `packages/store/src/index.ts`, `packages/store/test/`, `packages/ingest/src/index.ts`, `packages/ingest/test/`, `apps/daemon/src/app.ts`, `apps/daemon/src/history-worker.ts`, `apps/daemon/test/`, `scripts/`, `docs/review/`, `STATUS.md`, `TASKS.md`. |
 | FILES-18 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/files-18` | 2026-11-12 | `apps/ui/src/components/FileHistory.tsx`, `apps/ui/src/components/FileReadingActions.tsx`, file-history helpers/units, browser specs (`file-timeline-steps.spec.ts`, `file-timeline-pages.spec.ts`, `fresh-workspace.spec.ts`, `product-workspace.spec.ts`), `docs/review/files-18-newest-first.md`, `STATUS.md`, `TASKS.md`. |
 | SITE-1 | @yash + Claude Opus 5.5 (design, review), @harsh | first pass on `main` (#421); each next change on its own branch and PR | 2026-11-12 | `apps/site` only (its own Vite app, styles, scenes), `scripts/build-site.ts`, `scripts/site-footage*.ts`. Never `apps/landing` or `apps/ui`. Harsh may work on it too (Yash, 12 Nov): say which part in the PR so two branches do not edit the same scene. |
@@ -60,6 +59,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash — 12 Nov: UI-35 woven aperture logo and favicons (PR #430)
+
+- Replaced the legacy faceted crystal PNGs and favicon (`apps/ui/public/brand/drishya*.png`, `favicon.ico`) with crisp supersampled rasterizations (`32`, `180`, `192`, `512` px + multi-size `favicon.ico` + normalized square `drishya.svg`) of the cream `#ece9dd` woven aperture mark on matte `#0b0c0f` backing.
+- Removed `.brand-image img { transform: scale(1.55); }` in `apps/ui/src/classic.css` while preserving `background: var(--s1)` token compliance (`palette-paint-policy.test.ts`).
+- Verified across `typecheck`, `ui:build`, `apps/ui/test` (118 files / 580 passed / 1 existing skip), 28 Edge browser tests (`header-cluster`, `palette-contrast`, `session-typography`, `prose-reference-preview`), and real-session Home + Session Header screenshots at `600` & `1440` px in Jet Black, Midnight, and Paper ([review record](review/ui-35-woven-logo.md)).
 ### Yash with Gemini 3.8 Flash — 12 Nov: FILES-17 file and folder icons (PR #427)
 
 - Replaced the minimal `FileIcon.tsx` labels with custom inline geometric vector icons in Drishya's own minimal line style (zero external icon packages or license notices required): 55+ file types by extension and exact filename plus open/closed folder states with calm bottom-right badge marks for 11 well-known folder categories (`.git`, `.github`, `.claude`/`.codex`/`.agents`, `src`/`apps`/`packages`/`lib`, `docs`, `tests`/`spec`, `scripts`/`tools`, `dist`/`build`, `node_modules`/`vendor`, `public`/`assets`, `fixtures`/`mocks`).
