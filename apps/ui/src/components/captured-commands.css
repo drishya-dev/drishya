@@ -15,6 +15,9 @@
 .captured-command .cmd {max-height:190px;overflow:auto;margin:0;align-items:flex-start;}
 .captured-command .cmd code {white-space:pre-wrap;overflow-wrap:anywhere;}
 .captured-command .command-request {min-width:0;}
+.exec-patch-material {display:grid;gap:8px;min-width:0;}
+.exec-patch-file {display:grid;gap:4px;min-width:0;}
+.exec-patch-material .diff-scroll {max-height:280px;}
 .captured-command>footer {display:flex;justify-content:flex-end;margin-top:8px;}
 .captured-command>footer .btn {font-size:var(--text-2xs);min-height:var(--control-md);padding:4px 8px;}
 .command-preview {margin:0;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:190px;overflow:auto;font:var(--text-xs)/1.7 var(--mono);background:var(--bg);border-radius:var(--round-sm);}

@@ -5,6 +5,7 @@ import {useApp} from '../state.ts';
 import {ReadingDialog} from './ProductShell.tsx';
 import {CommandText} from './CommandText.tsx';
 import {ArtifactReader} from './ArtifactReader.tsx';
+import {ExecPatchMaterial} from './ExecPatchMaterial.tsx';
 import './captured-commands.css';
 
 /** An occasional investigation destination, not another resident panel or command runner. */
@@ -32,7 +33,14 @@ function CommandsReader({close}:{close:()=>void}) {
     {error?<p className="commands-error" role="alert">{error}<button className="btn" onClick={()=>setRetry(n=>n+1)}>Retry</button></p>:!page?<p className="commands-empty" role="status">Reading the session command index…</p>:<>
       <div className="commands-list" aria-label="Command results">{page.items.map(item=>{const outcome=operationOutcome({status:item.status,tool:item.tool,detail:{kind:'shell',command:item.command,exitCode:item.exitCode}});return <article className="captured-command" data-command-id={item.id} key={item.id}>
         <header><span className={`command-outcome outcome-${outcome.tone}`} title={outcome.explanation}>{outcome.label}</span><span>{item.tool}{item.exitCode!=null?` · exit ${item.exitCode}`:''}</span><time title={item.time} dateTime={item.time}>{item.time?new Date(item.time).toLocaleString():'Time unavailable'}</time></header>
-        {item.truncated?<><pre className="command-preview">{item.command}</pre><small className="commands-limit">Preview · open the input for complete content.</small>{item.inputArtifactId&&<details className="command-full-input"><summary>Full input</summary><ArtifactReader id={item.inputArtifactId} kind="code" navigationSlot={`commands/${item.id}`}/></details>}</>:<CommandText text={item.command}/>}
+        <ExecPatchMaterial
+          id={`commands/${item.id}`}
+          command={item.command}
+          truncated={item.truncated}
+          full
+          inputArtifactId={item.inputArtifactId}
+          rawFallback={item.truncated?<><pre className="command-preview">{item.command}</pre><small className="commands-limit">Preview · open the input for complete content.</small>{item.inputArtifactId&&<details className="command-full-input"><summary>Full input</summary><ArtifactReader id={item.inputArtifactId} kind="code" navigationSlot={`commands/${item.id}`}/></details>}</>:<CommandText text={item.command}/>}
+        />
         <footer><button className="btn ghost" onClick={()=>{useApp.getState().select(item.id);close();}}>Open activity <span aria-hidden="true">↗</span></button></footer>
       </article>;})}{!page.items.length&&<p className="commands-empty">No commands match. Try another command or outcome.</p>}</div>
       <nav className="commands-pages" aria-label="Command pages"><button className="btn" disabled={!page.newer&&!query.cursor} onClick={()=>setQuery({q:query.q,status:query.status})}>Newest</button><button className="btn" disabled={!page.newer} onClick={()=>setQuery({...query,cursor:page.newer,direction:'newer'})}>Newer</button><span>Up to 25 per page</span><button className="btn" disabled={!page.older} onClick={()=>setQuery({...query,cursor:page.older,direction:'older'})}>Older</button></nav>

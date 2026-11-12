@@ -110,6 +110,8 @@ describe('Codex adapter', () => {
     expect(result!.payload).toMatchObject({ text: '{}', outcome: { kind: 'other' } });
     expect(intentOf('functions.apply_patch', { raw: patch })).toEqual({ kind: 'patch', patch });
     expect(intentOf('functions.exec', { code: source })).toEqual({ kind: 'patch', patch });
+    const bound = `const patch = ${JSON.stringify(patch)};\nconst r = await tools.apply_patch(patch);\ntext(typeof r === "string" ? r : JSON.stringify(r));`;
+    expect(intentOf('exec', { raw: bound })).toEqual({ kind: 'patch', patch });
   });
 
   it('does not execute code or turn dynamic, deferred and quoted patches into edits', () => {
