@@ -12,7 +12,7 @@ export const QUIET_FEATHER = 72;
  * still clearly below the margins.
  */
 /** MAP-4: strength of dots and lines at rest, in the margins. The canvas is no longer dimmed to 38 % on top of this. */
-export const MAP_REST_ALPHA = .85;
+export const MAP_REST_ALPHA = .95; // Yash, 14 Nov: "increase the brightness ... of the graph a bit more" (was .85).
 export const QUIET_NODE_FLOOR = .38;
 export const QUIET_EDGE_FLOOR = .5;
 
