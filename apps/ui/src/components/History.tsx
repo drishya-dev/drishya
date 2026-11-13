@@ -173,6 +173,13 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const followingStarted = useRef(false);
   const requestedWindow = useRef<{ key: string; projection: Projection; start: number; count: number; pending: boolean } | undefined>(undefined);
   const lastViewportTop = useRef(0);
+  // True from the render that switches Work and Conversation until its reflow has settled (UI-41c).
+  const switching = useRef(false);
+  // The exact thing at the top of the view when the mode changed: a prompt, a message, or a run's cards (or its line), with the
+  // pixels from the top of the view to it. It is read before React re-renders, and put back after.
+  const modeAnchor = useRef<{ passageId: string; kind: 'turn' | 'prose' | 'ops'; index: number; offset: number } | undefined>(undefined);
+  const shownMode = useRef(historyMode);
+  if (shownMode.current !== historyMode) { shownMode.current = historyMode; switching.current = true; }
   const lastTravel = useRef(0);
   const motion = useApp(s => s.motion);
   const materialPositions = useRef(new Map<string, DOMRect>());
@@ -504,7 +511,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     if (!el || follow && !atDestination || navigating.current&&!committedLayout) return;
     // Native scrolling can precede its scroll event. Never restore an older anchor
     // over that still-unreported user delta while a measurement commits.
-    if(committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
+    // Switching Work and Conversation reflows everything at once; the browser clamping the scroll to the new, shorter document
+    // is not the reader scrolling, so it must not become the new anchor (UI-41c).
+    if(!switching.current&&committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
       rememberReading();return;
     }
     // At the document start, late allocation changes must preserve the boundary,
@@ -512,6 +521,36 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     if (readingAtStart.current) { if (el.scrollTop > .5) setScrollTop(0); return; }
     if (!anchor) return;
     const node = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
+    // The reader's place is a passage and the pixels from the top of the view to it. A passage that moved far (the document
+    // got much shorter or longer) is not mounted yet: put the view where the layout says it now is, and the mounted passage
+    // refines it on the next pass. A passage that shrank to a line keeps its line in view rather than its old inner offset.
+    if (switching.current && modeAnchor.current) {
+      // Put the same prompt, message or run back at the same distance from the top. A run folded into its line uses the line; a
+      // run that opened uses its first card; a later passage of a folded run uses the line that now holds it.
+      const wanted = modeAnchor.current;
+      const lead = runs.find((run) => run.passageIds.includes(wanted.passageId))?.passageIds[0] ?? wanted.passageId;
+      const slotOf = (id: string) => [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === id);
+      const slot = slotOf(wanted.passageId), leadSlot = slotOf(lead);
+      const part = wanted.kind === 'turn' ? slot?.querySelector<HTMLElement>('.turn')
+        : wanted.kind === 'prose' ? slot?.querySelectorAll<HTMLElement>('.prose')[wanted.index]
+        : slot?.querySelector<HTMLElement>('.ops-row') ?? slot?.querySelector<HTMLElement>('.run-line') ?? leadSlot?.querySelector<HTMLElement>('.run-line') ?? leadSlot?.querySelector<HTMLElement>('.ops-row');
+      if (part) {
+        // A tall run's cards that fold to one line cannot keep an offset deep inside them: the line itself stays in view.
+        const height = part.getBoundingClientRect().height, offset = Math.max(wanted.offset, Math.min(0, Math.min(height, 12) - height));
+        const delta = part.getBoundingClientRect().top - el.getBoundingClientRect().top - offset;
+        if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+        return;
+      }
+      // Not mounted yet (it moved far): bring its passage into the window, and the next pass finishes the job.
+      const index = scene.passages.findIndex((ps) => ps.id === (slot ? wanted.passageId : lead));
+      if (index >= 0) { setScrollTop(layout.prefix[index]! - wanted.offset); return; }
+    }
+    if (switching.current) {
+      const index = scene.passages.findIndex((ps) => ps.id === anchor.id);
+      const height = node ? node.getBoundingClientRect().height : heights.get(anchor.id) ?? 0;
+      anchor.offset = Math.max(anchor.offset, Math.min(0, 24 - height));
+      if (!node && index >= 0) { setScrollTop(layout.prefix[index]! - anchor.offset); return; }
+    }
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
     if (Math.abs(delta) > 0.5) {
@@ -568,6 +607,26 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     // Correct measured spacer changes before paint, using the latest user-scroll anchor.
     restoreReading(true);
   }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion, expandedOp, hoveredOp, readingOp]);
+
+  useLayoutEffect(() => useApp.subscribe((state, previous) => {
+    if (state.historyMode === previous.historyMode) return;
+    const el = ref.current;
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const parts = [...el.querySelectorAll<HTMLElement>('.passage-slot:not([data-folded=hidden]):not([data-unloaded=true]) :is(.turn, .prose, .ops-row, .run-line)')];
+    const hit = parts.find((part) => part.getBoundingClientRect().bottom > box.top + 1);
+    const slot = hit?.closest<HTMLElement>('.passage-slot');
+    if (!hit || !slot?.dataset.passageId) { modeAnchor.current = undefined; return; }
+    const kind = hit.matches('.turn') ? 'turn' : hit.matches('.prose') ? 'prose' : 'ops';
+    const same = [...slot.querySelectorAll<HTMLElement>(kind === 'ops' ? '.ops-row, .run-line' : kind === 'turn' ? '.turn' : '.prose')];
+    modeAnchor.current = { passageId: slot.dataset.passageId, kind, index: kind === 'ops' ? 0 : Math.max(0, same.indexOf(hit)), offset: hit.getBoundingClientRect().top - box.top };
+  }), []);
+
+  useLayoutEffect(() => {
+    if (!switching.current) return;
+    let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => { switching.current = false; modeAnchor.current = undefined; if (!useApp.getState().follow) rememberReading(); }); });
+    return () => cancelAnimationFrame(frame);
+  }, [historyMode]);
 
   // Folding moves the work below the header: it travels from where it was, and unfolded work eases in under the header.
   useLayoutEffect(() => {
@@ -719,6 +778,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       else if (below < extentFloor - .5) setExtentFloor(below);
     }
     if (programmatic.current && Math.abs(el.scrollTop - lastScrollTop.current) < 0.5) return;
+    if (switching.current) return;
     if (follow && performance.now() >= userScrollUntil.current) return;
     navigating.current = true;
     rememberReading();
