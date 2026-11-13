@@ -81,6 +81,19 @@
     margin-left:var(--reading-pad-left); margin-right:var(--reading-pad-right); max-width:none;
   }
 }
+/* UI-45 (Yash, 13 Nov: prose "cut at the edge" of the Files panel in a half-width window). Up to 820 px Files and the Toolbox
+   are drawers over History. Viewer.tsx measures what is left beside them: where a readable column (360 px) fits it moves
+   over and reflows beside the drawer (data-side-fit=docked, margins set like the wide placement), the scrim goes quiet
+   and a click outside still closes the drawer; where it does not (covered), History behind the drawer is dimmed to a
+   ghost so no half-cut words show at the drawer's edge. */
+@media(max-width:820px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-side-fit=docked]:not(.developer-workspace-open):not(.exploring) .history-inner {
+    margin-left:var(--reading-pad-left,0px); margin-right:var(--reading-pad-right,0px); max-width:none;
+  }
+  :root[data-ui-version=modern] .connected-workspace[data-side-fit=docked] .files-scrim { background:transparent; }
+  :root[data-ui-version=modern] .connected-workspace[data-side-fit=covered]:not(.developer-workspace-open) .history { opacity:.08; }
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .connected-workspace:not(.developer-workspace-open) .history { transition:opacity 160ms var(--ease-out); }
+}
 /* Drawers stay in front of the prompt. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {
   max-height:calc(100dvh - var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px)) - 16px);
