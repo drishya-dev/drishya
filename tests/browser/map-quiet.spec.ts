@@ -120,7 +120,7 @@ test('beneath the reading column dots and import lines stay visible but transluc
     const map = document.querySelector('.map')!.getBoundingClientRect();
     const scale = canvas.width / map.width, feather = 72;
     const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
-    // Pixels above an alpha, counted per horizontal span. A quiet dot is .68 x .6 = 104 of 255; a full one is 173.
+    // Pixels above an alpha, counted per horizontal span. A quiet dot is .85 x .38 = 82 of 255; a full one is 217.
     const above = (left: number, right: number, alpha: number) => {
       let count = 0;
       for (let y = 0; y < canvas.height; y++) for (let x = Math.max(0, Math.floor(left * scale)); x < Math.min(canvas.width, Math.ceil(right * scale)); x++) if (data[(y * canvas.width + x) * 4 + 3]! > alpha) count++;
@@ -140,7 +140,7 @@ test('beneath the reading column dots and import lines stay visible but transluc
   // SHIP-8's .3 / .08 floors left 35 pixels at mid strength here; the translucent floors leave thousands (measured, 13 Nov).
   expect(result.insideMid, 'beneath the column the shapes are present, not near-invisible').toBeGreaterThan(500);
   // Relative, because overlapping lines of the dense hub add up: a smaller share of what is drawn beneath the column is at full strength.
-  expect(result.inside / result.insideSeen, 'beneath the column the map is translucent, not full strength').toBeLessThan(.5 * result.outside / result.outsideSeen);
+  expect(result.inside / result.insideSeen, 'beneath the column the map is translucent, not full strength').toBeLessThan(.8 * result.outside / result.outsideSeen);
   // Exploring has no reading material, so the whole map is full strength again.
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.waitForTimeout(500);

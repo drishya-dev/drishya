@@ -128,29 +128,29 @@ test('buttons are pills in every palette, and Jet Black\'s main action is the cr
   expect(await approve.evaluate(el => getComputedStyle(el).backgroundColor), 'Midnight keeps its own primary').not.toBe(cream);
 });
 
-test('Jet Black\'s canvas sits on Home\'s dot ground, painted on the canvas itself; other palettes keep theirs; low resource drops it (MAP-4)', async ({ page }) => {
+test('Jet Black\'s canvas sits on a plain, even dot ground painted on the canvas itself; other palettes keep theirs; low resource drops it (MAP-4)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
   await page.goto(server.launchUrl);
   await expect(page.locator('.mh-home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern#/r/${id}`);
   await expect(page.locator('.history article.op').first()).toBeVisible();
-  // Home's ground, still: a 12 px grid of small dots, a fade toward the edges and the soft accent glow, as the canvas's own
-  // background (it does not scroll, so scrolling history never repaints it). No pseudo-element, no mask, no SVG.
+  // One uniform grid: a single dot gradient on a straight 12 px tile, as the canvas's own background (it does not scroll, so
+  // scrolling history never repaints it). No glow, no fade, no stagger, no pseudo-element, no mask, no SVG.
   const ground = () => page.locator('.connected-workspace').first().evaluate(el => {
     const own = getComputedStyle(el), before = getComputedStyle(el, '::before');
     return { image: own.backgroundImage, size: own.backgroundSize, beforeContent: before.content, beforeMask: before.maskImage || before.getPropertyValue('-webkit-mask-image') };
   });
   await palette(page, 'jet');
   const jet = await ground();
-  expect(jet.image.match(/radial-gradient/g)?.length, 'glow, edge fade and dots').toBe(3);
-  expect(jet.image, 'the dots are 1.1 px with a soft edge, as on Home').toContain('1.7px');
-  expect(jet.size, 'a symmetric 12 px grid').toBe('100% 100%, 100% 100%, 12px 12px');
+  expect(jet.image.match(/radial-gradient/g)?.length, 'one gradient: the dots, nothing else').toBe(1);
+  expect(jet.image, 'a 1.25 px dot with a soft edge').toContain('1.25px');
+  expect(jet.size, 'a straight 12 px grid').toBe('12px 12px');
   expect(jet.image).not.toContain('svg');
-  expect(['none', 'normal'], 'the staggered mask layer is gone').toContain(jet.beforeContent);
+  expect(['none', 'normal'], 'no layer behind the canvas').toContain(jet.beforeContent);
   expect(['none', '']).toContain(jet.beforeMask);
   await palette(page, 'midnight');
-  expect((await ground()).image, 'Midnight keeps its own ground').not.toContain('1.7px');
+  expect((await ground()).image, 'Midnight keeps its own ground').not.toContain('1.25px');
   await palette(page, 'jet');
   await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
   expect((await ground()).image, 'low resource drops it').toBe('none');

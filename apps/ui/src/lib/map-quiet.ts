@@ -13,8 +13,8 @@ export const QUIET_FEATHER = 72;
  */
 /** MAP-4: strength of dots and lines at rest, in the margins. The canvas is no longer dimmed to 38 % on top of this. */
 export const MAP_REST_ALPHA = .85;
-export const QUIET_NODE_FLOOR = .5;
-export const QUIET_EDGE_FLOOR = .45;
+export const QUIET_NODE_FLOOR = .38;
+export const QUIET_EDGE_FLOOR = .3;
 
 /** 1 outside the feather band, `floor` inside the zone, a straight ramp between. */
 export function quietFactor(x: number, y: number, zones: readonly QuietZone[], floor: number, feather = QUIET_FEATHER): number {

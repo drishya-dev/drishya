@@ -1,16 +1,10 @@
-/* Jet Black's ground is Home's (home-opening.css, `.mh-opening`): a symmetric 12 px grid of small dots, denser toward the
-   middle and fading toward the edges, with a soft accent glow behind it. It replaces UI-39's staggered 4 px mask layer,
-   which read as scattered and too large and repainted a masked pseudo-element on every history scroll (MAP-4, Yash 13 Nov).
-   It is plain CSS background on `.connected-workspace` itself, which does not scroll, so scrolling history never repaints it.
-   The edge fade is a --bg gradient laid over the dots (a background cannot be masked), so there is no pseudo-element, no
-   mask and no SVG. Jet-only: Midnight and Paper keep their own ground; low resource drops it (atelier.css). */
+/* Jet Black's ground: a plain, even grid of dots on the canvas itself (MAP-4, Yash 13 Nov: "way too intense ... more clean ...
+   just use the previous dots and just a bit more in size"). It is UI-39 part 3's first ground (#456), a straight 12 px grid at
+   11 % cream, with the dot a little larger (radius 1.25 px, soft edge to 2 px; it was 1 px). Every dot has the same size and
+   brightness: no stagger, no variation, no glow, no gradient, no fade, no mask, no pseudo-element, no SVG. It is a CSS
+   background of `.connected-workspace`, which does not scroll, so scrolling history never repaints it. Midnight and Paper keep
+   their own ground; the low-resource rule that removes it still wins (atelier.css). */
 :root[data-ui-version=modern][data-experience][data-theme][data-palette=jet] .connected-workspace {
-  background-color:var(--bg);
-  background-image:
-    radial-gradient(46% 52% at 50% 44%,color-mix(in srgb,var(--modern-accent,var(--focus)) 9%,transparent),transparent 74%),
-    radial-gradient(80% 90% at 50% 44%,transparent 0,color-mix(in srgb,var(--bg) 45%,transparent) 50%,var(--bg) 100%),
-    radial-gradient(circle,color-mix(in srgb,var(--brand-ink) 30%,transparent) 1.1px,transparent 1.7px);
-  background-size:100% 100%,100% 100%,12px 12px;
-  background-position:0 0,0 0,0 0;
-  background-repeat:no-repeat,no-repeat,repeat;
+  background-image:radial-gradient(circle,color-mix(in srgb,var(--brand-ink) 11%,transparent) 1.25px,transparent 2px);
+  background-size:12px 12px;
 }
