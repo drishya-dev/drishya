@@ -263,40 +263,40 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☑ | 68 | UI-42 | History's passages use the width between the left and right panels; prose keeps its reading measure (frames first) | `ui` |
 | ☑ | 69 | UI-43 | The composer's model menu shows versions and permission modes again (regression) | `ui` `bug` |
 | ☑ | 70 | UI-44 | Edit and Write cards show whole lines, as Read does: long lines wrap inside the card instead of running out of it | `ui` `bug` |
-| ☐ | Done | 70b | UI-45 | History never runs under a side panel, at any zoom: the file reader, peek, Workspace and the Toolbox all bound the reading column | `ui` `bug` |
+| ☐ | 70b | UI-45 | History never runs under a side panel, at any zoom: the file reader, peek, Workspace and the Toolbox all bound the reading column | `ui` `bug` |
 | ☐ | 70c | UI-46 | Tool cards show their content cleanly: line structure kept, never cut mid-line | `ui` `content` |
-| ☐ | Done | 71 | MAP-4 | Map nodes and edges seen through the reading area again, translucent (regression) | `ui` `bug` |
-| ☐ | Done | 72 | SITE-3 | The landing site's hero intro starts without a stall on first load | `ui` `rel` |
-| ☑ | Done | 73 | TEST-3 | Five browser specs red on clean main (13 Nov): fix each, or the spec where the product is right | `test` |
-| ☑ | Done | 74 | SHIP-2h | Opened surfaces finished: dialogs sized to content, human values in Session details, ellipsis and path wrapping, plurals, settings icons, grouped command palette, a route from an empty This session | `ui` |
-| ☑ | Done | 75 | UI-36 | A compaction reads as one seam in history: the context shrinking at true scale, human numbers, the summary one click away | `ui` `content` `motion` |
-| ☐ | Done | 76 | SHIP-2b | History readable at a glance: prose, prompts, cards, outcomes, compaction and notices each distinct from one another and from chrome | `ui` `content` |
-| ☐ | Done | 77 | SHIP-2c | Everything a click opens (menus, session menu, Usage, settings, dialogs, popovers, Queued inputs) has clear hierarchy, not content after content | `ui` |
-| ☐ | Done | 78 | SHIP-2d | Readers and tools (Files, peek, Workspace, Git, search, Screen) with the same hierarchy and colour | `ui` `files` `git` |
-| ☐ | Done | 79 | SHIP-6 | Reading and overlap defects from the COMP-1 presentation review | `ui` `bug` |
-| ☑ | Done | 80 | CLEAN-2 | Remove every trace of the parked Nebius/Nemotron model feature from the product and current docs | `data` `ui` |
-| ☑ | Done | 81 | DATA-14 | The history worker waits for its cache lock instead of failing with "database is locked" at startup | `data` `bug` |
-| ☑ | Done | 82 | BUILD-1 | Split the UI bundle so no chunk passes the 800 KB warning, with first paint unchanged or faster | `perf` |
-| ☐ | Done | 83 | LIVE-7 | Live latency: measure and shorten the delay between the agent doing something and Drishya showing it, at every step | `live` `perf` |
-| ☐ | Done | 84 | MOTION-4 | Smooth motion on every click that looks better with it, with both an opening and a closing animation | `motion` |
-| ☐ | Done | 85 | MAP-3 | If possible (Yash, 13 Nov; does not block the release): Lit files: the file the agent is on is pulled forward on the map with its name and type, the rest stays a quiet field | `ui` `motion` |
-| ☐ | Done | 86 | PERF-4 | Large sessions open at once: the latest work first, the rest loads in the background and arrives in one quiet batch | `perf` `live` `ui` |
-| ☐ | Done | 87 | SITE-2 | Every product image on the landing site re-captured from the finished product; the same clicks, cursor and zooms | `rel` `ui` |
-| ☐ | Done | 88 | SEC-3 | Threat model and an automated security suite (`pnpm test:security`): network exposure, the request gate, file access, injected content, command execution, outbound traffic, secrets, limits | `privacy` `rel` |
-| ☐ | Done | 89 | AG-1 | HARNESS-AG: read Antigravity sessions (adapter, discovery, import) from the transcript JSONL and the session index | `data` `native` |
-| ☐ | Done | 90 | AG-2 | HARNESS-AG: Antigravity in the product (harness identity, counts, filters, search, no composer) | `ui` `data` |
-| ☐ | Done | 91 | AG-3 | HARNESS-AG: live tail, background commands and subagent conversations | `live` `data` |
-| ☐ | Done | 92 | AG-4 | HARNESS-AG: images, plan artifacts and recorded thinking (needs the builders' agreement) | `data` `content` |
-| ☐ | Done | 93 | AG-5 | HARNESS-AG: genuine Antigravity sessions for the cases no local session has (browser, MCP, plan review, question, approval) | `native` `data` |
-| ☐ | Done | 94 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
-| ☐ | Done | 95 | SEC-4 | Penetration pass on the release candidate with real tools (hostile page, DNS rebinding, scanner, fuzzer, another local user), every finding fixed or accepted in writing | `privacy` `rel` |
-| ☐ | Done | 96 | SEC-5 | Supply chain and release hygiene: package contents, dependencies, a secret scan of the whole Git history before the repository is public, SECURITY.md | `privacy` `rel` |
-| ☐ | Done | 97 | PUBLIC-1 | Make the repository public: history and content audit first, a licence chosen by the builders, then CI runs free | `rel` |
-| ☐ | Done | 98 | SHIP-16 | Linux and macOS from tests: CI on all three systems including package:verify, plus a real Linux run in WSL2 | `rel` |
-| ☐ | Done | 99 | MAC-1 | macOS acceptance run (a separate task so it is not forgotten) | `rel` |
-| ☐ | Done | 100 | SHIP-10 | Release-candidate review by a fresh agent, plus Yash's human ten-minute pass | `rel` |
-| ☐ | Done | 101 | VIDEO-1 | Product videos: real-session demos and a comparison, made with an open-source video skill | `rel` |
-| ☐ | Done | 102 | SHIP-11 | Launch posts written and scheduled (builders, not agents) | `rel` |
+| ☐ | 71 | MAP-4 | Map nodes and edges seen through the reading area again, translucent (regression) | `ui` `bug` |
+| ☐ | 72 | SITE-3 | The landing site's hero intro starts without a stall on first load | `ui` `rel` |
+| ☑ | 73 | TEST-3 | Five browser specs red on clean main (13 Nov): fix each, or the spec where the product is right | `test` |
+| ☑ | 74 | SHIP-2h | Opened surfaces finished: dialogs sized to content, human values in Session details, ellipsis and path wrapping, plurals, settings icons, grouped command palette, a route from an empty This session | `ui` |
+| ☑ | 75 | UI-36 | A compaction reads as one seam in history: the context shrinking at true scale, human numbers, the summary one click away | `ui` `content` `motion` |
+| ☐ | 76 | SHIP-2b | History readable at a glance: prose, prompts, cards, outcomes, compaction and notices each distinct from one another and from chrome | `ui` `content` |
+| ☐ | 77 | SHIP-2c | Everything a click opens (menus, session menu, Usage, settings, dialogs, popovers, Queued inputs) has clear hierarchy, not content after content | `ui` |
+| ☐ | 78 | SHIP-2d | Readers and tools (Files, peek, Workspace, Git, search, Screen) with the same hierarchy and colour | `ui` `files` `git` |
+| ☐ | 79 | SHIP-6 | Reading and overlap defects from the COMP-1 presentation review | `ui` `bug` |
+| ☑ | 80 | CLEAN-2 | Remove every trace of the parked Nebius/Nemotron model feature from the product and current docs | `data` `ui` |
+| ☑ | 81 | DATA-14 | The history worker waits for its cache lock instead of failing with "database is locked" at startup | `data` `bug` |
+| ☑ | 82 | BUILD-1 | Split the UI bundle so no chunk passes the 800 KB warning, with first paint unchanged or faster | `perf` |
+| ☐ | 83 | LIVE-7 | Live latency: measure and shorten the delay between the agent doing something and Drishya showing it, at every step | `live` `perf` |
+| ☐ | 84 | MOTION-4 | Smooth motion on every click that looks better with it, with both an opening and a closing animation | `motion` |
+| ☐ | 85 | MAP-3 | If possible (Yash, 13 Nov; does not block the release): Lit files: the file the agent is on is pulled forward on the map with its name and type, the rest stays a quiet field | `ui` `motion` |
+| ☐ | 86 | PERF-4 | Large sessions open at once: the latest work first, the rest loads in the background and arrives in one quiet batch | `perf` `live` `ui` |
+| ☐ | 87 | SITE-2 | Every product image on the landing site re-captured from the finished product; the same clicks, cursor and zooms | `rel` `ui` |
+| ☐ | 88 | SEC-3 | Threat model and an automated security suite (`pnpm test:security`): network exposure, the request gate, file access, injected content, command execution, outbound traffic, secrets, limits | `privacy` `rel` |
+| ☐ | 89 | AG-1 | HARNESS-AG: read Antigravity sessions (adapter, discovery, import) from the transcript JSONL and the session index | `data` `native` |
+| ☐ | 90 | AG-2 | HARNESS-AG: Antigravity in the product (harness identity, counts, filters, search, no composer) | `ui` `data` |
+| ☐ | 91 | AG-3 | HARNESS-AG: live tail, background commands and subagent conversations | `live` `data` |
+| ☐ | 92 | AG-4 | HARNESS-AG: images, plan artifacts and recorded thinking (needs the builders' agreement) | `data` `content` |
+| ☐ | 93 | AG-5 | HARNESS-AG: genuine Antigravity sessions for the cases no local session has (browser, MCP, plan review, question, approval) | `native` `data` |
+| ☐ | 94 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
+| ☐ | 95 | SEC-4 | Penetration pass on the release candidate with real tools (hostile page, DNS rebinding, scanner, fuzzer, another local user), every finding fixed or accepted in writing | `privacy` `rel` |
+| ☐ | 96 | SEC-5 | Supply chain and release hygiene: package contents, dependencies, a secret scan of the whole Git history before the repository is public, SECURITY.md | `privacy` `rel` |
+| ☐ | 97 | PUBLIC-1 | Make the repository public: history and content audit first, a licence chosen by the builders, then CI runs free | `rel` |
+| ☐ | 98 | SHIP-16 | Linux and macOS from tests: CI on all three systems including package:verify, plus a real Linux run in WSL2 | `rel` |
+| ☐ | 99 | MAC-1 | macOS acceptance run (a separate task so it is not forgotten) | `rel` |
+| ☐ | 100 | SHIP-10 | Release-candidate review by a fresh agent, plus Yash's human ten-minute pass | `rel` |
+| ☐ | 101 | VIDEO-1 | Product videos: real-session demos and a comparison, made with an open-source video skill | `rel` |
+| ☐ | 102 | SHIP-11 | Launch posts written and scheduled (builders, not agents) | `rel` |
 
 ### P1 — next, after Release 1
 
