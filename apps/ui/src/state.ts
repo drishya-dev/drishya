@@ -23,6 +23,10 @@ function revisionsOf(recordings: RecordingSummary[]): Record<string, number> {
   return Object.fromEntries(recordings.map((r) => [r.id, r.revision ?? 0]));
 }
 
+/** The reading mode lives in the window's own memory (not any one session's), so every session in this window opens the way it was left. */
+export type HistoryMode = 'work' | 'conversation';
+export const HISTORY_MODE_SCOPE = '@home', HISTORY_MODE_KEY = 'history/mode';
+
 export type Screen = 'loading' | 'home' | 'viewer' | 'no-daemon' | 'signed-out' | 'error';
 
 interface State {
@@ -56,6 +60,8 @@ interface State {
   held: boolean;
   /** History follows the newest work; scrolling away turns it off. */
   follow: boolean;
+  /** UI-41: how History reads. Work shows every tool card; Conversation folds each run of cards to its one line. Remembered per window. */
+  historyMode: HistoryMode;
   motion: boolean;
   hoverReading: boolean;
   /** Largest Markdown file the Document view renders; Source always stays available. */
@@ -112,6 +118,7 @@ interface State {
   togglePlay(): void;
   jump(type: Marker['type'] | Marker['type'][], dir?: 1 | -1): void;
   select(opId: string | undefined): void;
+  setHistoryMode(mode: HistoryMode): void;
   resume(): void;
   showHistory(): void;
   setFilter(f: ComposeInput['filter'] | undefined): void;
@@ -151,6 +158,7 @@ export const useApp = create<State>((set, get) => ({
   speed: 1,
   held: false,
   follow: true,
+  historyMode: 'work',
   hoverReading: (() => { try { return localStorage.getItem("drishya.hoverReading") !== "0"; } catch { return true; } })(),
   documentSize: (() => { try { const value = localStorage.getItem("drishya.documentSize"); return isDocumentSize(value) ? value : "standard"; } catch { return "standard"; } })(),
   reasoningDetail: storedPresentation('reasoningDetail') === 'hidden' ? 'hidden' : storedPresentation('reasoningDetail') === 'collapsed' ? 'collapsed' : 'expanded',
@@ -299,6 +307,11 @@ export const useApp = create<State>((set, get) => ({
     if (to !== undefined) get().seek(to, { hold: true });
   },
 
+  setHistoryMode(mode) {
+    const source = get().source;
+    if (source) workspaceMemory(source).session(HISTORY_MODE_SCOPE).set(HISTORY_MODE_KEY, mode);
+    set({ historyMode: mode });
+  },
   select(opId) {
     const clockRunning = get().mode === 'replay' && get().playing;
     set({ selectedOp: opId, expandedOp: undefined, promptStep: undefined, ...(opId && !clockRunning ? { playing: false, held: true } : {}) });
