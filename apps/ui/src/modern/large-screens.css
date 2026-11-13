@@ -70,6 +70,15 @@
     mask-image:linear-gradient(to bottom,rgba(0,0,0,.1) 0,rgba(0,0,0,.1) calc(var(--reading-edge-top,0px) - 4px),#000 calc(var(--reading-edge-top,0px) + 36px),#000 calc(100% - var(--reading-edge-bottom,0px) - 36px),rgba(0,0,0,.1) calc(100% - var(--reading-edge-bottom,0px) + 4px));
   }
 }
+/* Yash, 13 Nov: the reading column starts after the Files panel (or its chips, when minimised) and ends before the
+   Toolbox, with the same gap at both ends, at every browser zoom. Viewer.tsx measures the chrome and sets the margins
+   (the column keeps its padding and its reading maximum, and is centred when the space is wider); until it has, the
+   stylesheet's own placement stands. Above 820 px only: narrower, Files is an overlay and the column is the window. */
+@media(min-width:821px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open):not(.exploring)[style*="--reading-pad-left"] .history-inner {
+    margin-left:var(--reading-pad-left); margin-right:var(--reading-pad-right);
+  }
+}
 /* Drawers stay in front of the prompt. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {
   max-height:calc(100dvh - var(--workspace-leading-bottom,var(--workspace-tools-bottom,132px)) - 16px);
