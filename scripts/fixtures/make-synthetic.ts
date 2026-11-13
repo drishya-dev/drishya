@@ -531,4 +531,49 @@ write(
 The sessions record \`cwd\` as \`${CWD}\`; importers map the repository with \`--workspace fixtures/synthetic/workspace/shop\`.
 `,
 );
+// Antigravity's corpus is standalone; no existing harness story is changed.
+const agFolder = join(out, 'antigravity');
+mkdirSync(agFolder, { recursive: true });
+const agTools: [string, Record<string, unknown>][] = [
+  ['read_file', { Path: abs('src/checkout/guard.ts'), StartLine: 1, EndLine: 2 }],
+  ['view_file', { AbsolutePath: abs('src/checkout/guard.ts') }],
+  ['write_file', { TargetFile: abs('new.ts'), Content: 'export const value = 1;' }],
+  ['write_to_file', { TargetFile: abs('created.ts'), CodeContent: 'export {};' }],
+  ['edit_file', { TargetFile: abs('new.ts'), Target: 'missing', Replacement: 'new' }],
+  ['replace_file_content', { TargetFile: abs('new.ts'), TargetContent: '1', ReplacementContent: '2' }],
+  ['multi_replace_file_content', { TargetFile: abs('new.ts'), ReplacementChunks: [{ TargetContent: '2', ReplacementContent: '3' }] }],
+  ['grep_search', { Query: 'checkout', SearchPath: CWD }],
+  ['find_by_name', { Pattern: '*.ts', SearchDirectory: CWD }],
+  ['list_dir', { DirectoryPath: CWD }],
+  ['run_command', { CommandLine: 'node --version', Cwd: CWD }],
+  ['manage_task', { Action: 'status', TaskId: '1' }],
+  ['search_web', { Query: 'synthetic reference' }],
+  ['read_url_content', { Url: 'https://example.test/' }],
+  ['invoke_subagent', { Prompt: 'Inspect the synthetic fixture', type_name: 'explorer' }],
+  ['define_subagent', { type_name: 'explorer', role: 'read-only review' }],
+  ['manage_subagents', { Action: 'list' }],
+  ['send_message', { Recipient: 'child', Message: 'synthetic message' }],
+  ['schedule', { DurationSeconds: 1 }],
+  ['search_marketplace', { Query: 'synthetic' }],
+  ['ask_question', { Question: 'synthetic question' }],
+  ['ask_permission', { Action: 'synthetic action' }],
+];
+let agStep = 0;
+const agRow = (type: string, extra: Record<string, unknown> = {}) => ({
+  step_index: agStep++, source: 'MODEL', type, status: 'DONE', created_at: '2026-11-13T10:00:00Z',
+  content: '', tool_calls: [], thinking: '', ...extra,
+});
+const agRows = [agRow('USER_INPUT', { source: 'USER_EXPLICIT', content: 'Review this synthetic code.', media: [{ mime_type: 'image/png', uri: 'file:///home/dev/.gemini/antigravity/brain/synthetic/.user_uploaded/test.png' }] })];
+for (const [name, args] of agTools) {
+  agRows.push(agRow('PLANNER_RESPONSE', { tool_calls: [{ name, args: Object.fromEntries(Object.entries(args).map(([key, value]) => [key, JSON.stringify(value)])) }] }));
+  agRows.push(agRow('GENERIC', {
+    status: name === 'edit_file' ? 'ERROR' : name === 'run_command' ? 'RUNNING' : 'DONE',
+    ...(name === 'edit_file' ? { error: 'target content not found' } : {}),
+    content: name === 'read_file' || name === 'view_file' ? 'Showing lines 1-2 of 2\n1: export const value = 1;\n2: export {};' : name === 'write_to_file' ? 'Created file' : 'Synthetic result',
+  }));
+}
+for (const type of ['VIEW_FILE', 'LIST_DIRECTORY', 'CODE_ACTION', 'RUN_COMMAND', 'SEARCH_WEB', 'GREP_SEARCH', 'INVOKE_SUBAGENT', 'READ_URL_CONTENT', 'CHECKPOINT', 'SYSTEM_MESSAGE', 'EPHEMERAL_MESSAGE', 'CONVERSATION_HISTORY', 'ERROR_MESSAGE']) agRows.push(agRow(type, { content: 'Synthetic recorded material' }));
+agRows.push(agRow('PLANNER_RESPONSE', { content: 'Partial synthetic prose', thinking: 'Synthetic recorded thinking', truncated_fields: ['content'], tool_calls: [{ name: 'run_command', args: { CommandLine: JSON.stringify('echo token=ghp_1234567890abcdefghijklmnopqrstuv123456') } }] }));
+agRows.push({ ...agRows[2]!, content: 'A replacement receipt for the same synthetic step.' });
+writeFileSync(join(agFolder, 'corpus.ndjson'), agRows.map(row => JSON.stringify(row)).join('\n') + '\n{"step_index":999,"content":');
 console.log(`Wrote synthetic fixtures to ${out}`);

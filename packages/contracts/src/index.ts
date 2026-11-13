@@ -2,7 +2,7 @@
 // Shapes follow docs/review/03-engineering-plan.md §3–4: immutable observations, a versioned
 // projection built from them, typed evidence links, historical artifacts with explicit gaps.
 
-export const CONTRACT_VERSION = '0.2.0-draft';
+export const CONTRACT_VERSION = '0.2.1-draft';
 
 // ─── Observations: what a source actually said, sanitized, never rewritten ─────────────
 
@@ -61,7 +61,7 @@ export interface Observation {
   agentId: string;
   /** Native tool call id, so a call and its result correlate into one operation. */
   operationId?: string;
-  correlation?: { operationId: string; basis: 'source-id' | 'enclosing-call' };
+  correlation?: { operationId: string; basis: 'source-id' | 'enclosing-call' | 'call-order' };
   kind: ObservationKind | (string & {});
   payload: ObservationPayload;
   privacyPolicyVersion: string;
@@ -244,7 +244,7 @@ export interface UsagePayload {
 
 /** Optional enrichment of an existing compaction record; its original observation stays immutable. */
 export interface CompactionPayload {
-  source: 'claude-boundary' | 'claude-summary' | 'codex-compacted' | 'codex-context-compacted';
+  source: 'claude-boundary' | 'claude-summary' | 'codex-compacted' | 'codex-context-compacted' | 'antigravity-checkpoint';
   phase: 'boundary' | 'summary';
   trigger?: string;
   beforeTokens?: number;

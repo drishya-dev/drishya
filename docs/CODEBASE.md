@@ -260,6 +260,8 @@ TypeScript runs directly on Node 24 (type stripping), with no build step for the
 4. Write synthetic fixtures in the real format (`scripts/fixtures/make-synthetic.ts`) and parser tests. Never commit a real session.
 5. Register it in `ingest/src/index.ts` (`defaultAdapters`).
 
+Antigravity (AG-1, integration branch): `adapter-antigravity` reads allow-listed transcript JSONL and an immutable read-only summary index; positional correlation is explicit, repeated steps replace their materialized receipts, and its native step index controls ordering. See its README for merge sections and acceptance limits.
+
 Formats verified on this machine on 22–25 Sep 2026 against 574 Claude Code and 28 Codex sessions. Newer records that are handled: Claude `ai-title` and `cost-state`; Codex `exec` (code mode), `spawn_agent`/`agent_message` (collaboration) and `namespace: "mcp__<server>"`.
 
 ## Local API and security

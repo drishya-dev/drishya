@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r40';
+export const REDUCER_VERSION = 'r41';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -715,6 +715,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             st.op.endSequence = st.scriptWrapper ? Math.max(0, step() - 1) : step();
             st.op.endTime = o.sourceTime;
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
+            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || st.intent.kind === 'shell' && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
             if (!p.isError && st.literalPlan !== undefined && literalPlanConfirmed(text(p.text))) {
@@ -753,7 +754,9 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               }
             }
             if (st.nestedPatch) st.wrapperResult = { observation: o, payload: p };
-            link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObservationId ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
+            link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: o.correlation?.basis === 'call-order' ? 'deterministic-rule' : 'source-id',
+              ...(o.correlation?.basis === 'call-order' ? { ruleVersion: 'antigravity-call-order-v1' } : {}), sourceObservationIds: [st.callObservationId ?? o.id, o.id],
+              explanation: o.correlation?.basis === 'call-order' ? 'The result follows this call in the recorded planner group order; the transcript has no native call id.' : 'The harness recorded this result for this call id.' });
             // Completed calls no longer need their potentially large edit/command input.
             st.intent = { kind: 'other' };
             if (!st.scriptWrapper) timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
@@ -977,6 +980,13 @@ function copyValue<T>(value: T): T {
  * carrying each source's last time forward for records without one. Ties keep ingest order.
  */
 export function orderObservations(input: Observation[]): Observation[] {
+  if (input.length && input.every(o => o.source.adapterId === 'antigravity')) {
+    return [...input].sort((a, b) => {
+      const index = (o: Observation) => Number.parseInt(o.source.recordId?.split(':')[1] ?? '-1', 10);
+      const ai = index(a), bi = index(b);
+      return (Number.isFinite(ai) ? ai : -1) - (Number.isFinite(bi) ? bi : -1) || a.receivedSequence - b.receivedSequence;
+    });
+  }
   const last = new Map<string, string>();
   const keyed = [...input]
     .sort((a, b) => a.receivedSequence - b.receivedSequence)
@@ -1190,6 +1200,16 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       if (st.intent.kind !== 'edit' && st.intent.kind !== 'write') break; // patch ops were described at call time
       if (outcome.kind !== 'edit') break;
       const original = outcome.originalFile === null ? null : c.text(outcome.originalFile as TextValue);
+      if (o.source.adapterId === 'antigravity') {
+        // The transcript records requested strings, not the applied disk state. Show the
+        // intent diff, but never promote it to a confirmed snapshot or future read base.
+        d.hunks = st.intent.kind === 'write' ? addHunk(st.intent.content ?? '') : hunksFromStrings(st.intent.edits, undefined);
+        d.created = outcome.created === true && !p.isError;
+        d.reconstruction = 'unavailable';
+        d.reconstructionNote = p.isError ? 'The tool reported an error; no after-state was recorded.' : 'Requested change; Antigravity reported the tool result but did not record an applied file snapshot.';
+        c.knownFull.delete(c.fileKey(o.recordingId, d.path));
+        break;
+      }
       const base = typeof original === 'string' ? original : c.knownFull.get(c.fileKey(o.recordingId, d.path));
       const hunks = Array.isArray(outcome.hunks) && outcome.hunks.length
         ? resolveHunkLines(outcome.hunks as Hunk[], line => c.text(line, false))

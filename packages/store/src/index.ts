@@ -26,6 +26,8 @@ const PREVIEW = 2048;
 const IMAGE_BUDGET = 256 * 1024 * 1024;
 
 export interface StoredCursor {
+  /** Optional physical transcript variant; the source path remains the recording identity. */
+  readPath?: string;
   offset: number;
   generation: number;
   fingerprint: string;
@@ -946,13 +948,44 @@ export class Store {
   appendObservations(recordingId: string, sourceId: string, cursor: StoredCursor, obs: Omit<Observation, 'receivedSequence'>[]): Observation[] {
     const stored = this.tx(() => {
       const added: Observation[] = [];
+      let inserted = 0;
+      let removed = 0;
       let seq = (this.q('SELECT COALESCE(MAX(seq), -1) AS m FROM observations WHERE recording_id = ?').get(recordingId) as { m: number }).m;
       const exists = this.q('SELECT 1 FROM observations WHERE id = ?');
       const ins = this.q('INSERT INTO observations(id, recording_id, seq, kind, agent_id, operation_id, source_time, body) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       const fts = this.q('INSERT INTO search(text, recording_id, observation_id) VALUES (?, ?, ?)');
+      const reconciled = new Set<string>();
+      for (const receipt of obs.filter(o => o.source.adapterId === 'antigravity' && o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number' && exists.get(o.id))) {
+        const incoming = new Set(obs.filter(o => o.source.recordId === receipt.source.recordId).map(o => o.id));
+        const previous = this.q("SELECT id FROM observations WHERE recording_id=? AND json_extract(body, '$.source.sourceId')=? AND json_extract(body, '$.source.recordId')=?")
+          .all(recordingId, sourceId, receipt.source.recordId!) as { id: string }[];
+        for (const previousPart of previous) if (!incoming.has(previousPart.id)) {
+          this.q('DELETE FROM search WHERE observation_id=?').run(previousPart.id);
+          this.q('DELETE FROM observations WHERE id=?').run(previousPart.id);
+          removed++;
+          reconciled.add(receipt.id);
+        }
+      }
       for (const o of obs) {
-        if (exists.get(o.id)) continue;
+        if (exists.get(o.id)) {
+          if (o.source.adapterId !== 'antigravity') continue;
+          const previous = this.observationById(recordingId, o.id)!;
+          const next: Observation = { ...o, payload: this.externalize(o.payload, recordingId) as Observation['payload'], receivedSequence: previous.receivedSequence };
+          // Antigravity appends replacement receipts for a step. Preserve its position and
+          // stable identity, update the latest materialized receipt, and replace its FTS text.
+          const material = (value: Observation) => JSON.stringify([value.kind, value.agentId, value.operationId, value.correlation, value.workspaceRoot, value.sourceTime, value.payload, value.availability, value.redactions]);
+          if (material(previous) === material(next) && !reconciled.has(o.id)) continue;
+          this.q('UPDATE observations SET kind=?, agent_id=?, operation_id=?, source_time=?, clock_time=?, body=? WHERE id=?')
+            .run(next.kind, next.agentId, next.operationId ?? null, next.sourceTime ?? null, clockTime(next.sourceTime), JSON.stringify(next), next.id);
+          this.q('DELETE FROM search WHERE observation_id=?').run(next.id);
+          const updatedText = searchableText(o);
+          if (updatedText) fts.run(updatedText, recordingId, next.id);
+          this.q('DELETE FROM projections WHERE recording_id=?').run(recordingId);
+          added.push(next);
+          continue;
+        }
         seq += 1;
+        inserted++;
         const full: Observation = { ...o, payload: this.externalize(o.payload, recordingId) as Observation['payload'], receivedSequence: seq };
         ins.run(full.id, recordingId, seq, full.kind, full.agentId, full.operationId ?? null, full.sourceTime ?? null, JSON.stringify(full));
         this.q('UPDATE observations SET clock_time=? WHERE id=?').run(clockTime(full.sourceTime), full.id);
@@ -971,7 +1004,7 @@ export class Store {
         this.q(`UPDATE recordings SET observation_count = observation_count + ?, updated_at = ?, revision = revision + 1,
                 first_source_time = COALESCE(MIN(first_source_time, ?), first_source_time, ?),
                 last_source_time = CASE WHEN last_source_time IS NULL OR last_source_time < ? THEN ? ELSE last_source_time END
-                WHERE id = ?`).run(added.length, new Date().toISOString(), times[0] ?? null, times[0] ?? null, times.at(-1) ?? null, times.at(-1) ?? null, recordingId);
+                WHERE id = ?`).run(inserted - removed, new Date().toISOString(), times[0] ?? null, times[0] ?? null, times.at(-1) ?? null, times.at(-1) ?? null, recordingId);
       }
       return added;
     });
@@ -1018,6 +1051,15 @@ export class Store {
     const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
     return {
       *[Symbol.iterator]() {
+        const antigravity = ids.length === 1 && store.getRecording(ids[0]!)?.harness === 'antigravity';
+        if (antigravity) {
+          // Whole-second source clocks can regress. The harness's step index is authoritative.
+          const rows = store.q(`SELECT body FROM observations WHERE recording_id=? ORDER BY
+            CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
+              CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END, seq`).iterate(ids[0]!) as Iterable<{ body: string }>;
+          for (const row of rows) yield JSON.parse(row.body) as Observation;
+          return;
+        }
         // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
         // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
         const order = store.db.prepare(`

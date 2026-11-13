@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { claudeAdapter } from '@drishya/adapter-claude';
 import { claudeContinuation } from '../../adapter-claude/src/continuation.ts';
 import { codexAdapter } from '@drishya/adapter-codex';
+import { antigravityAdapter } from '@drishya/adapter-antigravity';
 import {
   headRecords,
   initialCursor,
@@ -25,7 +26,7 @@ import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { reduce, REDUCER_VERSION } from '@drishya/projection';
 import type { SourceRow, Store } from '@drishya/store';
 
-export const defaultAdapters = (): Adapter[] => [claudeAdapter, codexAdapter];
+export const defaultAdapters = (): Adapter[] => [claudeAdapter, codexAdapter, antigravityAdapter];
 
 export interface ChangeEvent {
   type: 'recording';
@@ -177,12 +178,17 @@ export class Ingestor extends EventEmitter {
       ),
     );
     const all = lists.flat();
+    for (const adapter of this.adapters.filter(a => !adapterId || a.descriptor.id === adapterId)) {
+      for (const diagnostic of adapter.diagnostics?.() ?? []) errors.push({ adapterId: adapter.descriptor.id, code: diagnostic.code, message: sanitize(diagnostic.message).value });
+    }
     for (const s of all) {
       // Shown in the session list before any import, so it gets the same policy. The path stays
       // exact: it is the import key, and local paths are deliberately visible in the local UI.
       if (s.title !== undefined) s.title = sanitize(s.title).value;
       if (s.cwd !== undefined) s.cwd = sanitize(s.cwd).value;
-      const id = recordingIdFor(s.adapterId, s.path);
+      const existing = this.existingNativeSource(this.adapter(s.adapterId), s.path);
+      if (existing?.sourcePath) s.path = existing.sourcePath;
+      const id = existing?.id ?? recordingIdFor(s.adapterId, s.path);
       if (this.store.getRecording(id)) s.importedRecordingId = id;
     }
     return { sources: all.sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt)), errors };
@@ -195,10 +201,16 @@ export class Ingestor extends EventEmitter {
   }
 
   /** Imports (or resumes importing) a journal and its companions. Idempotent. */
+  private existingNativeSource(adapter: Adapter, path: string) {
+    if (!adapter.identity) return undefined;
+    const identity = adapter.identity(path);
+    return this.store.listRecordings().find(recording => recording.harness === adapter.descriptor.harness && recording.sourcePath && adapter.identity!(recording.sourcePath) === identity);
+  }
+
   async importSource(adapterId: string, mainPath: string, opts: { title?: string; lineageSeen?: Set<string>; lineageSources?: string[] } & SyncOptions = {}): Promise<ImportResult> {
     const adapter = this.adapter(adapterId);
-    const path = resolve(mainPath);
-    await stat(path); // fail early, before creating a recording
+    const path = this.existingNativeSource(adapter, resolve(mainPath))?.sourcePath ?? resolve(mainPath);
+    await stat(adapter.readPath ? await adapter.readPath(path) : path); // fail early, before creating a recording
     const recordingId = recordingIdFor(adapterId, path);
     const title = opts.title === undefined ? undefined : sanitize(opts.title).value;
     this.store.upsertRecording({ id: recordingId, adapterId, harness: adapter.descriptor.harness, sourcePath: path, title });
@@ -263,9 +275,10 @@ export class Ingestor extends EventEmitter {
   rescan(recordingId: string): Promise<{ added: number; gaps: number; more: boolean }> {
     return this.locked(recordingId, async () => {
       const recording = this.store.getRecording(recordingId);
-      if (!recording?.sourcePath || !(await stat(recording.sourcePath)).isFile()) throw new Error('The original journal is unavailable. Captured history remains readable.');
+      if (!recording?.sourcePath) throw new Error('The original journal is unavailable. Captured history remains readable.');
       const row = this.store.db.prepare('SELECT adapter_id AS adapter FROM recordings WHERE id = ?').get(recordingId) as { adapter: string };
       const adapter = this.adapter(row.adapter);
+      if (!(await stat(adapter.readPath ? await adapter.readPath(recording.sourcePath) : recording.sourcePath)).isFile()) throw new Error('The original journal is unavailable. Captured history remains readable.');
       for (const source of this.store.getSources(recordingId)) {
         if (!(await stat(source.path).catch(() => undefined))?.isFile()) continue;
         this.store.rewindSource(source);
@@ -403,6 +416,7 @@ export class Ingestor extends EventEmitter {
       // unused pages rather than retaining the import's native working set.
       if (added && !more && this.store.sourceBytes(recordingId) > 32 * 1024 * 1024) this.store.db.exec('PRAGMA shrink_memory');
       if (added) {
+        if (adapterId === 'antigravity') this.projectionCache.delete(recordingId);
         const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);
       }
@@ -415,16 +429,19 @@ export class Ingestor extends EventEmitter {
   }
 
   private async readSource(adapter: Adapter, src: SourceRow, live: boolean, turnBytes: number | undefined, acceptUnterminated = !live): Promise<{ added: number; gaps: number; more: boolean; missing: boolean; size?: number }> {
+    const readPath = adapter.readPath ? await adapter.readPath(src.path) : src.path;
+    const switched = src.cursor.readPath !== undefined && src.cursor.readPath !== readPath;
+    if (switched) this.parsers.delete(src.id);
     let parser = this.parsers.get(src.id);
     if (!parser) {
       parser = adapter.createParser({ recordingId: src.recordingId, sourceId: src.id, sourcePath: src.path, agentId: src.agentId });
       // After a restart, rebuild call correlation from what is already stored.
-      parser.prime(this.store.observationsOfKinds(src.recordingId, ['tool.call', 'tool.result', 'session.meta', 'turn.start', 'turn.end']).filter((o) => o.source.sourceId === src.id));
+      if (!switched) parser.prime(this.store.observationsOfKinds(src.recordingId, ['tool.call', 'tool.result', 'session.meta', 'turn.start', 'turn.end', ...(adapter.descriptor.id === 'antigravity' ? ['checkpoint'] : [])]).filter((o) => o.source.sourceId === src.id));
       this.parsers.set(src.id, parser);
     }
     // A record must fit in one read, or a bounded turn could never get past it.
     const readOpts = turnBytes === undefined ? { acceptUnterminated } : { acceptUnterminated, maxReadBytes: turnBytes, maxRecordBytes: Math.min(MAX_RECORD_BYTES, turnBytes) };
-    let cursor = src.cursor;
+    let cursor = switched ? { ...initialCursor(), generation: src.cursor.generation + 1 } : src.cursor;
     let added = 0;
     let gaps = 0;
     let more = false;
@@ -432,7 +449,8 @@ export class Ingestor extends EventEmitter {
     for (let guard = 0; guard < 10_000; guard++) {
       let res;
       try {
-        res = await readJsonl(src.path, cursor, readOpts);
+        res = await readJsonl(readPath, cursor, readOpts);
+        if (adapter.readPath) Object.assign(res.cursor, { readPath });
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { added, gaps, more: false, missing: true };
         throw e;
