@@ -99,3 +99,31 @@ for (const width of [1440, 600]) {
     expect(await rects(page), 'the session with the labels back in the sans').toEqual(session);
   });
 }
+
+test('buttons are pills in every palette, and Jet Black\'s main action is the cream pill (UI-39 part 2)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
+  await page.getByRole('button', { name: 'Changes', exact: true }).click();
+  const approve = page.getByRole('button', { name: 'Approve read-only Git', exact: true });
+  await expect(approve).toBeVisible();
+  for (const name of ['jet', 'midnight', 'paper'] as const) {
+    await palette(page, name);
+    const radii = await page.locator(':is(.btn,.icon-btn):visible').evaluateAll(list => list.map(el => parseFloat(getComputedStyle(el).borderTopLeftRadius) >= Math.min(el.getBoundingClientRect().height / 2, 999) - 0.5));
+    expect(radii.length, name).toBeGreaterThan(3);
+    expect(radii.every(Boolean), `${name}: every visible button is a pill`).toBe(true);
+  }
+  await palette(page, 'jet');
+  await page.mouse.move(0, 0); await page.waitForTimeout(400); // past the button's colour transition
+  const { bg, ink, cream, ground } = await approve.evaluate(el => {
+    const probe = (v: string) => { const s = document.createElement('span'); s.style.color = `var(${v})`; document.body.append(s); const c = getComputedStyle(s).color; s.remove(); return c; };
+    return { bg: getComputedStyle(el).backgroundColor, ink: getComputedStyle(el).color, cream: probe('--brand-ink'), ground: probe('--bg') };
+  });
+  expect(bg, 'the main action is cream').toBe(cream);
+  expect(ink, 'its label is the ground').toBe(ground);
+  await palette(page, 'midnight'); await page.waitForTimeout(400);
+  expect(await approve.evaluate(el => getComputedStyle(el).backgroundColor), 'Midnight keeps its own primary').not.toBe(cream);
+});
