@@ -14,3 +14,5 @@
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .prose :is(.md-h,.md-lead):first-child { margin-top:0; }
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .prose > :last-child,
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .prose li > p:last-child { margin-bottom:0; }
+/* Code and plain-text blocks inside a message end on the same right edge as its lines (they scroll inside). */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose .fenced-material.fenced-material { max-width:min(100%,75ch); }
