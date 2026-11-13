@@ -19,7 +19,6 @@ import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import type { VerificationTrail } from '../../../packages/scene/src/verification.ts';
 import type { FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import type { ReadBeforeWrite } from '../../../packages/scene/src/read-before-write.ts';
-import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
 import type {GitSessionQuery,GitSessionEvidence} from './git-session-evidence.ts';
 import type {DelegationThread} from './delegation-types.ts';
@@ -150,7 +149,6 @@ export class HistoryService {
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }
   file(id: string, path: string, start = 0, count = 100, step?: number, query = '', selectedOperationId?: string) { return this.request<FileOperationPage>('file', { id, path, start, count, step, query, selectedOperationId }); }
-  prepare(id: string, task: string, model: ModelConfig, body: Record<string, unknown>) { return this.request<Prepared>('prepare', { id, task, model: { ...model, apiKey: undefined }, body }); }
   marker(id: string, step: number, types: Marker['type'][], direction: 1 | -1) { return this.request<number | undefined>('marker', { id, step, types, direction }); }
   forget(id: string) { return this.request<void>('forget', { id }); }
   async close() {

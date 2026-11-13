@@ -48,34 +48,8 @@ export interface DiscoveryError {
   message: string;
 }
 
-export interface ExplainClaim {
-  text: string;
-  evidence: { key: string; step: number; ref: { type: string; id?: string; step?: number }; observationIds: string[] }[];
-}
-
-export interface Explanation {
-  provenance: { kind: 'generated'; generator: string; version: string; observationIds: string[] };
-  task: 'explain-operation' | 'briefing';
-  summary: string;
-  claims: ExplainClaim[];
-  unknowns: string[];
-  droppedClaims: number;
-  evidenceCount: number;
-}
-
-export interface ModelPreview {
-  endpoint: string;
-  model: string;
-  chars: number;
-  items: number;
-  messages: { role: string; content: string }[];
-  /** Fingerprint of exactly this request. Sending requires it back, so consent covers only what was shown. */
-  digest: string;
-}
-
 export interface Config {
   version: string;
-  llm: { configured: boolean; baseUrl: string; models: { nano: string; super: string; ultra: string } };
   adapters: { id: string; label: string; capabilities: Record<string, string> }[];
 }
 
@@ -131,9 +105,6 @@ export interface DataSource {
   /** One bounded passive read of an already imported local journal. No persistent watch. */
   refreshRecording?(id:string):Promise<{added:number;more:boolean}>;
   sessionSegments?(id:string):Promise<{items:{source:DiscoveredSource;boundary:{ordinal:number;bytes:number}}[];partial:boolean}>;
-  /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
-  explain(id: string, operationId: string, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
-  briefing(id: string, range: { from?: number; to?: number }, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
   exportUrl(id: string): string | undefined;
   forget(id: string): Promise<void>;
   /** The reader's "seen through here" mark for one recording; null when never marked. */
@@ -243,11 +214,6 @@ export class HttpError extends Error {
   }
 }
 
-/** The updated preview when a send was refused because the evidence changed after review. */
-export function changedPreview(e: unknown): ModelPreview | undefined {
-  return e instanceof HttpError && e.status === 409 ? (e.body.preview as ModelPreview | undefined) : undefined;
-}
-
 async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -334,8 +300,6 @@ export const daemon: DataSource = {
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   refreshRecording: id => req(`/v1/recordings/${encodeURIComponent(id)}/refresh`,{method:'POST',json:{}}),
   sessionSegments: id=>req(`/v1/recordings/${encodeURIComponent(id)}/segments`),
-  explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
-  briefing: (id, range, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/briefing`, { method: 'POST', json: { ...range, consent } }),
   exportUrl: (id) => `/v1/recordings/${encodeURIComponent(id)}/export`,
   forget: async (id) => {
     await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -493,8 +457,6 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       return hits.slice(0, 50);
     },
     setLive: unsupported,
-    explain: unsupported,
-    briefing: unsupported,
     exportUrl: () => undefined,
     forget: unsupported,
     boundary: async () => null,
