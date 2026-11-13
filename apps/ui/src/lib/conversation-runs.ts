@@ -96,9 +96,17 @@ const RUN = '#run';
 export const runMeasureKey = (id: string, folded: boolean) => folded ? id + RUN : id;
 
 /** Heights for the virtual list: hidden passages take none, folded ones use their own measurement. */
-export function runHeights(base: ReadonlyMap<string, number>, measured: ReadonlyMap<string, number>, fold: RunFold): ReadonlyMap<string, number> {
-  if (!fold.folded.size) return base;
+export function runHeights(base: ReadonlyMap<string, number>, measured: ReadonlyMap<string, number>, fold: RunFold, passages?: readonly ScenePassage[]): ReadonlyMap<string, number> {
+  const unloaded = passages?.filter((ps) => ps.unloaded) ?? [];
+  if (!fold.folded.size && !unloaded.length) return base;
   const heights = new Map(base);
   for (const id of fold.folded) heights.set(id, fold.hidden.has(id) ? 0 : measured.get(id + RUN) ?? RUN_FOLDED_ESTIMATE);
+  if (unloaded.length) {
+    // A page not loaded yet stands in with what folded rows have measured so far, not a Work-mode passage's height: the
+    // difference moves every row after it the moment the page arrives.
+    const sizes = [...measured].filter(([key]) => key.endsWith(RUN)).map(([, height]) => height).slice(-200);
+    const typical = sizes.length ? sizes.reduce((sum, height) => sum + height, 0) / sizes.length : RUN_FOLDED_ESTIMATE;
+    for (const ps of unloaded) heights.set(ps.id, measured.get(ps.id + RUN) ?? typical);
+  }
   return heights;
 }

@@ -172,6 +172,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const followFrame = useRef<number | undefined>(undefined);
   const followingStarted = useRef(false);
   const requestedWindow = useRef<{ key: string; projection: Projection } | undefined>(undefined);
+  const lastViewportTop = useRef(0);
+  const lastTravel = useRef(0);
   const motion = useApp(s => s.motion);
   const materialPositions = useRef(new Map<string, DOMRect>());
   const isProgrammaticScroll = useCallback(() => programmatic.current && Math.abs((ref.current?.scrollTop ?? 0) - lastScrollTop.current) < .5, []);
@@ -289,7 +291,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const runLines = useMemo(() => new Map(runs.map((run) => [run.id, runLine(run.operationIds.flatMap((id) => { const op = ops.get(id); return op ? [op] : []; }))])), [runs, ops]);
   const foldFor = (ps: ScenePassage): Fold => foldOf(ps, folded) ?? (runState.hidden.has(ps.id) ? 'hidden' : undefined);
   const keyFor = (ps: ScenePassage, fold: Fold) => fold ? measureKey(ps.id, fold) : runMeasureKey(ps.id, runState.folded.has(ps.id));
-  const heights = useMemo(() => runHeights(foldedHeights(scene.passages, measurements.current, folded), measurements.current, runState), [scene.passages, folded, measurementVersion, runState]);
+  const heights = useMemo(() => runHeights(foldedHeights(scene.passages, measurements.current, folded), measurements.current, runState, conversation ? scene.passages : undefined), [scene.passages, folded, measurementVersion, runState, conversation]);
   const layout = useMemo(() => passageWindow(ids, heights, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
     // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
     [scene.passages, viewport, heights, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
@@ -377,21 +379,37 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
 
   useLayoutEffect(() => {
     if (!onWindow) return;
-    const visible = passageWindow(ids, heights, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
-    const missing = visible.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i))
-      .find((i) => scene.passages[i]?.unloaded && foldFor(scene.passages[i]!) !== 'hidden');
+    const indexes = (window: ReturnType<typeof passageWindow>) => window.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i));
+    const isMissing = (i: number) => scene.passages[i]?.unloaded && foldFor(scene.passages[i]!) !== 'hidden';
+    const near = passageWindow(ids, heights, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
+    let missing = indexes(near).find(isMissing);
+    let start = Math.max(0, (missing ?? 0) - 8), count = 32;
+    const travel = viewport.top < lastViewportTop.current - 1 ? -1 : viewport.top > lastViewportTop.current + 1 ? 1 : lastTravel.current;
+    lastViewportTop.current = viewport.top; lastTravel.current = travel;
+    if (conversation && !lowResource) {
+      // Folded rows are short, so a screen holds many passages and a page of 32 spans only a few screens: it is outrun, and a
+      // loading slot shows. Ask for the largest page, placed so it covers the whole look-ahead window (about two screens each
+      // way) with the spare room on the side the reader is moving toward. A page that covers the window is never replaced by
+      // one that covers less of it, so pages do not take turns evicting each other.
+      const ahead = indexes(passageWindow(ids, heights, viewport.top, viewport.height, new Set(), 1800));
+      missing = ahead.find(isMissing);
+      if (missing !== undefined) {
+        const spare = Math.max(0, 64 - ((ahead.at(-1) ?? 0) - (ahead[0] ?? 0) + 1));
+        count = 64;
+        start = Math.max(0, Math.min(scene.passages.length - count, (ahead[0] ?? 0) - (travel < 0 ? Math.max(0, spare - 2) : Math.min(2, spare))));
+      }
+    }
     if (missing === undefined) { requestedWindow.current = undefined; return; }
-    const start = Math.max(0, missing - 8);
     const key = `${scene.step}:${start}`;
     // A background refresh can supersede this request without moving the reader.
     // Deduplicate within one projection, never suppress its replacement's missing page.
     if (requestedWindow.current?.key === key && requestedWindow.current.projection === projection) return;
     requestedWindow.current = { key, projection };
-    void onWindow({ start, count: 32, pinnedPassageIds: [...pinned].slice(0, 3) }).catch((error) => {
+    void onWindow({ start, count, pinnedPassageIds: [...pinned].slice(0, 3) }).catch((error) => {
       requestedWindow.current = undefined;
       set({ error: error.message });
     });
-  }, [scene.passages, scene.step, viewport, heights, onWindow]);
+  }, [scene.passages, scene.step, viewport, heights, onWindow, conversation]);
 
   remember.current = () => rememberReading();
   const rememberReading = () => {
@@ -772,7 +790,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={keyFor(ps, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
               {fold !== 'hidden' && !unloaded && <SessionLineage projection={projection} passageId={ps.id} visibleStep={scene.step} />}
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: heights.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
             </div>;
           }),
         ])}
