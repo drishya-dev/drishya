@@ -9,6 +9,8 @@
 :root[data-ui-version=modern] .history-mode-option:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 :root[data-ui-version=modern] .history-mode-option:active { transform: scale(.97); }
 @media (max-width: 760px) { :root[data-ui-version=modern] .history-mode-option { padding: 0 9px; } }
+/* Below the narrowest supported window (600 px) the switch gives up its room; the v key still switches. */
+@media (max-width: 480px) { :root[data-ui-version=modern] .history-mode { display: none; } }
 
 /* The line: the turn ledger's words for one run, in the same mono and ink as the turn's own ledger. The chevron says
    it opens; it turns when it does. A failure keeps a red dot before the words so it cannot hide among the counts. */
