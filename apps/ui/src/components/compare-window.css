@@ -75,8 +75,9 @@
 .compare-reader>.compare-evidence.none { padding:0 14px 8px; }
 
 .compare-reader { display:flex; flex-direction:column; min-width:0; min-height:0; }
-.compare-file-header { display:flex; align-items:center; gap:12px; padding:9px 14px 4px; flex:none; min-width:0; }
-.compare-file-title { flex:1; min-width:0; display:flex; align-items:baseline; gap:10px; }
+/* SHIP-2d: the file's name keeps room for about 26 characters; the side switch and actions wrap under it instead of squeezing it to one letter. */
+.compare-file-header { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; padding:9px 14px 4px; flex:none; min-width:0; }
+.compare-file-title { flex:1 1 26ch; min-width:0; display:flex; align-items:baseline; gap:10px; }
 .compare-file-title strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .compare-file-title small { color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .compare-side-switch { display:inline-flex; gap:2px; flex:none; }
