@@ -171,7 +171,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const seenThrough = useRef(scene.total);
   const followFrame = useRef<number | undefined>(undefined);
   const followingStarted = useRef(false);
-  const requestedWindow = useRef<{ key: string; projection: Projection } | undefined>(undefined);
+  const requestedWindow = useRef<{ key: string; projection: Projection; start: number; count: number; pending: boolean } | undefined>(undefined);
   const lastViewportTop = useRef(0);
   const lastTravel = useRef(0);
   const motion = useApp(s => s.motion);
@@ -404,11 +404,20 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     // A background refresh can supersede this request without moving the reader.
     // Deduplicate within one projection, never suppress its replacement's missing page.
     if (requestedWindow.current?.key === key && requestedWindow.current.projection === projection) return;
-    requestedWindow.current = { key, projection };
+    // A newer request makes the one in flight stale, so asking again on every scroll step means no page ever lands until the
+    // reader stops. While a request covers every passage that is missing in view, wait for it (Conversation, where a screen
+    // holds many short rows and the reader outruns the loader most easily).
+    const flight = requestedWindow.current;
+    if (conversation && flight?.pending && flight.projection === projection) {
+      const needed = indexes(near).filter(isMissing);
+      if (needed.every((i) => i >= flight.start && i < flight.start + flight.count)) return;
+    }
+    const mine = { key, projection, start, count, pending: true };
+    requestedWindow.current = mine;
     void onWindow({ start, count, pinnedPassageIds: [...pinned].slice(0, 3) }).catch((error) => {
       requestedWindow.current = undefined;
       set({ error: error.message });
-    });
+    }).finally(() => { mine.pending = false; });
   }, [scene.passages, scene.step, viewport, heights, onWindow, conversation]);
 
   remember.current = () => rememberReading();
