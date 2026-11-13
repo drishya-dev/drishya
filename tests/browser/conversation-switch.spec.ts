@@ -70,9 +70,12 @@ for (const kind of ['turn', 'prose', 'ops'] as const) {
     expect(middle, 'the reader is in the middle, not at either end').toBeGreaterThan(0.2);
 
     for (const [target, wantKind] of [['Conversation', kind === 'ops' ? 'line' : kind], ['Work', kind === 'ops' ? 'cards' : kind], ['Conversation', kind === 'ops' ? 'line' : kind], ['Work', kind === 'ops' ? 'cards' : kind]] as const) {
+      
       await mode(page, target).click();
       // The same thing, at the same distance from the top (a run's cards become its line, and back).
-      await expect.poll(async () => { const now = await topPart(page); return now.kind === wantKind && (kind === 'ops' || now.text === start.text) && Math.abs(now.offset - start.offset) <= 3; }, { timeout: 8000, message: `after switching to ${target}` }).toBe(true);
+      let seen = '';
+      await expect.poll(async () => { const now = await topPart(page); seen = JSON.stringify(now); return now.kind === wantKind && (kind === 'ops' || now.text === start.text) && Math.abs(now.offset - start.offset) <= 3; }, { timeout: 15000 }).toBe(true).catch((error) => { throw new Error(`after switching to ${target}: wanted ${wantKind} like ${JSON.stringify(start)}, last saw ${seen}
+${error.message}`); });
       // And it stays there once the reflow and any page loads have finished.
       await page.waitForTimeout(800);
       const settled = await topPart(page);

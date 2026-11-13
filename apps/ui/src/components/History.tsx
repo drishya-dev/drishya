@@ -536,7 +536,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
         : slot?.querySelector<HTMLElement>('.ops-row') ?? slot?.querySelector<HTMLElement>('.run-line') ?? leadSlot?.querySelector<HTMLElement>('.run-line') ?? leadSlot?.querySelector<HTMLElement>('.ops-row');
       if (part) {
         // A tall run's cards that fold to one line cannot keep an offset deep inside them: the line itself stays in view.
-        const offset = Math.max(wanted.offset, Math.min(0, 24 - part.getBoundingClientRect().height));
+        const height = part.getBoundingClientRect().height, offset = Math.max(wanted.offset, Math.min(0, Math.min(height, 12) - height));
         const delta = part.getBoundingClientRect().top - el.getBoundingClientRect().top - offset;
         if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
         return;
