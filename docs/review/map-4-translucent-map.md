@@ -32,5 +32,5 @@ Dot candidates (frames `dots-candidates-100.png` and `-150.png`, 100 % and 150 %
 - The densest real map available is 108 files; SHIP-8's 307-file session is gone. The 280-file synthetic hub covers density.
 - The reference worktrees index their own checkouts, so their nodes differ from this branch's; compared look and pixel counts, not identical nodes.
 - A low-resource attribute added after load does not stop rotation (read at start); that rule is untouched here.
-- `jet-language.spec.ts` "surfaces nested in a panel ... outline returns with focus" fails on clean origin/main (5a78176f) as well; not caused by this change, not fixed here.
+- `jet-language.spec.ts` "surfaces nested in a panel ... outline returns with focus" failed on origin/main 5a78176f (not this change) and passes on the branch rebased onto 0dac90ec.
 - Full gate and the ten-minute test not run; Yash accepts from frames.
