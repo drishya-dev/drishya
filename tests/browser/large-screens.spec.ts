@@ -79,8 +79,11 @@ for (const width of [1440, 1920, 2149, 2560, 3840, 5120]) {
       expect(box!.right, `${name} right`).toBeLessThanOrEqual(width - edge + 0.5);
     };
     for (const selector of ['.modern-identity', '.workspace-utilities', '.folder-explorer', '.history-inner', '.toolbox-rail']) inside(await span(page, selector), selector);
-    const column = (await span(page, '.history-inner'))!;
-    expect(column.right - column.left, 'history column keeps its reading maximum').toBeLessThanOrEqual(1280.5);
+    // UI-42: the column spans the space between the Files panel and the Toolbox (no 1280 px cap); only prose keeps a measure.
+    const column = (await span(page, '.history-inner'))!, files = (await span(page, '.folder-explorer'))!, tools = (await span(page, '.modern-toolbox'))!;
+    expect(column.left, 'history column starts at the Files panel').toBeGreaterThanOrEqual(files.right - 80);
+    expect(column.right, 'history column ends at the Toolbox').toBeLessThanOrEqual(tools.left + 80);
+    expect(await page.evaluate(() => Math.max(0, ...[...document.querySelectorAll('.history .prose p')].map(p => p.getBoundingClientRect().width))), 'prose keeps its reading measure').toBeLessThanOrEqual(75 * 11);
 
     const file = page.locator('[data-spine-path]').filter({ has: page.getByText('main.ts', { exact: true }) });
     await file.click();

@@ -107,7 +107,7 @@ const GOLDEN: Record<Recording, Record<number, string[]>> = {
     1024: ['1/1/1', '1/1', '1/1/1/1', '1/1/1/1/1/1/1/2/2/1'],
     1280: ['1/2', '2', '2/2', '1/1/2/2/2/3/1'],
     1440: ['2/1', '2', '2/2', '1/1/2/2/3/2/1'],
-    1920: ['3', '2', '3/1', '1/1/4/4/1/1'],
+    1920: ['3', '2', '3/1', '1/1/4/5/1'], // UI-42: the column spans the whole space between the panels, so a row holds one more card
   },
 };
 
@@ -131,6 +131,7 @@ for (const width of [1024, 1440]) test(`full-row wide edit still grows into boun
   op.detail.hunks=[{oldStart:1,oldLines:1,newStart:1,newLines:76,lines:[' const unchanged = true;',...Array.from({length:75},(_,n)=>`+export const capturedChange${n+1} = ${n+1};`)]}];
   await page.route('**/demo/bundle.json',route=>route.fulfill({json:bundle}));
   await page.goto(new URL('/?demo&experience=modern',server.launchUrl).href);
+  await expect(page.locator('.connected-workspace')).toHaveAttribute('style',/--reading-pad-left/); // UI-42: measure the card once the column is placed between the panels
   const card=page.locator(`article[data-op-id="${op.id}"]`);
   await card.scrollIntoViewIfNeeded();
   await expect.poll(()=>card.evaluate(el=>el.getAnimations().filter(a=>a.playState==='running').length)).toBe(0);
