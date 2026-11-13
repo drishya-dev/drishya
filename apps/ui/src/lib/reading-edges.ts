@@ -69,4 +69,36 @@ export function measureReadingEdges(viewer: HTMLElement): ReadingEdges {
 }
 
 export const READING_EDGE_OBSERVED_SELECTORS =
-  '.history-inner, .workspace-header, .workspace-bar, .workspace-leading, .workspace-secondary, .modern-native-composer, .history-transport, .catalog-toggle, .modern-replay-transport, .queued-input-receipts';
+  '.history-inner, .workspace-header, .workspace-bar, .workspace-leading, .workspace-secondary, .modern-native-composer, .history-transport, .catalog-toggle, .modern-replay-transport, .queued-input-receipts, .folder-explorer, .modern-toolbox, .complete-prompt-rail, .history-prompt-marks';
+
+/** The reading column's equal side gap (Yash, 13 Nov: "same equal padding from both ends on both toggle and untoggle states"). */
+export const READING_SIDE_GAP = 24;
+
+/**
+ * Margins that place History's reading column between the persistent side chrome with the same gap on both sides:
+ * from the Files panel's right edge (or, when Files is minimised, its Files/Repository chips) to the Toolbox's left
+ * edge (or the prompt rail). The column keeps its own padding and its reading maximum (UI-37's 1280 px measure); when
+ * the space is wider than that, it is centred in the space, so both gaps stay equal. The header islands and the
+ * composer only sit at the top and bottom and carry their own surfaces, so they do not bound it. Measured, not
+ * assumed, so it holds at every browser zoom.
+ */
+export function measureReadingSides(viewer: HTMLElement): { left: number; right: number } | undefined {
+  const history = viewer.querySelector<HTMLElement>('.history'), column = viewer.querySelector<HTMLElement>('.history-inner');
+  if (!history || !column) return;
+  const rects = (selector: string) => [...viewer.querySelectorAll<HTMLElement>(selector)].filter(isVisibleControl).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  const leftChrome = rects('.workspace-leading > *, .folder-explorer');
+  const rightChrome = rects('.modern-toolbox, .complete-prompt-rail, .history-prompt-marks');
+  if (!leftChrome.length || !rightChrome.length) return;
+  const h = history.getBoundingClientRect(), hs = getComputedStyle(history), cs = getComputedStyle(column);
+  const containerLeft = h.left + parseFloat(hs.borderLeftWidth) + parseFloat(hs.paddingLeft);
+  const containerRight = h.left + parseFloat(hs.borderLeftWidth) + history.clientWidth - parseFloat(hs.paddingRight);
+  const padLeft = parseFloat(cs.paddingLeft), padRight = parseFloat(cs.paddingRight);
+  // The column's text starts one gap after the left chrome and ends one gap before the right chrome.
+  const start = Math.max(...leftChrome.map(r => r.right)) + READING_SIDE_GAP - padLeft;
+  const end = Math.min(...rightChrome.map(r => r.left)) - READING_SIDE_GAP + padRight;
+  const cap = parseFloat(cs.maxWidth);
+  const width = Number.isFinite(cap) ? Math.min(end - start, cap) : end - start;
+  if (width < 320 + padLeft + padRight) return; // too tight to place by the chrome: keep the stylesheet's own placement
+  const left = start + (end - start - width) / 2;
+  return { left: Math.round(left - containerLeft), right: Math.round(containerRight - (left + width)) };
+}

@@ -102,7 +102,6 @@
 }
 
 /* The header button is a word, not an icon (the Changes entry it replaces kept its label the same way). */
-:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.btn.compare-open {width:auto;min-width:34px;padding:0 9px;}
 
 /* GIT-9: reviewed marks, notes and the handoff preview (what Git review had), in the same hairline-only language. */
 .compare-header-end .desk-options>summary { display:grid; place-items:center; width:32px; min-height:32px; padding:6px; }
