@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
 | UI-43 | @yash + Claude Opus 5.5 | `claude/ui-43-composer-menu` | 2026-11-13 | Composer model menu: `ComposerMenu.tsx`, composer parts of `SessionWorkspace.tsx` and their CSS; the native controller's model/permission data in `apps/daemon/src` if it no longer sends versions or modes; a new browser spec for the menu. Never `workspace-shared-draft.spec.ts`. |
 | UI-42 | @yash + Claude Opus 5.5 (build; Fable reviews) | `claude/ui-42-history-width` | 2026-11-13 | Measure what #461 left first. History column width only: `atelier.css`/`large-screens.css` (`.history-inner` cap), `History.tsx` if needed, `reading-edges.ts`, a browser spec; TASKS/STATUS. No card sizes, no prose measure. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
