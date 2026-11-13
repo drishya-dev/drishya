@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| BUILD-1 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/build-1` | 2026-11-13 | `apps/ui/vite.config.ts`, dynamic imports in `apps/ui`, plus docs/TASKS/STATUS. |
 | DATA-14 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/data-14` | 2026-11-13 | `apps/daemon/src/history-worker.ts`, `apps/daemon/src/history.ts`, `apps/daemon/test/history-lock.test.ts`, plus docs/TASKS/STATUS. |
 | CLEAN-2 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/clean-2` | 2026-11-13 | Remove `packages/explain`, CLI startup `Model:` line, server `explain`/`briefing`/`labels` routes, `prepareBriefing`/`prepareExplain`/`prepareLabels` in `history-worker.ts`, UI generated-briefing panel and `NEBIUS_API_KEY` hints, `docs/HACKATHON.md` and related doc references. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
