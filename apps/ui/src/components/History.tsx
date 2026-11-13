@@ -339,7 +339,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     for (const animation of foldAnimations.current) animation.finish();
     foldAnimations.current = [];
     const closing = !!el?.querySelector(`.passage-slot[data-passage-id="${CSS.escape(passageId)}"] .ops-row`);
-    if (useApp.getState().follow) { remember.current(); set({ follow: false }); }
+    // The reader chose this spot: record it as the anchor, and as where the scroll is, so the reflow below is measured from it.
+    if (useApp.getState().follow) { remember.current(); if (el) lastScrollTop.current = el.scrollTop; set({ follow: false }); }
     if (el && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
       const slots = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')];
       const bottom = el.getBoundingClientRect().bottom;
@@ -837,7 +838,7 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
   const compactNote = compactArgs ? `/compact ${compactArgs}` : undefined;
   const suppressCompactNotice = !folded && isCompactPrompt && hasVisibleCompaction;
   return (
-    <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
+    <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}${run && !run.open && !ps.prose.length && !ps.notices?.length && !ps.compactionIds?.length && !ps.compactionSummaryIds?.length && !ps.turnPrompt && !ps.turnImages?.length ? ' run-only' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
       {!suppressCompactNotice && !!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} time={ps.turnTime} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (

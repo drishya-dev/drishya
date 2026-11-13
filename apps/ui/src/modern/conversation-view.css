@@ -23,6 +23,12 @@
 .history .run-line .bad { color: var(--fail); }
 .history .run-line .run-fail { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--fail); }
 .history .run-line .run-agent { color: var(--agent, var(--t2)); font-family: var(--sans); font-size: var(--text-xs); }
+/* A folded run with nothing after it is only its line: it sits close to what it follows and what comes next, not a passage's worth of space away. */
+:root[data-ui-version=modern][data-experience] .history .passage.run-only { margin-bottom: 4px; }
+.history .passage.run-only .run-line { margin-bottom: 0; }
 /* An open run's line is the way to close it: it sits above its cards without taking their space. */
 .history .run-line[aria-expanded=true] { margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) { .history .run-line, .history .run-line svg, :root[data-ui-version=modern] .history-mode-option { transition: none; } .history .run-line:active, :root[data-ui-version=modern] .history-mode-option:active { transform: none; } }
+
+/* The Changes entry is a word, not an icon. Its width rule lives in compare-window.css, which BUILD-1 moved into the lazy Compare chunk, so until Changes was first opened the word sat in a 34 px square and ran under the next icon. The rule is repeated here, where the header cluster is styled; it keeps its width, and at the narrowest windows the session title gives way (it already truncates). */
+:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.btn.compare-open { width: auto; min-width: 34px; padding: 0 9px; flex: none; }
