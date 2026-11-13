@@ -127,3 +127,42 @@ test('buttons are pills in every palette, and Jet Black\'s main action is the cr
   await palette(page, 'midnight'); await page.waitForTimeout(400);
   expect(await approve.evaluate(el => getComputedStyle(el).backgroundColor), 'Midnight keeps its own primary').not.toBe(cream);
 });
+
+test('Jet Black\'s canvas sits on the site\'s dot ground; other palettes keep theirs; low resource drops it (UI-39 part 3)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
+  const ground = () => page.locator('.connected-workspace').first().evaluate(el => ({ size: getComputedStyle(el).backgroundSize, image: getComputedStyle(el).backgroundImage }));
+  await palette(page, 'jet');
+  const jet = await ground();
+  expect(jet.size).toBe('12px 12px');
+  expect(jet.image).toContain('radial-gradient');
+  await palette(page, 'midnight');
+  expect((await ground()).size, 'Midnight keeps its own ground').not.toBe('12px 12px');
+  await palette(page, 'jet');
+  await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
+  expect((await ground()).image).toBe('none');
+});
+
+test('surfaces nested in a panel keep a fill and lose their outline; a field shows it again on focus; nothing moves (UI-39 part 5)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
+  const search = page.locator('.folder-explorer .ux-search').first();
+  await expect(search).toBeVisible();
+  const look = () => search.evaluate(el => { const c = getComputedStyle(el), r = el.getBoundingClientRect(); return { border: c.borderTopColor, width: c.borderTopWidth, fill: c.backgroundColor, box: `${r.x},${r.y},${r.width},${r.height}` }; });
+  const rest = await look();
+  expect(rest.border, 'no outline at rest').toBe('rgba(0, 0, 0, 0)');
+  expect(rest.fill, 'it keeps a fill').not.toBe('rgba(0, 0, 0, 0)');
+  await search.locator('input').first().focus();
+  const focused = await look();
+  expect(focused.border, 'its outline returns with focus').not.toBe('rgba(0, 0, 0, 0)');
+  expect(focused.width).toBe(rest.width);
+  expect(focused.box, 'the field does not move').toBe(rest.box);
+});
