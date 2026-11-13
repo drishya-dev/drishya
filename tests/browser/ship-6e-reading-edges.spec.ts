@@ -117,6 +117,7 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
     const walker = document.createTreeWalker(column, NodeFilter.SHOW_TEXT);
     const range = document.createRange();
     let visibleCharIntersections = 0;
+    let uncoveredCharIntersections = 0;
     let totalMeasuredRects = 0;
     let node: Node | null;
     while ((node = walker.nextNode())) {
@@ -133,6 +134,15 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
         for (const c of allChromes) {
           if (r.right > c.left + 0.5 && r.left < c.right - 0.5 && clippedBottom > c.top + 0.5 && clippedTop < c.bottom - 0.5) {
             visibleCharIntersections++;
+            // Above 820 px text may pass under a control, but only behind that control's own surface: the topmost
+            // element at the overlap must belong to the control and sit on a fill of 80 % or more.
+            const x = (Math.max(r.left, c.left) + Math.min(r.right, c.right)) / 2, y = (Math.max(clippedTop, c.top) + Math.min(clippedBottom, c.bottom)) / 2;
+            let top = document.elementFromPoint(x, y) as HTMLElement | null, surfaced = false;
+            if (top && !column.contains(top)) for (let e: HTMLElement | null = top; e && e !== viewer; e = e.parentElement) {
+              const bg = getComputedStyle(e).backgroundColor, alpha = /rgba?\(|color\(/.test(bg) ? Number((bg.match(/[\d.]+(?=\)$)/) ?? ['1'])[0]) : 1;
+              if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && (bg.includes('/') || bg.startsWith('rgba') ? alpha >= 0.8 : true)) { surfaced = true; break; }
+            }
+            if (!surfaced) uncoveredCharIntersections++;
           }
         }
       }
@@ -149,6 +159,7 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
       uncoveredTop,
       uncoveredBottom,
       visibleCharIntersections,
+      uncoveredCharIntersections,
       totalMeasuredRects,
       secondaryButtonsRowAligned: (() => {
         const sec = viewer.querySelector<HTMLElement>('.workspace-secondary');
@@ -178,17 +189,19 @@ for (const harness of ['claude-code', 'codex'] as const) {
       const m = await measureChromeAndVisibleTextOverlaps(page);
       expect(m.historyTop).toBe(0);
       expect(m.paintedEdges).toBe(0);
-      expect(m.historyMask).toContain('linear-gradient');
-      // Full strength begins just below the measured top chrome and ends just above the bottom chrome.
-      expect(m.historyMask).toContain(`rgb(0, 0, 0) ${m.edgeTopPx + 36}px`);
-      expect(m.historyMask).toContain(`calc(100% - ${m.edgeBottomPx + 36}px)`);
+      if (width <= 820) {
+        // Full strength begins just below the measured top chrome and ends just above the bottom chrome.
+        expect(m.historyMask).toContain(`rgb(0, 0, 0) ${m.edgeTopPx + 36}px`);
+        expect(m.historyMask).toContain(`calc(100% - ${m.edgeBottomPx + 36}px)`);
+      } else expect(m.historyMask, 'wide windows show the work at full strength (Yash, 13 Nov)').toBe('none');
       expect(m.edgeTopPx).toBeGreaterThan(40);
       expect(m.edgeBottomPx).toBeGreaterThan(40);
       expect(m.historyBackdrop).toBe('none');
       expect(m.uncoveredTop).toBe(0);
       expect(m.uncoveredBottom).toBe(0);
       expect(m.totalMeasuredRects).toBeGreaterThan(10);
-      expect(m.visibleCharIntersections).toBe(0);
+      if (width <= 820) expect(m.visibleCharIntersections).toBe(0);
+      expect(m.uncoveredCharIntersections).toBe(0);
       if (width === 600) expect(m.secondaryButtonsRowAligned).toBe(true);
     });
   }
