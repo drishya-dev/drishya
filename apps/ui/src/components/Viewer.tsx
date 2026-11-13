@@ -54,7 +54,7 @@ import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
 import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
-import { measureReadingEdges, measureReadingSides, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
+import { FILE_READER_SELECTOR, measureReadingEdges, measureReadingSides, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
 
 const CompareWindow = lazy(() => import('./CompareWindow.tsx').then(m => ({ default: m.CompareWindow })));
 
@@ -223,18 +223,32 @@ function WorkspaceViewer() {
       };
       watchResize(el);
       for (const node of el.querySelectorAll(READING_EDGE_OBSERVED_SELECTORS)) watchResize(node);
+      // The file reader is a portal on the document (UI-45): its size, and the width History gives up for it, move the column's sides.
+      for (const node of document.querySelectorAll(FILE_READER_SELECTOR)) watchResize(node);
       for (const subtree of el.querySelectorAll('.workspace-header, .workspace-bar, .modern-native-composer, .history-transport, .queued-input-receipts')) {
         mutation.observe(subtree, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open', 'data-waiting', 'aria-expanded'] });
       }
     };
     const rootMutation = new MutationObserver(() => { bind(); update(); });
     rootMutation.observe(el, { childList: true });
+    // The reader opens and closes as a portal and moves when dragged: measure again, then watch whichever one is open.
+    const portalMutation = new MutationObserver(() => { bind(); update(); });
+    portalMutation.observe(document.body, { childList: true });
+    const openMutation = new MutationObserver(records => { if (records.some(r => (r.target as Element).matches?.('dialog'))) { bind(); update(); } });
+    openMutation.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+    const relayout = () => update();
+    window.addEventListener('drishya-reading-layout', relayout);
+    window.addEventListener('resize', relayout);
     bind();
     update();
     return () => {
       resize.disconnect();
       mutation.disconnect();
       rootMutation.disconnect();
+      portalMutation.disconnect();
+      openMutation.disconnect();
+      window.removeEventListener('drishya-reading-layout', relayout);
+      window.removeEventListener('resize', relayout);
       el.style.removeProperty('--reading-edge-top');
       el.style.removeProperty('--reading-edge-bottom');
       el.style.removeProperty('--reading-pad-left');

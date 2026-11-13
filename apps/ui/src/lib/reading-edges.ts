@@ -69,10 +69,13 @@ export function measureReadingEdges(viewer: HTMLElement): ReadingEdges {
 }
 
 export const READING_EDGE_OBSERVED_SELECTORS =
-  '.history-inner, .workspace-header, .workspace-bar, .workspace-leading, .workspace-secondary, .modern-native-composer, .history-transport, .catalog-toggle, .modern-replay-transport, .queued-input-receipts, .folder-explorer, .modern-toolbox, .complete-prompt-rail, .history-prompt-marks';
+  '.history-inner, .workspace-header, .workspace-bar, .workspace-leading, .workspace-secondary, .modern-native-composer, .history-transport, .catalog-toggle, .modern-replay-transport, .queued-input-receipts, .folder-explorer, .modern-toolbox, .complete-prompt-rail, .history-prompt-marks, .history';
 
 /** The reading column's equal side gap (Yash, 13 Nov: "same equal padding from both ends on both toggle and untoggle states"). */
 export const READING_SIDE_GAP = 24;
+
+/** The file reader (peek) is a portal on the document, not inside `.viewer`; it is the one panel that docks over History's side. */
+export const FILE_READER_SELECTOR = '.file-peek-reader[open]';
 
 /**
  * Margins that place History's reading column between the persistent side chrome with the same gap on both sides:
@@ -82,23 +85,34 @@ export const READING_SIDE_GAP = 24;
  * its 75ch measure on the column's left edge (reading-type.css). The header islands and the composer only sit at the
  * top and bottom and carry their own surfaces, so they do not bound it. Measured, not assumed, so it holds at every
  * browser zoom.
+ *
+ * UI-45 (Yash, 13 Nov: "some glitch here after zooming out and the file explorer where some box gets cutoff"): the
+ * file reader opens over the Toolbox and `.history` itself shrinks to end before it (use-file-peek-layout.ts), so the
+ * reader is chrome on the side it sits, and a margin never pushes the column past the edge `.history` already pulled
+ * in for it. Without that the Toolbox behind the reader set a margin of several hundred pixels the wrong way and the
+ * column's last card and the prompt ran under the reader.
  */
 export function measureReadingSides(viewer: HTMLElement): { left: number; right: number } | undefined {
   const history = viewer.querySelector<HTMLElement>('.history'), column = viewer.querySelector<HTMLElement>('.history-inner');
   if (!history || !column) return;
-  const rects = (selector: string) => [...viewer.querySelectorAll<HTMLElement>(selector)].filter(isVisibleControl).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
+  const rects = (selector: string, root: ParentNode = viewer) => [...root.querySelectorAll<HTMLElement>(selector)].filter(isVisibleControl).map(el => el.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0);
   const leftChrome = rects('.workspace-leading > *, .folder-explorer');
   const rightChrome = rects('.modern-toolbox, .complete-prompt-rail, .history-prompt-marks');
+  const readers = rects(FILE_READER_SELECTOR, document);
+  // The same rule as use-file-peek-layout.ts: the reader is on the side with more room behind it.
+  const readerLeft = readers.filter(r => r.left < innerWidth - r.right), readerRight = readers.filter(r => !(r.left < innerWidth - r.right));
   if (!leftChrome.length || !rightChrome.length) return;
   const h = history.getBoundingClientRect(), hs = getComputedStyle(history), cs = getComputedStyle(column);
   const containerLeft = h.left + parseFloat(hs.borderLeftWidth) + parseFloat(hs.paddingLeft);
   const containerRight = h.left + parseFloat(hs.borderLeftWidth) + history.clientWidth - parseFloat(hs.paddingRight);
   const padLeft = parseFloat(cs.paddingLeft), padRight = parseFloat(cs.paddingRight);
   // The column's text starts one gap after the left chrome and ends one gap before the right chrome.
-  const start = Math.max(...leftChrome.map(r => r.right)) + READING_SIDE_GAP - padLeft;
-  const end = Math.min(...rightChrome.map(r => r.left)) - READING_SIDE_GAP + padRight;
+  const start = Math.max(...leftChrome.map(r => r.right), ...readerLeft.map(r => r.right)) + READING_SIDE_GAP - padLeft;
+  const end = Math.min(...rightChrome.map(r => r.left), ...readerRight.map(r => r.left)) - READING_SIDE_GAP + padRight;
   // The stylesheet lifts its cap once these margins are set, so the column is not read for a maximum here: the
   // placement must not depend on the cap it removes.
   if (end - start < 320 + padLeft + padRight) return; // too tight to place by the chrome: keep the stylesheet's own placement
-  return { left: Math.round(start - containerLeft), right: Math.round(containerRight - end) };
+  // Where a reader docks, `.history` already ends (or starts) beside it: the margin may only pull the column in from there.
+  const left = Math.round(start - containerLeft), right = Math.round(containerRight - end);
+  return { left: readerLeft.length ? Math.max(0, left) : left, right: readerRight.length ? Math.max(0, right) : right };
 }
