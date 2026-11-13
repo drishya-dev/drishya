@@ -1,0 +1,28 @@
+/* UI-41, Conversation view. Two small things: the Work / Conversation switch in the header's view cluster, and the one
+   quiet line a folded run of tool cards shows. Both are made of tokens only; the line is text and a chevron, not a box. */
+
+/* The switch: two labels on one hairline pill. The pressed one rests on the surface colour; nothing glows or moves. */
+:root[data-ui-version=modern] .history-mode { display: inline-flex; align-items: center; gap: 2px; height: 30px; margin: 0 4px; padding: 2px; border: 1px solid var(--line-2); border-radius: var(--round-full); flex: none; }
+:root[data-ui-version=modern] .history-mode-option { height: 24px; padding: 0 11px; border: 0; border-radius: var(--round-full); background: transparent; color: var(--t3); font: var(--weight-regular) var(--text-2xs)/1 var(--mono); white-space: nowrap; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+:root[data-ui-version=modern] .history-mode-option:hover { color: var(--t1); }
+:root[data-ui-version=modern] .history-mode-option[aria-pressed=true] { background: var(--s3); color: var(--t1); }
+:root[data-ui-version=modern] .history-mode-option:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+:root[data-ui-version=modern] .history-mode-option:active { transform: scale(.97); }
+@media (max-width: 760px) { :root[data-ui-version=modern] .history-mode-option { padding: 0 8px; } }
+
+/* The line: the turn ledger's words for one run, in the same mono and ink as the turn's own ledger. The chevron says
+   it opens; it turns when it does. A failure keeps a red dot before the words so it cannot hide among the counts. */
+.history .run-line { display: flex; align-items: center; gap: 7px; max-width: 100%; margin: 2px 0 10px -8px; padding: 4px 10px 4px 8px; border: 0; border-radius: var(--round-full); background: transparent; color: var(--t3); font: var(--weight-regular) var(--text-2xs)/1.6 var(--mono); font-variant-numeric: tabular-nums; text-align: left; cursor: pointer; transition: background-color 150ms ease, color 150ms ease; }
+.history .run-line:hover { background: var(--s2); color: var(--t1); }
+.history .run-line:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.history .run-line:active { transform: scale(.99); }
+.history .run-line svg { width: 10px; height: 10px; flex: none; transition: transform 200ms cubic-bezier(.23,1,.32,1); }
+.history .run-line[aria-expanded=false] svg { transform: rotate(-90deg); }
+.history .run-line .run-words { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history .run-line .good { color: var(--pass); }
+.history .run-line .bad { color: var(--fail); }
+.history .run-line .run-fail { width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--fail); }
+.history .run-line .run-agent { color: var(--agent, var(--t2)); font-family: var(--sans); font-size: var(--text-xs); }
+/* An open run's line is the way to close it: it sits above its cards without taking their space. */
+.history .run-line[aria-expanded=true] { margin-bottom: 8px; }
+@media (prefers-reduced-motion: reduce) { .history .run-line, .history .run-line svg, :root[data-ui-version=modern] .history-mode-option { transition: none; } .history .run-line:active, :root[data-ui-version=modern] .history-mode-option:active { transform: none; } }

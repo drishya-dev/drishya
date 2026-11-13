@@ -37,5 +37,7 @@ import './pill-buttons.css';
 import './jet-ground.css';
 // UI-39: nested surfaces keep a fill and lose their own outline.
 import './fewer-outlines.css';
+// UI-41: the Work / Conversation switch and the line a folded run shows.
+import './conversation-view.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
 import './motion.css';

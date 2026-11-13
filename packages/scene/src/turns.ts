@@ -1,4 +1,4 @@
-import type { Projection, Turn, TurnSettings } from '@drishya/contracts';
+import type { Operation, Projection, Turn, TurnSettings } from '@drishya/contracts';
 
 /**
  * What one turn (from a user prompt to the next) did, counted from captured operations. Pure and clock-free.
@@ -86,6 +86,33 @@ function recordedFacts(turn: Turn, previous: TurnSettings | undefined, place: { 
   return Object.keys(recorded).length ? recorded : undefined;
 }
 
+/** One operation's contribution to a ledger. Shared by the per-turn ledger and the per-run line so the two never count differently. */
+export function tallyOperation(ledger: TurnLedger, op: Operation, files: Set<string>): void {
+  ledger.operations++;
+  if (op.declined) ledger.declined++;
+  else if (op.status === 'error') ledger.failed++;
+  if (op.status === 'running') ledger.open++;
+  const d = op.detail;
+  switch (op.kind) {
+    case 'read': ledger.reads++; break;
+    case 'search': ledger.searches++; break;
+    case 'shell': ledger.commands++; break;
+    case 'web': ledger.web++; break;
+    case 'mcp': ledger.mcp++; break;
+    case 'spawn': ledger.delegations++; break;
+    case 'test':
+      ledger.tests.runs++;
+      if (d.kind === 'test' && d.summary) { ledger.tests.passed += d.summary.passed; ledger.tests.failed += d.summary.failed; }
+      break;
+    case 'edit': case 'write':
+      if (d.kind === 'edit' && op.status !== 'error') {
+        files.add(d.path);
+        for (const hunk of d.hunks) for (const line of hunk.lines) { if (line[0] === '+') ledger.edits.added++; else if (line[0] === '-') ledger.edits.removed++; }
+      }
+      break;
+  }
+}
+
 export function turnLedgers(projection: Projection): TurnLedger[] {
   const recordedAt = recordedTurns(projection);
   const lastSettings = new Map<string, TurnSettings>();
@@ -121,29 +148,7 @@ export function turnLedgers(projection: Projection): TurnLedger[] {
       if (item.type !== 'op-start') continue;
       const op = ops.get(item.operationId);
       if (!op) continue;
-      ledger.operations++;
-      if (op.declined) ledger.declined++;
-      else if (op.status === 'error') ledger.failed++;
-      if (op.status === 'running') ledger.open++;
-      const d = op.detail;
-      switch (op.kind) {
-        case 'read': ledger.reads++; break;
-        case 'search': ledger.searches++; break;
-        case 'shell': ledger.commands++; break;
-        case 'web': ledger.web++; break;
-        case 'mcp': ledger.mcp++; break;
-        case 'spawn': ledger.delegations++; break;
-        case 'test':
-          ledger.tests.runs++;
-          if (d.kind === 'test' && d.summary) { ledger.tests.passed += d.summary.passed; ledger.tests.failed += d.summary.failed; }
-          break;
-        case 'edit': case 'write':
-          if (d.kind === 'edit' && op.status !== 'error') {
-            files.add(d.path);
-            for (const hunk of d.hunks) for (const line of hunk.lines) { if (line[0] === '+') ledger.edits.added++; else if (line[0] === '-') ledger.edits.removed++; }
-          }
-          break;
-      }
+      tallyOperation(ledger, op, files);
     }
     ledger.edits.files = files.size;
     const recorded = owner.get(from);

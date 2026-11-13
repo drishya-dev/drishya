@@ -69,7 +69,10 @@ import {useDisclosureChoice} from './Disclosure.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
-import { foldedHeights, foldedSteps, foldOf, measureKey } from '../lib/turn-fold.ts';
+import { foldedHeights, foldedSteps, foldOf, measureKey, type Fold } from '../lib/turn-fold.ts';
+import { conversationRuns, runFold, runHeights, runMeasureKey } from '../lib/conversation-runs.ts';
+import { runLine } from '../lib/run-ledger.ts';
+import type { RunPresentation } from '../lib/passage-content.ts';
 import { measureReadingEdges, READING_EDGE_FADE } from '../lib/reading-edges.ts';
 
 /** Navigation targets the readable world clear of top and bottom fixed controls and their reading fade. */
@@ -122,6 +125,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const theme = useApp((s) => s.theme);
   const lowResource = useApp((s) => s.lowResource);
   const follow = useApp((s) => s.follow);
+  const historyMode = useApp((s) => s.historyMode);
   const selectedOp = useApp((s) => s.selectedOp);
   const [keyboardOp, setKeyboardOp] = useState<string>();
   const readingOp = selectedOp ?? keyboardOp;
@@ -136,7 +140,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const activeNow = useNow((s) => !!s.view?.mark);
   // Folded turns, by the id of the passage that opens each one (TURN-1b).
   const [storedFolds, setStoredFolds] = useWorkspaceState<string[]>('history/folded-turns', []);
-  const foldMotion = useRef<{ opener: string; tops: Map<string, number> } | undefined>(undefined);
+  // Runs the reader opened in Conversation mode, by the id of the passage that opens each (UI-41).
+  const [storedRuns, setStoredRuns] = useWorkspaceState<string[]>('history/open-runs', []);
+  const foldMotion = useRef<{ opener: string; tops: Map<string, number>; run?: 'open' | 'close' } | undefined>(undefined);
   const foldAnimations = useRef<Animation[]>([]);
   // Folding near the end shortens the document under the reader; the browser would clamp the scroll and move the header.
   // Hold the old extent until the reader scrolls back inside the real one (see onScroll).
@@ -271,7 +277,19 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const folded = useMemo(() => mode === 'history' && modern
     ? foldedSteps(scene.passages, stored, new Set([targetTurn, expandedTurn, activeNow ? newestTurn : undefined].filter((n): n is number => n !== undefined)))
     : new Set<number>(), [scene.passages, stored, mode, modern, targetTurn, expandedTurn, activeNow, newestTurn]);
-  const heights = useMemo(() => foldedHeights(scene.passages, measurements.current, folded), [scene.passages, folded, measurementVersion]);
+  // UI-41: in Conversation mode each run of tool cards between two messages folds to its line. Folding goes through the same
+  // measured-height path as a folded turn (hidden passages measure zero, folded ones use their own key), never CSS alone.
+  const conversation = modern && historyMode === 'conversation';
+  const openRuns = useMemo(() => new Set(storedRuns), [storedRuns]);
+  const runs = useMemo(() => conversation ? conversationRuns(scene.passages) : [], [conversation, scene.passages]);
+  // A reader sent to an action (map, search, a key, the toolbox) must see it: its run opens, and stays open afterwards.
+  const forcedPassage = readingOp ? targetId : focusObservationId && scene.passages[targetIndex]?.ops.some((op) => ops.get(op.id)?.observationIds.includes(focusObservationId)) ? targetId : undefined;
+  const forcedPassages = useMemo(() => new Set([forcedPassage, expandedId].filter((id): id is string => !!id)), [forcedPassage, expandedId]);
+  const runState = useMemo(() => runFold(runs, scene.passages, openRuns, forcedPassages, folded), [runs, scene.passages, openRuns, forcedPassages, folded]);
+  const runLines = useMemo(() => new Map(runs.map((run) => [run.id, runLine(run.operationIds.flatMap((id) => { const op = ops.get(id); return op ? [op] : []; }))])), [runs, ops]);
+  const foldFor = (ps: ScenePassage): Fold => foldOf(ps, folded) ?? (runState.hidden.has(ps.id) ? 'hidden' : undefined);
+  const keyFor = (ps: ScenePassage, fold: Fold) => fold ? measureKey(ps.id, fold) : runMeasureKey(ps.id, runState.folded.has(ps.id));
+  const heights = useMemo(() => runHeights(foldedHeights(scene.passages, measurements.current, folded), measurements.current, runState), [scene.passages, folded, measurementVersion, runState]);
   const layout = useMemo(() => passageWindow(ids, heights, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
     // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
     [scene.passages, viewport, heights, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
@@ -281,6 +299,13 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     const opened = scene.passages.filter((ps) => ps.turnStep !== undefined && (ps.turnStep === targetTurn || ps.turnStep === expandedTurn) && stored.has(ps.id)).map((ps) => ps.id);
     if (opened.length) setStoredFolds((list) => list.filter((id) => !opened.includes(id)));
   }, [targetTurn, expandedTurn, stored]);
+
+  // Being sent into a run is the reader's choice to open it, so it stays open after the selection clears (as for a turn).
+  useEffect(() => {
+    if (!conversation || !forcedPassages.size) return;
+    const opened = runs.filter((run) => !openRuns.has(run.id) && run.passageIds.some((id) => forcedPassages.has(id))).map((run) => run.id);
+    if (opened.length) setStoredRuns((list) => [...list, ...opened.filter((id) => !list.includes(id))]);
+  }, [conversation, runs, forcedPassages]);
 
   const setFolds = useRef(setStoredFolds);
   setFolds.current = setStoredFolds;
@@ -302,6 +327,37 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   }, [lowResource]);
   const extentTotal = useRef(layout.total);
   extentTotal.current = layout.total;
+  const remember = useRef(() => {});
+  const setRuns = useRef(setStoredRuns);
+  setRuns.current = setStoredRuns;
+  const forcedRuns = useRef(new Set<string>());
+  forcedRuns.current = new Set(runs.filter((run) => run.passageIds.some((id) => forcedPassages.has(id))).map((run) => run.id));
+  // Opening or closing a run keeps the reading position: Follow lets go (the reader chose this spot), the slots below glide
+  // from where they were, and a held extent stops the document shrinking under the reader.
+  const toggleRun = useCallback((runId: string, passageId: string) => {
+    const el = ref.current;
+    for (const animation of foldAnimations.current) animation.finish();
+    foldAnimations.current = [];
+    const closing = !!el?.querySelector(`.passage-slot[data-passage-id="${CSS.escape(passageId)}"] .ops-row`);
+    if (useApp.getState().follow) { remember.current(); set({ follow: false }); }
+    if (el && useApp.getState().motion && !lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const slots = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-folded=hidden])')];
+      const bottom = el.getBoundingClientRect().bottom;
+      foldMotion.current = { opener: passageId, run: closing ? 'close' : 'open', tops: new Map(slots.slice(slots.findIndex((slot) => slot.dataset.passageId === passageId) + 1).flatMap((slot) => {
+        const top = slot.getBoundingClientRect().top;
+        return top < bottom + 400 ? [[slot.dataset.passageId!, top] as const] : [];
+      })) };
+    }
+    setExtentFloor((floor) => Math.max(floor, extentTotal.current));
+    // The action the reader was sent to holds its run open; closing the run lets that selection go.
+    if (closing && forcedRuns.current.has(runId)) set({ selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined });
+    setRuns.current((list) => list.includes(runId) ? list.filter((id) => id !== runId) : [...list, runId]);
+  }, [lowResource]);
+  const runProps = (ps: ScenePassage): { run?: RunPresentation; onRun?: (runId: string, passageId: string) => void } => {
+    const view = runState.views.get(ps.id), line = view && runLines.get(view.runId);
+    if (!view || !line) return {};
+    return { run: { runId: view.runId, lead: view.lead, open: view.open, text: line.text, parts: line.parts, failed: line.failed, operations: line.operations, live: line.open > 0 }, onRun: toggleRun };
+  };
   useLayoutEffect(() => { if (follow) setExtentFloor(0); }, [follow]);
 
   useLayoutEffect(() => {
@@ -322,7 +378,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     if (!onWindow) return;
     const visible = passageWindow(ids, heights, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
     const missing = visible.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i))
-      .find((i) => scene.passages[i]?.unloaded && foldOf(scene.passages[i]!, folded) !== 'hidden');
+      .find((i) => scene.passages[i]?.unloaded && foldFor(scene.passages[i]!) !== 'hidden');
     if (missing === undefined) { requestedWindow.current = undefined; return; }
     const start = Math.max(0, missing - 8);
     const key = `${scene.step}:${start}`;
@@ -336,6 +392,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     });
   }, [scene.passages, scene.step, viewport, heights, onWindow]);
 
+  remember.current = () => rememberReading();
   const rememberReading = () => {
     const el = ref.current;
     if (!el) return;
@@ -462,8 +519,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       if (node.dataset.unloaded === 'true' || node.dataset.folded === 'hidden') continue;
       const ps = passages.get(node.dataset.passageId!);
       if (!ps) continue;
-      const fold = foldOf(ps, folded);
-      const content: PassageContent = { ps, artifacts: passageArtifacts(ps, ops, artifacts), ops: passageItems(ps.ops, ops), prose: passageItems(ps.prose, prose), notices: passageItems(ps.notices ?? [], notices),
+      const fold = foldFor(ps);
+      const content: PassageContent = { ...runProps(ps), ps, artifacts: passageArtifacts(ps, ops, artifacts), ops: passageItems(ps.ops, ops), prose: passageItems(ps.prose, prose), notices: passageItems(ps.notices ?? [], notices),
         agent: agents.get(ps.agentId), agents: projection.agents, focus: scene.focus?.passageId === ps.id,
         foldable: modern && mode === 'history' && ps.turnStep !== undefined && !(activeNow && ps.turnStep === newestTurn), folded: fold === 'header', onFold: toggleFold };
       const key = node.dataset.measureKey!;
@@ -499,7 +556,11 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       if (before === undefined) foldAnimations.current.push(slot.animate([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing, id: 'turn-fold' }));
       else if (Math.abs(before - top) > 1) foldAnimations.current.push(slot.animate([{ transform: `translateY(${before - top}px)` }, { transform: 'none' }], { duration: 260, easing, id: 'turn-fold' }));
     }
-  }, [storedFolds]);
+    // The run that opened reveals its own rows (opacity and a clip that grows with the height they take); one that closed brings in its line.
+    const own = moved.run && el.querySelector<HTMLElement>(`.passage-slot[data-passage-id="${CSS.escape(moved.opener)}"]`);
+    if (own && moved.run === 'open') for (const rows of own.querySelectorAll<HTMLElement>('.passage-head, .ops-row')) foldAnimations.current.push(rows.animate([{ opacity: 0, clipPath: 'inset(0 0 100% 0)' }, { opacity: 1, clipPath: 'inset(0 0 0 0)' }], { duration: 240, easing, id: 'turn-fold' }));
+    if (own && moved.run === 'close') for (const line of own.querySelectorAll<HTMLElement>('.run-line')) foldAnimations.current.push(line.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing, id: 'turn-fold' }));
+  }, [storedFolds, storedRuns, conversation]);
 
   // A passage can grow after its artifact arrives or its width changes. Record the actual slot
   // height, then reflow spacers; preserve the captured passage/pixel anchor while detached.
@@ -706,11 +767,11 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
           ...(run.before > 0 ? [<div key={`gap-${run.start}`} aria-hidden="true" style={{ height: run.before }} />] : []),
           ...scene.passages.slice(run.start, run.end).map((ps) => {
             // A folded opener keeps its prompt while paged out, so it shows as a header rather than a loading slot.
-            const fold = foldOf(ps, folded);
+            const fold = foldFor(ps);
             const unloaded = ps.unloaded && fold !== 'header';
-            return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={measureKey(ps.id, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
+            return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={keyFor(ps, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
               {fold !== 'hidden' && !unloaded && <SessionLineage projection={projection} passageId={ps.id} visibleStep={scene.step} />}
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} />}
+              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: measurements.current.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
             </div>;
           }),
         ])}
@@ -766,7 +827,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   );
 });
 
-const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold }: PassageContent) {
+const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold, run, onRun }: PassageContent) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
   const injectedPrompt = ps.turnPrompt ? injectedMessage(ps.turnPrompt) : undefined;
@@ -781,6 +842,8 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
+          {run?.lead && <RunLine run={run} passageId={ps.id} onRun={onRun} agent={agents.length > 1 && !run.open ? agentName(agent) : undefined} />}
+          {(!run || run.open) && <>
           <div className="passage-head">
             {agents.length > 1 && <><span className="agent-dot" /><span className="passage-agent">{agentName(agent)}</span></>}
             {first?.startTime && <CapturedTime iso={first.startTime} />}
@@ -795,6 +858,7 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
               return <BrowserStrip key={first.id} operations={grouped} renderOperation={(chosen) => <OpCard key={chosen.id} so={group.find(item => item.id === chosen.id)!} op={chosen} index={ps.ops.findIndex(item => item.id === chosen.id)} />} />;
             })}
           </div>
+          </>}
         </>
       )}
       {!folded && ps.compactionIds?.map((id, i) => <CompactionEvidence key={id} id={id} commandNote={i === 0 ? compactNote : undefined} />)}
@@ -807,6 +871,23 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
     </section></HistoryArtifacts.Provider>
   );
 }, samePassageContent);
+
+/**
+ * UI-41: the one quiet line a folded run shows in Conversation mode, and the way back to its cards. It carries the turn
+ * ledger's words for the run (counts and outcomes only, never written text) and keeps the run's failure mark.
+ */
+function RunLine({ run, passageId, onRun, agent }: { run: RunPresentation; passageId: string; onRun?: (runId: string, passageId: string) => void; agent?: string }) {
+  const what = run.operations === 1 ? 'this action' : `these ${run.operations} actions`;
+  return <button type="button" className="run-line" data-run-id={run.runId} data-failed={run.failed || undefined} data-live={run.live || undefined} aria-expanded={run.open}
+    aria-label={`${run.open ? 'Hide' : 'Show'} ${what}: ${run.text}${run.failed ? ' (something failed)' : ''}`}
+    title={`${run.open ? 'Hide' : 'Show'} the cards of this run. Counted from the captured operations in it; the time runs from the first start to the last end.`}
+    onClick={(e) => { e.stopPropagation(); onRun?.(run.runId, passageId); }}>
+    <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5 5 6.5 8 3.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+    {agent && <><span className="agent-dot" /><span className="run-agent">{agent}</span></>}
+    {run.failed && <i className="run-fail" aria-hidden="true" />}
+    <span className="run-words">{run.parts.map((part, i) => <Fragment key={i}>{i > 0 && ' · '}<span className={part.tone}>{part.text}</span></Fragment>)}</span>
+  </button>;
+}
 
 function openCapturedFile(path:string,line?:number,evidence?:string) {
   const state=useApp.getState(),reference=prosePath(path,state.recording?.workspaceRoot,true);
