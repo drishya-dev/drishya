@@ -6,7 +6,7 @@
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .prose { max-width: none; width: auto; }
 :root[data-ui-version=modern] .history .prose :is(p, li) { max-width: 100ch; }
 
-/* The person's prompt: right-aligned capsule on a quiet surface with a hairline edge and medium prompt weight.
+/* The person's prompt: right-aligned capsule on a quiet surface with a hairline edge, set in the regular reading weight (Yash, 13 Nov: bold "doesnt look good").
    The label stays for assistive technology and turn tests. Notices Claude Code wrote in the user role (turn-source) are not the person's. */
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .turn {
   width: auto; max-width: none; margin-block: 0 26px; padding: 0; border: 0; background: none;
@@ -31,7 +31,7 @@
 :root[data-ui-version=modern] .history .turn-capsule .turn-text {
   max-width: none;
   font-size: var(--text-md);
-  font-weight: var(--weight-medium);
+  font-weight: var(--weight-regular);
   line-height: 1.58;
   letter-spacing: -0.005em;
 }
