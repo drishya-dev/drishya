@@ -1,0 +1,8 @@
+/* UI-39 part 3 (Yash, 12 Nov): the session canvas sits on the site's ground. The site and Home use a fine cream dot
+   on a 12 px grid; the canvas had its own sparse grey dots (0.7 px every 22 px at 8 %). Jet Black now uses the site's
+   grid and dot in its cream, at 11 %: fainter than Home's 30 % so it passes the ten-minute reading test behind prose.
+   Midnight and Paper keep their own ground. The low-resource rule that removes the ground still wins (atelier.css). */
+:root[data-ui-version=modern][data-experience][data-theme][data-palette=jet] .connected-workspace {
+  background-image:radial-gradient(circle,color-mix(in srgb,var(--brand-ink) 11%,transparent) 1px,transparent 1.6px);
+  background-size:12px 12px;
+}
