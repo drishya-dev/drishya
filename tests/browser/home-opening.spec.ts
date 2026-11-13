@@ -23,7 +23,9 @@ test.afterAll(async () => {
 
 // `count` listed sessions across three workspaces, three a day going back; the two imported recordings come first.
 async function home(page: Page, count: number) {
-  const day = 86400000, at = (i: number) => new Date(Date.now() - 600000 - Math.floor(i / 3) * day).toISOString();
+  // One clock reading, and a millisecond between neighbours: three sessions share a day, and with a clock read per row
+  // the newest was whichever row happened to cross a millisecond (session 003 instead of 001, seen 13 Nov).
+  const day = 86400000, now = Date.now(), at = (i: number) => new Date(now - 600000 - Math.floor(i / 3) * day - i).toISOString();
   const recordings = Array.from({ length: count }, (_, i) => ({
     id: i === 0 ? claudeId : i === 1 ? codexId : `rec_listed_${i}`, harness: i % 3 === 1 ? 'codex' : 'claude-code', title: `Listed session ${String(i + 1).padStart(3, '0')}`,
     workspaceRoot: `/work/${['alpha', 'beta', 'gamma'][i % 3]}`, createdAt: at(i), updatedAt: at(i), lastSourceTime: at(i), observationCount: 12, live: false, pinned: false, health: { state: 'idle', live: false },

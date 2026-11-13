@@ -27,5 +27,7 @@ import './shell-ink.css';
 import './reader-ink.css';
 // LAYOUT-1: after the sheets whose edge offsets it extends.
 import './large-screens.css';
+// UI-39: small labels and counts in the mono face; after the sheets whose labels it re-faces.
+import './label-face.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
 import './motion.css';
