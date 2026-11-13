@@ -135,16 +135,21 @@ test('Jet Black\'s canvas sits on the site\'s dot ground; other palettes keep th
   await expect(page.locator('.mh-home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern#/r/${id}`);
   await expect(page.locator('.history article.op').first()).toBeVisible();
-  const ground = () => page.locator('.connected-workspace').first().evaluate(el => ({ size: getComputedStyle(el).backgroundSize, image: getComputedStyle(el).backgroundImage }));
+  // The site's dots, still: a cream fill on the canvas's own layer, masked by a 288 px tile of 4 px dots on a staggered 12 px grid.
+  const ground = () => page.locator('.connected-workspace').first().evaluate(el => { const b = getComputedStyle(el, '::before'); return { display: b.display, mask: b.maskImage || b.getPropertyValue('-webkit-mask-image'), size: b.maskSize || b.getPropertyValue('-webkit-mask-size'), z: b.zIndex, events: b.pointerEvents, own: getComputedStyle(el).backgroundImage }; });
   await palette(page, 'jet');
   const jet = await ground();
-  expect(jet.size).toBe('12px 12px');
-  expect(jet.image).toContain('radial-gradient');
+  expect(jet.display).toBe('block');
+  expect(jet.mask).toContain('data:image/svg+xml');
+  expect(jet.size).toBe('288px 288px');
+  expect(jet.z, 'behind everything on the canvas').toBe('-1');
+  expect(jet.events).toBe('none');
+  expect(jet.own, 'the old grid is gone').toBe('none');
   await palette(page, 'midnight');
-  expect((await ground()).size, 'Midnight keeps its own ground').not.toBe('12px 12px');
+  expect((await ground()).display, 'Midnight keeps its own ground').toBe('none');
   await palette(page, 'jet');
   await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
-  expect((await ground()).image).toBe('none');
+  expect((await ground()).display, 'low resource drops it').toBe('none');
 });
 
 test('surfaces nested in a panel keep a fill and lose their outline; a field shows it again on focus; nothing moves (UI-39 part 5)', async ({ page }) => {
