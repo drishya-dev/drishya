@@ -85,6 +85,8 @@ function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; u
       const activated = navigation.current;
       if (!activated || (!activated.disabled && activated.isConnected)) return;
       navigation.current = null;
+      // A disabled/removed pagination control can drop focus to body. This mutation microtask
+      // owns only that loss; any deliberate outside pointer/focus action cancels ownership.
       if (document.activeElement === document.body || document.activeElement === activated) root.focus({ preventScroll: true });
     });
     observer.observe(root, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled'] });
@@ -124,6 +126,29 @@ export function useHasVisibleCompaction(compactionIds?: string[], summaryIds?: s
 // Track compactions whose Resolve contract animation has completed in the active session.
 const animatedCompactions = new Set<string>();
 let currentRecordingId: string | undefined;
+
+// Its own component so the seam's early returns (no scope, boundary not yet reached in replay) never change hook order.
+function CompactionTrack({ id, boundaryStep, step, total, atEnd, window, beforeWidth, afterWidth }: { id: string; boundaryStep: number; step: number; total: number; atEnd: boolean; window: boolean; beforeWidth: number; afterWidth: number }) {
+  const solidRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const state = useApp.getState();
+    if (state.recordingId !== currentRecordingId) { animatedCompactions.clear(); currentRecordingId = state.recordingId; }
+    const solid = solidRef.current;
+    if (!solid || animatedCompactions.has(id)) return;
+    const motionAllowed = state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !document.querySelector('.viewer')?.classList.contains('still');
+    // Resolve once, on live arrival or when a playing replay reaches this boundary; never when scrolled back to it.
+    const replayArrival = state.mode === 'replay' && state.playing && (step === boundaryStep + 1 || step === boundaryStep + 2);
+    const liveArrival = state.mode === 'history' && atEnd && boundaryStep >= total - 2;
+    if (!motionAllowed || !(replayArrival || liveArrival) || afterWidth <= 0) return;
+    animatedCompactions.add(id);
+    // Scale, not width: the bar contracts on the compositor from where the context stood to where it ended.
+    solid.animate([{ transform: `scaleX(${beforeWidth / afterWidth})` }, { transform: 'scaleX(1)' }], { duration: 600, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }, [id, boundaryStep, step, total, atEnd, beforeWidth, afterWidth]);
+  return <span className={`context-track${window ? ' has-window' : ''}`} aria-hidden="true">
+    {window && <span className="context-track-faint" style={{ width: `${beforeWidth}%` }} />}
+    <span ref={solidRef} className="context-track-solid" style={{ width: `${afterWidth}%` }} />
+  </span>;
+}
 
 /** Only references selected for this loaded passage are read, with an independent replay cutoff. */
 export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string; summaryId?: string; commandNote?: string }) {
@@ -169,43 +194,6 @@ export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string
     }
   }
 
-  const solidRef = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    const activeRec = useApp.getState().recordingId;
-    if (activeRec !== currentRecordingId) {
-      animatedCompactions.clear();
-      currentRecordingId = activeRec;
-    }
-
-    const solid = solidRef.current;
-    if (!solid || !hasNumbers) return;
-
-    const state = useApp.getState();
-    const motionAllowed = state.motion && !state.lowResource &&
-      !matchMedia('(prefers-reduced-motion: reduce)').matches &&
-      !document.querySelector('.viewer')?.classList.contains('still');
-
-    // Resolve once on live arrival or replay clock playback onto this compaction boundary
-    const isReplayArrival = state.mode === 'replay' && state.playing && (step === boundary.step + 1 || step === boundary.step + 2);
-    const isLiveArrival = state.mode === 'history' && atEnd && boundary.step >= total - 2;
-
-    if (motionAllowed && (isReplayArrival || isLiveArrival) && !animatedCompactions.has(boundary.id)) {
-      animatedCompactions.add(boundary.id);
-      solid.animate(
-        [
-          { width: `${beforeWidth}%` },
-          { width: `${afterWidth}%` },
-        ],
-        {
-          duration: 600,
-          easing: 'cubic-bezier(0.23, 1, 0.32, 1)',
-          fill: 'forwards',
-        }
-      );
-    }
-  }, [boundary.id, boundary.step, step, total, atEnd, hasNumbers, beforeWidth, afterWidth]);
-
   const percentFreed = hasNumbers && left > 0 ? Math.max(0, Math.round((1 - right / left) * 100)) : undefined;
 
   return (
@@ -221,14 +209,7 @@ export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string
       <div className="context-seam-body">
         {hasNumbers ? (
           <div className="context-metric-row">
-            <span className={`context-track${window ? ' has-window' : ''}`} aria-hidden="true">
-              {window && <span className="context-track-faint" style={{ width: `${beforeWidth}%` }} />}
-              <span
-                ref={solidRef}
-                className="context-track-solid"
-                style={{ width: `${afterWidth}%` }}
-              />
-            </span>
+            <CompactionTrack id={boundary.id} boundaryStep={boundary.step} step={step} total={total} atEnd={atEnd} window={!!window} beforeWidth={beforeWidth} afterWidth={afterWidth} />
             <span className="context-metric-numbers">
               {!direct && <span className="context-reading-label">Last request before and first after · </span>}
               <strong>{formatTokens(left)} → {formatTokens(right)} tokens</strong>
