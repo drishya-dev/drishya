@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | AG-3 | @yash + Codex | `codex/ag-3-live` | 2026-11-13 | Whole live/task/subagent item into `codex/harness-antigravity`, stacked on ready AG-1 #469 (merge dependency first). New adapter tasks.ts/subagents.ts and tests, adapter index.ts live-safe sections, ingest live test, new antigravity-live real case and README/TASKS/STATUS. AG-1 source is frozen and handed off; AG-2 owns only product identity. Additional existing plumbing, if required, will be documented in the draft PR and agreed before editing. Own frozen install, scratch real imports, prefix/count-only evidence; no native control, old adapters, UI, palette or layout changes. |
-| AG-2 | @yash + Codex (Terra, coordinated by Codex) | `codex/ag-2-product` | 2026-11-13 | Whole product identity item, integration branch only, stacked on reviewed AG-1 dependency (#469 first). Yash explicitly reserved only harness-count/filter/label sections in HomeOverview.tsx, SessionHome.tsx, LibrarySearch.tsx and the Antigravity-only composer guard in SessionWorkspace.tsx beside FINISH claims. TASKS-listed server search allow-lists, store harness-list audit (do not widen cost/rescan logic blindly), controller/native-readiness unsupported guards, existing identity-label/token helper, one antigravity-harness browser spec and TASKS/STATUS. Target at most 15 paths; no styling, layout, palette, motion, old adapter/parser or native-policy edits. User approved stacked dependencies on 13 Nov; PR base remains codex/harness-antigravity and Fable reviews/merges AG-1 first. |
 | AG-1 | @yash + Codex | `codex/ag-1-adapter` | 2026-11-13 | Whole item, draft #469 into `codex/harness-antigravity` only. Yash approved up to 30 paths on 13 Nov: new adapter/tests/fixtures; capture-core optional diagnostics/identity/read hooks; ingest registration/package and lockfile; store Antigravity replacement/step-order branches; projection ordering/truth branches and contract/reducer versions; real-case registration/types, generator, schema/CODEBASE/TASKS/STATUS docs and generated goldens if changed. Exact merge sections and rationale in #469/adapter README; preserve concurrent shared-file edits, old adapter behavior and every UI design. Own install, scratch real imports, prefix/count-only reporting. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
 | UI-45 | @yash + Claude Sonnet 5.5 | `claude/ui-45-right-panels-c2d404` | 2026-11-13 | `apps/ui/src/lib/reading-edges.ts`, the side-measurement effect in `Viewer.tsx`, `large-screens.css` only if needed, `tests/browser/reading-column-edges.spec.ts`. TASKS/STATUS. Frames in `.local/ui-45/`. |
@@ -63,6 +62,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 13 Nov: AG-2 Antigravity product identity
+
+- Draft PR #472 into the Antigravity integration branch adds the third harness to Home and search and explicitly keeps native control read-only. Genuine-session counts, 18 automated 600/1440 palette frames, targeted browsers and unit results are in TASKS AG-2; Fable review and AG-1 merge remain pending.
 
 ### Yash with Claude Sonnet 5.5 (started on Opus 5.5) — 13 Nov: UI-43 composer model menu
 
