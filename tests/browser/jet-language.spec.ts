@@ -129,7 +129,6 @@ test('buttons are pills in every palette, and Jet Black\'s main action is the cr
 });
 
 test('Jet Black\'s canvas sits on the site\'s dot ground; other palettes keep theirs; low resource drops it (UI-39 part 3)', async ({ page }) => {
-test('surfaces nested in a panel keep a fill and lose their outline; a field shows it again on focus; nothing moves (UI-39 part 5)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
   await page.goto(server.launchUrl);
@@ -146,6 +145,15 @@ test('surfaces nested in a panel keep a fill and lose their outline; a field sho
   await palette(page, 'jet');
   await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
   expect((await ground()).image).toBe('none');
+});
+
+test('surfaces nested in a panel keep a fill and lose their outline; a field shows it again on focus; nothing moves (UI-39 part 5)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
   const search = page.locator('.folder-explorer .ux-search').first();
   await expect(search).toBeVisible();
   const look = () => search.evaluate(el => { const c = getComputedStyle(el), r = el.getBoundingClientRect(); return { border: c.borderTopColor, width: c.borderTopWidth, fill: c.backgroundColor, box: `${r.x},${r.y},${r.width},${r.height}` }; });
