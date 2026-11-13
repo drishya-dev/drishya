@@ -103,32 +103,44 @@ test('hovering a spatial group names the files inside it, touched ones first', a
   await expect(page.locator('.map-tip')).toHaveCount(0);
 });
 
-test('beneath the reading column dots and import lines recede while the margins stay full strength', async ({ page }) => {
+test('beneath the reading column dots and import lines stay visible but translucent while the margins stay full strength', async ({ page }) => {
   await page.setViewportSize({ width: 1600, height: 900 });
   await openMap(page, true);
   await expect(page.locator('.map')).toHaveAttribute('data-map-depth', 'flat');
   await expect(page.locator('.history-inner > *').first()).toBeVisible();
-  await page.waitForTimeout(500);
+  await expect.poll(() => page.evaluate(() => {
+    const canvas = document.querySelector<HTMLCanvasElement>('.map canvas:not([data-spatial-renderer])')!;
+    const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
+    let drawn = 0; for (let i = 3; i < data.length; i += 4) if (data[i]! > 12) drawn++;
+    return drawn;
+  })).toBeGreaterThan(300);
   const result = await page.evaluate(() => {
     const canvas = document.querySelector<HTMLCanvasElement>('.map canvas:not([data-spatial-renderer])')!;
     const column = document.querySelector('.history-inner > *')!.getBoundingClientRect();
     const map = document.querySelector('.map')!.getBoundingClientRect();
     const scale = canvas.width / map.width, feather = 72;
     const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
-    // Pixels at or above a quiet dot's strength (.68 x .3 = 52 of 255), counted per horizontal span.
-    const strong = (left: number, right: number) => {
+    // Pixels above an alpha, counted per horizontal span. A quiet dot is .68 x .6 = 104 of 255; a full one is 173.
+    const above = (left: number, right: number, alpha: number) => {
       let count = 0;
-      for (let y = 0; y < canvas.height; y++) for (let x = Math.max(0, Math.floor(left * scale)); x < Math.min(canvas.width, Math.ceil(right * scale)); x++) if (data[(y * canvas.width + x) * 4 + 3]! > 80) count++;
+      for (let y = 0; y < canvas.height; y++) for (let x = Math.max(0, Math.floor(left * scale)); x < Math.min(canvas.width, Math.ceil(right * scale)); x++) if (data[(y * canvas.width + x) * 4 + 3]! > alpha) count++;
       return count;
     };
     const l = column.left - map.left, r = column.right - map.left;
-    return { inside: strong(l, r), outside: strong(0, l - feather) + strong(r + feather, map.width), quiet: document.querySelector('.map')!.getAttribute('data-map-quiet') };
+    return {
+      inside: above(l, r, 120), insideSeen: above(l, r, 12), insideMid: above(l, r, 90), outside: above(0, l - feather, 120) + above(r + feather, map.width, 120), outsideSeen: above(0, l - feather, 12) + above(r + feather, map.width, 12),
+      quiet: document.querySelector('.map')!.getAttribute('data-map-quiet'),
+    };
   });
   expect(result.quiet, 'the quiet zone is the measured reading column').toMatch(/^\d+,\d+$/);
   expect(result.outside, 'dots and lines in the margins keep their strength').toBeGreaterThan(300);
-  // Only the dot of the file this passage read (and its antialiasing) stays crisp beneath the column: no line and no other dot does.
-  expect(result.inside).toBeLessThan(200);
-  expect(result.inside * 10).toBeLessThan(result.outside);
+  // MAP-4: beneath the column the map is still there as translucent shapes (SHIP-8 had cleared it), but only the dot of the
+  // file this passage read (and its antialiasing) reaches full strength: no line and no other dot does.
+  expect(result.insideSeen, 'dots and lines stay visible, translucent, beneath the reading column').toBeGreaterThan(30);
+  // SHIP-8's .3 / .08 floors left 35 pixels at mid strength here; the translucent floors leave thousands (measured, 13 Nov).
+  expect(result.insideMid, 'beneath the column the shapes are present, not near-invisible').toBeGreaterThan(500);
+  // Relative, because overlapping lines of the dense hub add up: a smaller share of what is drawn beneath the column is at full strength.
+  expect(result.inside / result.insideSeen, 'beneath the column the map is translucent, not full strength').toBeLessThan(.5 * result.outside / result.outsideSeen);
   // Exploring has no reading material, so the whole map is full strength again.
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   await page.waitForTimeout(500);

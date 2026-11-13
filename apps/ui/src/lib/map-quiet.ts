@@ -6,9 +6,13 @@ export interface QuietPoint { t: number; x: number; y: number; factor: number }
 
 /** Width of the soft edge around a zone, so the dimming reads as a gentle falloff and not a hard box. */
 export const QUIET_FEATHER = 72;
-/** Remaining strength of a file dot / an import line directly beneath reading material. */
-export const QUIET_NODE_FLOOR = .3;
-export const QUIET_EDGE_FLOOR = .08;
+/**
+ * Remaining strength of a file dot / an import line directly beneath reading material. MAP-4: SHIP-8's .3 / .08 compounded
+ * with the .38 canvas dim and left nothing visible under the column; these keep the shapes translucent but present, and
+ * still clearly below the margins.
+ */
+export const QUIET_NODE_FLOOR = .6;
+export const QUIET_EDGE_FLOOR = .45;
 
 /** 1 outside the feather band, `floor` inside the zone, a straight ramp between. */
 export function quietFactor(x: number, y: number, zones: readonly QuietZone[], floor: number, feather = QUIET_FEATHER): number {
