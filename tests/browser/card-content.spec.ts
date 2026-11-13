@@ -18,6 +18,7 @@ const LONG_COMMAND=`cd /home/dev/shop/.local/worktrees/feature-cards-0123456789/
 const HEREDOC=['python - <<\'EOF\'','import pathlib','','path = pathlib.Path(\'docs/TASKS.md\')','raw = path.read_bytes()','print("ok", len(raw), "bytes in the working copy of docs/review/antigravity-codex-instructions.md")','EOF'].join('\n');
 const OUTPUT=Array.from({length:40},(_,i)=>i===5?`line ${i}: ${WORDS} ${WORDS}`:i===9?`warning: in the working copy of 'docs/review/antigravity-codex-instructions.md', LF will be replaced by CRLF the next time Git touches it`:`line ${i}: ok`).join('\n');
 const MARKDOWN=['# Antigravity as a third harness: instructions for Codex','',`**Why it matters.** ${WORDS} ${WORDS} ${WORDS}.`,'',`- ${WORDS} ${WORDS}`,`- Release rule: ${WORDS}`,'','| a | b |','| - | - |',`| ${WORDS} | ${WORDS} |`,'','Last line of the file.'];
+const WIDE_OUTPUT=Array.from({length:12},(_,i)=>`${i}: ${WORDS} ${WORDS} ${WORDS}`).join('\n');
 const ARGS={session_id:'local_81397698-4025-45be-90cc-ef27d471b354',message:`${WORDS} ${WORDS} ${WORDS} ${WORDS}`,title:'Build MAP-4: map nodes and edges visible under reading area',options:{wait:false,notify:'at-the-end'}};
 const RESULT=`Message delivered to session local_81397698-4025-45be-90cc-ef27d471b354 ("Build MAP-4: map nodes and edges visible under reading area"); its turn has started on it. (delivery: delivered; message_id: 0df76c1f-ca1b-41d1-987a-a963964d2e04) ${WORDS}`;
 
@@ -30,6 +31,7 @@ function journal(){
  use('Bash',{command:LONG_COMMAND,description:'Check out main'},'Switched to origin/main\nok');
  use('Bash',{command:HEREDOC,description:'Read the tasks file'},'ok 5 bytes');
  use('Bash',{command:'git log --oneline -40',description:'Show the log'},OUTPUT);
+ use('Bash',{command:HEREDOC.replace('print(','print("x",'),description:'Print wide output'},WIDE_OUTPUT);
  use('Write',{file_path:'/home/dev/shop/docs/notes.md',content:MARKDOWN.join('\n')+'\n'},'File created successfully.');
  use('mcp__ccd_session_mgmt__send_message',ARGS,RESULT);
  return rows.join('\n')+'\n';
@@ -55,8 +57,33 @@ const clampsAreWhole=(el:Locator)=>el.evaluate((card,src)=>{
  });
 },LINES);
 
+/** The card body either shows all of its content or is cut between two lines: no text line straddles the visible edge. */
+const bodyEdge=(el:Locator)=>el.evaluate(card=>{
+ const body=card.querySelector<HTMLElement>('.op-body')!,box=body.getBoundingClientRect(),cut=body.hasAttribute('data-cut')?parseFloat(body.style.getPropertyValue('--card-cut')):undefined;
+ const edge=box.top+(cut??body.clientHeight),range=document.createRange(),walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
+ let straddling=0;
+ for(let t=walker.nextNode() as Text|null;t;t=walker.nextNode() as Text|null){
+  if(!t.data.trim()||t.parentElement!.closest('.captured-result-views'))continue;
+  const clip=t.parentElement!.closest('.line-clamp[data-clamped]')?.getBoundingClientRect();
+  range.selectNodeContents(t);
+  for(const r of range.getClientRects()){if(!r.height||(clip&&(r.top>=clip.bottom-1||r.bottom<=clip.top+1)))continue;if(r.top<edge-1&&r.bottom>edge+1)straddling++;}
+ }
+ return {cut:cut!==undefined,straddling,clipped:cut===undefined?body.scrollHeight-body.clientHeight:0};
+});
+
 for(const width of [1440,600]){
  test.describe(`at ${width}px`,()=>{
+  test('every collapsed card ends on a whole line, however tall its content',async({page})=>{
+   await open(page,width);
+   const cards=page.locator('article.op');const count=await cards.count();expect(count).toBeGreaterThanOrEqual(6);
+   for(let i=0;i<count;i++){
+    const el=cards.nth(i);await settle(page,el);if(await el.evaluate(c=>c.classList.contains('expanded')))continue;
+    const edge=await bodyEdge(el);
+    expect(edge.straddling,`card ${i} cuts a line`).toBe(0);expect(edge.clipped,`card ${i} hides content`).toBeLessThanOrEqual(1);
+    if(i===3)await frame(el,`wide-output-${width}`);
+   }
+  });
+
   test('a long shell command keeps its words whole, wraps at paths, and ends on a whole line',async({page})=>{
    await open(page,width);
    const el=card(page,'shell',0);await settle(page,el);await frame(el,`shell-command-${width}`);

@@ -20,6 +20,7 @@ import { reasoningGap } from '../lib/reasoning-gap.ts';
 import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
 import { LineClamp } from '../lib/line-clamp.tsx';
+import { CardBody } from './CardBody.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { isQuestionTool } from '../lib/ask-question.ts';
 import { ToolOutput } from './ToolOutput.tsx';
@@ -1052,9 +1053,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         )}
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
-      {!expanded && <div className="op-body">
+      {!expanded && <CardBody>
         {imageMaterial??<><OpPreview op={op} resolving={resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
-      </div>}
+      </CardBody>}
       {expanded&&<ExpandedOperation op={op} image={imageMaterial}/>}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Shortened · Expand to read all of it</div>}
       <EvidenceNote op={op} />

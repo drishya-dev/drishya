@@ -48,3 +48,11 @@
 .mcp-result { min-width: 0; }
 /* The argument-data chip rests at the arguments' lower corner, clear of the Original switch on the caption row. */
 .tool-input > .captured-result-views { top: auto; bottom: 2px; }
+
+/* ── the card body ends on a whole line (components/CardBody.tsx) ──────────────────────── */
+.history .op:not(.expanded) .op-body[data-cut] {
+  overflow: hidden !important;
+  -webkit-mask-image: linear-gradient(#000 calc(var(--card-cut) - var(--card-cut-fade)), rgb(0 0 0 / .42) var(--card-cut), transparent var(--card-cut)) !important;
+  mask-image: linear-gradient(#000 calc(var(--card-cut) - var(--card-cut-fade)), rgb(0 0 0 / .42) var(--card-cut), transparent var(--card-cut)) !important;
+}
+.history .op[data-hover-reading] .op-body[data-cut] { overflow: auto !important; -webkit-mask-image: none !important; mask-image: none !important; }

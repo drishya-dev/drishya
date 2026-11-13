@@ -3,7 +3,7 @@ import '../components/card-content.css';
 
 /** The visual lines of a block, top to bottom, from the real layout of its text: one entry per line box, merged where
  * fragments of one line (a token span, a key beside its value) overlap vertically. Empty text nodes have no box and add nothing. */
-export function visualLines(root:HTMLElement):{top:number;bottom:number}[] {
+export function visualLines(root:HTMLElement,visibleOnly=false):{top:number;bottom:number}[] {
   const range=document.createRange(),walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),boxes:{top:number;bottom:number}[]=[];
   for(let node=walker.nextNode();node;node=walker.nextNode()){
     if(!(node as Text).data.trim())continue;
