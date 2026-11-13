@@ -58,6 +58,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: UI-36 compaction reads as one seam in history (PR #448)
+
+- Hairline seam across the reading column (`border-top: 1px solid var(--line)`) replaces the card/form presentation in `apps/ui/src/components/ContextEvidence.tsx` and `context-evidence.css`; header with `<CompactionIcon />`, `"Context compacted"`, muted timestamp and human phrase (`"You compacted · 1 min 29 s"`, `"Compacted automatically · 41 s"`).
+- Single 180px rounded pill track with solid part representing remaining tokens (`566.7k → 23.2k tokens · 96% freed`); Codex request readings supported (`"Last request before and first after · 80k → 9k tokens · 89% freed of 100k"`); single quiet line when tokens not recorded. Summary one click away as captured text with provenance; unlinked summaries isolated to clean up landmark queries. Resolve motion smoothly contracts solid bar from before to after width over 600ms on live/replay arrival, static when scrolled back or reduced motion.
+- Verified: 3 formatting units pass (`compaction-seam.test.ts`), `tests/browser/compaction.spec.ts` & `ship-2f-history.spec.ts` pass (6 passed, 0 failures, Edge). Real local sessions (`claude-manual 42a5fd26`, `claude-auto a1de5659`, `codex rollout-2026-11-07`) verified at 600 and 1440 across Jet Black, Midnight, Paper (settled frames in `.local/ui-36/`). [Review record](review/ui-36-compaction-seam.md).
+
 ### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2h opened surfaces finished
 
 - Sized `.settings-dialog` (`settings.css`) and `.review-insights-dialog` (`review-insights.css`) to `height: fit-content` up to their viewport max-height caps (`Playback`: 311 px at 600 px / 485 px at 1440 px; `Review packet`: 493–503 px before preview).

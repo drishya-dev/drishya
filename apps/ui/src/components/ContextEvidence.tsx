@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import type { CompactionSummary, ContextReading, Projection } from '@drishya/contracts';
 import type { ContextReport } from '../lib/context-report.ts';
+import { useApp } from '../state.ts';
 import { ArtifactReader } from './ArtifactReader.tsx';
 import './context-evidence.css';
 
@@ -9,12 +10,50 @@ const Evidence = createContext<{ projection: Projection; step: number; total: nu
 export function ContextEvidenceScope({ projection, step, total, children }: { projection: Projection; step: number; total: number; children: ReactNode }) {
   return <Evidence.Provider value={{ projection, step, total }}>{children}</Evidence.Provider>;
 }
+
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) {
+    const val = n / 1_000_000;
+    return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)) + 'M';
+  }
+  if (n >= 1_000) {
+    const val = n / 1_000;
+    return (val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)) + 'k';
+  }
+  return n.toLocaleString('en-US');
+}
+
+export function formatDuration(ms?: number): string | undefined {
+  if (ms === undefined || !Number.isFinite(ms) || ms < 0) return undefined;
+  if (ms < 1000) return `${ms} ms`;
+  const totalSec = Math.round(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  if (min > 0) return `${min} min ${sec} s`;
+  return `${sec} s`;
+}
+
+export function triggerPhrase(trigger?: string, durationMs?: number): string | undefined {
+  const dur = formatDuration(durationMs);
+  let action: string | undefined;
+  if (trigger === 'manual') action = 'You compacted';
+  else if (trigger === 'auto') action = 'Compacted automatically';
+  else if (trigger) action = `Compacted (${trigger})`;
+
+  if (action && dur) return `${action} · ${dur}`;
+  if (action) return action;
+  if (dur) return `Compacted · ${dur}`;
+  return undefined;
+}
+
 const number = (n: number) => n.toLocaleString('en-US');
+
 export const contextTime = (time?: string) => {
   if (!time) return 'Time not recorded';
   const date = new Date(time);
   return Number.isNaN(date.getTime()) ? 'Time not recorded' : date.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 };
+
 export function RequestContextLine({ reading }: { reading: ContextReading }) {
   const percent = reading.window ? reading.input.tokens / reading.window * 100 : undefined;
   return <section className="request-context" aria-label="Request input">
@@ -24,8 +63,10 @@ export function RequestContextLine({ reading }: { reading: ContextReading }) {
     <small>{reading.input.basis === 'derived-request-input' ? 'Claude message.usage · input + cache read + cache write.' : 'Codex token_count · request input.'} This reading stays fixed until another is recorded.</small>
   </section>;
 }
+
 // History remounts a row as it pages and measures; a summary being read must not close by itself.
 const openSummaries = new Set<string>();
+
 function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; unlinked?: boolean }) {
   const [open, setOpenState] = useState(() => !!summary?.id && openSummaries.has(summary.id));
   const setOpen = (next: boolean) => {
@@ -62,17 +103,13 @@ function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; u
     }}><ArtifactReader id={summary.artifactId} kind="output" provenance navigationSlot={`compaction/${summary.id}`} /><button type="button" className="btn ghost" onClick={close}>Close summary</button></div>}
   </div>;
 }
-function Metric({ label, tokens, maximum, reading }: { label: string; tokens?: number; maximum: number; reading?: ContextReading }) {
-  return <div className="context-metric"><span>{label}</span><strong>{tokens === undefined ? 'Not recorded' : `${number(tokens)} tokens`}</strong>
-    {tokens !== undefined && <span className="context-track" aria-hidden="true"><span style={{ width: `${Math.min(100, maximum ? tokens / maximum * 100 : 0)}%` }} /></span>}
-    {reading && <small>{contextTime(reading.time)}{reading.window ? ` · ${number(reading.window)} context window` : ''}</small>}
-  </div>;
-}
+
 function CompactionIcon() {
   return <svg className="context-compaction-icon" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2.5 8h11M8 2v3.5M6 3.5 8 5.5l2-2M8 14v-3.5M6 12.5 8 10.5l2 2" />
   </svg>;
 }
+
 /** Whether this passage currently exposes at least one visible compaction boundary or unlinked summary. */
 export function useHasVisibleCompaction(compactionIds?: string[], summaryIds?: string[]): boolean {
   const evidence = useContext(Evidence);
@@ -85,6 +122,34 @@ export function useHasVisibleCompaction(compactionIds?: string[], summaryIds?: s
     return !!s && !s.boundaryId;
   });
 }
+
+// Track compactions whose Resolve contract animation has completed in the active session.
+const animatedCompactions = new Set<string>();
+let currentRecordingId: string | undefined;
+
+// Its own component so the seam's early returns (no scope, boundary not yet reached in replay) never change hook order.
+function CompactionTrack({ id, boundaryStep, step, total, atEnd, window, beforeWidth, afterWidth }: { id: string; boundaryStep: number; step: number; total: number; atEnd: boolean; window: boolean; beforeWidth: number; afterWidth: number }) {
+  const solidRef = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    const state = useApp.getState();
+    if (state.recordingId !== currentRecordingId) { animatedCompactions.clear(); currentRecordingId = state.recordingId; }
+    const solid = solidRef.current;
+    if (!solid || animatedCompactions.has(id)) return;
+    const motionAllowed = state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches && !document.querySelector('.viewer')?.classList.contains('still');
+    // Resolve once, on live arrival or when a playing replay reaches this boundary; never when scrolled back to it.
+    const replayArrival = state.mode === 'replay' && state.playing && (step === boundaryStep + 1 || step === boundaryStep + 2);
+    const liveArrival = state.mode === 'history' && atEnd && boundaryStep >= total - 2;
+    if (!motionAllowed || !(replayArrival || liveArrival) || afterWidth <= 0) return;
+    animatedCompactions.add(id);
+    // Scale, not width: the bar contracts on the compositor from where the context stood to where it ended.
+    solid.animate([{ transform: `scaleX(${beforeWidth / afterWidth})` }, { transform: 'scaleX(1)' }], { duration: 600, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' });
+  }, [id, boundaryStep, step, total, atEnd, beforeWidth, afterWidth]);
+  return <span className={`context-track${window ? ' has-window' : ''}`} aria-hidden="true">
+    {window && <span className="context-track-faint" style={{ width: `${beforeWidth}%` }} />}
+    <span ref={solidRef} className="context-track-solid" style={{ width: `${afterWidth}%` }} />
+  </span>;
+}
+
 /** Only references selected for this loaded passage are read, with an independent replay cutoff. */
 export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string; summaryId?: string; commandNote?: string }) {
   const evidence = useContext(Evidence);
@@ -93,20 +158,83 @@ export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string
   const available = (after: number, request = false) => atEnd || (request ? after < step : after <= step);
   const boundary = id ? p.compactions?.find(c => c.id === id && c.step < step) : undefined;
   const summary = p.compactionSummaries?.find(s => s.id === (boundary?.summaryId ?? summaryId) && available(s.availableAfterStep));
-  if (!boundary) return summary && !summary.boundaryId ? <div className="context-evidence context-unlinked" data-summary-id={summary.id}><div className="context-heading"><CompactionIcon /><strong>Context compacted</strong><small>Summary recorded nearby · link not recorded · {contextTime(summary.time)}</small></div><Summary summary={summary} unlinked /></div> : null;
+
+  if (!boundary) {
+    return summary && !summary.boundaryId ? (
+      <div className="context-evidence context-unlinked" data-summary-id={summary.id}>
+        <div className="context-seam-head">
+          <CompactionIcon />
+          <strong className="context-seam-title">Context compacted</strong>
+          <small className="context-seam-time">Summary recorded nearby · link not recorded · {contextTime(summary.time)}</small>
+        </div>
+        <Summary summary={summary} unlinked />
+      </div>
+    ) : null;
+  }
+
   const before = p.context?.readings.find(r => r.id === boundary.priorReadingId && available(r.availableAfterStep, true));
   const after = p.context?.readings.find(r => r.id === boundary.nextReadingId && available(r.availableAfterStep, true));
   const direct = p.agents.find(a => a.id === boundary.agentId)?.harness === 'claude-code';
-  const left = direct ? boundary.beforeTokens : before?.input.tokens, right = direct ? boundary.afterTokens : after?.input.tokens;
-  const maximum = Math.max(left ?? 0, right ?? 0);
-  return <section className="context-evidence" aria-label="Compaction" data-compaction-id={boundary.id}>
-    <div className="context-heading"><CompactionIcon /><strong>Context compacted</strong><small>{contextTime(boundary.time)}</small>{commandNote && <small className="context-command">{commandNote}</small>}</div>
-    <small>{direct ? 'Before and after tokens · relative scale' : 'Request input readings around compaction · relative scale'}</small>
-    <div className="context-pair"><Metric label={direct ? 'Before' : 'Last request before'} tokens={left} maximum={maximum} reading={direct ? undefined : before} /><Metric label={direct ? 'After' : 'First request after'} tokens={right} maximum={maximum} reading={direct ? undefined : after} /></div>
-    <div className="context-foot"><span>Trigger · {boundary.trigger ?? 'Not recorded'}</span><span>Duration · {boundary.durationMs === undefined ? 'Not recorded' : `${number(boundary.durationMs)} ms`}</span></div>
-    <Summary summary={summary} />
-  </section>;
+  const left = direct ? boundary.beforeTokens : before?.input.tokens;
+  const right = direct ? boundary.afterTokens : after?.input.tokens;
+  const window = !direct ? (before?.window ?? after?.window) : undefined;
+
+  const phrase = triggerPhrase(boundary.trigger, boundary.durationMs);
+  const hasNumbers = left !== undefined && right !== undefined;
+
+  let beforeWidth = 100;
+  let afterWidth = 0;
+  if (hasNumbers) {
+    if (window && window > 0) {
+      beforeWidth = Math.min(100, Math.max(0, (left / window) * 100));
+      afterWidth = Math.min(100, Math.max(0, (right / window) * 100));
+    } else if (left > 0) {
+      beforeWidth = 100;
+      afterWidth = Math.min(100, Math.max(0, (right / left) * 100));
+    }
+  }
+
+  const percentFreed = hasNumbers && left > 0 ? Math.max(0, Math.round((1 - right / left) * 100)) : undefined;
+
+  return (
+    <section className="context-evidence" aria-label="Compaction" data-compaction-id={boundary.id}>
+      <div className="context-seam-head">
+        <CompactionIcon />
+        <strong className="context-seam-title">Context compacted</strong>
+        <small className="context-seam-time">{contextTime(boundary.time)}</small>
+        {phrase && <small className="context-seam-phrase">· {phrase}</small>}
+        {commandNote && <small className="context-command">{commandNote}</small>}
+      </div>
+
+      <div className="context-seam-body">
+        {hasNumbers ? (
+          <div className="context-metric-row">
+            <CompactionTrack id={boundary.id} boundaryStep={boundary.step} step={step} total={total} atEnd={atEnd} window={!!window} beforeWidth={beforeWidth} afterWidth={afterWidth} />
+            <span className="context-metric-numbers">
+              {!direct && <span className="context-reading-label">Last request before and first after · </span>}
+              <strong>{formatTokens(left)} → {formatTokens(right)} tokens</strong>
+              {percentFreed !== undefined && (
+                <span className="context-freed">
+                  {' '}· {percentFreed}% freed{window ? ` of ${formatTokens(window)}` : ''}
+                </span>
+              )}
+            </span>
+          </div>
+        ) : (
+          <div className="context-missing-line">
+            {left === undefined && right === undefined
+              ? 'Tokens not recorded'
+              : left === undefined
+                ? (direct ? 'Tokens before compaction not recorded' : 'Last request before not recorded')
+                : (direct ? `${formatTokens(left)} tokens before compaction · tokens after not recorded` : `Last request before ${formatTokens(left)} · first after not recorded`)}
+          </div>
+        )}
+        <Summary summary={summary} />
+      </div>
+    </section>
+  );
 }
+
 export function CapturedContextReport({ report, time }: { report: ContextReport; time?: string }) {
   return <section className="context-report" aria-label="Context report"><strong>Claude Code · {report.heading}</strong><small>Report from {contextTime(time)}</small>
     <dl>{report.rows.map((row, i) => <div key={i}><dt>{row.label}</dt><dd>{row.value}</dd>{row.percent !== undefined && <span className="context-track" aria-hidden="true"><span style={{ width: `${row.percent}%` }} /></span>}</div>)}</dl>
