@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | BUILD-1 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/build-1` | 2026-11-13 | `apps/ui/vite.config.ts`, dynamic imports in `apps/ui`, plus docs/TASKS/STATUS. |
-| DATA-14 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/data-14` | 2026-11-13 | `apps/daemon/src/history-worker.ts`, `apps/daemon/src/history.ts`, `apps/daemon/test/history-lock.test.ts`, plus docs/TASKS/STATUS. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -145,6 +144,11 @@ px tight Show full prompt / Show less control, flush right-aligned .turn-images 
 - Checked on real local sessions in scratch storage (before/after frames in .local/ui-31/ at 600 and 1440 px in jet, midnight, and paper): Claude Code ec_69977fa0 (0.9 MB, 42 ops, 12 person turns) and Codex ec_aca34202 (0.3 MB, 11 ops, 7 person turns); [completion record](review/ui-31-prompt-capsule.md). Running-turn submission verified via connected-workspace.spec.ts:598 (no live turn active on disk during capture).
 - Checks: corepack pnpm typecheck, corepack pnpm ui:build, pps/ui/test (116 files / 570 passed / 1 skip), and 12 Edge browser specs including new 	ests/browser/prompt-capsule.spec.ts (56 passed / 0 failed / 0 retries).
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: DATA-14 History worker waits for cache lock
+
+- Set `PRAGMA busy_timeout = 5000;` as the history worker's very first statement on opening `history/index.db` in `history-worker.ts`, and logged a clear single line (`history: cache database ... remained locked after 5s wait`) if the lock is still held after the timeout.
+- Guarded replacement worker creation in `HistoryService` (`history.ts`) so replacement workers are spawned only after previous workers have exited, deduplicating concurrent start requests with `startingWorker` and tracking lifecycle with `exitPromise`.
+- Dedicated unit tests in `apps/daemon/test/history-lock.test.ts` (4/4 passed): verifying worker waits on external exclusive lock and succeeds on commit; replacement worker spawns only after previous worker exits; lock held >5s logs the clear error line; successive server startups on the same directory have zero lock errors. All 17 history daemon tests pass. Review record: [data-14-cache-lock.md](review/data-14-cache-lock.md).
 ### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: CLEAN-2 Remove parked Nebius/Nemotron model feature
 
 - Deleted `packages/explain` and removed workspace dependency from `apps/daemon/package.json`.

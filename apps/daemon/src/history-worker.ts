@@ -36,18 +36,28 @@ import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 const source = new Store(workerData.dir, { readOnly: true });
 const dir = join(workerData.dir, 'history');
 mkdirSync(dir, { recursive: true, mode: 0o700 });
-const db = new DatabaseSync(join(dir, 'index.db'));
-// Everything here is a rebuildable cache, so a commit need not reach the disk before returning.
-db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
-  CREATE TABLE IF NOT EXISTS views(id TEXT PRIMARY KEY, revision TEXT NOT NULL, header TEXT NOT NULL);
-  CREATE TABLE IF NOT EXISTS items(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
-    kind TEXT NOT NULL, id TEXT NOT NULL, position INTEGER NOT NULL, body TEXT NOT NULL,
-    PRIMARY KEY(view_id,kind,id));
-  CREATE INDEX IF NOT EXISTS item_position ON items(view_id,kind,position);
-  CREATE TABLE IF NOT EXISTS file_ops(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
-    path TEXT NOT NULL, op_id TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(view_id,path,op_id));
-  CREATE INDEX IF NOT EXISTS file_position ON file_ops(view_id,path,position);
-`);
+const dbPath = join(dir, 'index.db');
+let db: DatabaseSync;
+try {
+  db = new DatabaseSync(dbPath);
+  db.exec('PRAGMA busy_timeout = 5000;');
+  // Everything here is a rebuildable cache, so a commit need not reach the disk before returning.
+  db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
+    CREATE TABLE IF NOT EXISTS views(id TEXT PRIMARY KEY, revision TEXT NOT NULL, header TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS items(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL, id TEXT NOT NULL, position INTEGER NOT NULL, body TEXT NOT NULL,
+      PRIMARY KEY(view_id,kind,id));
+    CREATE INDEX IF NOT EXISTS item_position ON items(view_id,kind,position);
+    CREATE TABLE IF NOT EXISTS file_ops(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
+      path TEXT NOT NULL, op_id TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(view_id,path,op_id));
+    CREATE INDEX IF NOT EXISTS file_position ON file_ops(view_id,path,position);
+  `);
+} catch (error) {
+  if (error instanceof Error && (error.message.includes('database is locked') || error.message.includes('busy'))) {
+    console.error(`history: cache database ${dbPath} remained locked after 5s wait`);
+  }
+  throw error;
+}
 // Derived blobs live in index.db (PERF-2): one file per artifact made a cold rebuild of a large
 // history spend seconds creating and renaming files. Earlier versions kept them in history/blobs;
 // that directory is disposable and every view is rebuilt under the new HISTORY_VERSION.
@@ -387,5 +397,10 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     // page's object graph and re-encoding it on capture's event loop.
     if (message.method === 'page-bytes') parentPort!.postMessage({ id: message.id, value }, [(value as Uint8Array<ArrayBuffer>).buffer]);
     else parentPort!.postMessage({ id: message.id, value });
-  } catch (error) { parentPort!.postMessage({ id: message.id, error: sanitize(error instanceof Error ? error.message : 'History request failed').value }); }
+  } catch (error) {
+    if (error instanceof Error && (error.message.includes('database is locked') || error.message.includes('busy'))) {
+      console.error(`history: cache database ${dbPath} remained locked after 5s wait`);
+    }
+    parentPort!.postMessage({ id: message.id, error: sanitize(error instanceof Error ? error.message : 'History request failed').value });
+  }
 });
