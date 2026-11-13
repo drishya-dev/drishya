@@ -36,7 +36,7 @@ export function HomeOverview({ sessions, groups, now, onGroup }: { sessions: Ove
       <div><dt>Sessions</dt><dd>{sessions.length}</dd></div>
       <div><dt>This week</dt><dd>{week}</dd></div>
       <div><dt>Workspaces</dt><dd>{projects.length}</dd></div>
-      <div className="mh-ov-harness"><dt>Claude Code <b>{claude}</b> · Codex <b>{codex}</b> � Antigravity <b>{antigravity}</b></dt><dd aria-hidden="true"><span style={{ flexGrow: claude }} className="claude-code"/><span style={{ flexGrow: codex }} className="codex"/><span style={{ flexGrow: antigravity, background: "var(--t2)" }}/></dd></div>
+      <div className="mh-ov-harness"><dt>Claude Code <b>{claude}</b> · Codex <b>{codex}</b> · Antigravity <b>{antigravity}</b></dt><dd aria-hidden="true"><span style={{ flexGrow: claude }} className="claude-code"/><span style={{ flexGrow: codex }} className="codex"/><span style={{ flexGrow: antigravity, background: "var(--t2)" }}/></dd></div>
     </dl>
     {recent.length > 0 && <div className="mh-ov-recent" role="group" aria-label="Recent workspaces">
       {recent.map(group => <button key={group.key} type="button" onClick={() => onGroup(group.key)} title={`Show ${group.name}'s sessions`}>
