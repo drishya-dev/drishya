@@ -29,14 +29,19 @@ test.beforeEach(async()=>{
   livePath=join(dir,'codex.jsonl');server=await startServer({app,port:0,token:'synthetic-compaction-browser'});
 });
 test.afterEach(async()=>{await server?.close();await app?.close();if(dir&&resolve(dir).startsWith(resolve(tmpdir())+sep))rmSync(dir,{recursive:true,force:true});});
-async function open(page:import('@playwright/test').Page,id:string,step?:number){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0${step===undefined?'':`&at=${step}`}#/r/${id}`);await page.locator('.viewer').waitFor();}
+async function open(page:import('@playwright/test').Page,id:string,step?:number,motion:0|1=0){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=${motion}${step===undefined?'':`&at=${step}`}#/r/${id}`);await page.locator('.viewer').waitFor();}
 for(const width of [600,1440]) test(`captured metrics, summaries and categories at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:1000});await open(page,claude);
   const boundary=page.getByRole('region',{name:'Compaction',exact:true});await boundary.scrollIntoViewIfNeeded();
-  await expect(boundary).toContainText('80,000 tokens');await expect(boundary).toContainText('6,000 tokens');await expect(boundary).toContainText('manual');await expect(boundary).toContainText('3,400 ms');await expect(boundary.locator('.context-track')).toHaveCount(2);
-  expect(await boundary.locator('.context-track').first().evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-  expect(await boundary.locator('.context-track > span').first().evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-  expect(await boundary.locator('.context-foot').evaluate(el=>getComputedStyle(el).display)).toBe('flex');
+  await expect(boundary).toContainText('Context compacted');
+  await expect(boundary).toContainText('80k → 6k tokens · 93% freed');
+  await expect(boundary).toContainText('You compacted · 3 s');
+  await expect(boundary.locator('.context-track')).toHaveCount(1);
+  const trackBox=(await boundary.locator('.context-track').boundingBox())!;
+  const solidBox=(await boundary.locator('.context-track-solid').boundingBox())!;
+  expect(solidBox.width / trackBox.width).toBeCloseTo(6000 / 80000, 1);
+  expect(await boundary.locator('.context-track').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  expect(await boundary.locator('.context-track-solid').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
   await page.screenshot({path:resolve(`.local/content12-synthetic-receipt-${width}.png`)});
   const summary=boundary.getByRole('button',{name:'Read summary'});await summary.focus();await page.keyboard.press('Enter');
   await expect(boundary).toContainText('Synthetic retained line 1');await expect(boundary).toContainText('200 of 350');
@@ -50,11 +55,25 @@ for(const width of [600,1440]) test(`captured metrics, summaries and categories 
   await page.screenshot({path:resolve(`.local/content12-synthetic-${width}.png`)});
 });
 test('Codex request readings, encrypted/missing states and replay cutoffs',async({page})=>{
-  await open(page,codex);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await receipt.scrollIntoViewIfNeeded();await expect(receipt).toContainText('Request input readings around compaction');await expect(receipt).toContainText('80,000 tokens');await expect(receipt).toContainText('9,000 tokens');await expect(receipt).toContainText('Summary encrypted by harness');await expect(receipt).toContainText('Duration · Not recorded');
+  await open(page,codex);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await receipt.scrollIntoViewIfNeeded();
+  await expect(receipt).toContainText('Last request before and first after');
+  await expect(receipt).toContainText('80k → 9k tokens · 89% freed of 100k');
+  await expect(receipt).toContainText('Summary encrypted by harness');
+  await expect(receipt.locator('.context-track')).toHaveCount(1);
+  const trackBox=(await receipt.locator('.context-track').boundingBox())!;
+  const solidBox=(await receipt.locator('.context-track-solid').boundingBox())!;
+  const faintBox=(await receipt.locator('.context-track-faint').boundingBox())!;
+  expect(faintBox.width / trackBox.width).toBeCloseTo(80000 / 100000, 1);
+  expect(solidBox.width / trackBox.width).toBeCloseTo(9000 / 100000, 1);
   const c=app.projection(codex).compactions![0]!;
   await open(page,codex,c.step);await expect(page.getByRole('region',{name:'Compaction',exact:true})).toHaveCount(0);
-  await open(page,codex,c.step+1);const past=page.getByRole('region',{name:'Compaction',exact:true});await expect(past).toContainText('80,000 tokens');await expect(past).not.toContainText('9,000 tokens');
-  await open(page,missing);await expect(page.getByRole('region',{name:'Compaction',exact:true})).toContainText('Last request beforeNot recorded');
+  await open(page,codex,c.step+1);const past=page.getByRole('region',{name:'Compaction',exact:true});
+  await expect(past).toContainText('Last request before 80k · first after not recorded');
+  await expect(past).not.toContainText('9k');
+  await expect(past.locator('.context-track')).toHaveCount(0);
+  await open(page,missing);
+  await expect(page.getByRole('region',{name:'Compaction',exact:true})).toContainText('Last request before not recorded');
+  await expect(page.locator('.context-track')).toHaveCount(0);
   await open(page,clean);await expect(page.locator('.context-evidence,.context-report')).toHaveCount(0);
 });
 test('a later summary stays hidden and live append does not change past evidence',async({page})=>{

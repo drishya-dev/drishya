@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-36 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-36` | 2026-11-13 | `apps/ui/src/components/ContextEvidence.tsx`, `apps/ui/src/components/context-evidence.css`, `tests/browser/compaction.spec.ts`, `docs/STATUS.md`, `docs/TASKS.md`, `docs/review/ui-36-compaction-seam.md`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -57,6 +56,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: UI-36 compaction reads as one seam in history (PR #448)
+
+- Hairline seam across the reading column (`border-top: 1px solid var(--line)`) replaces the card/form presentation in `apps/ui/src/components/ContextEvidence.tsx` and `context-evidence.css`; header with `<CompactionIcon />`, `"Context compacted"`, muted timestamp and human phrase (`"You compacted · 1 min 29 s"`, `"Compacted automatically · 41 s"`).
+- Single 180px rounded pill track with solid part representing remaining tokens (`566.7k → 23.2k tokens · 96% freed`); Codex request readings supported (`"Last request before and first after · 80k → 9k tokens · 89% freed of 100k"`); single quiet line when tokens not recorded. Summary one click away as captured text with provenance; unlinked summaries isolated to clean up landmark queries. Resolve motion smoothly contracts solid bar from before to after width over 600ms on live/replay arrival, static when scrolled back or reduced motion.
+- Verified: 3 formatting units pass (`compaction-seam.test.ts`), `tests/browser/compaction.spec.ts` & `ship-2f-history.spec.ts` pass (6 passed, 0 failures, Edge). Real local sessions (`claude-manual 42a5fd26`, `claude-auto a1de5659`, `codex rollout-2026-11-07`) verified at 600 and 1440 across Jet Black, Midnight, Paper (settled frames in `.local/ui-36/`). [Review record](review/ui-36-compaction-seam.md).
 
 ### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2h opened surfaces finished
 
