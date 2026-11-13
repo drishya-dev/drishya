@@ -39,7 +39,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | SHIP-2c | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
 | SHIP-2d | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
 | SHIP-6 | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: the eleven COMP-1 rows with evidence. |
-| UI-44 | @yash + Claude Sonnet 5.5 (built from Fable's brief; Fable reviews and merges) | `claude/ui-44-diff-lines-faef70` | 2026-11-13 | The diff body components of Edit and Write cards in `apps/ui/src/components/` and their CSS, new `tests/browser/diff-line-wrap.spec.ts`. Not `History.tsx`, `state.ts`, `turn-ledger.ts` (UI-41). |
 | MAP-3 | @yash + Claude Fable 5.2 | not started; only if possible (Yash, 13 Nov) | 2026-11-12 | The repository map component and a new chip layer. |
 | MOTION-4 | @yash + Gemini 3.8 Flash (Antigravity; taken over from Codex Sol 6.1, 12 Nov: continue `codex/motion-4` in its worktree, last commit 951b638d plus uncommitted edits) | `codex/motion-4` | 2026-11-11 | Whole task resumed after UI-28c, LINK-1 and LAYOUT redo merged, FILES-16 ready #417 and LAYOUT-1c ready #418. Yash explicitly approved up to 20 source/test/docs paths on 11 Nov and isolated open/close lifecycle reservations alongside FINISH-0a/0b, plus Workspace, Screen and peek-tab lifecycles. Shared owners only: ReadingDialog/ProductShell, ProductMenu, Disclosure/dismiss-menus and surface reflow/presence, Modern motion rules and motion-duration tokens; Workspace/Screen/peek mount-return owners, focused units/browser tests, real both-harness/all-palette acceptance and report plus TASKS/STATUS/CONTINUITY. Preserve contents, focus, selection, layout and existing composer spacing; no History arrivals/hover, native policies, evidence/schema, GIT-9 UI consolidation, palette decisions, protected files or hosted dispatch. Draft #403 holds inventory; update that same task PR ready only at whole acceptance. Own worktree/install, latest main integration, two browser workers, one suite at a time; Opus reviews/merges. |
 | SHIP-9 | @harsh + Codex | `codex/ship-9` | 2026-11-09 | Queued for the frozen candidate after November 13. Coordinate version metadata, install guide, release notes and packaging paths when the candidate is selected. Includes Harsh's clean Windows machine install and live-session walkthrough. |
@@ -57,6 +56,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — 13 Nov: UI-44 Edit and Write cards show whole lines
+
+- One cause: `modern/reading-windows.css` forced `white-space: pre` and `width: max-content` on `.history .op[data-diff=code] .op-body .diff`, so a wide diff card ran past its allocation behind a horizontal scrollbar. The two rules are removed; `p1.css` already wraps `.history .op-body .diff .ln-tx` (gutter, sign, add/remove background and hanging indent come from the existing flex row; the gutter has `user-select: none`, so copying yields the source line).
+- New `tests/browser/diff-line-wrap.spec.ts` (Write and Edit with a 300-character line and an unbreakable token, at 1440 and 600, collapsed and expanded: no element overflows, one gutter number, copied text equals the line) and a real-session case `node scripts/check-real.ts long-diff-lines`.
+- Real sessions: Claude Code `rec_45b046b2` (11.7 MB, 147 edits, 108 with a line over 110 characters, longest 640) at 1440 and 600: 0 overflowing cards. Codex `rec_7f1936ab` (a 168-line Write-style patch) at both widths: 0 overflowing diff lines. No real Codex journal has a line over 110 characters and the Codex CLI is not installed here, so a genuine long-line Codex patch was not recorded.
+- Not green on clean main either (same failures before the change): `classic-refinement.spec.ts:130`, `approval-clearance.spec.ts:82` at both widths, `connected-workspace.spec.ts:148` and `:222` (plural "1 import").
 
 ### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: UI-36 compaction reads as one seam in history (PR #448)
 
@@ -1838,6 +1844,8 @@ Ordered by dependency, not by owner. Take from the top of either column. Tick wh
 ---
 
 ## Decisions made
+
+- **13 Nov, Yash: Edit and Write cards wrap long lines inside the card, as Read does (UI-44).** The no-wrap wide diff card of #126 (`width: max-content`, `white-space: pre`, sideways scroll) is retired: the reader saw "the file just shown half". A wide diff still takes the width its longest line needs up to the passage (`diffCardWidth`); a longer line wraps there. The patch reader's "Wrap lines" switch is unchanged for the Workspace, Git and Compare readers.
 
 - **11 Nov, Yash: the concept widens from agent visualization to helping developers work.** Drishya now gives a developer most of what they need to work in a codebase that agents work in: what the agent is doing live and did before, the Files tree with each file's earlier changes, Workspace, Git review, Compare for branches and pull requests (GIT-8) and the Git graph. Agent visualization stays the centre and the differentiator; the product is presented, planned and judged developer-first. This is a direction, not a tagline: launch posts, videos and the website (SHIP-11, VIDEO-1, phase F) show both sides, and future planning asks what helps developers work. AGENTS.md's north star is updated.
 
