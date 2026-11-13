@@ -35,5 +35,7 @@ import './reading-type.css';
 import './pill-buttons.css';
 // UI-39: Jet Black's canvas on the site's dot ground.
 import './jet-ground.css';
+// UI-39: nested surfaces keep a fill and lose their own outline.
+import './fewer-outlines.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
 import './motion.css';

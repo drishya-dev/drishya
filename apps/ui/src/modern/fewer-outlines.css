@@ -1,0 +1,8 @@
+/* UI-39 part 5 (Yash, 12 Nov): on the site a surface is a fill or a hairline, rarely both. Floating chrome (panels,
+   popovers, the header islands) keeps its hairline; surfaces nested inside a panel keep a fill and lose their own
+   outline. The border stays in place but transparent, so no box moves; a field shows its outline again while it has
+   focus, so where you type is never in doubt. Every palette (this is structure, the colours are tokens). */
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer .ux-search:not(:focus-within),
+:root[data-ui-version=modern][data-experience=classic] .modern-toolbox .tool-search:not(:focus) { border-color:transparent; }
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer .ux-search { background:var(--s2); }
+:root[data-ui-version=modern][data-experience=classic] .folder-explorer .workspace-grant-card { border-color:transparent; background:var(--s2); }
