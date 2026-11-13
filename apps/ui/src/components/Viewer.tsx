@@ -255,8 +255,6 @@ function WorkspaceViewer() {
         {!workingWindow && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
-      <div className="reading-edge reading-edge-top" aria-hidden="true" />
-      <div className="reading-edge reading-edge-bottom" aria-hidden="true" />
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} followSlot={setFollowSlot} />
