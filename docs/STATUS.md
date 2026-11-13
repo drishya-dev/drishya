@@ -57,6 +57,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Codex — 14 Nov: AG-3 genuine runs and draft audit
+
+- #469 (AG-1) and #472 (AG-2) are ready for Fable, integration branch only. AG-3 #474 remains draft, source pushed through 9ff6ff28 plus current-main refresh 929a1b56; no PR was merged by Codex.
+- Genuine 660a1ec4: 16,556 bytes, five operations, one child, two background commands. At 600/1440, child opening, Running now, History and restart cursor passed. A genuine five-child spawn in 61769918 also opens correctly. 1,548 units / one existing skip, both types, package verification and 20 targeted Edge browsers passed. No content/screenshots exposed.
+- Keep AG-3 claimed/unticked: cold inspection still rereads transcript variants; a late completed-task file update can show future content in replay. At-most-28-path cursor/projection/as-of expansion is requested before edits. Final-build live timing needs a pre-armed observer (the second run was already finished); native crash/kill not run. README records exact seams, evidence and honest timing limits. AG-4/5 have not started; no full integration gate yet.
+
 ### Yash with Codex — 13 Nov: AG-1 passive Antigravity adapter
 
 - PR #469 targets `codex/harness-antigravity` only; no product merge to main. All 55 readable captures imported into scratch storage (16,455 distinct steps), source files unchanged, genuine canary redacted. Four material cases at both supported widths plus existing-harness frames checked without exposing journal content.
