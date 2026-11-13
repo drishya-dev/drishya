@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | AG-2 | @yash + Codex (Terra, coordinated by Codex) | `codex/ag-2-product` | 2026-11-13 | Whole product identity item, integration branch only, stacked on reviewed AG-1 dependency (#469 first). Yash explicitly reserved only harness-count/filter/label sections in HomeOverview.tsx, SessionHome.tsx, LibrarySearch.tsx and the Antigravity-only composer guard in SessionWorkspace.tsx beside FINISH claims. TASKS-listed server search allow-lists, store harness-list audit (do not widen cost/rescan logic blindly), controller/native-readiness unsupported guards, existing identity-label/token helper, one antigravity-harness browser spec and TASKS/STATUS. Target at most 15 paths; no styling, layout, palette, motion, old adapter/parser or native-policy edits. User approved stacked dependencies on 13 Nov; PR base remains codex/harness-antigravity and Fable reviews/merges AG-1 first. |
-| AG-1 | @yash + Codex | `codex/ag-1-adapter` | 2026-11-13 | Whole item, draft #469 into `codex/harness-antigravity` only. Yash approved up to 30 paths on 13 Nov: new adapter/tests/fixtures; capture-core optional diagnostics/identity/read hooks; ingest registration/package and lockfile; store Antigravity replacement/step-order branches; projection ordering/truth branches and contract/reducer versions; real-case registration/types, generator, schema/CODEBASE/TASKS/STATUS docs and generated goldens if changed. Exact merge sections and rationale in #469/adapter README; preserve concurrent shared-file edits, old adapter behavior and every UI design. Own install, scratch real imports, prefix/count-only reporting. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
 | UI-45 | @yash + Claude Sonnet 5.5 | `claude/ui-45-right-panels-c2d404` | 2026-11-13 | `apps/ui/src/lib/reading-edges.ts`, the side-measurement effect in `Viewer.tsx`, `large-screens.css` only if needed, `tests/browser/reading-column-edges.spec.ts`. TASKS/STATUS. Frames in `.local/ui-45/`. |
 | MAP-4 | @yash + Claude Opus 5.5 | `claude/gifted-austin-952e56` | 2026-11-13 | Map renderer only: `apps/ui/src/map/spatial-map.ts` (and its reading-column quiet-zone code), the map canvas rule in `apps/ui/src/atelier.css`, map tokens in `tokens.css` if needed, a map spec. TASKS/STATUS. Frames in `.local/map-4/`. |
@@ -62,6 +61,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Codex — 13 Nov: AG-1 passive Antigravity adapter
+
+- PR #469 targets `codex/harness-antigravity` only; no product merge to main. All 55 readable captures imported into scratch storage (16,455 distinct steps), source files unchanged, genuine canary redacted. Four material cases at both supported widths plus existing-harness frames checked without exposing journal content.
+- Final types, 1,534 units / one existing skip, package verification and 18 named Home/search browsers passed. Broad browsers: 866 pass / 27 skip / six fail plus serial 32 pass / one skip; all six failures reproduced on untouched source base. Exact acceptance, baseline controls and shared merge seams: `packages/adapter-antigravity/README.md`.
+- AG-2 is stacked and owns product identity; AG-3 owns live tasks/children. AG-4 follows TASKS' later same-conversation image-byte decision (superseding the initial reference-only recommendation). Browser/MCP native captures remain AG-5 acceptance gaps. Fable must merge AG-1 before its stacked dependents; no PR was merged by Codex.
 
 ### Yash with Claude Sonnet 5.5 (started on Opus 5.5) — 13 Nov: UI-43 composer model menu
 
