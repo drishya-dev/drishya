@@ -852,7 +852,8 @@ export function PromptComposer() {
   const currentPermission = nativeCurrentPermission(recording?.harness, controller?.settings?.sandbox);
   const permissionId = options.permission ?? currentPermission;
   const permissionChoice = permissionId ? permissionLabel(permissionId) : undefined;
-  const choosePermission = (id: string | undefined) => { setOptions({ ...options, permission: id === currentPermission ? undefined : id }); setConfirmSend(false); };
+  // An explicit choice is always passed, even when it matches the last report: a connected Codex turn reports its own sandbox, which a later resume may not keep.
+  const choosePermission = (id: string | undefined) => { setOptions({ ...options, permission: id }); setConfirmSend(false); };
   const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<RememberCheckbox checked={remember} disabled={busy} onChange={setRemember} />}</>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
