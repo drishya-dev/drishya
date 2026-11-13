@@ -81,6 +81,7 @@ export class HarnessController {
   }
 
   async inspect(id: string): Promise<ControllerState> {
+    if (this.app.recording(id).harness === 'antigravity') throw new HttpError(409, 'Read-only: Antigravity cannot be steered from Drishya');
     if (this.inspecting.has(id) || this.inspecting.size >= 2) throw new HttpError(409, 'a native settings check is already in progress');
     this.inspecting.add(id);
     try {
@@ -178,6 +179,7 @@ export class HarnessController {
   }
 
   private async startTurn(id: string, prompt: unknown, exclusive: unknown, attachments?: unknown, options?: unknown): Promise<ControllerState> {
+    if (this.app.recording(id).harness === 'antigravity') throw new HttpError(409, 'Read-only: Antigravity cannot be steered from Drishya');
     const selected = turnOptions(options);
     if (id.includes('+')) throw new HttpError(400, 'choose one harness session');
     if (typeof prompt !== 'string' || !prompt.trim() || Buffer.byteLength(prompt) > 64 * 1024) throw new HttpError(400, 'prompt must be 1–65536 bytes');

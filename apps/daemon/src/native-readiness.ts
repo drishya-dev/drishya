@@ -9,6 +9,7 @@ export interface NativeReadiness {
 interface Probe {code:number|null;text:string;failed?:boolean}
 /** These are CLI metadata commands only: no session, prompt, config write or stdin. */
 export async function nativeReadiness(harness:string,cwd:string,options:{launch?:typeof spawn;resolveExecutable?:typeof executable;timeoutMs?:number}={}):Promise<NativeReadiness> {
+  if(harness==='antigravity')return {available:false,signedIn:null,supported:false,state:'unsupported',reason:'Read-only: Antigravity cannot be steered from Drishya'};
   const name=harness==='codex'?'codex':harness==='claude-code'?'claude':undefined;
   if(!name)return {available:false,signedIn:null,supported:false,state:'unsupported',reason:'This harness has no supported native connection.'};
   const bin=(options.resolveExecutable??executable)(name);
