@@ -163,7 +163,6 @@ When two documents disagree, the one higher in its row wins. When a document her
 | [`review/09-p1-content-origins.md`](review/09-p1-content-origins.md) | Prototype source audit, first P1 presentation slice, evidence and remaining choreography |
 | [`review/10-p1-design-directions.md`](review/10-p1-design-directions.md) | Fresh Studio/Relay/Atlas prototypes, recommendation, persistent essentials, integrated safeguards and next design task |
 | [`CODEBASE.md`](CODEBASE.md) | The code as built: pipeline, packages, identity, privacy, API, tests |
-| [`HACKATHON.md`](HACKATHON.md) | Fit assessment for the Nebius × NVIDIA hackathon, against its official rules |
 | [`review/`](review/) | The 21 September external review: product, experience, engineering, research ledger, first storyboard |
 | [`reference/`](reference/) | Evidence pack, motion catalog, event schema (draft), continuous canvas |
 | [`prototype/`](prototype/) | **The interactive design reference** — the continuous canvas, all five signature moves. Synthetic data only; never presented as a working integration |

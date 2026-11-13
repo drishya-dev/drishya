@@ -23,12 +23,10 @@ import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
-import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { setLowResource, setMapVisible, setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
 import { History } from './History.tsx';
-import { ExplanationView } from './ExplanationView.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
@@ -689,16 +687,10 @@ function Briefing({ projection }: { projection: Projection }) {
   const paged = useApp((s) => !!s.historyPage);
   const open = useApp((s) => s.briefingOpen);
   const source = useApp((s) => s.source);
-  const config = useApp((s) => s.config);
   const recordingId = useApp((s) => s.recordingId);
   const step = useApp((s) => s.step);
   const set = useApp((s) => s.set);
   const [range, setRange] = useState<'all' | 'since'>('all');
-  const [preview, setPreview] = useState<ModelPreview>();
-  // The range the preview was built for; a send uses it, not wherever playback has moved since.
-  const [previewFrom, setPreviewFrom] = useState<number>();
-  const [result, setResult] = useState<Explanation>();
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
   const [facts, setFacts] = useState<HistorySummary>();
   const from = range === 'since' ? step : undefined;
@@ -708,16 +700,6 @@ function Briefing({ projection }: { projection: Projection }) {
     if (open && paged && source?.summary && recordingId) void source.summary(recordingId, from).then((data) => { if (active) setFacts(data); }).catch((e) => { if (active) setErr(e.message); });
     return () => { active = false; };
   }, [open, paged, source, recordingId, from, projection]);
-
-  useEffect(() => {
-    if (!open || source?.kind !== 'daemon' || !recordingId) return;
-    setErr(undefined);
-    source.briefing(recordingId, { from }).then((r) => {
-      setPreview(r.preview);
-      setPreviewFrom(from);
-      setResult(r.cached);
-    }).catch((e) => setErr(e.message));
-  }, [open, range, recordingId, source]);
 
   if (!open) return null;
   const counts = paged ? facts : summarize(projection, from ?? 0);
@@ -741,44 +723,7 @@ function Briefing({ projection }: { projection: Projection }) {
           <li>{counts.agents} agent{counts.agents === 1 ? '' : 's'} active</li></> : <li>Loading…</li>}
         </ul>
       </div>
-      {source?.kind === 'daemon' ? (
-        <>
-          {result && <ExplanationView r={result} />}
-          {preview && (
-            <div className="consent">
-              <div>
-                A generated briefing sends <strong>{preview.items}</strong> redacted items ({Math.round(preview.chars / 1000)}k characters) to <code>{preview.model}</code>.
-              </div>
-              {config?.llm.configured ? (
-                <button
-                  className="btn primary"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    setErr(undefined);
-                    try {
-                      setResult((await source.briefing(recordingId!, { from: previewFrom }, preview.digest)).result);
-                    } catch (e) {
-                      const fresh = changedPreview(e);
-                      if (fresh) setPreview(fresh);
-                      setErr((e as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  {busy ? 'Waiting for Nemotron…' : result ? 'Regenerate' : 'Write briefing with Nemotron'}
-                </button>
-              ) : (
-                <span className="muted">Set <code>NEBIUS_API_KEY</code> to enable generated briefings.</span>
-              )}
-            </div>
-          )}
-          {err && <p className="bad">{err}</p>}
-        </>
-      ) : (
-        <p className="muted small">Generated briefings run only in the local app.</p>
-      )}
+      {err && <p className="bad">{err}</p>}
     </div>
   );
 }

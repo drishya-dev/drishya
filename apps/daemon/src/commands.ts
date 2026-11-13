@@ -26,8 +26,7 @@ const HELP = `drishya ${VERSION} — see what your coding agents did. Observe on
   drishya forget <recording>                         delete a recording from the local store
   drishya storage [--json]                          show local disk usage and the 10 GiB advisory budget
 
-Data lives in ${dataDir()} (override with DRISHYA_HOME).
-Model features are off unless NEBIUS_API_KEY is set, and each call is an explicit action.`;
+Data lives in ${dataDir()} (override with DRISHYA_HOME).`;
 
 export async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
@@ -60,7 +59,7 @@ export async function main() {
       console.log(`\n  Drishya ${VERSION} — local agent workspace.\n`);
       console.log(`  Open:  ${running.launchUrl}`);
       if (values.dev) console.log(`  Dev UI: http://127.0.0.1:5173/#token=${running.token}  (run \`pnpm ui:dev\`)`);
-      console.log(`  Data:  ${running.app.store.dataDir}\n  Model: ${process.env.NEBIUS_API_KEY ? 'Nebius Token Factory configured (explicit calls only)' : 'off (set NEBIUS_API_KEY to enable explanations)'}\n`);
+      console.log(`  Data:  ${running.app.store.dataDir}\n`);
       if (!values['no-open'] && !values.dev) openBrowser(running.launchUrl);
       const stop = async () => {
         await running.close();

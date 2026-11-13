@@ -233,7 +233,6 @@ Replay works with the map absent. The indexer (`indexer`) and the model layer (`
 | `projection` | The reducer, plus derived rules: shell classification, test-output parsing, patch/diff | `src/reduce.ts`, `src/shell.ts`, `src/tests.ts`, `src/patch.ts` |
 | `indexer` | Repository map: file enumeration, import extraction and resolution, deterministic layout | `src/index.ts` |
 | `scene` | `compose()`, markers, pacing (`dwellFor`), step lookups — runs in Node and the browser | `src/index.ts` |
-| `explain` | Nemotron on Nebius Token Factory: evidence packs, consent preview, citation validation | `src/index.ts` |
 | `apps/daemon` | `drishya` CLI and the local API server | `src/cli.ts`, `src/commands.ts`, `src/server.ts`, `src/app.ts` |
 | `apps/ui` | Base UI: React 19 + Vite + Zustand | `src/App.tsx`, `src/components/*` |
 

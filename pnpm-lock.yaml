@@ -35,9 +35,6 @@ importers:
       '@drishya/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@drishya/explain':
-        specifier: workspace:*
-        version: link:../../packages/explain
       '@drishya/indexer':
         specifier: workspace:*
         version: link:../../packages/indexer
@@ -165,22 +162,6 @@ importers:
         version: link:../privacy
 
   packages/contracts: {}
-
-  packages/explain:
-    dependencies:
-      '@drishya/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@drishya/privacy':
-        specifier: workspace:*
-        version: link:../privacy
-    devDependencies:
-      '@drishya/ingest':
-        specifier: workspace:*
-        version: link:../ingest
-      '@drishya/store':
-        specifier: workspace:*
-        version: link:../store
 
   packages/indexer:
     dependencies:

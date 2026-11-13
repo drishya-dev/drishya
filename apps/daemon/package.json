@@ -8,7 +8,6 @@
   "dependencies": {
     "@drishya/capture-core": "workspace:*",
     "@drishya/contracts": "workspace:*",
-    "@drishya/explain": "workspace:*",
     "@drishya/indexer": "workspace:*",
     "@drishya/ingest": "workspace:*",
     "@drishya/privacy": "workspace:*",
