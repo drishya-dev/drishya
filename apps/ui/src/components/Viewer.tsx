@@ -19,7 +19,7 @@ import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
+import { Fragment, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -44,7 +44,7 @@ import { NotifyWatcher } from './NotifyWatcher.tsx';
 import { TurnsWatcher } from './TurnsWatcher.tsx';
 import { ContextReportWatcher } from './ContextReportWatcher.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
-import { CompareButton, CompareWindow } from './CompareWindow.tsx';
+import { CompareButton } from './CompareButton.tsx';
 import { GitEntry } from './GitEntry.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
@@ -54,6 +54,8 @@ import type { SessionSearchHit } from '../../../../packages/store/src/search-typ
 import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
 import { measureReadingEdges, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
+
+const CompareWindow = lazy(() => import('./CompareWindow.tsx').then(m => ({ default: m.CompareWindow })));
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -261,7 +263,10 @@ function WorkspaceViewer() {
       <ContextReportWatcher key={`context-report/${recordingId}`} />
       <PromptComposer key={`composer/${recordingId}`} />
       <HistoryNoteHint />
-      <DeveloperWorkspace /><CompareWindow />
+      <DeveloperWorkspace />
+      <Suspense fallback={null}>
+        {compareOpen && <CompareWindow />}
+      </Suspense>
       <Briefing projection={projection} />
       <Search projection={projection} />
       <ScreenHost />
