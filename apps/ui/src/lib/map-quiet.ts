@@ -11,7 +11,9 @@ export const QUIET_FEATHER = 72;
  * with the .38 canvas dim and left nothing visible under the column; these keep the shapes translucent but present, and
  * still clearly below the margins.
  */
-export const QUIET_NODE_FLOOR = .6;
+/** MAP-4: strength of dots and lines at rest, in the margins. The canvas is no longer dimmed to 38 % on top of this. */
+export const MAP_REST_ALPHA = .85;
+export const QUIET_NODE_FLOOR = .5;
 export const QUIET_EDGE_FLOOR = .45;
 
 /** 1 outside the feather band, `floor` inside the zone, a straight ramp between. */

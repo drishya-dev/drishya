@@ -227,7 +227,7 @@ body { font-size: var(--text-md); letter-spacing: -.01em; }
 :root[data-experience] .connected-workspace .search input { height: 48px; font-size: var(--text-md); }
 :root[data-experience] .map-tools { border-radius: var(--round-md); background: var(--s1); box-shadow: none; }
 :root[data-experience] .map-legend { color: var(--t3); }
-:root[data-experience] .connected-workspace:not(.exploring) .map > canvas { opacity: .38; }
+/* MAP-4: the map is no longer dimmed as a whole (it was 38 %, which with SHIP-8's quiet zone left nothing readable). Strength is set in MapCanvas and map-quiet.ts. */
 .workbench-utilities .settings-open { display: grid; place-items: center; width: 34px; padding: 0; min-height: 34px; }
 .workbench-utilities .settings-open svg { width: 20px; height: 20px; }
 .workspace-menu .usage-peek > div { min-width: 0; overflow-wrap: anywhere; }
