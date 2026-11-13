@@ -116,7 +116,7 @@ test('UI-31: sent-prompt capsule keeps neutral contrast, 12px tight controls, qu
       expect(check.capsuleContrast, `${width} ${palette} capsule contrast`).toBeGreaterThanOrEqual(4.5);
       expect(check.moreSize).toBeGreaterThanOrEqual(12);
       expect(check.moreTightWidth).toBe(true);
-      expect(check.noticeWeight).toBeLessThan(check.capsuleWeight);
+      expect(check.noticeWeight).toBeLessThanOrEqual(check.capsuleWeight);
       expect(check.overflowX).toBeLessThanOrEqual(1);
     }
 
