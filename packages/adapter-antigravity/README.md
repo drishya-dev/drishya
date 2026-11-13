@@ -55,3 +55,17 @@ Yash approved up to 30 paths on 13 November. Additional existing sections reserv
 - `docs/reference/03-event-schema.md`: record the additive agreement; TASKS/STATUS completion and CODEBASE documentation.
 
 Merge review must inspect these sections independently of concurrent work: do not replace complete shared files with this branch's copy. No Claude Code/Codex parser, fixture or real-case implementation is reserved or edited.
+
+## AG-3 live implementation plan (draft)
+
+PR is stacked on AG-1 #469, which must merge first. New tasks.ts and subagents.ts will read only bounded, same-conversation output and exact spawn metadata. Native task IDs and spawnStepIndex are evidence; time/name similarity is not. Missing, partial and outside references remain explicit. No controller is added.
+
+Existing-file expansion requested before edits (AG-3 TASKS omits these necessary seams):
+
+- capture-core RecordParser interface: optional asynchronous preparation and post-read side-file refresh. Existing parsers keep their synchronous default. Ingest readSource alone awaits those hooks and seals every returned observation before persistence, including when no new journal line arrives.
+- adapter paths.ts allow-list: exact .system_generated/subagents/<id>.json metadata only; summaries.ts: captured step count and bounded refresh cache. The adapter index inspection cache becomes incremental rather than re-reading 43 MB on every append.
+- projection reduce.ts: Antigravity-only background receipt replacement and exact recorded task/spawn references, preserving original source times and existing harness behavior. Missing final status stays unknown; a growing output file alone is never proof of success.
+- daemon delegation-thread.ts imported-child lookup: exact Antigravity parent/conversation identity and spawn metadata only, reusing the existing child-open view without changing UI.
+- check-real.ts registration for the new antigravity-live case; focused tests for the shared seams. Target at most 24 source/test/docs paths, no contract/schema/UI changes. If the implementation cannot fit this scope, document and ask before expanding.
+
+These sections must be reviewed independently when merging concurrent shared files. Never replace whole files from this branch. Genuine live flush, background final output, child opening, restart and interrupted-write acceptance remain pending; existing captures alone do not prove live cadence.
