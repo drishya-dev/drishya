@@ -1,0 +1,50 @@
+/* UI-46: tool cards show their content cleanly. Commands and output keep their lines and wrap at sensible places, a collapsed
+   preview ends on a whole line (never half of one), arguments are key/value rows, and every card shares one rhythm. Older layers
+   capped these regions at fixed pixel heights that scrolled inside the card; the clamp now comes from measuring real lines. */
+:root { --card-gap: 8px; }
+
+/* ── whole-line clamp (lib/line-clamp.tsx) ─────────────────────────────────────────────── */
+.line-clamp { min-width: 0; max-width: 100%; }
+.line-clamp-body { display: flow-root; min-width: 0; }
+.line-clamp[data-clamped] {
+  max-height: var(--clamp-height); overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 calc(100% - var(--clamp-fade)), rgb(0 0 0 / .42));
+  mask-image: linear-gradient(#000 calc(100% - var(--clamp-fade)), rgb(0 0 0 / .42));
+}
+/* The end of an output: the last lines show, and the fade is at the top. */
+.line-clamp[data-clamped][data-from=end] {
+  -webkit-mask-image: linear-gradient(to top, #000 calc(100% - var(--clamp-fade)), rgb(0 0 0 / .42));
+  mask-image: linear-gradient(to top, #000 calc(100% - var(--clamp-fade)), rgb(0 0 0 / .42));
+}
+.line-clamp[data-clamped][data-from=end] > .line-clamp-body { margin-top: calc(var(--clamp-offset) * -1); }
+/* Reading a card in place (hover zoom) has the room: show it all. */
+.op[data-hover-reading] .line-clamp[data-clamped] { max-height: none; overflow: visible; -webkit-mask-image: none; mask-image: none; }
+.op[data-hover-reading] .line-clamp[data-clamped][data-from=end] > .line-clamp-body { margin-top: 0; }
+
+/* The older fixed-height scroll boxes give way to the clamp wherever one is present. */
+:root[data-experience] .history .op[data-tool-exchange]:not(.expanded):not([data-hover-reading]) :is(.command-request, .tool-input, .result-content):has(.line-clamp) {
+  max-height: none; overflow: visible; -webkit-mask-image: none; mask-image: none; animation: none;
+}
+
+/* ── commands: real line breaks, a hanging indent, soft breaks at paths ────────────────── */
+.command-material code { display: block; min-width: 0; font: inherit; background: none; border: 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.command-material > .line-clamp { align-self: stretch; }
+.cmd-line { display: block; padding-left: 2ch; text-indent: -2ch; }
+
+/* ── one rhythm: header, command, output and arguments sit the same distance apart ─────── */
+.history .op:not(.expanded) .op-body :is(.shell, .test, .mcp) { display: grid; gap: var(--card-gap); min-width: 0; }
+.history .op:not(.expanded) .op-body :is(.shell, .test, .mcp) > * { margin: 0; }
+.history .op:not(.expanded) .op-body :is(.shell, .test, .mcp) .cmd { margin: 0; }
+.history .op:not(.expanded) .op-body .result-area { padding-top: var(--card-gap); margin: 0; }
+
+/* ── arguments: aligned key / value rows that wrap ─────────────────────────────────────── */
+.tool-input-fields { display: grid; grid-template-columns: fit-content(9rem) minmax(0, 1fr); column-gap: 12px; margin: 0; }
+.tool-input-fields > div { display: grid; grid-column: 1 / -1; grid-template-columns: subgrid; align-items: baseline; padding: calc(var(--card-gap) * .75) 0; }
+.tool-input-fields > div > dt { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.tool-input-fields > div > dd { min-width: 0; }
+.tool-input-fields .tool-input-fields { padding-left: 0; border-left: 0; }
+.tool-input-fields pre { overflow-wrap: anywhere; }
+.tool-input-fields > div:last-child { border-bottom: 0; }
+.mcp-result { min-width: 0; }
+/* The argument-data chip rests at the arguments' lower corner, clear of the Original switch on the caption row. */
+.tool-input > .captured-result-views { top: auto; bottom: 2px; }
