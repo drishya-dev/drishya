@@ -87,7 +87,7 @@ for (const width of [1440, 2000, 2560]) {
     expect(Math.abs(m.width - m.space), `the column fills the space between the panels: ${JSON.stringify(m)}`).toBeLessThanOrEqual(2);
     expect(m.under, 'no card under a side panel').toBe(0);
     expect(m.proseMax, 'prose keeps its reading measure').toBeLessThanOrEqual(75 * 11);
-    expect(m.proseLeft, 'prose starts at the column edge (its own 6 px indent), not centred').toBeLessThanOrEqual(8);
+    expect(m.proseLeft, `prose starts at the column edge (its own 6 px indent), not centred: ${JSON.stringify(m)}`).toBeLessThanOrEqual(8);
     if (width >= 2000) expect(m.width, 'wide windows use more than the old cap').toBeGreaterThan(1280);
   });
 }
@@ -148,3 +148,126 @@ for (const [label, width, ratio] of zooms) {
     }
   });
 }
+
+// UI-45, narrow windows (Yash, 13 Nov: prose "cut at the edge" of Files in a half-width window). Up to 820 px Files is a
+// drawer over History. Where a readable column (360 px) still fits beside it, the column moves over and reflows; where it
+// does not, History behind the drawer is dimmed to a ghost so no half-cut words show. 1920 px at 125 % and 150 % are
+// 768 and 640 CSS px.
+const narrowCases: Array<[string, number, number, 'docked' | 'covered']> = [['600 px', 600, 1, 'covered'], ['640 px (150 %)', 640, 1.5, 'covered'], ['700 px', 700, 1, 'covered'], ['768 px (125 %)', 768, 1.25, 'docked'], ['820 px', 820, 1, 'docked']];
+for (const [label, width, ratio, expected] of narrowCases) {
+  test.describe(`Files drawer at ${label}`, () => {
+    test.use({ deviceScaleFactor: ratio });
+    test(`the column is ${expected === 'docked' ? 'beside the drawer' : 'dimmed behind the drawer'}`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.route('**/controller', route => route.fulfill({ json: { harness: 'claude-code', available: false, state: 'idle', output: '', tools: [], approvals: [] } }));
+      await page.goto(server.launchUrl);
+      await expect(page.locator('.home, .mh-home').first()).toBeVisible();
+      await page.goto(`${server.url}/?experience=modern&motion=0#/r/${readerId}`);
+      await expect(page.locator('.history article.op').first()).toBeVisible();
+      if (await page.locator('.file-peek-reader[open]').count()) await page.keyboard.press('Escape');
+      await page.locator('[data-workspace-files-trigger]').click();
+      await expect(page.locator('.folder-explorer')).toBeVisible();
+      await expect(page.locator('.connected-workspace')).toHaveAttribute('data-side-fit', expected);
+      const m = await page.evaluate(() => {
+        const drawer = document.querySelector('.folder-explorer')!.getBoundingClientRect();
+        const column = document.querySelector('.history-inner')!.getBoundingClientRect(), pad = parseFloat(getComputedStyle(document.querySelector('.history-inner')!).paddingLeft);
+        const prose = [...document.querySelectorAll<HTMLElement>('.history .prose p')].map(p => p.getBoundingClientRect()).filter(r => r.width > 0);
+        return { opacity: parseFloat(getComputedStyle(document.querySelector('.history')!).opacity), drawerRight: drawer.right, columnLeft: column.left + pad, columnWidth: column.width - 2 * pad, proseLeft: Math.min(...prose.map(r => r.left)) };
+      });
+      if (expected === 'docked') {
+        expect(m.opacity, 'History stays at full strength').toBe(1);
+        expect(m.proseLeft, `prose starts after the drawer: ${JSON.stringify(m)}`).toBeGreaterThanOrEqual(m.drawerRight + 20);
+        expect(m.columnWidth, 'a readable column is left').toBeGreaterThanOrEqual(360);
+      } else {
+        expect(m.opacity, `History is a ghost behind the drawer, so no half-cut words read: ${JSON.stringify(m)}`).toBeLessThanOrEqual(0.15);
+      }
+      // Minimising the drawer gives the column back at full strength.
+      await page.locator('.folder-explorer header button').first().click();
+      await expect(page.locator('.folder-explorer')).toHaveCount(0);
+      await expect.poll(() => page.evaluate(() => parseFloat(getComputedStyle(document.querySelector('.history')!).opacity))).toBe(1);
+      await expect(page.locator('.connected-workspace')).not.toHaveAttribute('data-side-fit', /.+/);
+    });
+  });
+}
+
+// UI-45, placement is immediate: toggling a panel moves the column in the same frame the panel's size is final, never on
+// the next scroll. Frames are sampled from the click on, without scrolling.
+const probeSource = `() => {
+  const vis = (s) => [...document.querySelectorAll(s)].filter(e => getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0);
+  const panels = vis('.file-peek-reader[open], .modern-toolbox, .folder-explorer, .workspace-leading > *, .complete-prompt-rail, .history-prompt-marks').map(e => e.getBoundingClientRect());
+  const content = vis('.history article.op, .history .prose, .history .turn-capsule').map(e => e.getBoundingClientRect());
+  let hits = 0;
+  for (const c of content) { if (c.bottom < 0 || c.top > innerHeight) continue; for (const s of panels) if (c.right > s.left + 1 && c.left < s.right - 1 && c.bottom > s.top + 1 && c.top < s.bottom - 1) hits++; }
+  const col = document.querySelector('.history-inner').getBoundingClientRect(), pad = parseFloat(getComputedStyle(document.querySelector('.history-inner')).paddingLeft);
+  return { hits, signature: panels.map(r => Math.round(r.left) + ':' + Math.round(r.right)).join('|') + '/' + Math.round(col.left) + ':' + Math.round(col.right) };
+}`;
+const sampleFrames = async (page: Page, act: () => Promise<unknown>, frames = 48) => {
+  await page.evaluate((source) => { (window as unknown as { __probe: () => unknown }).__probe = new Function(`return (${source})`)(); }, probeSource);
+  const pending = page.evaluate((count) => new Promise<Array<{ hits: number; signature: string }>>((resolve) => {
+    const out: Array<{ hits: number; signature: string }> = [];
+    const step = () => { out.push((window as unknown as { __probe: () => { hits: number; signature: string } }).__probe()); if (out.length < count) requestAnimationFrame(step); else resolve(out); };
+    requestAnimationFrame(step);
+  }), frames);
+  await act();
+  return pending;
+};
+/**
+ * Frames from the first one whose panel and column rectangles never change again, plus three: the cards re-flow in the
+ * passage layout's own resize pass, one to three frames (about 50 ms) after the column moved, so nothing may sit under a
+ * panel from the fourth frame on. It never waits for a scroll.
+ */
+const afterSettled = (samples: Array<{ hits: number; signature: string }>) => {
+  let settled = samples.length - 1;
+  while (settled > 0 && samples[settled - 1]!.signature === samples[settled]!.signature) settled--;
+  return { settled, late: samples.slice(settled + 4), all: samples };
+};
+
+test('toggling Files and the file reader places the column at once, without a scroll', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/controller', route => route.fulfill({ json: { harness: 'claude-code', available: false, state: 'idle', output: '', tools: [], approvals: [] } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home, .mh-home').first()).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${readerId}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
+  const grant = page.getByRole('button', { name: /^Enable workspace reading/ });
+  await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();
+  if (await grant.isVisible()) await grant.click();
+  await expect.poll(async () => (await gaps(page)).left).toBeGreaterThanOrEqual(23);
+  const steps: Array<[string, () => Promise<unknown>]> = [
+    ['Files minimised', () => page.locator('.folder-explorer header button').first().click()],
+    ['Files opened again', () => page.locator('[data-workspace-files-trigger]').click()],
+    ['file reader opened', () => page.locator('[data-spine-path="main.ts"]').click()],
+    ['file reader closed', () => page.keyboard.press('Escape')],
+  ];
+  for (const [name, act] of steps) {
+    const { settled, late, all } = afterSettled(await sampleFrames(page, act));
+    expect(settled, `${name}: the layout settles within the sampled frames`).toBeLessThan(all.length - 3);
+    expect(late.filter(frame => frame.hits > 0).length, `${name}: nothing under a panel once the layout is final (settled at frame ${settled} of ${all.length}; frames with a hit: ${all.map((frame, i) => frame.hits ? i : -1).filter(i => i >= 0).join(",")})`).toBe(0);
+    await expect.poll(async () => (await underSurface(page)).hits, { message: `${name}: still clear a moment later` }).toEqual([]);
+  }
+  await expect.poll(async () => { const g = await gaps(page); return g.left >= 23 && Math.abs(g.left - g.right) <= 2; }, { message: 'equal gaps again with the reader closed' }).toBe(true);
+});
+
+// Up to 820 px the file reader is a bottom sheet over History, by design: it is opaque, so nothing of History shows
+// half-cut through it, and it stays inside the window with the Files drawer closed behind it.
+test('the narrow file reader is an opaque sheet inside the window', async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 800 });
+  await page.route('**/controller', route => route.fulfill({ json: { harness: 'claude-code', available: false, state: 'idle', output: '', tools: [], approvals: [] } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home, .mh-home').first()).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${readerId}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
+  if (!await page.locator('.file-peek-reader[open]').count()) {
+    await page.locator('[data-workspace-files-trigger]').click();
+    const grant = page.getByRole('button', { name: /^Enable workspace reading/ });
+    await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();
+    if (await grant.isVisible()) await grant.click();
+    await page.locator('[data-spine-path="main.ts"]').click();
+  }
+  const sheet = page.locator('.file-peek-reader[open]');
+  await expect(sheet).toBeVisible();
+  const m = await sheet.evaluate(el => { const b = el.getBoundingClientRect(), c = getComputedStyle(el).backgroundColor.match(/[\d.]+/g)!.map(Number); return { left: b.left, right: b.right, alpha: c.length > 3 ? c[3]! : 1, width: innerWidth }; });
+  expect(m.alpha, 'the sheet is opaque').toBe(1);
+  expect(m.left).toBeGreaterThanOrEqual(0);
+  expect(m.right).toBeLessThanOrEqual(m.width);
+});

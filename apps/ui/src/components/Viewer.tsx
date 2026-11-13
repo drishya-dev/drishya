@@ -54,7 +54,7 @@ import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
 import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
-import { FILE_READER_SELECTOR, measureReadingEdges, measureReadingSides, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
+import { FILE_READER_SELECTOR, SIDE_PANELS, measureNarrowSides, measureReadingEdges, measureReadingSides, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
 
 const CompareWindow = lazy(() => import('./CompareWindow.tsx').then(m => ({ default: m.CompareWindow })));
 
@@ -205,7 +205,10 @@ function WorkspaceViewer() {
       const bottomValue = `${edges.bottom}px`;
       if (el.style.getPropertyValue('--reading-edge-top') !== topValue) el.style.setProperty('--reading-edge-top', topValue);
       if (el.style.getPropertyValue('--reading-edge-bottom') !== bottomValue) el.style.setProperty('--reading-edge-bottom', bottomValue);
-      const sides = measureReadingSides(el);
+      const narrow = measureNarrowSides(el);
+      if (narrow.fit === 'none') { if (el.hasAttribute('data-side-fit')) el.removeAttribute('data-side-fit'); }
+      else if (el.getAttribute('data-side-fit') !== narrow.fit) el.setAttribute('data-side-fit', narrow.fit);
+      const sides = narrow.fit === 'docked' ? narrow : measureReadingSides(el);
       for (const [name, value] of [['--reading-pad-left', sides?.left], ['--reading-pad-right', sides?.right]] as const) {
         const next = value === undefined ? '' : `${value}px`;
         if (el.style.getPropertyValue(name) !== next) { if (next) el.style.setProperty(name, next); else el.style.removeProperty(name); }
@@ -231,6 +234,16 @@ function WorkspaceViewer() {
     };
     const rootMutation = new MutationObserver(() => { bind(); update(); });
     rootMutation.observe(el, { childList: true });
+    // A side panel mounts or unmounts anywhere under the viewer (Files, Toolbox, the prompt marks): place the column in the
+    // same frame (a microtask, before paint) and watch the new one's size. Nothing waits for a scroll (UI-45).
+    const panelMutation = new MutationObserver(records => {
+      const panel = (node: Node) => node instanceof Element && (node.matches(SIDE_PANELS) || node.querySelector(SIDE_PANELS) !== null);
+      if (records.some(r => [...r.addedNodes, ...r.removedNodes].some(panel))) { bind(); update(); }
+    });
+    panelMutation.observe(el, { childList: true, subtree: true });
+    // A panel that slides or fades in has its final size only when the motion ends.
+    const settled = (event: Event) => { if (event.target instanceof Element && event.target.matches(SIDE_PANELS)) update(); };
+    for (const type of ['transitionend', 'transitioncancel', 'animationend', 'animationcancel']) el.addEventListener(type, settled);
     // The reader opens and closes as a portal and moves when dragged: measure again, then watch whichever one is open.
     const portalMutation = new MutationObserver(() => { bind(); update(); });
     portalMutation.observe(document.body, { childList: true });
@@ -245,6 +258,8 @@ function WorkspaceViewer() {
       resize.disconnect();
       mutation.disconnect();
       rootMutation.disconnect();
+      panelMutation.disconnect();
+      for (const type of ['transitionend', 'transitioncancel', 'animationend', 'animationcancel']) el.removeEventListener(type, settled);
       portalMutation.disconnect();
       openMutation.disconnect();
       window.removeEventListener('drishya-reading-layout', relayout);
@@ -253,6 +268,7 @@ function WorkspaceViewer() {
       el.style.removeProperty('--reading-edge-bottom');
       el.style.removeProperty('--reading-pad-left');
       el.style.removeProperty('--reading-pad-right');
+      el.removeAttribute('data-side-fit');
     };
   }, [!!projection && !!scene && !!historical, foldersHidden, explore, experience, workingWindow, catalogOpen, historyMode]);
 
