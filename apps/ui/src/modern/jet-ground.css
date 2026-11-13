@@ -1,10 +1,10 @@
 /* Jet Black's ground: a plain, even grid of dots on the canvas itself (MAP-4, Yash 13 Nov: "way too intense ... more clean ...
-   just use the previous dots and just a bit more in size"). It is UI-39 part 3's first ground (#456), a straight 12 px grid at
-   11 % cream, with the dot a little larger (radius 1.25 px, soft edge to 2 px; it was 1 px). Every dot has the same size and
+   just use the previous dots and just a bit more in size", then "make it 1"). It is UI-39 part 3's first ground (#456), a straight 12 px grid at
+   11 % cream, with #456's own dot (radius 1 px, soft edge to 1.6 px; Yash settled on 1 px after seeing 1.25 px). Every dot has the same size and
    brightness: no stagger, no variation, no glow, no gradient, no fade, no mask, no pseudo-element, no SVG. It is a CSS
    background of `.connected-workspace`, which does not scroll, so scrolling history never repaints it. Midnight and Paper keep
    their own ground; the low-resource rule that removes it still wins (atelier.css). */
 :root[data-ui-version=modern][data-experience][data-theme][data-palette=jet] .connected-workspace {
-  background-image:radial-gradient(circle,color-mix(in srgb,var(--brand-ink) 11%,transparent) 1.25px,transparent 2px);
+  background-image:radial-gradient(circle,color-mix(in srgb,var(--brand-ink) 11%,transparent) 1px,transparent 1.6px);
   background-size:12px 12px;
 }

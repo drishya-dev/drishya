@@ -12,9 +12,9 @@ Compared the build just before #400 (`8e29da53^`) with main on the same real ses
 ## Change
 
 - **Map strength.** The 0.38 dim on the canvas is removed (`atelier.css`). Rest strength is `MAP_REST_ALPHA` = .85 (was .68 x .38) in the margins; under the reading column dots keep `QUIET_NODE_FLOOR` = .38 and import lines `QUIET_EDGE_FLOOR` = .5 (were .3 and .08). The floors are the highest that keep prose at 4.5:1 or better over the densest map area with the ground included. Zone, 72 px feather, exempt passage dots, SHIP-8's label collision rule and every redraw trigger are untouched.
-- **Ground.** `apps/ui/src/modern/jet-ground.css` is UI-39 part 3's first ground (#456) again: one `radial-gradient` of a straight 12 px grid at 11 % cream as the background of `.connected-workspace`, with the dot a little larger (radius 1.25 px, soft edge to 2 px; it was 1 px). All dots are the same size and brightness. No glow, no gradient, no fade, no stagger, no pseudo-element, no mask, no SVG. The staggered 288 px mask layer from #458 is deleted. Jet Black only; the low-resource rule that removes it (`atelier.css`) still wins.
+- **Ground.** `apps/ui/src/modern/jet-ground.css` is UI-39 part 3's first ground (#456) again: one `radial-gradient` of a straight 12 px grid at 11 % cream as the background of `.connected-workspace`, with #456's own dot (radius 1 px, soft edge to 1.6 px). A 1.25 px dot was tried and Yash chose 1 px. All dots are the same size and brightness. No glow, no gradient, no fade, no stagger, no pseudo-element, no mask, no SVG. The staggered 288 px mask layer from #458 is deleted. Jet Black only; the low-resource rule that removes it (`atelier.css`) still wins.
 
-Dot candidates (frames `dots-candidates-100.png` and `-150.png`, 100 % and 150 % zoom, in `.local/map-4/`): 1 px (#456) is barely there; 1.25 px is a visible step up and still reads as calm texture; 1.5 px starts to read as a pattern. 1.25 px was chosen.
+Dot candidates (frames `dots-candidates-100.png` and `-150.png`, 100 % and 150 % zoom, in `.local/map-4/`): 1 px (#456) is barely there; 1.25 px is a visible step up and still reads as calm texture; 1.5 px starts to read as a pattern. 1.25 px was built first; Yash then asked for 1 px, which is what ships.
 
 ## Evidence (real sessions; counts and prefixes only; frames in `.local/map-4/`, never committed)
 
