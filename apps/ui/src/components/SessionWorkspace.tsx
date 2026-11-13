@@ -33,6 +33,26 @@ import {workspaceMemory} from '../lib/workspace-memory.ts';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNowText } from './NowWatcher.tsx';
 import { ComposerMenu } from './ComposerMenu.tsx';
+
+/**
+ * UI-43: plain words for the permission modes each harness offers (the ids are the harness's own). Bypass and full access are
+ * marked as dangerous wherever they show; Drishya passes the chosen id through the harness's own protocol and nothing else.
+ */
+const PERMISSION_LABELS: Record<string, { label: string; hint: string; danger?: boolean }> = {
+  default: { label: 'Default', hint: 'Asks before edits and commands' },
+  acceptEdits: { label: 'Accept edits', hint: 'Edits files without asking; asks before commands' },
+  plan: { label: 'Plan', hint: 'Reads and plans; changes nothing' },
+  bypassPermissions: { label: 'Bypass permissions', hint: 'Never asks · every edit and command runs', danger: true },
+  ':read-only': { label: 'Read only', hint: 'Reads files; asks before any change' },
+  ':workspace': { label: 'Workspace', hint: 'Edits in this workspace; asks beyond it' },
+  ':danger-full-access': { label: 'Full access', hint: 'No sandbox · edits and runs anything', danger: true },
+};
+const permissionLabel = (id: string) => PERMISSION_LABELS[id] ?? { label: id, hint: '' };
+/** The mode the next prompt runs with when nothing is chosen: Claude Code is always launched in its default mode; Codex reports its sandbox. */
+function nativeCurrentPermission(harness: string | undefined, sandbox: string | undefined) {
+  if (harness === 'claude-code') return 'default';
+  return ({ 'read-only': ':read-only', readOnly: ':read-only', 'workspace-write': ':workspace', workspaceWrite: ':workspace', 'danger-full-access': ':danger-full-access', dangerFullAccess: ':danger-full-access' } as Record<string, string>)[sandbox ?? ''];
+}
 import { RememberCheckbox } from './RememberCheckbox.tsx';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
@@ -820,9 +840,19 @@ export function PromptComposer() {
   };
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const settingsModels = controller?.settings?.models ?? [];
-  const modelId = options.model ?? controller?.settings?.model;
+  // UI-43: Claude Code lists its own "default" model; choosing it is the same as no override, so Drishya adds no second Default.
+  const nativeDefault = settingsModels.find(model => model.id === 'default');
+  const reported = controller?.settings?.model;
+  // A connected Claude turn reports the resolved id ("claude-opus-5-5"), which is not one of its menu entries; keep the menu's own name then.
+  const modelId = options.model ?? (reported && (settingsModels.some(model => model.id === reported) || !nativeDefault) ? reported : nativeDefault?.id);
   const modelEfforts = settingsModels.find(model => model.id === modelId)?.efforts ?? [];
   const modelLabel = settingsModels.find(model => model.id === modelId)?.name ?? modelId ?? 'Default model';
+  const harnessName = recording?.harness === 'codex' ? 'Codex' : 'Claude Code';
+  const permissions = controller?.settings?.permissions ?? [];
+  const currentPermission = nativeCurrentPermission(recording?.harness, controller?.settings?.sandbox);
+  const permissionId = options.permission ?? currentPermission;
+  const permissionChoice = permissionId ? permissionLabel(permissionId) : undefined;
+  const choosePermission = (id: string | undefined) => { setOptions({ ...options, permission: id === currentPermission ? undefined : id }); setConfirmSend(false); };
   const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<RememberCheckbox checked={remember} disabled={busy} onChange={setRemember} />}</>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
@@ -855,13 +885,17 @@ export function PromptComposer() {
             { key: 'folder', label: 'Folder contents', hint: 'Up to 32 files in total', select: () => folderInput.current?.click() },
           ]} />
           {controller && <ComposerMenu label="Model" className="composer-model" disabled={!!running || busy} title="Model for the next prompt" trigger={<><span>{modelLabel}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
-            { key: 'default', label: 'Default', hint: settingsModels.find(model => model.id === controller.settings?.model)?.name, checked: !options.model, select: () => { setOptions({}); setConfirmSend(false); } },
-            ...settingsModels.map(model => ({ key: model.id, label: model.name, checked: options.model === model.id, select: () => { setOptions({ model: model.id }); setConfirmSend(false); } })),
+            ...(nativeDefault ? [] : [{ key: 'default', label: 'Default', hint: settingsModels.find(model => model.id === controller.settings?.model)?.name, checked: !options.model, select: () => { setOptions({ permission: options.permission }); setConfirmSend(false); } }]),
+            ...settingsModels.map(model => ({ key: model.id, label: model.name, hint: model.description, checked: model === nativeDefault ? !options.model : options.model === model.id, select: () => { setOptions({ ...(model === nativeDefault ? {} : { model: model.id }), permission: options.permission }); setConfirmSend(false); } })),
             ...(settingsModels.length ? [] : [{ key: 'load', label: 'Load model list', hint: workspace?.approved ? `Asks ${recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} which models it offers` : 'Enable this workspace first', disabled: !workspace?.approved || !inspect, select: () => inspect && void act(inspect) }]),
           ]} />}
           {!!modelEfforts.length && <ComposerMenu label="Reasoning effort" className="composer-effort" disabled={!!running || busy} title="Reasoning effort for the next prompt" trigger={<><span>{options.effort ?? 'Default effort'}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
             { key: 'default', label: 'Default', checked: !options.effort, select: () => { setOptions({ ...options, effort: undefined }); setConfirmSend(false); } },
             ...modelEfforts.map(effort => ({ key: effort, label: effort, checked: options.effort === effort, select: () => { setOptions({ ...options, effort }); setConfirmSend(false); } })),
+          ]} />}
+          {!!permissions.length && <ComposerMenu label="Permissions" className={`composer-permission${permissionChoice?.danger ? ' is-bypass' : ''}`} disabled={!!running || busy} title={permissionChoice?.danger ? `${permissionChoice.label}: ${harnessName} will not ask before edits or commands in the next prompt` : `${harnessName} permission mode for the next prompt`} trigger={<>{permissionChoice?.danger && <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.75 2.75 3.9v3.6c0 3 2.2 5.6 5.25 6.75 3.05-1.15 5.25-3.75 5.25-6.75V3.9Z" /><path d="M8 5.25v3.25m0 2.25v.01" /></svg>}<span>{permissionChoice?.label ?? 'Permissions'}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
+            ...(currentPermission ? [] : [{ key: 'native', label: 'As configured', hint: `${harnessName} uses its own settings`, checked: !options.permission, select: () => choosePermission(undefined) }]),
+            ...permissions.map(mode => { const shown = permissionLabel(mode.id); return { key: mode.id, label: shown.label, hint: mode.allowed ? mode.description ?? shown.hint : `Not allowed by your ${harnessName} settings`, checked: permissionId === mode.id, disabled: !mode.allowed, tone: shown.danger ? 'danger' as const : undefined, select: () => choosePermission(mode.id) }; }),
           ]} />}
         </div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title={cannotSend ? sendWaits : 'Send prompt'} disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
         {!modern && <div className="composer-add-menu" hidden={!addOpen} data-pointer-menu={addPointer ? '' : undefined}><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}
