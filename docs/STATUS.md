@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-43 | @yash + Claude Opus 5.5 | `claude/ui-43-composer-menu` | 2026-11-13 | Composer model menu: `ComposerMenu.tsx`, composer parts of `SessionWorkspace.tsx` and their CSS; the native controller's model/permission data in `apps/daemon/src` if it no longer sends versions or modes; a new browser spec for the menu. Never `workspace-shared-draft.spec.ts`. |
 | UI-42 | @yash + Claude Opus 5.5 (build; Fable reviews) | `claude/ui-42-history-width` | 2026-11-13 | Measure what #461 left first. History column width only: `atelier.css`/`large-screens.css` (`.history-inner` cap), `History.tsx` if needed, `reading-edges.ts`, a browser spec; TASKS/STATUS. No card sizes, no prose measure. |
 | MAP-4 | @yash + Claude Opus 5.5 | `claude/gifted-austin-952e56` | 2026-11-13 | Map renderer only: `apps/ui/src/map/spatial-map.ts` (and its reading-column quiet-zone code), the map canvas rule in `apps/ui/src/atelier.css`, map tokens in `tokens.css` if needed, a map spec. TASKS/STATUS. Frames in `.local/map-4/`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
@@ -58,6 +57,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 (started on Opus 5.5) — 13 Nov: UI-43 composer model menu
+
+- Models show the harness's own description (Claude Code's starts with the version); a Permissions menu lists Claude Code's four modes and Codex's own profiles with the current one checked and Bypass / Full access marked; the chosen mode is passed through `--permission-mode` / `thread/resume` `sandbox` only. PR #465 for Fable's review; not merged. Details and what could not run: `docs/review/ui-43-composer-menu.md`.
 
 ### Yash with Claude Sonnet 5.5 (research started on Opus 5.5) — 13 Nov: HARNESS-AG-research, Antigravity as a third harness
 

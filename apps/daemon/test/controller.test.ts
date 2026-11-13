@@ -28,7 +28,7 @@ const send = value => process.stdout.write(JSON.stringify(value) + '\\n');
 let prompt = '';
 createInterface({ input: process.stdin }).on('line', line => {
   const v = JSON.parse(line);
-  if (v.type === 'control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[{value:'native-model',displayName:'Native model',supportedEffortLevels:['low','high']}],commands:[{name:'compact'}]}}});
+  if (v.type === 'control_request') send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[{value:'native-model',displayName:'Native model',description:'Native 1.2 · Synthetic fixture model',supportedEffortLevels:['low','high']}],commands:[{name:'compact'}],current_permission_mode:'default'}}});
   else if (v.type === 'user') {
     prompt = v.message.content;
     if (prompt === 'QUESTION' || prompt === 'QUESTION_CANCEL') {
@@ -64,6 +64,7 @@ createInterface({ input: process.stdin }).on('line', line => {
   else if (v.method === 'initialize') send({id:v.id,result:{}});
   else if (v.method === 'config/read') send({id:v.id,result:{config:{model:'native-model',model_reasoning_effort:'high',approval_policy:'on-request',sandbox_mode:'read-only',api_key:'PRIVATE_CONFIG_VALUE'}}});
   else if (v.method === 'model/list') send({id:v.id,result:{data:[{model:'native-model',displayName:'Native model',supportedReasoningEfforts:[{reasoningEffort:'low'},{reasoningEffort:'high'}],inputModalities:['text','image']}],nextCursor:null}});
+  else if (v.method === 'permissionProfile/list') send({id:v.id,result:{data:[{id:':read-only',description:null,allowed:true},{id:':workspace',description:null,allowed:true},{id:':danger-full-access',description:null,allowed:false},{id:':custom-profile',description:null,allowed:true}],nextCursor:null}});
   else if (v.method === 'thread/compact/start') { send({id:v.id,result:{}}); send({method:'turn/completed',params:{turn:{status:'completed'}}}); }
   else if (v.method === 'thread/resume') send({id:v.id,result:{thread:{status:{type:'idle'}}}});
   else if (v.method === 'mcpServerStatus/list') send({id:v.id,result:{data:[{name:'docs',tools:{lookup:{}}}],nextCursor:null}});
@@ -118,8 +119,11 @@ it('reads native settings without a prompt, resume or exposing private config', 
   const codex = await controller.inspect(codexId);
   expect(codex.settings).toMatchObject({ scope: 'workspace-config', model: 'native-model', effort: 'high', permission: 'on-request', sandbox: 'read-only', models: [{ id: 'native-model', efforts: ['low', 'high'], images: true }] });
   expect(JSON.stringify(codex)).not.toContain('PRIVATE_CONFIG_VALUE');
+  // UI-43: Codex's own profiles, only those Drishya can select, with the harness's allowed flag kept as reported.
+  expect(codex.settings!.permissions).toEqual([{ id: ':read-only', allowed: true }, { id: ':workspace', allowed: true }, { id: ':danger-full-access', allowed: false }]);
   const claude = await controller.inspect(claudeId);
-  expect(claude.settings).toMatchObject({ models: [{ id: 'native-model', efforts: ['low', 'high'] }], commands: ['compact'] });
+  expect(claude.settings).toMatchObject({ permission: 'default', models: [{ id: 'native-model', name: 'Native model', description: 'Native 1.2 · Synthetic fixture model', efforts: ['low', 'high'] }], commands: ['compact'] });
+  expect(claude.settings!.permissions!.map(p => p.id)).toEqual(['default', 'acceptEdits', 'plan', 'bypassPermissions']);
   expect(frames.slice(begin).some(f => f.method === 'thread/resume' || f.method === 'turn/start' || f.type === 'user')).toBe(false);
 });
 it('resumes Claude over structured stdin, exposes real tool inventory and applies one exact approval', async () => {
@@ -178,6 +182,30 @@ it('routes model and effort through native controls without changing permission 
   expect(launches.at(-1)!.args).toEqual(['app-server', '--listen', 'stdio://']);
   await controller.stop(codexId, codex.runId);
   await expect(controller.start(codexId, 'unsafe', true, undefined, { approvalPolicy: 'never' })).rejects.toMatchObject({ status: 400 });
+});
+it('passes only a permission mode the harness offers and allows, through its own protocol (UI-43)', async () => {
+  const resumeParams = () => frames.findLast(f => f.method === 'thread/resume').params;
+  const claudeArgs = () => { const args = launches.at(-1)!.args; return args[args.indexOf('--permission-mode') + 1]; };
+  let run = await controller.start(claudeId, 'mode', true, undefined, {});
+  await wait(claudeId, 'approval'); expect(claudeArgs()).toBe('manual'); await controller.stop(claudeId, run.runId);
+  for (const mode of ['acceptEdits', 'plan', 'bypassPermissions']) {
+    run = await controller.start(claudeId, 'mode', true, undefined, { permission: mode });
+    await wait(claudeId, 'approval'); expect(claudeArgs()).toBe(mode);
+    expect(launches.at(-1)!.args.filter(a => /dangerously/.test(a))).toEqual([]);
+    await controller.stop(claudeId, run.runId);
+  }
+  run = await controller.start(claudeId, 'mode', true, undefined, { permission: 'default' });
+  await wait(claudeId, 'approval'); expect(claudeArgs()).toBe('manual'); await controller.stop(claudeId, run.runId);
+  run = await controller.start(codexId, 'mode', true, undefined, { permission: ':workspace' });
+  await wait(codexId, 'approval');
+  expect(resumeParams()).toEqual({ threadId: '44444444-4444-4444-8444-444444444444', cwd: await realpath(root), sandbox: 'workspace-write' });
+  expect(frames.findLast(f => f.method === 'turn/start').params).not.toHaveProperty('permission');
+  expect(frames.findLast(f => f.method === 'turn/start').params).not.toHaveProperty('approvalPolicy');
+  await controller.stop(codexId, run.runId);
+  // Refused: a profile the harness reports as not allowed, one Drishya cannot select, another harness's mode, prototype keys.
+  for (const [id, permission] of [[codexId, ':danger-full-access'], [codexId, ':custom-profile'], [codexId, 'bypassPermissions'], [codexId, 'constructor'], [claudeId, ':workspace'], [claudeId, 'dontAsk'], [claudeId, 'auto']] as const)
+    await expect(controller.start(id, 'mode', true, undefined, { permission })).rejects.toMatchObject({ status: 400 });
+  await expect(controller.start(claudeId, 'mode', true, undefined, { permission: '--dangerously-skip-permissions' })).rejects.toMatchObject({ status: 400 });
 });
 it('compacts through the native protocol instead of treating a CLI command as model text', async () => {
   const first = frames.length;
