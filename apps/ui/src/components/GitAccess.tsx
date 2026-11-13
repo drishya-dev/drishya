@@ -12,6 +12,6 @@ export function GitAccess({workspaceApproved,busy,disabled,grant}:{workspaceAppr
     <h3>Read this repository’s Git</h3>
     <p>Local branches, tags, commits and their changes, with staged and unstaged work. This shows deleted files and other branches. Nothing is written to the repository.</p>
     {!workspaceApproved&&<p>Approving also lets Drishya read the files in this workspace.</p>}
-    <button className="btn" disabled={disabled} onClick={grant}>{busy?'Approving…':'Approve read-only Git'}</button>
+    <button className="btn primary" disabled={disabled} onClick={grant}>{busy?'Approving…':'Approve read-only Git'}</button>
   </section>;
 }

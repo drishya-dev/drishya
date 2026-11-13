@@ -31,5 +31,7 @@ import './large-screens.css';
 import './label-face.css';
 // UI-39: agent messages set for reading; after the sheets that set the old prose leading and measure.
 import './reading-type.css';
+// UI-39: buttons are pills; Jet Black's main action is the cream pill. After every sheet that sets a button's radius.
+import './pill-buttons.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
 import './motion.css';

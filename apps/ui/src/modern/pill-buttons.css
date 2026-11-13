@@ -1,0 +1,16 @@
+/* UI-39 part 2 (Yash, 12 Nov): buttons speak the site's language. The site and Home have two button shapes, both pills:
+   a cream pill for the one main action and a dark hairline pill for the rest. */
+
+/* Shape, in every palette (shape is not paint). A button's radius is set per surface in a dozen sheets, so this one
+   property is marked important here; size, padding, fill and border stay where each surface set them, so nothing
+   moves. Panels, cards, fields and list rows keep their own radius: only things you press become pills. */
+:root[data-ui-version=modern][data-experience=classic] :is(.btn,.icon-btn,.workspace-menu>summary) { border-radius:var(--round-full)!important; }
+
+/* Jet Black: the one main action of a surface is the cream pill, as on the site and Home. Azure keeps its meaning of
+   state: focus, selection, links and switches. Hover and press settle slightly into the ground, never brighter. */
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] .btn.primary { background:var(--brand-ink); border-color:transparent; color:var(--bg); }
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] .btn.primary:hover:not(:disabled) { background:color-mix(in srgb,var(--brand-ink) 88%,var(--bg)); border-color:transparent; color:var(--bg); }
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] .btn.primary:active:not(:disabled) { background:color-mix(in srgb,var(--brand-ink) 78%,var(--bg)); border-color:transparent; color:var(--bg); }
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] .prompt-composer .send-prompt:not(:disabled) { background:var(--brand-ink)!important; color:var(--bg); }
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] .prompt-composer .send-prompt:hover:not(:disabled) { background:color-mix(in srgb,var(--brand-ink) 88%,var(--bg))!important; }
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] .prompt-composer .send-prompt:active:not(:disabled) { background:color-mix(in srgb,var(--brand-ink) 78%,var(--bg))!important; }
