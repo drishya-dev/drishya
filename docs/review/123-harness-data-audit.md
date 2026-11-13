@@ -15,7 +15,7 @@
 
 1. show summaries and thinking text whenever they exist (already supported);
 2. show an honest quiet state ("Reasoning not recorded by the harness") instead of silence, so absence isn't mistaken for "no thinking";
-3. fill the *why* gap with **derived, opt-in, evidence-cited** explanation. This is the role of `packages/explain` (Nemotron) and the hackathon story (see [HACKATHON](../HACKATHON.md)). The model must never be presented as the agent's own thoughts.
+3. fill the *why* gap with **derived, opt-in, evidence-cited** explanation (the parked explain feature; removed under CLEAN-2). The model must never be presented as the agent's own thoughts.
 
 Separately, investigate whether harness settings can persist more. Codex exposes a reasoning-summary setting (`model_reasoning_summary`) and summaries appear when it applies. Document what users can enable, then verify on a fresh session; do not assume.
 

@@ -11,10 +11,6 @@ const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.met
 let dir: string;
 let s: RunningServer;
 let recId: string;
-/** What the fake model received, so tests can compare it with the consent preview. */
-const sent: { model: string; messages: unknown }[] = [];
-const MODEL_REPLY = '{"summary":"s [E1]","claims":[{"text":"t","evidence":["E1"]}],"unknowns":[]}';
-
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-server-'));
   mkdirSync(join(dir, 'no-ui', 'assets'), { recursive: true });
@@ -28,12 +24,7 @@ beforeAll(async () => {
   const r = await app.ingest.importSource('claude-code', journal);
   app.store.updateRecordingMeta(r.recordingId, { graphRoot: workspace });
   recId = r.recordingId;
-  s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui'), model: { baseUrl: 'http://model.invalid', nanoModel: 'n', superModel: 's', ultraModel: 'u' },
-    complete: async (model, messages) => {
-      sent.push({ model, messages });
-      return MODEL_REPLY;
-    },
-  });
+  s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui') });
 });
 afterAll(async () => {
   await s.close();
@@ -184,15 +175,6 @@ describe('local API', () => {
     expect(hits.length).toBeGreaterThan(0);
   });
 
-  it('previews exactly what a model call would send, without sending it', async () => {
-    const p = (await call(`/v1/recordings/${recId}/projection`, { headers: auth() })).body;
-    const edit = p.operations.find((o: { kind: string }) => o.kind === 'edit');
-    const r = await call(`/v1/recordings/${recId}/explain`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { operationId: edit.id } });
-    expect(r.status).toBe(200);
-    expect(r.body.preview.model).toBe('u');
-    expect(r.body.preview.messages[1].content).toContain('FOCUS');
-  });
-
   it('exports a bundle with no local paths and no path-derived ids', async () => {
     const r = await call(`/v1/recordings/${recId}/export`, { headers: auth() });
     expect(r.body.format).toBe('drishya-replay');
@@ -205,50 +187,6 @@ describe('local API', () => {
 
 const post = (path: string, body: unknown) => call(path, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body });
 const GH = 'gh' + 'p_' + 'Zz9Yy8Xx7Ww6Vv5Uu4Tt3Ss2Rr1Qq0Pp9Oo8';
-
-// Audit A04: a model call sends only what the person reviewed, to the model and endpoint shown.
-describe('model consent', () => {
-  const editId = async () => (await call(`/v1/recordings/${recId}/projection`, { headers: auth() })).body.operations.find((o: { kind: string }) => o.kind === 'edit').id;
-
-  it('refuses a send whose consent does not match the current payload, and shows the new preview', async () => {
-    const before = sent.length;
-    const r = await post(`/v1/recordings/${recId}/explain`, { operationId: await editId(), consent: 'stale-digest' });
-    expect(r.status).toBe(409);
-    expect(r.body.preview.digest).toMatch(/^[0-9a-f]{64}$/);
-    expect(sent.length).toBe(before);
-  });
-
-  it('a bare confirm without a reviewed digest sends nothing', async () => {
-    const before = sent.length;
-    const r = await post(`/v1/recordings/${recId}/explain`, { operationId: await editId(), confirm: true });
-    expect(r.body.preview).toBeDefined();
-    expect(r.body.result).toBeUndefined();
-    expect(sent.length).toBe(before);
-  });
-
-  it('sends exactly the previewed messages to the previewed model, then serves the cache', async () => {
-    const opId = await editId();
-    const { preview } = (await post(`/v1/recordings/${recId}/explain`, { operationId: opId })).body;
-    const r = await post(`/v1/recordings/${recId}/explain`, { operationId: opId, consent: preview.digest });
-    expect(r.status).toBe(200);
-    expect(sent.at(-1)).toEqual({ model: preview.model, messages: preview.messages });
-    const again = (await post(`/v1/recordings/${recId}/explain`, { operationId: opId })).body;
-    expect(again.cached.summary).toBe(r.body.result.summary);
-  });
-
-  it('never serves a cached answer made from a different payload', async () => {
-    const opId = await editId();
-    s.app.store.putGenerated(recId, `explain:${opId}`, { identity: { digest: 'f'.repeat(64) }, result: { summary: 'old' } });
-    expect((await post(`/v1/recordings/${recId}/explain`, { operationId: opId })).body.cached).toBeUndefined();
-  });
-
-  it('previews the exact labels payload too', async () => {
-    const { preview } = (await post(`/v1/recordings/${recId}/labels`, {})).body;
-    expect(preview.messages.length).toBe(2);
-    await post(`/v1/recordings/${recId}/labels`, { consent: preview.digest });
-    expect(sent.at(-1)).toEqual({ model: preview.model, messages: preview.messages });
-  });
-});
 
 // Audit A02: user notes and error text are sinks too.
 describe('other sinks', () => {

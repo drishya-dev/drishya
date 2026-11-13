@@ -42,7 +42,7 @@ Each row should become a small reviewable PR or closely related sequence. Do not
 | P2 | Since-last-visit plus file history and verification freshness | Evidence-linked tasks improve in a small pilot; no misleading verification claims |
 | E1 | Further harnesses and review packets | Versioned compatibility corpus, passive capture proven, export privacy review, no baseline regression |
 
-Nemotron or another explanation service is optional and does not block B0–B4. A model key is not required to build or validate the core product. The live remote explain integration remains unverified. Harden consent before sending real evidence, then validate separately with an explicitly configured service.
+Model explanation services were parked and removed (CLEAN-2); Drishya operates completely model-free and private on local captured evidence alone.
 
 **6 October product delivery amendment:** the builder now requests the finished integrated local product rather than more standalone studies. [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) describes the shared production workspace, settings/themes, P2-B file evidence comparison and run/package flows. P1/P2 implementation is the current baseline; human comprehension/preference and physical/platform release checks remain acceptance work. Further colour/motion refinement proceeds in `apps/ui`, retaining truthful origins and bounded history.
 

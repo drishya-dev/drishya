@@ -32,7 +32,6 @@ import { turnLedgers } from '../../../packages/scene/src/turns.ts';
 import { contextReportCandidates } from './context-report-turns.ts';
 import { SqliteBlobStore, Store } from '@drishya/store';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
-import { prepareBriefing, prepareExplain, prepareLabels } from '@drishya/explain';
 
 const source = new Store(workerData.dir, { readOnly: true });
 const dir = join(workerData.dir, 'history');
@@ -366,15 +365,6 @@ parentPort!.on('message', (message: { id: number; method: string; args: any }) =
     else if (message.method === 'read-before') value = readBeforeWriteFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'fix-chain') value = fixChainFor(current(a.id).projection, a.operationId) ?? null;
     else if (message.method === 'verification') value = verificationFor(current(a.id).projection, a.operationId) ?? null;
-    else if (message.method === 'prepare') {
-      const p = current(a.id).projection;
-      const art = (id: string) => { const item = p.artifacts.find((art) => art.id === id); return item?.blob ? io.get(item.blob) : undefined; };
-      if (a.task === 'explain') {
-        if (!p.operations.some((op) => op.id === a.body.operationId)) throw new Error('operation not found');
-        value = prepareExplain(p, String(a.body.operationId), art, a.model);
-      } else if (a.task === 'briefing') value = prepareBriefing(p, art, a.model, { from: a.body.from, to: a.body.to });
-      else value = prepareLabels(p, a.model);
-    }
     else if (message.method === 'marker') {
       const p = current(a.id).projection;
       const candidates = markers(p).filter((m) => a.types.includes(m.type) && (a.direction > 0 ? m.step > a.step : m.step < a.step));
