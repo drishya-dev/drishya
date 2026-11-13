@@ -1,0 +1,36 @@
+/* UI-39 part 4 (Yash, 12 Nov): small labels and counts are set in the mono face, as on the website and Home's opening.
+   The rule of thumb: a label names a group or counts something (TODAY, Native tools, 33, Shell); a sentence or a name
+   stays in the sans. Only the face and its tracking change here: size, weight, line height and colour stay where each
+   surface set them, so no panel, card or row moves. The face is the same in every palette (type is not paint). */
+
+/* Section labels, which are uppercase. */
+:root[data-ui-version=modern][data-experience=classic] :is(
+  .home .mh-time-group h3,
+  .home .mh-workspaces>header,
+  .home .mh-active>.mh-active-label,
+  .modern-settings-nav>span,
+  .workspace-utilities .utility-heading
+) { font-family:var(--mono); letter-spacing:.05em; }
+
+/* Labels and counts in sentence case. */
+:root[data-ui-version=modern][data-experience=classic] :is(
+  /* Home: the overview's labels and the count beside a heading. */
+  .home .mh-ov-totals dt,
+  .home .mh-ov-activity small,
+  .home .mh-ov-recent span,
+  .home .mh-results>header>div>span,
+  /* Toolbox: group names, per-kind counts and the server tag. */
+  .modern-toolbox .tool-group-name,
+  .modern-toolbox .md-tool-list>.instrument small,
+  .modern-toolbox .server-name small,
+  /* History: the kind under a card's title, and the name of each reading inside a card (Arguments, Tool text). */
+  .connected-workspace .history .op-kind,
+  .reading-caption>span
+) { font-family:var(--mono); letter-spacing:.02em; }
+
+/* In the one-line overview the label sits on the number's baseline. The mono face carries its baseline lower in the
+   line box than the sans, which would make the row a pixel taller and push the session list down. The row keeps the
+   height it had with the sans (18.5 px, measured), so the list stays exactly where it was. */
+@media(max-height:820px), (max-width:760px) {
+  :root[data-ui-version=modern][data-experience=classic] .home .mh-ov-totals>div { height:18.5px; }
+}

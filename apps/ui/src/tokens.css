@@ -63,11 +63,12 @@ small { font-size: var(--text-2xs); }
   --agent-rose-ink: #802a5a;
 }
 
-/* SHIP-21: the three shipped palettes and their Settings previews own all paint here. */
+/* SHIP-21: the three shipped palettes and their Settings previews own all paint here.
+   UI-39: Jet Black's ink is the website's cream (t1) and three steps below it at the old steps' lightness, same hue. */
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
   --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
-  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
-  --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#4f9cff;
+  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f1eee4;
+  --t2:#d5d2c8; --t3:#afaca2; --t4:#949187; --focus:#4f9cff;
   --palette-active:#4f9cff; --accent-partner:#34d6e6; --brand-ink:#f1eee4; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
   --syntax-number:#fc9e47; --syntax-type:#48c1f7; --syntax-property:#30c9c5;
   --source:#80b8ff; --external:#f296df; --edited:#d4b137;
