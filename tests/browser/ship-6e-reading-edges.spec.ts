@@ -71,8 +71,6 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
     const viewer = document.querySelector<HTMLElement>('.viewer')!;
     const history = viewer.querySelector<HTMLElement>('.history')!;
     const column = viewer.querySelector<HTMLElement>('.history-inner')!;
-    const topEdge = viewer.querySelector<HTMLElement>('.reading-edge-top')!;
-    const bottomEdge = viewer.querySelector<HTMLElement>('.reading-edge-bottom')!;
 
     const viewerRect = viewer.getBoundingClientRect();
     const colRect = column.getBoundingClientRect();
@@ -108,8 +106,8 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
     ];
     const bottomChromes = visibleRects(bottomSelectors, false);
 
-    // Every overlapping top control's bottom must be above the solid veil boundary (`visibleTop`),
-    // and every visible bottom control's top must be below the solid bottom veil boundary (`visibleBottom`).
+    // Every overlapping top control's bottom must sit inside the faded top edge (above `visibleTop`),
+    // and every visible bottom control's top inside the faded bottom edge (below `visibleBottom`).
     const uncoveredTop = topOverlappingColumn.filter(r => r.bottom > visibleTop + 0.5).length;
     const uncoveredBottom = bottomChromes.filter(r => r.top < visibleBottom - 0.5).length;
 
@@ -127,7 +125,7 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
       range.selectNodeContents(node);
       for (const r of range.getClientRects()) {
         if (r.width <= 0 || r.height <= 0) continue;
-        // Clip vertically to the un-veiled region (outside the opaque --bg reading-edge veil)
+        // Clip vertically to the full-strength region (outside the faded reading edges)
         const clippedTop = Math.max(r.top, visibleTop);
         const clippedBottom = Math.min(r.bottom, visibleBottom);
         if (clippedBottom <= clippedTop + 0.5) continue;
@@ -144,12 +142,10 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
       historyTop: history.getBoundingClientRect().top,
       edgeTopPx,
       edgeBottomPx,
-      topVeilZ: Number(getComputedStyle(topEdge).zIndex),
-      bottomVeilZ: Number(getComputedStyle(bottomEdge).zIndex),
-      historyZ: Number(getComputedStyle(history).zIndex),
-      topBackdrop: getComputedStyle(topEdge).backdropFilter,
-      bottomBackdrop: getComputedStyle(bottomEdge).backdropFilter,
-      topPointerEvents: getComputedStyle(topEdge).pointerEvents,
+      // UI-39 (Yash, 13 Nov): nothing is painted over the world at the edges; History's own content fades instead.
+      paintedEdges: viewer.querySelectorAll('.reading-edge').length,
+      historyMask: getComputedStyle(history).maskImage || getComputedStyle(history).getPropertyValue('-webkit-mask-image'),
+      historyBackdrop: getComputedStyle(history).backdropFilter,
       uncoveredTop,
       uncoveredBottom,
       visibleCharIntersections,
@@ -167,7 +163,7 @@ async function measureChromeAndVisibleTextOverlaps(page: Page) {
 
 for (const harness of ['claude-code', 'codex'] as const) {
   for (const width of [600, 1440] as const) {
-    test(`${harness} reading edges veil fixed chrome without text intersection at ${width}px`, async ({ page }) => {
+    test(`${harness} reading edges fade history under fixed chrome without text intersection at ${width}px`, async ({ page }) => {
       await openSession(page, harness, width);
       const history = page.locator('.history');
       // Wait for initial virtual layout to settle before scrolling to mid-history
@@ -181,13 +177,14 @@ for (const harness of ['claude-code', 'codex'] as const) {
 
       const m = await measureChromeAndVisibleTextOverlaps(page);
       expect(m.historyTop).toBe(0);
-      expect(m.topPointerEvents).toBe('none');
-      expect(m.topVeilZ).toBeGreaterThan(m.historyZ);
-      expect(m.bottomVeilZ).toBeGreaterThan(m.historyZ);
+      expect(m.paintedEdges).toBe(0);
+      expect(m.historyMask).toContain('linear-gradient');
+      // Full strength begins just below the measured top chrome and ends just above the bottom chrome.
+      expect(m.historyMask).toContain(`rgb(0, 0, 0) ${m.edgeTopPx + 36}px`);
+      expect(m.historyMask).toContain(`calc(100% - ${m.edgeBottomPx + 36}px)`);
       expect(m.edgeTopPx).toBeGreaterThan(40);
       expect(m.edgeBottomPx).toBeGreaterThan(40);
-      expect(m.topBackdrop).toBe('blur(8px)');
-      expect(m.bottomBackdrop).toBe('blur(8px)');
+      expect(m.historyBackdrop).toBe('none');
       expect(m.uncoveredTop).toBe(0);
       expect(m.uncoveredBottom).toBe(0);
       expect(m.totalMeasuredRects).toBeGreaterThan(10);
@@ -197,7 +194,7 @@ for (const harness of ['claude-code', 'codex'] as const) {
   }
 }
 
-test('low-resource and reduced-motion fallbacks remove veil blur while preserving solid edge cover, and destinations stay clear', async ({ page }) => {
+test('the edge fade holds on low-resource machines, and destinations stay clear', async ({ page }) => {
   await openSession(page, 'claude-code', 600);
   const history = page.locator('.history');
 
@@ -262,12 +259,9 @@ test('low-resource and reduced-motion fallbacks remove veil blur while preservin
   expect(openOverlap.visibleCharIntersections).toBe(0);
   expect(openOverlap.edgeBottomPx).toBeGreaterThanOrEqual(collapsedBottom);
 
-  // Low-resource fallback removes backdrop-filter while preserving opaque veil
+  // The fade is an alpha mask with no blur, so low-resource machines keep it unchanged.
   await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
-  const lowResource = await page.evaluate(() => ({
-    top: getComputedStyle(document.querySelector('.reading-edge-top')!).backdropFilter,
-    bottom: getComputedStyle(document.querySelector('.reading-edge-bottom')!).backdropFilter,
-  }));
-  expect(lowResource.top).toBe('none');
-  expect(lowResource.bottom).toBe('none');
+  const lowResource = await measureChromeAndVisibleTextOverlaps(page);
+  expect(lowResource.historyMask).toContain('linear-gradient');
+  expect(lowResource.visibleCharIntersections).toBe(0);
 });
