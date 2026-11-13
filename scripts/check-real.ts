@@ -2,6 +2,7 @@ import { liveBatches } from './real-cases/live-batches.ts';
 import { personPrompts } from './real-cases/person-prompts.ts';
 import { midTurnPrompts } from './real-cases/mid-turn-prompts.ts';
 import { antigravity } from './real-cases/antigravity.ts';
+import { antigravityLive } from './real-cases/antigravity-live.ts';
 // TEST-3: check a feature's case on real local sessions, read-only, in one command.
 //   node scripts/check-real.ts --list
 //   node scripts/check-real.ts <case> [--harness claude-code|codex] [--max-mb 90] [--pick 1]
@@ -53,6 +54,7 @@ import {redaction} from './real-cases/redaction.ts';
 const cases: RealCase[] = [redaction, fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, longDiffLines, widePassages, usageContext, linkProse];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 cases.push(antigravity);
+cases.push(antigravityLive);
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
   process.exit(values.list ? 0 : 2);
@@ -99,8 +101,10 @@ try {
       if (harness === 'antigravity') {
         const observations = app.store.observations(imported.recordingId);
         const receipts = new Set(observations.filter(o => o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number').map(o => o.source.recordId));
-        console.log(`  ${receipts.size === f.hits ? 'PASS' : 'FAIL'} distinct step receipts: ${receipts.size}/${f.hits}`);
-        if (receipts.size !== f.hits) failed = true;
+        if (chosen.name === 'antigravity') {
+          console.log(`  ${receipts.size === f.hits ? 'PASS' : 'FAIL'} distinct step receipts: ${receipts.size}/${f.hits}`);
+          if (receipts.size !== f.hits) failed = true;
+        }
         const finalResults = new Set(observations.filter(o => o.kind === 'tool.result' && (o.payload as { status?: string }).status !== 'running').map(o => o.operationId));
         const gaps = new Set(observations.filter(o => o.kind === 'capture.gap').map(o => o.operationId));
         const missing = observations.filter(o => o.kind === 'tool.call' && !finalResults.has(o.operationId) && !gaps.has(o.operationId)).length;

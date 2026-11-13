@@ -9,6 +9,7 @@ import { defaultRoots, readableRoot, readablePath, conversationId, within, local
 import { summaries, type Summary } from './summaries.ts';
 import { decodeArgs, intentFor, outcomeFor, recordedExitCode, touchesProtectedFile, isPlanArtifact } from './tools.ts';
 import { CallOrder, unmatched, matched, type PendingCall } from './pairing.ts';
+import { liveParser } from './live.ts';
 
 export const descriptor: AdapterDescriptor = {
   id: 'antigravity', harness: 'antigravity', version: '0.1.0', label: 'Antigravity',
@@ -135,6 +136,7 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
   const metadata = new Map<string, Summary>();
   const selected = new Map<string, string>();
   const inspections = new Map<string, Inspection>();
+  const summaryCache = new Map<string, { at: number; values: Map<string, Summary> }>();
   let diagnostics: { code: string; message: string }[] = [];
   function locate(path: string) {
     const absolute = resolve(path);
@@ -163,6 +165,19 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     }
     paths.sort((a, b) => b.last - a.last);
     return paths[0]?.path;
+  }
+  async function refreshSummary(root: string, id: string, physical: string) {
+    let cached = summaryCache.get(root);
+    if (!cached || Date.now() - cached.at >= 5000) {
+      let values: Map<string, Summary>;
+      try { values = await summaries(root); }
+      catch {
+        values = cached?.values ?? new Map();
+        if (!diagnostics.some(d => d.code === 'index-unavailable')) diagnostics.push({ code: 'index-unavailable', message: 'Antigravity session metadata could not be refreshed safely; readable transcripts remain available.' });
+      }
+      cached = { at: Date.now(), values }; summaryCache.set(root, cached);
+    }
+    metadata.set(id, chooseSummary(id, cached.values.get(id) ?? metadata.get(id), await inspect(physical)));
   }
   return {
     descriptor,
@@ -228,13 +243,13 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
       const { root, id } = locate(main);
       const physical = await choose(root, id);
       if (!physical) throw new Error('The Antigravity transcript is unavailable. Captured history remains readable.');
-      if (!metadata.has(id)) {
-        const index = await summaries(root);
-        metadata.set(id, chooseSummary(id, index.get(id), await inspect(physical)));
-      }
+      await refreshSummary(root, id, physical);
       return { main, companions: [] };
     },
-    createParser(ctx) { return createParser(ctx, metadata.get(locate(ctx.sourcePath).id)); },
+    createParser(ctx) {
+      const { root, id } = locate(ctx.sourcePath);
+      return liveParser(createParser(ctx, metadata.get(id)), ctx, root, id, () => metadata.get(id));
+    },
     sniff(head) { return head.some(value => { const row = object(value); return Number.isSafeInteger(row.step_index) && typeof row.source === 'string' && typeof row.type === 'string' && Array.isArray(row.tool_calls); }); },
   };
 }

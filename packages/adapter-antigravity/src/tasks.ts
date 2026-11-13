@@ -5,17 +5,19 @@ import { localPath, readablePath } from './paths.ts';
 export const OUTPUT_LIMIT = 256 * 1024;
 export type CapturedOutput =
   | { available: true; path: string; text: string; bytes: number; truncated: boolean; signature: string }
-  | { available: false; reason: 'not-recorded' | 'removed' | 'outside-harness-folder' };
+  | { available: false; reason: 'not-recorded' | 'removed' | 'outside-harness-folder' | 'unreadable' };
 
 /** Task identity is recorded explicitly. Never associate commands by time or output similarity. */
 export function taskId(value: unknown): string | undefined {
   if (typeof value !== 'string' && typeof value !== 'number') return;
-  const match = /^(?:task-)?(\d{1,16})$/.exec(String(value));
-  return match ? `task-${match[1]}` : undefined;
+  const match = /^(?:([a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12})\/)?(?:task-)?(\d{1,16})$/i.exec(String(value));
+  return match ? `${match[1] ? match[1].toLowerCase() + '/' : ''}task-${match[2]}` : undefined;
 }
 
 export function taskInResult(content: string): string | undefined {
-  return taskId(/(?:^|\n)\s*Task\s*ID\s*:\s*((?:task-)?\d+)\s*(?:\r?$)/im.exec(content)?.[1]);
+  const references = [...content.matchAll(/\bTask\s*ID\s*:\s*`?((?:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}\/)?(?:task-)?\d+)`?(?![\w/-])/gi)].map(match => taskId(match[1]));
+  const unique = [...new Set(references)];
+  return unique.length === 1 ? unique[0] : undefined;
 }
 
 /** A terminal state must be stated by the harness. A quiet or growing log proves neither. */
@@ -28,7 +30,9 @@ export function taskState(content: string): 'running' | 'complete' | 'error' | u
 
 export function taskOutputPath(root: string, conversation: string, id: string): string | undefined {
   const normalized = taskId(id);
-  return normalized ? join(root, 'brain', conversation, '.system_generated', 'tasks', `${normalized}.log`) : undefined;
+  if (!normalized) return;
+  const [owner, file] = normalized.includes('/') ? normalized.split('/') : [conversation, normalized];
+  return owner === conversation ? join(root, 'brain', conversation, '.system_generated', 'tasks', `${file}.log`) : undefined;
 }
 
 /** Keep only an explicitly written persisted-output URI/path; containment is checked on read. */
@@ -43,7 +47,9 @@ export async function readOutput(root: string, conversation: string, reference: 
   let path: string;
   try { path = await readablePath(root, candidate, 'output', conversation); }
   catch (error) { return { available: false, reason: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'removed' : 'outside-harness-folder' }; }
-  const handle = await open(path, 'r');
+  let handle;
+  try { handle = await open(path, 'r'); }
+  catch (error) { return { available: false, reason: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'removed' : 'unreadable' }; }
   try {
     const info = await handle.stat();
     if (!info.isFile()) return { available: false, reason: 'outside-harness-folder' };
@@ -53,5 +59,6 @@ export async function readOutput(root: string, conversation: string, reference: 
     // Decode only complete UTF-8 sequences if a bounded read splits a character.
     const text = new TextDecoder('utf-8', { fatal: false }).decode(buffer.subarray(0, bytesRead), { stream: bytesRead < info.size });
     return { available: true, path, text, bytes: info.size, truncated: bytesRead < info.size, signature: `${info.size}:${info.mtimeMs}` };
-  } finally { await handle.close(); }
+  } catch { return { available: false, reason: 'unreadable' }; }
+  finally { await handle.close(); }
 }

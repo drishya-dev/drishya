@@ -12,6 +12,11 @@ describe('Antigravity background evidence', () => {
     expect(taskId('task-17')).toBe('task-17');
     expect(taskId('../17')).toBeUndefined();
     expect(taskInResult('Perhaps task 17 finished')).toBeUndefined();
+    const owner = '00000000-0000-0000-0000-000000000000';
+    expect(taskInResult(`Running in background with Task ID: ${owner}/task-2`)).toBe(`${owner}/task-2`);
+    expect(taskOutputPath('/root', 'other', `${owner}/task-2`)).toBeUndefined();
+    expect(taskOutputPath('/root', owner, `${owner}/task-2`)).toContain('task-2.log');
+    expect(taskInResult('Task ID: 1\nTask ID: 2')).toBeUndefined();
     expect(taskState('Status: COMPLETED')).toBe('complete');
     expect(taskState('Status: RUNNING')).toBe('running');
     expect(taskState('Status: KILLED')).toBe('error');

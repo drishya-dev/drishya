@@ -476,7 +476,11 @@ export class Ingestor extends EventEmitter {
         let raws: RawObservation[];
         if (rec.type === 'record') {
           try {
+            let supplementalFailure: RawObservation | undefined;
+            try { await parser.prepare?.(rec.value); }
+            catch { supplementalFailure = gap('unsupported-content', undefined, 'A supplemental harness file could not be read; the journal record was retained.', src.agentId); }
             raws = parser.parse(rec.value);
+            if (supplementalFailure) raws.push(supplementalFailure);
           } catch (e) {
             raws = [gap('unsupported-content', rec.bytes, `adapter error: ${e instanceof Error ? e.message.slice(0, 120) : 'unknown'}`, src.agentId)];
           }
@@ -519,6 +523,17 @@ export class Ingestor extends EventEmitter {
       }
       if (!progressed || res.cursor.offset >= res.size) break;
       await new Promise((ok) => setImmediate(ok)); // let the API and other recordings run between batches
+    }
+    if (parser.refresh) {
+      const observedAt = this.now().toISOString();
+      let raws: RawObservation[];
+      try { raws = await parser.refresh(); }
+      catch { raws = [{ ...gap('unsupported-content', undefined, 'Supplemental harness files could not be refreshed; captured journal history remains available.', src.agentId), recordId: `${src.id}:supplemental-refresh` }]; }
+      const sealed = raws.map(raw => {
+        if (raw.kind === 'capture.gap') gaps++;
+        return seal({ raw, recordingId: src.recordingId, adapter: adapter.descriptor, sourceId: src.id, generation: cursor.generation, byteOffset: -1, observedAt });
+      });
+      if (sealed.length) added += this.store.appendObservations(src.recordingId, src.id, cursor, sealed).length;
     }
     return { added, gaps, more, missing: false, size };
   }
