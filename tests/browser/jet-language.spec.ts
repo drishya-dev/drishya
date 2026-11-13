@@ -144,13 +144,13 @@ test('Jet Black\'s canvas sits on a plain, even dot ground painted on the canvas
   await palette(page, 'jet');
   const jet = await ground();
   expect(jet.image.match(/radial-gradient/g)?.length, 'one gradient: the dots, nothing else').toBe(1);
-  expect(jet.image, 'a 1 px dot with a soft edge').toContain('1.6px');
+  expect(jet.image, 'a 0.75 px dot with a soft edge').toContain('1.35px');
   expect(jet.size, 'a straight 12 px grid').toBe('12px 12px');
   expect(jet.image).not.toContain('svg');
   expect(['none', 'normal'], 'no layer behind the canvas').toContain(jet.beforeContent);
   expect(['none', '']).toContain(jet.beforeMask);
   await palette(page, 'midnight');
-  expect((await ground()).image, 'Midnight keeps its own ground').not.toContain('1.6px');
+  expect((await ground()).image, 'Midnight keeps its own ground').not.toContain('1.35px');
   await palette(page, 'jet');
   await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
   expect((await ground()).image, 'low resource drops it').toBe('none');
