@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { mkdtemp, mkdir, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { pathToFileURL } from 'node:url';
-import { allowedRelative, localPath, readablePath } from '../src/paths.ts';
+import { allowedRelative, localPath, readablePath, readableRoot } from '../src/paths.ts';
 import { summaries } from '../src/summaries.ts';
 import { createAntigravityAdapter } from '../src/index.ts';
 
@@ -13,6 +14,10 @@ async function temp() { const root = await mkdtemp(join(tmpdir(), 'ag-discover-'
 afterEach(async () => { await Promise.all(roots.splice(0).map(root => { if (!resolve(root).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch cleanup'); return rm(root, { recursive: true, force: true }); })); });
 
 describe('observation allow-list', () => {
+  it('rejects a private root override before attempting to read files', async () => {
+    await expect(readableRoot(join(homedir(), '.gemini', 'antigravity-browser-profile'))).rejects.toThrow(/never-read/);
+    if (process.env.APPDATA) await expect(readableRoot(join(process.env.APPDATA, 'Antigravity'))).rejects.toThrow(/never-read/);
+  });
   it('rejects every private category and chunks for every purpose', () => {
     const privatePaths = [
       'daemon/hub_42.json', 'antigravity-browser-profile/Default/Cookies',
@@ -60,6 +65,7 @@ describe('summary index', () => {
     expect(adapter.diagnostics()).toMatchObject([{ code: 'encrypted', message: '1 unreadable: encrypted Antigravity conversations without transcripts.' }]);
     await mkdir(join(root, 'brain', 'plan'), { recursive: true });
     await writeFile(join(root, 'brain', 'plan', 'task.md'), '# Synthetic artifact');
+    await writeFile(join(root, 'conversations', 'plan.db'), 'Synthetic metadata filename only');
     expect(await adapter.discover()).toEqual([]);
     expect(adapter.diagnostics().some(diagnostic => diagnostic.code === 'artifact-only')).toBe(true);
   });
@@ -81,6 +87,7 @@ describe('summary index', () => {
   });
   it('chooses the furthest complete transcript, not the file with full in its name', async () => {
     const root = await temp(), logs = join(root, 'brain', 'one', '.system_generated', 'logs');
+    await mkdir(join(root, 'conversations')); await writeFile(join(root, 'conversations', 'one.db'), 'Synthetic metadata filename only');
     await mkdir(logs, { recursive: true });
     const row = (step_index: number) => JSON.stringify({ step_index, type: 'USER_INPUT', source: 'USER_EXPLICIT', content: 'synthetic', tool_calls: [] }) + '\n';
     await writeFile(join(logs, 'transcript_full.jsonl'), row(0));

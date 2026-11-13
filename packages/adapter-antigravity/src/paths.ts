@@ -12,6 +12,18 @@ export function within(root: string, path: string): boolean {
   return rel !== '..' && !rel.startsWith('..' + sep) && !isAbsolute(rel);
 }
 
+function rejectPrivateLocation(path: string): void {
+  const privateRoots = [join(homedir(), '.gemini', 'antigravity-browser-profile'), ...(process.env.APPDATA ? [join(process.env.APPDATA, 'Antigravity')] : [])];
+  if (privateRoots.some(root => within(resolve(root), resolve(path)))) throw new Error('Antigravity location is in a never-read private directory');
+}
+
+export async function readableRoot(root: string): Promise<string> {
+  rejectPrivateLocation(root);
+  const canonical = await realpath(root);
+  rejectPrivateLocation(canonical);
+  return canonical;
+}
+
 export function conversationId(id: string): boolean {
   return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(id);
 }
@@ -39,10 +51,12 @@ export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 
 
 export async function readablePath(root: string, candidate: string, purpose: Parameters<typeof allowedRelative>[1], id?: string): Promise<string> {
   const absolute = resolve(candidate);
+  rejectPrivateLocation(absolute);
   if (!within(root, absolute) || !allowedRelative(relative(root, absolute), purpose)) throw new Error('Antigravity path is outside the observation allow-list');
   if (id && (!conversationId(id) || !within(join(root, 'brain', id), absolute))) throw new Error('Antigravity reference leaves its conversation');
-  const canonicalRoot = await realpath(root);
+  const canonicalRoot = await readableRoot(root);
   const canonical = await realpath(absolute);
+  rejectPrivateLocation(canonical);
   // Validate the resolved path too, rejecting junctions/symlinks into sibling or private files.
   if (!within(canonicalRoot, canonical) || !allowedRelative(relative(canonicalRoot, canonical), purpose)) throw new Error('Antigravity resolved path is outside the observation allow-list');
   if (id) {

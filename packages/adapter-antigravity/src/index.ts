@@ -5,7 +5,7 @@ import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
 import { initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser } from '@drishya/capture-core';
 import { sanitize } from '@drishya/privacy';
-import { defaultRoots, readablePath, conversationId, within, localPath } from './paths.ts';
+import { defaultRoots, readableRoot, readablePath, conversationId, within, localPath } from './paths.ts';
 import { summaries, type Summary } from './summaries.ts';
 import { decodeArgs, intentFor, outcomeFor, recordedExitCode, touchesProtectedFile, isPlanArtifact } from './tools.ts';
 import { CallOrder, unmatched, matched, type PendingCall } from './pairing.ts';
@@ -170,6 +170,8 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
       const encrypted = new Map<string, number>(), artifactOnly = new Set<string>(), missingTranscript = new Set<string>();
       for (const configured of roots) {
         const root = resolve(configured);
+        try { await readableRoot(root); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
         let entries: Dirent<string>[];
         try { entries = await readdir(join(root, 'brain'), { withFileTypes: true }); }
         catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') entries = []; else throw error; }
@@ -180,7 +182,9 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
         try { index = await summaries(root); }
         catch { diagnostics.push({ code: 'index-unavailable', message: 'Antigravity session metadata could not be read safely; readable transcripts remain available without index metadata.' }); }
         const nativeFiles = new Set(conversations.filter(entry => entry.isFile() && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}\.(?:pb|db)$/.test(entry.name)).map(entry => entry.name));
-        const ids = new Set([...entries.filter(entry => entry.isDirectory()).map(entry => entry.name), ...[...nativeFiles].map(name => name.slice(0, -3)), ...index.keys()]);
+        const declaredIds = new Set([...nativeFiles].map(name => name.slice(0, -3)).concat([...index.keys()]));
+        // brain also contains shared utility folders, which are not conversations.
+        const ids = new Set([...entries.filter(entry => entry.isDirectory() && (declaredIds.has(entry.name) || /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(entry.name))).map(entry => entry.name), ...declaredIds]);
         for (const id of ids) {
           if (!conversationId(id) || seen.has(id)) continue;
           try {

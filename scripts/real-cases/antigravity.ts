@@ -11,7 +11,8 @@ export const antigravity: RealCase = {
     return { hits: 1 };
   },
   verify(projection) {
+    const inventedNativeLinks = projection.links.filter(link => link.relation === 'tool-result' && link.basis === 'source-id').length;
     return [`${projection.operations.length} operations; ${projection.gaps.length} explicit gaps`,
-      'PASS recorded tool results retained without invented native call IDs'];
+      inventedNativeLinks ? `FAIL ${inventedNativeLinks} positional results labelled native IDs` : 'PASS recorded tool results retained without invented native call IDs'];
   },
 };

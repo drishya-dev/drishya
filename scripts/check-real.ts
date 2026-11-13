@@ -97,9 +97,16 @@ try {
     for (const f of found.slice(0, pick)) {
       const imported = await app.ingest.importSource(harness, f.file);
       if (harness === 'antigravity') {
-        const receipts = new Set(app.store.observations(imported.recordingId).filter(o => o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number').map(o => o.source.recordId));
+        const observations = app.store.observations(imported.recordingId);
+        const receipts = new Set(observations.filter(o => o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number').map(o => o.source.recordId));
         console.log(`  ${receipts.size === f.hits ? 'PASS' : 'FAIL'} distinct step receipts: ${receipts.size}/${f.hits}`);
         if (receipts.size !== f.hits) failed = true;
+        const finalResults = new Set(observations.filter(o => o.kind === 'tool.result' && (o.payload as { status?: string }).status !== 'running').map(o => o.operationId));
+        const gaps = new Set(observations.filter(o => o.kind === 'capture.gap').map(o => o.operationId));
+        const missing = observations.filter(o => o.kind === 'tool.call' && !finalResults.has(o.operationId) && !gaps.has(o.operationId)).length;
+        const unknown = observations.filter(o => o.kind === 'unknown').length;
+        console.log(`  ${missing || unknown ? 'FAIL' : 'PASS'} unaccounted calls: ${missing}; unknown records: ${unknown}`);
+        if (missing || unknown) failed = true;
       }
       const projection = app.projection(imported.recordingId);
       console.log(`  ${imported.recordingId.slice(0, 12)} · ${Math.round(f.size / 1e5) / 10} MB · ${projection.operations.length} operations`);
