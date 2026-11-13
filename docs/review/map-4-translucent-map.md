@@ -11,7 +11,7 @@ Compared the build just before #400 (`8e29da53^`) with main on the same real ses
 
 ## Change
 
-- **Map strength.** The 0.38 dim on the canvas is removed (`atelier.css`). Rest strength is `MAP_REST_ALPHA` = .85 (was .68 x .38) in the margins; under the reading column dots keep `QUIET_NODE_FLOOR` = .38 and import lines `QUIET_EDGE_FLOOR` = .3 (were .3 and .08). The floors are the highest that keep prose at 4.5:1 or better over the densest map area with the ground included. Zone, 72 px feather, exempt passage dots, SHIP-8's label collision rule and every redraw trigger are untouched.
+- **Map strength.** The 0.38 dim on the canvas is removed (`atelier.css`). Rest strength is `MAP_REST_ALPHA` = .85 (was .68 x .38) in the margins; under the reading column dots keep `QUIET_NODE_FLOOR` = .38 and import lines `QUIET_EDGE_FLOOR` = .5 (were .3 and .08). The floors are the highest that keep prose at 4.5:1 or better over the densest map area with the ground included. Zone, 72 px feather, exempt passage dots, SHIP-8's label collision rule and every redraw trigger are untouched.
 - **Ground.** `apps/ui/src/modern/jet-ground.css` is UI-39 part 3's first ground (#456) again: one `radial-gradient` of a straight 12 px grid at 11 % cream as the background of `.connected-workspace`, with the dot a little larger (radius 1.25 px, soft edge to 2 px; it was 1 px). All dots are the same size and brightness. No glow, no gradient, no fade, no stagger, no pseudo-element, no mask, no SVG. The staggered 288 px mask layer from #458 is deleted. Jet Black only; the low-resource rule that removes it (`atelier.css`) still wins.
 
 Dot candidates (frames `dots-candidates-100.png` and `-150.png`, 100 % and 150 % zoom, in `.local/map-4/`): 1 px (#456) is barely there; 1.25 px is a visible step up and still reads as calm texture; 1.5 px starts to read as a pattern. 1.25 px was chosen.
@@ -21,7 +21,7 @@ Dot candidates (frames `dots-candidates-100.png` and `-150.png`, 100 % and 150 %
 | Check | Result |
 |---|---|
 | Frames before #400, before this change, after, at 1440 and 2000 | `before-*`, `today-*`, `after-*`, `final-*` (each with a map-only frame); side-by-side product before / Home / product after in `side-by-side-*` |
-| Prose contrast over the brightest pixel beneath the column (map and ground together) | 6.6:1 at 1440 and 5.1:1 at 2000 (Claude Code); 7.9:1 on the Codex session; floor 4.5:1 |
+| Prose contrast over the brightest pixel beneath the column (map and ground together) | 5.2:1 at 1440 and 2000 (Claude Code); 4.8:1 on the Codex session; floor 4.5:1. Edge floor .6 gave 3.75:1, so .5 is the brightest that holds |
 | Idle redraws, 5 s, rotation on | 132 draws (132 on the pre-#400 build); 0 under reduced motion |
 | Scroll, 3 s of in-page scrolling of the 232-operation session, 3x CPU throttle, 5 rounds each | p95 frame time medians: this branch 317 ms, main 200 ms, before #458 325 ms; individual runs of the same build range from 108 to 1,312 ms, so the three are **indistinguishable** here. Paint time from a CDP trace: medians 229 / 254 / 293 ms, raster 75 / 101 / 113 ms, equally noisy |
 | Specs | `map-quiet.spec.ts` (shapes present beneath the column, weaker than the margins; separates the old floors from the new by rebuilding), `jet-language.spec.ts` ground test rewritten to the plain-grid shape; connected-workspace, map-fit, nested-checkouts, repository-navigation, workspace-map-limit, workspace-toolbar pass; UI units pass |
