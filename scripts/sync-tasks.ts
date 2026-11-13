@@ -29,6 +29,7 @@ for (let i = start; i < end; i++) {
   if (!priority || !line.startsWith('|')) { inTable = false; continue; }
   const cells = line.split('|').slice(1, -1).map((c) => c.trim());
   const body = /^[☑☐]$/.test(cells[0] ?? '') ? cells.slice(1) : cells;   // drop an existing Done cell
+  if (inTable && body[0] === 'Done') body.shift();                        // a stray header word pasted into a data row (13 Nov)
   const idAt = body.findIndex((c) => new RegExp(`^${ID}$`).test(c));
   if (!inTable) {                                                          // header row, then the separator
     if (/^-+$/.test(cells[0] ?? '')) { lines[i] = `|${Array(columns).fill('---').join('|')}|`; inTable = true; continue; }
