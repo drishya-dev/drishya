@@ -166,3 +166,19 @@ test('surfaces nested in a panel keep a fill and lose their outline; a field sho
   expect(focused.width).toBe(rest.width);
   expect(focused.box, 'the field does not move').toBe(rest.box);
 });
+
+test('the header\'s Changes button is sized before the Changes window ever loads (BUILD-1 regression)', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.mh-home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern#/r/${id}`);
+  await expect(page.locator('.history article.op').first()).toBeVisible();
+  const fit = await page.locator('.modern-session-header .studio-actions>.btn.compare-open').evaluate(el => {
+    const own = el.getBoundingClientRect();
+    const lefts = [...el.parentElement!.children].filter(c => c !== el).map(c => c.getBoundingClientRect()).filter(r => r.width > 0 && r.height > 0 && r.left > own.left).map(r => r.left);
+    return { overflow: el.scrollWidth - el.clientWidth, gap: Math.min(...lefts) - own.right };
+  });
+  expect(fit.overflow, 'the label fits its button').toBeLessThanOrEqual(0);
+  expect(fit.gap, 'and does not run into the next icon').toBeGreaterThanOrEqual(0);
+});

@@ -1,5 +1,6 @@
 import { useApp } from '../state.ts';
 import { openChanges } from '../lib/open-changes.ts';
+import './compare-button.css';
 
 export function CompareButton() {
   const open = useApp(s => s.compareOpen), mode = useApp(s => s.mode), id = useApp(s => s.recordingId), source = useApp(s => s.source);
