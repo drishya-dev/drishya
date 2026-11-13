@@ -31,3 +31,7 @@
 :root[data-ui-version=modern][data-experience=classic] .history .prose { color: var(--text-primary); }
 :root[data-ui-version=modern][data-experience=classic] .history .prose :is(.md-h, h1, h2, h3, h4) { color: var(--text-primary); font-weight: var(--weight-strong); }
 :root[data-ui-version=modern][data-experience=classic] .history .prose :is(p, li, td, dd) code { color: var(--source); background: var(--history-code-wash); border-color: transparent; }
+
+/* UI-38 (from Gemini's review, the part that fits): a lit top edge gives cards depth on the dark ground. One pixel and no
+   blur, so a long history costs nothing more to paint; a drop shadow would be invisible on Jet Black's ground. */
+:root[data-ui-version=modern][data-experience=classic][data-theme=dark] .connected-workspace .history article.op { box-shadow:inset 0 1px 0 color-mix(in srgb,var(--t1) 7%,transparent); }

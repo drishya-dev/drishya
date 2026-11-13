@@ -254,6 +254,9 @@
 .brand-image.brand-mark {display: block;position: relative;flex: none;overflow: hidden;border: 0;border-radius: var(--round-sm);background: var(--s1)} :where(:root:not([data-ui-skin=clarity])) .brand-image.brand-mark { width: 30px !important; height: 30px !important; }
 .brand-image.brand-mark::after { content: none; }
 .brand-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* UI-38: the mark is inline SVG in the current ink: the website's cream on Jet Black, each other palette's own ink. */
+.brand-image.brand-mark { color: var(--brand-ink, var(--t1)); }
+.brand-image svg { display: block; width: 100%; height: 100%; }
 
 /* Shared craft layer: space establishes hierarchy; outlines are reserved for state. */
 :root { --control-radius: var(--round-sm); --reading-radius: var(--round-lg); }
