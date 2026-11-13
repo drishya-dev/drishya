@@ -1,10 +1,11 @@
 import { readdir, stat } from 'node:fs/promises';
+import type { Dirent } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
 import { initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser } from '@drishya/capture-core';
 import { sanitize } from '@drishya/privacy';
-import { defaultRoots, readablePath, conversationId, within } from './paths.ts';
+import { defaultRoots, readablePath, conversationId, within, localPath } from './paths.ts';
 import { summaries, type Summary } from './summaries.ts';
 import { decodeArgs, intentFor, outcomeFor, recordedExitCode, touchesProtectedFile, isPlanArtifact } from './tools.ts';
 import { CallOrder, unmatched, matched, type PendingCall } from './pairing.ts';
@@ -27,7 +28,9 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
   const pair = new CallOrder();
   const fingerprints = new Map<number, string>();
   let resultOwners = new Map<number, PendingCall>();
-  const agentId = ctx.agentId ?? (summary?.parentSessionId ? `agent:${id}` : 'agent:main');
+  // A child is a separate recording, not a companion file of the parent. Its local
+  // owner is still main; the captured parentThreadId carries cross-session lineage.
+  const agentId = ctx.agentId ?? 'agent:main';
   let initialized = false;
   return {
     prime(observations: Observation[]) { resultOwners = pair.prime(observations); initialized = observations.some(o => o.kind === 'session.meta'); },
@@ -54,7 +57,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
         emit({ part: 1, kind: 'turn.start', payload: { turnId: recordId } });
         emit({ part: 2, kind: 'message.user', payload: { text: content } });
       } else if (type === 'PLANNER_RESPONSE') {
-        for (const call of pair.reset()) out.push(unmatched(call, base, 0));
+        for (const call of pair.reset()) if (!replacement) out.push(unmatched(call, base, 0));
         if (content) emit({ part: 1, kind: 'message.assistant', payload: { text: content } });
         if (text(row.thinking)) emit({ part: 2, kind: 'reasoning', payload: { text: text(row.thinking), source: 'antigravity-recorded-thinking' } });
         const calls = Array.isArray(row.tool_calls) ? row.tool_calls : [];
@@ -74,16 +77,18 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
           // The record is known to be a result, but its call was not captured. No positional
           // guess or fabricated operation id: the reducer already represents orphan results.
           const path = /^File Path:\s*(.+)$/m.exec(content)?.[1]?.trim();
-          emit({ part: 1, kind: 'tool.result', availability: 'partial', denyContent: !!path && touchesProtectedFile({ kind: 'read', path }), contentKeys: ['text', 'error'], payload: { tool: type, isError: row.status === 'ERROR' || !!row.error, text: content, error: row.error, callAvailability: 'not-recorded' } });
+          const protectedOrUnknown = !path || touchesProtectedFile({ kind: 'read', path });
+          emit({ part: 1, kind: 'tool.result', availability: protectedOrUnknown ? 'metadata-only' : 'partial', denyContent: protectedOrUnknown, contentKeys: ['text', 'error'], payload: { tool: type, isError: row.status === 'ERROR' || !!row.error, text: content, error: row.error, callAvailability: 'not-recorded', omissionReason: protectedOrUnknown ? 'The call/path was not captured, so protected-file access cannot be ruled out.' : undefined } });
           return out;
         }
         resultOwners.set(step, call);
-        out.push(matched(call, base));
         const running = row.status === 'RUNNING';
+        if (!running) out.push(matched(call, base));
+        const exitCode = call.intent.kind === 'shell' ? recordedExitCode(content) : undefined;
         emit({ part: 1, kind: 'tool.result', operationId: call.id,
           correlation: { operationId: call.id, basis: 'call-order' },
           denyContent: call.protected || touchesProtectedFile(call.intent), contentKeys: ['text', 'outcome', 'error'], availability: running || partial ? 'partial' : 'complete',
-          payload: { tool: call.tool, isError: row.status === 'ERROR' || !!row.error, text: content, error: row.error, exitCode: call.intent.kind === 'shell' ? recordedExitCode(content) : undefined,
+          payload: { tool: call.tool, isError: row.status === 'ERROR' || !!row.error || typeof exitCode === 'number' && exitCode !== 0, text: content, error: row.error, exitCode,
             outcome: isPlanArtifact(call.args) ? { kind: 'other' } : outcomeFor(call.tool, call.args, content), ...(running ? { status: 'running', resultAvailability: 'not-recorded' } : {}) } });
       } else if (type === 'CHECKPOINT') {
         emit({ part: 1, kind: 'compaction', payload: { source: 'antigravity-checkpoint', phase: 'summary', summary: content, summaryAvailability: 'captured', authoredBy: 'model' } });
@@ -96,6 +101,11 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
 }
 
 interface Scan { lastStep: number; title?: string; pathCounts: Map<string, number> }
+function chooseSummary(id: string, captured: Summary | undefined, inspection: Scan): Summary {
+  const workspaces = [...(captured?.workspaces ?? [])];
+  workspaces.sort((a, b) => [...inspection.pathCounts].reduce((sum, [path, count]) => sum + (within(b, path) ? count : 0) - (within(a, path) ? count : 0), 0));
+  return { ...captured, id, workspaces, title: captured?.title ?? inspection.title };
+}
 async function scan(path: string): Promise<Scan> {
   let cursor = initialCursor();
   const result: Scan = { lastStep: -1, pathCounts: new Map() };
@@ -108,7 +118,10 @@ async function scan(path: string): Promise<Scan> {
       if (!result.title && row.type === 'USER_INPUT' && row.source === 'USER_EXPLICIT') result.title = sanitize(text(row.content).slice(0, 160)).value;
       for (const value of Array.isArray(row.tool_calls) ? row.tool_calls : []) {
         const args = decodeArgs(object(value).args);
-        for (const key of ['Path', 'AbsolutePath', 'TargetFile']) if (typeof args[key] === 'string') result.pathCounts.set(args[key], (result.pathCounts.get(args[key]) ?? 0) + 1);
+        for (const key of ['Path', 'AbsolutePath', 'TargetFile']) if (typeof args[key] === 'string') {
+          const path = localPath(args[key]);
+          if (path) result.pathCounts.set(path, (result.pathCounts.get(path) ?? 0) + 1);
+        }
       }
     }
     if (batch.cursor.offset === cursor.offset || batch.cursor.offset >= batch.size) return result;
@@ -154,46 +167,61 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     async discover() {
       diagnostics = [];
       const sources: DiscoveredSource[] = [], seen = new Set<string>();
-      const encrypted = new Set<string>(), artifactOnly = new Set<string>();
+      const encrypted = new Map<string, number>(), artifactOnly = new Set<string>(), missingTranscript = new Set<string>();
       for (const configured of roots) {
         const root = resolve(configured);
-        let entries;
+        let entries: Dirent<string>[];
         try { entries = await readdir(join(root, 'brain'), { withFileTypes: true }); }
-        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue; throw error; }
-        const index = await summaries(root);
-        for (const entry of entries) {
-          if (!entry.isDirectory() || !conversationId(entry.name) || seen.has(entry.name)) continue;
-          const id = entry.name;
+        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') entries = []; else throw error; }
+        let conversations: Dirent<string>[];
+        try { conversations = await readdir(join(root, 'conversations'), { withFileTypes: true }); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') conversations = []; else throw error; }
+        let index = new Map<string, Summary>();
+        try { index = await summaries(root); }
+        catch { diagnostics.push({ code: 'index-unavailable', message: 'Antigravity session metadata could not be read safely; readable transcripts remain available without index metadata.' }); }
+        const nativeFiles = new Set(conversations.filter(entry => entry.isFile() && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}\.(?:pb|db)$/.test(entry.name)).map(entry => entry.name));
+        const ids = new Set([...entries.filter(entry => entry.isDirectory()).map(entry => entry.name), ...[...nativeFiles].map(name => name.slice(0, -3)), ...index.keys()]);
+        for (const id of ids) {
+          if (!conversationId(id) || seen.has(id)) continue;
           try {
             const physical = await choose(root, id);
             if (!physical) {
-              try { if ((await stat(join(root, 'conversations', `${id}.pb`))).isFile()) encrypted.add(id); else artifactOnly.add(id); }
-              catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') artifactOnly.add(id); else throw error; }
+              if (nativeFiles.has(`${id}.pb`)) encrypted.set(id, encrypted.get(id) ?? roots.indexOf(configured));
+              else {
+                let artifact = false;
+                for (const name of ['implementation_plan.md', 'task.md', 'walkthrough.md']) {
+                  try { await readablePath(root, join(root, 'brain', id, name), 'artifact', id); artifact = true; break; }
+                  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+                }
+                if (artifact) artifactOnly.add(id); else missingTranscript.add(id);
+              }
               continue;
             }
             seen.add(id);
-            encrypted.delete(id); artifactOnly.delete(id);
-            const captured = index.get(id), inspection = await inspect(physical);
-            const workspaces = [...(captured?.workspaces ?? [])];
-            workspaces.sort((a, b) => [...inspection.pathCounts].reduce((sum, [path, count]) => sum + (within(b, path) ? count : 0) - (within(a, path) ? count : 0), 0));
-            const summary: Summary = { ...captured, id, workspaces, title: captured?.title ?? inspection.title };
+            encrypted.delete(id); artifactOnly.delete(id); missingTranscript.delete(id);
+            const summary = chooseSummary(id, index.get(id), await inspect(physical));
             metadata.set(id, summary);
             const key = selected.get(id) ?? physical; selected.set(id, key);
             const info = await stat(physical);
-            sources.push({ adapterId: descriptor.id, harness: descriptor.harness, path: key, bytes: info.size, modifiedAt: info.mtime.toISOString(), sessionId: id, cwd: workspaces[0], title: summary.title, parentSessionId: summary.parentSessionId, agentName: summary.agentName, companions: [] });
+            sources.push({ adapterId: descriptor.id, harness: descriptor.harness, path: key, bytes: info.size, modifiedAt: info.mtime.toISOString(), sessionId: id, cwd: summary.workspaces[0], title: summary.title, parentSessionId: summary.parentSessionId, agentName: summary.agentName === undefined ? undefined : sanitize(summary.agentName).value, companions: [] });
           } catch { diagnostics.push({ code: 'read-failed', message: `Antigravity conversation ${id.slice(0, 8)} could not be read safely.` }); }
         }
       }
-      if (encrypted.size) diagnostics.push({ code: 'encrypted', message: `${encrypted.size} unreadable: encrypted Antigravity conversations without transcripts.` });
+      for (let root = 0; root < roots.length; root++) {
+        const count = [...encrypted.values()].filter(index => index === root).length;
+        if (count) diagnostics.push({ code: root ? 'encrypted-legacy' : 'encrypted', message: `${count} unreadable: encrypted Antigravity conversations without transcripts${root ? ' (additional legacy-root conversations)' : ''}.` });
+      }
       if (artifactOnly.size) diagnostics.push({ code: 'artifact-only', message: `${artifactOnly.size} Antigravity artifact-only conversations without transcripts.` });
+      if (missingTranscript.size) diagnostics.push({ code: 'transcript-unavailable', message: `${missingTranscript.size} Antigravity conversations have no readable transcript or supported artifact.` });
       return sources;
     },
     async sourceSet(main) {
       const { root, id } = locate(main);
-      if (!await choose(root, id)) throw new Error('The Antigravity transcript is unavailable. Captured history remains readable.');
+      const physical = await choose(root, id);
+      if (!physical) throw new Error('The Antigravity transcript is unavailable. Captured history remains readable.');
       if (!metadata.has(id)) {
         const index = await summaries(root);
-        metadata.set(id, index.get(id) ?? { id, workspaces: [] });
+        metadata.set(id, chooseSummary(id, index.get(id), await inspect(physical)));
       }
       return { main, companions: [] };
     },

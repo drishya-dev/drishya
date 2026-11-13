@@ -1,10 +1,13 @@
-import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { Store } from '@drishya/store';
 import { Ingestor } from '../src/index.ts';
 import { createAntigravityAdapter } from '../../adapter-antigravity/src/index.ts';
+import { App } from '../../../apps/daemon/src/app.ts';
+import { codexAdapter } from '../../adapter-codex/src/index.ts';
+import { orderObservations } from '../../projection/src/reduce.ts';
 
 let dir: string, journal: string, store: Store, ingest: Ingestor;
 const row = (step_index: number, type: string, content = '', extra: Record<string, unknown> = {}) => ({ step_index, type, source: 'MODEL', status: 'DONE', created_at: `2026-11-13T10:00:${String(step_index).padStart(2, '0')}Z`, content, tool_calls: [], ...extra });
@@ -15,7 +18,7 @@ beforeEach(() => {
   mkdirSync(join(journal, '..'), { recursive: true });
   store = new Store(join(dir, 'store')); ingest = new Ingestor(store, [createAntigravityAdapter([dir])]);
 });
-afterEach(async () => { await ingest.close(); store.close(); rmSync(dir, { recursive: true, force: true }); });
+afterEach(async () => { await ingest.close(); store.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch cleanup'); rmSync(dir, { recursive: true, force: true }); });
 
 it('imports idempotently and replaces a repeated result in the projection and search', async () => {
   const call = { name: 'run_command', args: { CommandLine: '"echo synthetic"' } };
@@ -38,6 +41,58 @@ it('preserves step order when the source clock moves backwards', async () => {
   const result = await ingest.importSource('antigravity', journal);
   const timeline = ingest.projection(result.recordingId).timeline;
   expect(timeline.findIndex(item => item.type === 'turn')).toBeLessThan(timeline.findIndex(item => item.type === 'prose'));
+});
+
+it('keeps native Antigravity order in a combined Codex view and agrees with in-memory reduction', async () => {
+  writeFileSync(journal, line(row(0, 'USER_INPUT', 'ag prompt', { source: 'USER_EXPLICIT', created_at: '2026-11-13T10:00:12Z' })) + line(row(1, 'PLANNER_RESPONSE', 'ag answer', { created_at: '2026-11-13T10:00:00Z' })));
+  const ag = await ingest.importSource('antigravity', journal);
+  const codexPath = join(dir, 'codex.jsonl');
+  writeFileSync(codexPath, line({ type: 'session_meta', timestamp: '2026-11-13T10:00:05Z', payload: { id: 'synthetic-codex' } }) + line({ type: 'response_item', timestamp: '2026-11-13T10:00:05Z', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'codex answer' }] } }));
+  ingest.adapters.push(codexAdapter);
+  const codex = await ingest.importSource('codex', codexPath);
+  const ordered = [...store.orderedObservations([ag.recordingId, codex.recordingId])];
+  const inMemory = orderObservations([...store.observations(ag.recordingId), ...store.observations(codex.recordingId)]);
+  expect(ordered.map(o => o.id)).toEqual(inMemory.map(o => o.id));
+  const messages = ordered.filter(o => o.kind === 'message.user' || o.kind === 'message.assistant');
+  expect(messages.map(o => (o.payload as { text: string }).text)).toEqual(['codex answer', 'ag prompt', 'ag answer']);
+  expect(JSON.stringify(ingest.combinedProjection([ag.recordingId, codex.recordingId]))).toContain('ag answer');
+  appendFileSync(journal, line(row(1, 'PLANNER_RESPONSE', 'replacement ag prose', { created_at: '2026-11-13T10:00:00Z' })));
+  await ingest.sync(ag.recordingId);
+  const updated = JSON.stringify(ingest.combinedProjection([ag.recordingId, codex.recordingId]));
+  expect(updated).toContain('replacement ag prose');
+  expect(updated).not.toContain('ag answer');
+});
+
+it('redacts the synthetic canary before the store, blobs, search and export', async () => {
+  const canary = 'ghp_' + 'a1b2c3d4'.repeat(5);
+  writeFileSync(journal, line(row(0, 'PLANNER_RESPONSE', '', { tool_calls: [{ name: 'run_command', args: { CommandLine: JSON.stringify('echo token=' + canary + ' synthetic'.repeat(3000)) } }] })) + line(row(1, 'GENERIC', 'Synthetic command output')));
+  const app = new App(join(dir, 'export-store'));
+  app.ingest.adapters.splice(0, app.ingest.adapters.length, createAntigravityAdapter([dir]));
+  try {
+    const result = await app.ingest.importSource('antigravity', journal);
+    expect(JSON.stringify(app.store.observations(result.recordingId))).not.toContain(canary);
+    expect(app.store.search(result.recordingId, canary)).toHaveLength(0);
+    const blobs = readdirSync(app.store.blobs.dir, { recursive: true, withFileTypes: true }).filter(entry => entry.isFile());
+    expect(blobs.length).toBeGreaterThan(0);
+    for (const blob of blobs) expect(readFileSync(join(blob.parentPath, blob.name), 'utf8')).not.toContain(canary);
+    expect(JSON.stringify(await app.exportBundle(result.recordingId))).not.toContain(canary);
+  } finally { await app.close(); }
+});
+
+it('removes stale prose, calls and search text when a planner replacement shrinks', async () => {
+  const first = row(0, 'PLANNER_RESPONSE', 'obsoleteprose', { tool_calls: [{ name: 'run_command', args: { CommandLine: '"echo obsoletecommand"' } }] });
+  writeFileSync(journal, line(first) + line(row(0, 'PLANNER_RESPONSE', 'replacementprose')));
+  const result = await ingest.importSource('antigravity', journal);
+  expect(store.search(result.recordingId, 'obsoleteprose')).toHaveLength(0);
+  expect(store.search(result.recordingId, 'obsoletecommand')).toHaveLength(0);
+  expect(ingest.projection(result.recordingId).operations).toHaveLength(0);
+  appendFileSync(journal, line(row(0, 'PLANNER_RESPONSE', 'latestprose', { tool_calls: [{ name: 'run_command', args: { CommandLine: '"echo latestcommand"' } }] })));
+  await ingest.sync(result.recordingId);
+  expect(store.search(result.recordingId, 'replacementprose')).toHaveLength(0);
+  appendFileSync(journal, line(row(0, 'PLANNER_RESPONSE', 'finalprose')));
+  await ingest.sync(result.recordingId);
+  expect(ingest.projection(result.recordingId).operations).toHaveLength(0);
+  expect(store.search(result.recordingId, 'latestcommand')).toHaveLength(0);
 });
 
 it('keeps the same recording when a fuller transcript appears, including after reopening', async () => {

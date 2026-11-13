@@ -980,23 +980,41 @@ function copyValue<T>(value: T): T {
  * carrying each source's last time forward for records without one. Ties keep ingest order.
  */
 export function orderObservations(input: Observation[]): Observation[] {
-  if (input.length && input.every(o => o.source.adapterId === 'antigravity')) {
+  if (input.length && input.every(o => o.source.adapterId === 'antigravity' && o.recordingId === input[0]!.recordingId)) {
     return [...input].sort((a, b) => {
       const index = (o: Observation) => Number.parseInt(o.source.recordId?.split(':')[1] ?? '-1', 10);
       const ai = index(a), bi = index(b);
       return (Number.isFinite(ai) ? ai : -1) - (Number.isFinite(bi) ? bi : -1) || a.receivedSequence - b.receivedSequence;
     });
   }
+  const orderedClocks = new Map<string, string>();
+  const agRecordings = new Set(input.filter(o => o.source.adapterId === 'antigravity').map(o => o.recordingId));
+  for (const recording of agRecordings) {
+    let clock = '';
+    for (const o of orderObservations(input.filter(o => o.recordingId === recording && o.source.adapterId === 'antigravity'))) {
+      const time = o.sourceTime && Number.isFinite(Date.parse(o.sourceTime)) && !(o.payload as { derived?: unknown }).derived ? new Date(o.sourceTime).toISOString() : '';
+      if (time > clock) clock = time;
+      orderedClocks.set(o.id, clock);
+    }
+  }
   const last = new Map<string, string>();
   const keyed = [...input]
     .sort((a, b) => a.receivedSequence - b.receivedSequence)
     .map((o, i) => {
       const src = `${o.recordingId}/${o.source?.sourceId}`;
-      const t = o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime)) ? new Date(o.sourceTime).toISOString() : last.get(src) ?? '';
+      const t = orderedClocks.get(o.id) ?? (o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime)) ? new Date(o.sourceTime).toISOString() : last.get(src) ?? '');
       if (t) last.set(src, t);
       return { o, t, i };
     });
-  keyed.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : a.i - b.i));
+  keyed.sort((a, b) => {
+    if (a.t !== b.t) return a.t < b.t ? -1 : 1;
+    if (agRecordings.size) {
+      const index = (o: Observation) => Number.parseInt(o.source.recordId?.split(':')[1] ?? '-1', 10);
+      const key = (o: Observation) => o.source.adapterId === 'antigravity' ? Number.isFinite(index(o)) ? index(o) : -1 : o.receivedSequence;
+      return key(a.o) - key(b.o) || a.o.receivedSequence - b.o.receivedSequence || a.i - b.i;
+    }
+    return a.i - b.i;
+  });
   return keyed.map((k) => k.o);
 }
 

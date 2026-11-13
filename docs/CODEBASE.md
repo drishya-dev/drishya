@@ -295,6 +295,8 @@ CI is manually dispatched for explicitly selected final candidates, with checks/
 
 These are informal, not the performance gates. An 83 MB Claude session: 6,930 observations, import 1.3 s, reduce under 1 s, compose ~3 ms per step. 21 MB Codex: 0.2 s. No crashes across the six largest sessions after the fixes on 25 Sep.
 
+Antigravity AG-1 integration-branch probe, 13 Nov: session `99ef88f8`, 43,659,730 bytes / 13,371 distinct steps / 7,670 operations, scratch import 8,530 ms and full projection 6,755 ms; process RSS 377,540,608 bytes after import / 408,027,136 after projection. Cold selected-card readiness was 8,657 ms, subsequent selections 575–950 ms, at 600/1440. These single-run, different-format measurements are not directly comparable to the older September probes and do not certify a performance gate or LIVE-7 latency. Eight private frames and numeric evidence remain under `.local/ag-1/`; no source content is committed.
+
 ## Deliberate deviations from the proposed stack (see STATUS decisions)
 
 | Proposed | Built | Why |

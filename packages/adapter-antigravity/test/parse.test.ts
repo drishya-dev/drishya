@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createParser, descriptor } from '../src/index.ts';
-import { seal } from '@drishya/capture-core';
+import { seal, initialCursor, readJsonl } from '@drishya/capture-core';
 import { reduce } from '../../projection/src/index.ts';
 
 const blobs = new Map<string, string>();
@@ -13,10 +14,14 @@ const row = (step_index: number, type: string, extra: Record<string, unknown> = 
 const call = (name: string, args: Record<string, unknown>) => ({ name, args: Object.fromEntries(Object.entries(args).map(([key, value]) => [key, JSON.stringify(value)])) });
 
 describe('Antigravity transcript', () => {
-  it('covers the generated real-shaped corpus without losing complete records before its cut line', () => {
-    const lines = readFileSync(new URL('../../../fixtures/synthetic/antigravity/corpus.ndjson', import.meta.url), 'utf8').split('\n');
+  it('covers the generated real-shaped corpus without losing complete records before its cut line', async () => {
+    const file = new URL('../../../fixtures/synthetic/antigravity/corpus.ndjson', import.meta.url);
+    const lines = readFileSync(file, 'utf8').split('\n');
     const parser = createParser(ctx);
     const complete = lines.slice(0, -1).map(line => JSON.parse(line));
+    const batch = await readJsonl(fileURLToPath(file), initialCursor(), { acceptUnterminated: false });
+    expect(batch.records.filter(record => record.type === 'record')).toHaveLength(complete.length);
+    expect(batch.cursor.offset).toBeLessThan(batch.size);
     expect(complete.length).toBeGreaterThan(50);
     const observations = complete.flatMap(record => parser.parse(record)).map((raw, receivedSequence) => seal({ raw, recordingId: 'r', adapter: descriptor, sourceId: 's', generation: 0, byteOffset: receivedSequence, observedAt: '2026-11-13T11:00:00Z' }));
     expect(observations.some(o => o.kind === 'unknown')).toBe(false);
@@ -71,6 +76,12 @@ describe('Antigravity transcript', () => {
     const sealed = raw.map((raw, receivedSequence) => ({ ...seal({ raw, recordingId: 'r', adapter: descriptor, sourceId: 's', generation: 0, byteOffset: receivedSequence, observedAt: '2026-11-13T11:00:00Z' }), receivedSequence }));
     expect(JSON.stringify(sealed)).not.toContain('must-not-persist');
     expect(JSON.stringify(reduce('r', sealed, io, options))).not.toContain('must-not-persist');
+  });
+  it('keeps an orphan result metadata-only when its path and protection cannot be established', () => {
+    const raw = createParser(ctx).parse(row(0, 'GENERIC', { content: 'unidentifiable private file content', error: 'unidentifiable private error' })).find(o => o.kind === 'tool.result')!;
+    const sealed = seal({ raw, recordingId: 'r', adapter: descriptor, sourceId: 's', generation: 0, byteOffset: 0, observedAt: '2026-11-13T11:00:00Z' });
+    expect(sealed.availability).toBe('metadata-only');
+    expect(JSON.stringify(sealed)).not.toContain('unidentifiable private');
   });
   it('orders a backwards source clock by recorded step, without altering the timestamp', () => {
     const parser = createParser(ctx);

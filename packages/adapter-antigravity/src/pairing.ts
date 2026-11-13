@@ -40,7 +40,7 @@ export class CallOrder {
 export function unmatched(call: PendingCall, base: Pick<RawObservation, 'agentId' | 'sourceTime'>, _part: number): RawObservation {
   const [recordId, index] = call.id.split(':call:');
   return { ...base, recordId, part: 20000 + Number(index), kind: 'capture.gap', operationId: call.id,
-    availability: 'partial', payload: { reason: 'unsupported-content', detail: 'Antigravity recorded this call without a corresponding result.', derived: 'antigravity-unmatched-call-v1' } };
+    availability: 'partial', payload: { reason: 'unsupported-content', detail: 'Antigravity recorded this call without a final result.', derived: 'antigravity-unmatched-call-v1' } };
 }
 
 /** Replaces the materialized missing-result notice, without inventing an extra source step. */

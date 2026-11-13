@@ -416,7 +416,9 @@ export class Ingestor extends EventEmitter {
       // unused pages rather than retaining the import's native working set.
       if (added && !more && this.store.sourceBytes(recordingId) > 32 * 1024 * 1024) this.store.db.exec('PRAGMA shrink_memory');
       if (added) {
-        if (adapterId === 'antigravity') this.projectionCache.delete(recordingId);
+        if (adapterId === 'antigravity') for (const key of this.projectionCache.keys()) {
+          if (key.split('\u0000')[0]!.split('+').includes(recordingId)) this.projectionCache.delete(key);
+        }
         const ev: ChangeEvent = { type: 'recording', recordingId, revision: cur.revision ?? 0, observationCount: cur.observationCount, added, live: cur.live };
         this.emit('change', ev);
       }
@@ -430,7 +432,7 @@ export class Ingestor extends EventEmitter {
 
   private async readSource(adapter: Adapter, src: SourceRow, live: boolean, turnBytes: number | undefined, acceptUnterminated = !live): Promise<{ added: number; gaps: number; more: boolean; missing: boolean; size?: number }> {
     const readPath = adapter.readPath ? await adapter.readPath(src.path) : src.path;
-    const switched = src.cursor.readPath !== undefined && src.cursor.readPath !== readPath;
+    const switched = !!adapter.readPath && (src.cursor.readPath ?? src.path) !== readPath && src.cursor.offset > 0;
     if (switched) this.parsers.delete(src.id);
     let parser = this.parsers.get(src.id);
     if (!parser) {
