@@ -31,6 +31,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| UI-36 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ui-36` | 2026-11-13 | `apps/ui/src/components/ContextEvidence.tsx`, `apps/ui/src/components/context-evidence.css`, `tests/browser/compaction.spec.ts`, `docs/STATUS.md`, `docs/TASKS.md`, `docs/review/ui-36-compaction-seam.md`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
