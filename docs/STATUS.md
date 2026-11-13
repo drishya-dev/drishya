@@ -38,7 +38,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | SHIP-2c | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
 | SHIP-2d | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: an Opus frame review on top of SHIP-18 to SHIP-21; gaps become new items. |
 | SHIP-6 | @yash + Claude Opus 5.5 (review; reassigned 11 Nov, see the P0 execution order) | — | 2026-11-11 | Closed by review, not a build: the eleven COMP-1 rows with evidence. |
-| MAP-3 | @yash + Claude Fable 5.2 | not started; only if possible (Yash, 13 Nov) | 2026-11-12 | The repository map component and a new chip layer. |
 | MOTION-4 | @yash + Gemini 3.8 Flash (Antigravity; taken over from Codex Sol 6.1, 12 Nov: continue `codex/motion-4` in its worktree, last commit 951b638d plus uncommitted edits) | `codex/motion-4` | 2026-11-11 | Whole task resumed after UI-28c, LINK-1 and LAYOUT redo merged, FILES-16 ready #417 and LAYOUT-1c ready #418. Yash explicitly approved up to 20 source/test/docs paths on 11 Nov and isolated open/close lifecycle reservations alongside FINISH-0a/0b, plus Workspace, Screen and peek-tab lifecycles. Shared owners only: ReadingDialog/ProductShell, ProductMenu, Disclosure/dismiss-menus and surface reflow/presence, Modern motion rules and motion-duration tokens; Workspace/Screen/peek mount-return owners, focused units/browser tests, real both-harness/all-palette acceptance and report plus TASKS/STATUS/CONTINUITY. Preserve contents, focus, selection, layout and existing composer spacing; no History arrivals/hover, native policies, evidence/schema, GIT-9 UI consolidation, palette decisions, protected files or hosted dispatch. Draft #403 holds inventory; update that same task PR ready only at whole acceptance. Own worktree/install, latest main integration, two browser workers, one suite at a time; Opus reviews/merges. |
 | SHIP-9 | @harsh + Codex | `codex/ship-9` | 2026-11-09 | Queued for the frozen candidate after November 13. Coordinate version metadata, install guide, release notes and packaging paths when the candidate is selected. Includes Harsh's clean Windows machine install and live-session walkthrough. |
 | SHIP-10 | @harsh + Codex | `codex/ship-10` | 2026-11-09 | Queued after SHIP-9 supplies the candidate. Coordinate the fresh agent review and Yash's human ten-minute pass. The review owns its evidence and completion docs; any fixes use agreed task and file boundaries. |
@@ -56,6 +55,13 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: MAP-3 brainstorm directions for lit files on the map
+
+- Authored `docs/review/map-3-lit-files.md` presenting 3 concrete, zero-idle-cost architectural directions inspired by the Dribbble Personal Memory graph reference, honouring Drishya's quiet-at-rest doctrine, strict reading column clearance, and 600px/1440px desktop responsive rules:
+  1. **Direction A (Spatial Halo & Free-Gutter DOM Chips):** WebGL point shader glow with 2D DOM chip anchored in the unblocked side gutters via `placeLabels` obstacle collision avoidance. 0.00 ms idle cost at rest.
+  2. **Direction B (Constellation Filament & Lateral Rail Tethers):** 1 px gradient spline connecting the last 3 files in traversal order, with hairline SVG tethers docked in the outer margin. 0.00 ms idle cost at rest.
+  3. **Direction C (Peripheral HUD Echo & Directional Ray Vectors):** Zero-canvas HUD echo inside the operation card or toolbar pointing directionally toward off-screen nodes in the 3D constellation. 0.00 ms idle cost.
+- Delivered comparison matrix covering visual premium, reading calm, responsiveness, and idle frame budget for Yash's selection; no product code modified.
 ### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: TEST-3 five browser specs red on clean main
 
 - Diagnosed and fixed the five specs failing on clean main (`tests/browser/classic-refinement.spec.ts:130`, `tests/browser/connected-workspace.spec.ts:148` & `:222`, `tests/browser/passage-layout.spec.ts:114`, and `tests/browser/prose-reference-preview.spec.ts:26` at 600px).
