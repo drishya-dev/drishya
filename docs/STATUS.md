@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TEST-3 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/test-3` | 2026-11-13 | Five browser specs red on main: `tests/browser/classic-refinement.spec.ts`, `tests/browser/connected-workspace.spec.ts`, `tests/browser/passage-layout.spec.ts`, `tests/browser/prose-reference-preview.spec.ts`, plus product fixes if needed. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -57,6 +56,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: TEST-3 five browser specs red on clean main
+
+- Diagnosed and fixed the five specs failing on clean main (`tests/browser/classic-refinement.spec.ts:130`, `tests/browser/connected-workspace.spec.ts:148` & `:222`, `tests/browser/passage-layout.spec.ts:114`, and `tests/browser/prose-reference-preview.spec.ts:26` at 600px).
+- `classic-refinement.spec.ts`: Expanded all reads for `src/checkout/guard.ts` in synthetic demo bundle so the newest read (placed top under FILES-18 newest-first ordering) contains 800 lines, enabling "Next lines" pagination.
+- `connected-workspace.spec.ts`: Corrected expected legend text to match grammatically correct product copy `"1 import"` and `"1 shown import"` (was `"1 imports"`), and updated map approve locator to `.isVisible()`.
+- `passage-layout.spec.ts`: Replaced synchronous wire length check with `expect.poll` (timeout 15s) to allow wire DOM layout frames to settle after cards arrive.
+- `prose-reference-preview.spec.ts`: Minimized repository files drawer overlay at 600px before clicking prose link to prevent `.files-scrim` pointer interception.
+- Verified: All 5 specs pass 3x alone (`--repeat-each=3 --retries=0`, 126/126 passed in 1.5m), `pnpm check:affected` passes (42/42 in 42.6s), and all 5 specs passed in the full 3-worker browser suite with zero retries or skips.
 ### Yash with Claude Sonnet 5.5 — 13 Nov: UI-44 Edit and Write cards show whole lines
 
 - One cause: `modern/reading-windows.css` forced `white-space: pre` and `width: max-content` on `.history .op[data-diff=code] .op-body .diff`, so a wide diff card ran past its allocation behind a horizontal scrollbar. The two rules are removed; `p1.css` already wraps `.history .op-body .diff .ln-tx` (gutter, sign, add/remove background and hanging indent come from the existing flex row; the gutter has `user-select: none`, so copying yields the source line).
