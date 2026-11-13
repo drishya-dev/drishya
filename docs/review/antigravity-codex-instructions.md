@@ -24,7 +24,7 @@ READ FIRST, IN THIS ORDER
 4. docs/CODEBASE.md ("how to add a harness") and packages/adapter-codex (the closest existing adapter).
 
 BRANCHES — THIS WORK STAYS OFF MAIN
-- Create the integration branch `codex/harness-antigravity` from the current origin/main. All Antigravity work merges
+- The integration branch `codex/harness-antigravity` already exists (cut from main on 13 Nov). All Antigravity work merges
   into it, never into main.
 - Each item gets its own branch from the integration branch (`codex/ag-1-adapter`, `codex/ag-2-product`, ...) and its
   own PR whose BASE IS `codex/harness-antigravity`. Open it as a draft after the first commit.
