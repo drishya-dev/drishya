@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { mkdtemp, mkdir, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { appendFile, mkdtemp, mkdir, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -57,6 +57,22 @@ describe('observation allow-list', () => {
 });
 
 describe('summary index', () => {
+  it('incrementally inspects appends, waits for a complete last line and resets a rewritten variant', async () => {
+    const root = await temp(), logs = join(root, 'brain', 'live', '.system_generated', 'logs');
+    await mkdir(logs, { recursive: true });
+    const full = join(logs, 'transcript_full.jsonl'), old = join(logs, 'transcript.jsonl');
+    const row = (step_index: number) => JSON.stringify({ step_index, type: 'USER_INPUT', source: 'USER_EXPLICIT', content: 'Synthetic', created_at: '2026-11-13T10:00:00Z' });
+    await writeFile(full, row(1) + '\n'); await writeFile(old, row(5) + '\n');
+    const adapter = createAntigravityAdapter([root]);
+    expect(await adapter.readPath(full)).toBe(old);
+    await appendFile(full, row(7));
+    expect(await adapter.readPath(full)).toBe(old);
+    await appendFile(full, '\n');
+    expect(await adapter.readPath(full)).toBe(full);
+    expect(await adapter.readPath(full)).toBe(full);
+    await writeFile(full, row(0) + '\n');
+    expect(await adapter.readPath(full)).toBe(old);
+  });
   it('reports an encrypted-only conversation even when no brain directory exists', async () => {
     const root = await temp(); await mkdir(join(root, 'conversations'));
     await writeFile(join(root, 'conversations', 'encrypted.pb'), 'Synthetic opaque bytes; never opened by discovery');

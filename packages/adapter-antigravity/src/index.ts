@@ -3,7 +3,7 @@ import type { Dirent } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
-import { initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser } from '@drishya/capture-core';
+import { initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser, type SourceCursor } from '@drishya/capture-core';
 import { sanitize } from '@drishya/privacy';
 import { defaultRoots, readableRoot, readablePath, conversationId, within, localPath } from './paths.ts';
 import { summaries, type Summary } from './summaries.ts';
@@ -101,16 +101,18 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
 }
 
 interface Scan { lastStep: number; title?: string; pathCounts: Map<string, number> }
+interface Inspection { signature: string; size: number; result: Scan; cursor: SourceCursor }
 function chooseSummary(id: string, captured: Summary | undefined, inspection: Scan): Summary {
   const workspaces = [...(captured?.workspaces ?? [])];
   workspaces.sort((a, b) => [...inspection.pathCounts].reduce((sum, [path, count]) => sum + (within(b, path) ? count : 0) - (within(a, path) ? count : 0), 0));
   return { ...captured, id, workspaces, title: captured?.title ?? inspection.title };
 }
-async function scan(path: string): Promise<Scan> {
-  let cursor = initialCursor();
-  const result: Scan = { lastStep: -1, pathCounts: new Map() };
+async function scan(path: string, previous?: Inspection): Promise<{ result: Scan; cursor: SourceCursor }> {
+  let cursor = previous?.cursor ?? initialCursor();
+  let result: Scan = previous ? { ...previous.result, pathCounts: new Map(previous.result.pathCounts) } : { lastStep: -1, pathCounts: new Map() };
   for (;;) {
     const batch = await readJsonl(path, cursor, { acceptUnterminated: false });
+    if (batch.reset) result = { lastStep: -1, pathCounts: new Map() };
     for (const record of batch.records) {
       if (record.type !== 'record') continue;
       const row = object(record.value);
@@ -124,7 +126,7 @@ async function scan(path: string): Promise<Scan> {
         }
       }
     }
-    if (batch.cursor.offset === cursor.offset || batch.cursor.offset >= batch.size) return result;
+    if (batch.cursor.offset === cursor.offset || batch.cursor.offset >= batch.size) return { result, cursor: batch.cursor };
     cursor = batch.cursor;
   }
 }
@@ -132,7 +134,7 @@ async function scan(path: string): Promise<Scan> {
 export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { diagnostics(): { code: string; message: string }[]; identity(path: string): string; readPath(path: string): Promise<string> } {
   const metadata = new Map<string, Summary>();
   const selected = new Map<string, string>();
-  const inspections = new Map<string, { signature: string; result: Scan }>();
+  const inspections = new Map<string, Inspection>();
   let diagnostics: { code: string; message: string }[] = [];
   function locate(path: string) {
     const absolute = resolve(path);
@@ -146,7 +148,10 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     const info = await stat(path), signature = `${info.size}:${info.mtimeMs}`;
     const cached = inspections.get(path);
     if (cached?.signature === signature) return cached.result;
-    const result = await scan(path); inspections.set(path, { signature, result }); return result;
+    // Appended receipts need only the unread suffix. Rewrites/truncations restart the
+    // inspection; readJsonl also checks the prefix identity before trusting the cursor.
+    const next = await scan(path, cached && info.size > cached.size ? cached : undefined);
+    inspections.set(path, { signature, size: info.size, ...next }); return next.result;
   }
   async function choose(root: string, id: string): Promise<string | undefined> {
     const paths = [];
