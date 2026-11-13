@@ -53,7 +53,7 @@ import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
 import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
-import { measureReadingEdges, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
+import { measureReadingEdges, measureReadingSides, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
 
 const CompareWindow = lazy(() => import('./CompareWindow.tsx').then(m => ({ default: m.CompareWindow })));
 
@@ -204,6 +204,11 @@ function WorkspaceViewer() {
       const bottomValue = `${edges.bottom}px`;
       if (el.style.getPropertyValue('--reading-edge-top') !== topValue) el.style.setProperty('--reading-edge-top', topValue);
       if (el.style.getPropertyValue('--reading-edge-bottom') !== bottomValue) el.style.setProperty('--reading-edge-bottom', bottomValue);
+      const sides = measureReadingSides(el);
+      for (const [name, value] of [['--reading-pad-left', sides?.left], ['--reading-pad-right', sides?.right]] as const) {
+        const next = value === undefined ? '' : `${value}px`;
+        if (el.style.getPropertyValue(name) !== next) { if (next) el.style.setProperty(name, next); else el.style.removeProperty(name); }
+      }
     };
     const resize = new ResizeObserver(update);
     const observed = new Set<Element>();
@@ -231,6 +236,8 @@ function WorkspaceViewer() {
       rootMutation.disconnect();
       el.style.removeProperty('--reading-edge-top');
       el.style.removeProperty('--reading-edge-bottom');
+      el.style.removeProperty('--reading-pad-left');
+      el.style.removeProperty('--reading-pad-right');
     };
   }, [!!projection && !!scene && !!historical, foldersHidden, explore, experience, workingWindow, catalogOpen, historyMode]);
 
