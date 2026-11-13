@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | AG-3 | @yash + Codex | `codex/ag-3-live` | 2026-11-13 | Whole live/task/subagent item into `codex/harness-antigravity`, stacked on ready AG-1 #469 (merge dependency first). New adapter tasks.ts/subagents.ts and tests, adapter index.ts live-safe sections, ingest live test, new antigravity-live real case and README/TASKS/STATUS. AG-1 source is frozen and handed off; AG-2 owns only product identity. Additional existing plumbing, if required, will be documented in the draft PR and agreed before editing. Own frozen install, scratch real imports, prefix/count-only evidence; no native control, old adapters, UI, palette or layout changes. |
-| AG-1 | @yash + Codex | `codex/ag-1-adapter` | 2026-11-13 | Whole item, draft #469 into `codex/harness-antigravity` only. Yash approved up to 30 paths on 13 Nov: new adapter/tests/fixtures; capture-core optional diagnostics/identity/read hooks; ingest registration/package and lockfile; store Antigravity replacement/step-order branches; projection ordering/truth branches and contract/reducer versions; real-case registration/types, generator, schema/CODEBASE/TASKS/STATUS docs and generated goldens if changed. Exact merge sections and rationale in #469/adapter README; preserve concurrent shared-file edits, old adapter behavior and every UI design. Own install, scratch real imports, prefix/count-only reporting. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
 | UI-45 | @yash + Claude Sonnet 5.5 | `claude/ui-45-right-panels-c2d404` | 2026-11-13 | `apps/ui/src/lib/reading-edges.ts`, the side-measurement effect in `Viewer.tsx`, `large-screens.css` only if needed, `tests/browser/reading-column-edges.spec.ts`. TASKS/STATUS. Frames in `.local/ui-45/`. |
 | MAP-4 | @yash + Claude Opus 5.5 | `claude/gifted-austin-952e56` | 2026-11-13 | Map renderer only: `apps/ui/src/map/spatial-map.ts` (and its reading-column quiet-zone code), the map canvas rule in `apps/ui/src/atelier.css`, map tokens in `tokens.css` if needed, a map spec. TASKS/STATUS. Frames in `.local/map-4/`. |
@@ -66,6 +65,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Yash with Codex — 13 Nov: AG-2 Antigravity product identity
 
 - Draft PR #472 into the Antigravity integration branch adds the third harness to Home and search and explicitly keeps native control read-only. Genuine-session counts, 18 automated 600/1440 palette frames, targeted browsers and unit results are in TASKS AG-2; Fable review and AG-1 merge remain pending.
+
+### Yash with Codex — 13 Nov: AG-1 passive Antigravity adapter
+
+- PR #469 targets `codex/harness-antigravity` only; no product merge to main. All 55 readable captures imported into scratch storage (16,455 distinct steps), source files unchanged, genuine canary redacted. Four material cases at both supported widths plus existing-harness frames checked without exposing journal content.
+- Final types, 1,534 units / one existing skip, package verification and 18 named Home/search browsers passed. Broad browsers: 866 pass / 27 skip / six fail plus serial 32 pass / one skip; all six failures reproduced on untouched source base. Exact acceptance, baseline controls and shared merge seams: `packages/adapter-antigravity/README.md`.
+- AG-2 is stacked and owns product identity; AG-3 owns live tasks/children. AG-4 follows TASKS' later same-conversation image-byte decision (superseding the initial reference-only recommendation). Browser/MCP native captures remain AG-5 acceptance gaps. Fable must merge AG-1 before its stacked dependents; no PR was merged by Codex.
 
 ### Yash with Claude Sonnet 5.5 (started on Opus 5.5) — 13 Nov: UI-43 composer model menu
 
