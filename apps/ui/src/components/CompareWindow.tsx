@@ -15,7 +15,7 @@ import {loadReviewMarks,previousReviewNote,reviewMarkId,saveReviewMarks,updateRe
 import {buildHandoff,type HandoffFile} from '../lib/changes-handoff.ts';
 import {GitPatchReader} from './GitPatchReader.tsx';
 import {FileIcon} from './FileIcon.tsx';
-import {InterfaceGlyph} from './InterfaceGlyph.tsx';
+import {InterfaceGlyph} from './InterfaceGlyph.tsx'; import {plural,pluralWord} from '../lib/plural.ts';
 import './compare-window.css';
 
 // GIT-8, named Changes by GIT-9. It replaces the header's old Changes: two branches (or a pull request against its base) from their merge-base, with
@@ -324,18 +324,18 @@ function CompareContent({id}:{id:string}) {
       </div>
       {(error||saveError)&&<p className="compare-note" role="alert">{error??saveError}</p>}
       {checking&&<p className="compare-note" role="status">Checking reviewed content…</p>}
-      <div className="compare-body">
+      <div className={`compare-body${!loading&&!error&&!rows.length&&!row&&!(preset==='uncommitted'&&snapshot?.omissions?.length)?' compare-body-empty':''}`}>
         <aside className="compare-files" aria-label="Changed files" aria-busy={loading||filtering&&!evidenceReady}>
           {preset==='pr'&&!pull?<p className="compare-note">{pulls?.status==='ready'&&!pulls.pulls.length?'No open pull requests.':'Choose a pull request.'}</p>
           :loading&&!rows.length?<p className="compare-note" role="status">Reading…</p>
           :<>
             {preset==='uncommitted'&&snapshot?.totalAllowed!==undefined&&snapshot.totalAllowed>snapshot.limit&&<nav className="compare-pages" aria-label="Changed file pages">
               <button className="btn ghost" disabled={loading||checking||!snapshot.pageStart} onClick={()=>{setPageStart(Math.max(0,(snapshot.pageStart??0)-snapshot.limit));setSelected('');}}>Previous files</button>
-              <span>{(snapshot.pageStart??0)+1}–{Math.min((snapshot.pageStart??0)+snapshot.limit,snapshot.totalAllowed)} of {snapshot.totalAllowed} eligible paths</span>
+              <span>{(snapshot.pageStart??0)+1}–{Math.min((snapshot.pageStart??0)+snapshot.limit,snapshot.totalAllowed)} of {snapshot.totalAllowed} eligible {pluralWord(snapshot.totalAllowed,'path')}</span>
               <button className="btn ghost" disabled={loading||checking||(snapshot.pageStart??0)+snapshot.limit>=snapshot.totalAllowed} onClick={()=>{setPageStart((snapshot.pageStart??0)+snapshot.limit);setSelected('');}}>Next files</button>
             </nav>}
             {filtering&&evidenceReady&&visible.length<rows.length&&<p className="compare-scope">{visible.length?`The ${visible.length} ${visible.length===1?'file':'files'} this session edited`:'This session recorded no edit to these files'} · <button className="compare-link" onClick={()=>setSessionOnly(false)}>Show all {rows.length}</button></p>}
-            {preset==='session'&&!sessionOnly&&rows.length>0&&<p className="compare-scope">All {rows.length} files on this branch · <button className="compare-link" onClick={()=>setSessionOnly(true)}>Only this session’s</button></p>}
+            {preset==='session'&&!sessionOnly&&rows.length>0&&<p className="compare-scope">{rows.length===1?'1 file on this branch':`All ${rows.length} files on this branch`} · <button className="compare-link" onClick={()=>setSessionOnly(true)}>Only this session’s</button></p>}
             {groups.map(group=>{
               const list=visible.filter(item=>item.group===group.key);
               if(!list.length)return null;
@@ -344,15 +344,15 @@ function CompareContent({id}:{id:string}) {
                 {list.map(item=><FileRow key={item.path} row={item} active={item.path===row?.path} entry={evidence?.[item.path]} name={agentByName} jump={jump} choose={()=>{setSelected(item.path);setSideChoice(undefined);}} mark={markStateOf(item)}/>)}
               </div>;
             })}
-            {!loading&&!error&&!rows.length&&(preset==='pr'&&pull||preset!=='pr')&&<p className="compare-note">{preset==='uncommitted'?'No uncommitted changes.':preset==='session'&&result&&result.head.tip===result.base.tip?`${headName==='Detached HEAD'?'This session’s checkout':`This session’s branch ${headName}`} is at the same commit as ${baseName}. Its work in progress is under Uncommitted.`:result?'These two sides have no differing files.':''}</p>}
+            {!loading&&!error&&!rows.length&&(preset==='pr'&&pull||preset!=='pr')&&<div className="compare-note compare-no-changes"><p>{preset==='uncommitted'?'No uncommitted changes.':preset==='session'&&result&&result.head.tip===result.base.tip?`${headName==='Detached HEAD'?'This session’s checkout':`This session’s branch ${headName}`} is at the same commit as ${baseName}. Its work in progress is under Uncommitted.`:result?'These two sides have no differing files.':''}</p>{preset==='session'&&result&&result.head.tip===result.base.tip&&<button className="btn small compare-uncommitted-jump" onClick={()=>{setPreset('uncommitted');setSelected('');}}>Show uncommitted</button>}</div>}
             {preset==='uncommitted'&&snapshot?.omissions?.map(item=><div className="compare-omission" key={item.path}><strong>{item.path}</strong><span>{item.reason==='content-limit'?'Patch exceeds the remaining 1 MiB response budget':'Patch exceeds the Git process output limit'}</span><button className="btn ghost" onClick={()=>{useApp.setState({compareOpen:false});useApp.getState().set({currentFile:item.path});}}>Open current file instead</button></div>)}
-            {preset==='uncommitted'&&snapshot&&snapshot.totalAllowed===undefined&&snapshot.omitted>0&&<p className="compare-note">{snapshot.omitted} paths omitted: protected or content / 50-file limit.</p>}
-            {preset==='uncommitted'&&!!snapshot?.protectedCount&&<p className="compare-note">{snapshot.protectedCount} protected paths excluded.</p>}
-            {result&&result.omitted>0&&<p className="compare-note">{result.omitted} more files are not listed.</p>}
+            {preset==='uncommitted'&&snapshot&&snapshot.totalAllowed===undefined&&snapshot.omitted>0&&<p className="compare-note">{plural(snapshot.omitted,'path')} omitted: protected or content / 50-file limit.</p>}
+            {preset==='uncommitted'&&!!snapshot?.protectedCount&&<p className="compare-note">{plural(snapshot.protectedCount,'protected path')} excluded.</p>}
+            {result&&result.omitted>0&&<p className="compare-note">{result.omitted} more {pluralWord(result.omitted,'file')} {result.omitted===1?'is':'are'} not listed.</p>}
             {result&&result.protectedCount>0&&<p className="compare-note">{result.protectedCount} protected {result.protectedCount===1?'path is':'paths are'} left out.</p>}
           </>}
         </aside>
-        <div className="compare-reader">
+        {(row||loading||error||rows.length>0||(preset==='uncommitted'&&!!snapshot?.omissions?.length))&&<div className="compare-reader">
           {row?<>
             <header className="compare-file-header">
               <span className="compare-file-title"><strong title={row.path}>{fileName(row.path)}</strong>{fileFolder(row.path)&&<small title={row.path}>{fileFolder(row.path)}</small>}</span>
@@ -390,8 +390,8 @@ function CompareContent({id}:{id:string}) {
                 :row.git?.status.trim()==='??'?<p className="compare-note">Git does not track this file yet, so there is no patch. Open it on disk to read it.</p>
                 :<p className="compare-note" role="status">Reading the change…</p>}
             </div>}
-          </>:<p className="compare-note compare-empty">{visible.length||loading?'':'Nothing to read here.'}</p>}
-        </div>
+          </>:null}
+        </div>}
       </div>
     </>}
   </section>;

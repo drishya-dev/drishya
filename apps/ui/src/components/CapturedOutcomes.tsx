@@ -1,4 +1,4 @@
-import {useId,useMemo,useState,type ReactNode} from 'react';
+import {useId,useMemo,useState,type ReactNode} from 'react'; import {plural} from '../lib/plural.ts';
 import {capturedOutcomes,type CapturedOutcome,type OutcomeState} from '../lib/captured-outcomes.ts';
 import {testTiles} from '../lib/test-tiles.ts';
 import './captured-outcomes.css';
@@ -38,7 +38,7 @@ function RunOutcomes({run,onFailure}:{run:CapturedOutcome;onFailure?:()=>void}){
    }}>
     {cases.map((item,index)=><button key={key(item)} type="button" className={`case-bar ${item.state}`} tabIndex={selected?key(item)===selected?0:-1:index===0?0:-1} aria-label={`${item.index?`Test ${item.index}`:'Case'}: ${item.state} · ${item.name}`} title={`${item.state} · ${item.name} · output line ${item.line}`} aria-pressed={key(item)===selected} aria-controls={detail} onPointerEnter={()=>setPeek(key(item))} onFocus={()=>setPeek(key(item))} onClick={event=>{event.stopPropagation();setSelected(value=>value===key(item)?'':key(item));}}><span className={`verification-tile ${item.state}`} aria-hidden="true"/></button>)}
    </div>
-   <div className="case-peek" title={preview?.name}>{preview?`${preview.index?`#${preview.index} · `:''}${preview.state} · ${preview.name}`:`${cases.length} results · hover to read, click to open`}</div>
+   <div className="case-peek" title={preview?.name}>{preview?`${preview.index?`#${preview.index} · `:''}${preview.state} · ${preview.name}`:`${plural(cases.length,'result')} · hover to read, click to open`}</div>
   </>:<div className="verification-track" aria-hidden="true">{entries.flatMap(([state,count])=>Array.from({length:Math.min(32,count)},(_,index)=><span key={`${state}-${index}`} title={`${count} ${state} · grouped summary; individual identity unavailable`} className={`verification-tile ${state}`}/>))}</div>}
   <div className="verification-caption" title={`Counted from the command's output: ${basis}${total>displayed?` · ${total-displayed} more in the counts`:''}`}>{entries.map(([state,count])=>state==='failed'&&onFailure?<button key={state} className="bad" onClick={event=>{event.stopPropagation();onFailure();}}>{count.toLocaleString()} failed · inspect assertions</button>:<span key={state} className={state==='passed'?'good':state==='failed'||state==='errors'?'bad':'muted'}>{count.toLocaleString()} {state}</span>)}{!total&&<span className="muted">0 reported tests</span>}</div>
   {run.warnings!==undefined&&<div className="verification-basis">{run.warnings.toLocaleString()} runner warning{run.warnings===1?'':'s'}</div>}

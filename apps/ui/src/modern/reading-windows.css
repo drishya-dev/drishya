@@ -156,12 +156,12 @@
 :root[data-ui-version=modern] .workspace-navigation>header { position:absolute;right:6px;top:6px;padding:0;border:0;background:transparent;z-index:1; }
 :root[data-ui-version=modern] .workspace-navigation>header>h2 { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
 :root[data-ui-version=modern] .workspace-navigation-query {width:100%;margin:0;padding:14px 48px 14px 16px;border-radius:0;font:var(--text-md)/1.5 var(--sans)} :root:where(:not([data-ui-skin=clarity]))[data-ui-version=modern] .workspace-navigation-query { border:0!important; border-bottom:1px solid var(--line)!important; background:transparent!important; box-shadow:none!important; outline:0!important; }
-:root[data-ui-version=modern] .workspace-navigation-results { padding:6px; }
-:root[data-ui-version=modern] .workspace-navigation-results>button { min-height:36px;padding:6px 10px;gap:10px; }
-:root[data-ui-version=modern] .workspace-navigation-results>button>span:last-child { display:flex;align-items:baseline;gap:10px;min-width:0;flex:1; }
+:root[data-ui-version=modern] .workspace-navigation-results { padding:6px 8px; }
+:root[data-ui-version=modern] .workspace-navigation-results>button { min-height:36px;padding:6px 10px;gap:10px; } :root[data-ui-version=modern] .workspace-navigation-heading { padding:8px 10px 4px; color:var(--t3); font:var(--text-2xs)/1.4 var(--sans); letter-spacing:.05em; text-transform:uppercase; } :root[data-ui-version=modern] .workspace-navigation-heading:not(:first-child) { margin-top:4px; padding-top:10px; border-top:1px solid var(--line); }
+:root[data-ui-version=modern] .workspace-navigation-results>button>.navigation-command-text { display:flex;align-items:baseline;gap:10px;min-width:0;flex:1; }
 :root[data-ui-version=modern] .workspace-navigation-results strong { flex:none;max-width:60%;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); }
 :root[data-ui-version=modern] .workspace-navigation-results small { min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font:var(--text-xs)/1.5 var(--sans); }
-:root[data-ui-version=modern] .navigation-command-icon { display:none; }
+:root[data-ui-version=modern] .navigation-command-icon { display:grid;place-items:center;width:16px;height:16px;flex:none;color:var(--t3); } :root[data-ui-version=modern] .navigation-command-icon svg { width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round; } :root[data-ui-version=modern] .workspace-navigation-results>button[aria-selected=true] .navigation-command-icon { color:var(--t1); } :root[data-ui-version=modern] .navigation-command-shortcut { margin-left:auto;flex:none;padding:1px 6px;border:1px solid var(--line);border-radius:var(--round-xs);background:var(--s2);color:var(--t2);font:var(--text-2xs)/1.4 var(--mono); }
 :root[data-ui-version=modern] .workspace-navigation-help { padding:8px 16px;font-size:var(--text-2xs); }
 
 /* AUDIT-1, Impeccable's detector: prose holds a reading measure and does not end on one word; line numbers stay legible on a tinted diff row. */

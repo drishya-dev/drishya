@@ -1,4 +1,4 @@
-import {useId,useMemo,useRef,useState} from 'react';
+import {useId,useMemo,useRef,useState} from 'react'; import {pluralWord} from '../lib/plural.ts';
 import {OriginalToggle} from './OriginalToggle.tsx';
 import {capturedResources,capturedDocuments,resourceHref,type ResourceSelection,type DocumentSelection} from '../lib/captured-resources.ts';
 import {ReadingDialog} from './ProductShell.tsx';
@@ -35,7 +35,7 @@ function ResourceReader({resources,original,context,close}:{resources:ResourceSe
      </>:<p className="material-context">{item.binary?'Binary body is present in Original result; this reader does not decode it.':'No text body in this reference.'}{href?' Opening the link shows its current destination.':''}</p>}
     </div>}
    </div>
-   </>}<div className="resource-reader-footer"><span>{visible.length} of {resources.items.length} references{resources.limited?' · bounded preview; original result has remaining fields':''}</span><span role="status">{copied}</span></div>
+   </>}<div className="resource-reader-footer"><span>{visible.length} of {resources.items.length} {pluralWord(resources.items.length,'reference')}{resources.limited?' · bounded preview; original result has remaining fields':''}</span><span role="status">{copied}</span></div>
   </div>
  </ReadingDialog>;
 }

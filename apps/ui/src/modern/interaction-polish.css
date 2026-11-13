@@ -24,6 +24,17 @@
 :root[data-ui-version=modern] .workspace-utilities :is(.usage-peek,.prompt-menu)[open]>summary::before {content:'⌄';}
 :root[data-ui-version=modern] .workspace-utilities summary::-webkit-details-marker {display:none;}
 :root[data-ui-version=modern] .workspace-utilities .usage-peek>div {padding:8px 10px 12px;}
+:root[data-ui-version=modern] .modern-session-header .workspace-utilities .usage-token-details>summary {padding:8px 0;min-height:var(--control-md);justify-content:space-between;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-popup {width:100%;max-width:100%;box-sizing:border-box;padding:6px 2px 4px;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-navigation {flex-wrap:wrap;gap:6px;width:100%;min-width:0;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-chapters {order:10;flex:1 0 100%;flex-direction:column;gap:4px;max-height:170px;overflow-y:auto;overflow-x:hidden;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-chapters button {width:100%;max-width:100%;min-width:0;align-items:baseline;box-sizing:border-box;padding:6px 8px;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-chapters .prompt-copy {flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-activity {padding-top:8px;min-width:0;}
+:root[data-ui-version=modern] .workspace-utilities .prompt-activity .activity {flex-direction:column;align-items:stretch;gap:6px;width:100%;min-width:0;}
+:root[data-ui-version=modern] .workspace-utilities .activity-jump {flex-wrap:wrap;gap:4px;width:100%;max-width:100%;}
+:root[data-ui-version=modern] .workspace-utilities .activity-strip {width:100%;min-width:0;flex:none;}
+:root[data-ui-version=modern] .workspace-utilities .activity-count {white-space:normal;}
 :root[data-ui-version=modern]:not([data-input-modality="pointer"]) .workspace-utilities :is(button,a,summary):focus-visible {
   outline:1px solid var(--focus-ring);outline-offset:-2px;background:var(--s2);color:var(--t1);
 }

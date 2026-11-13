@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-2h | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/ship-2h` | 2026-11-12 | `apps/ui/src/components/` & `apps/ui/src/` (dialogs, Session details, session menu, Usage, plurals, settings icons, grouped command palette, Changes empty This session), `tests/browser/ship-2h-surfaces.spec.ts`, `docs/review/ship-2h-surfaces.md`, `docs/STATUS.md`, `docs/TASKS.md`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -57,6 +56,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-2h opened surfaces finished
+
+- Sized `.settings-dialog` (`settings.css`) and `.review-insights-dialog` (`review-insights.css`) to `height: fit-content` up to their viewport max-height caps (`Playback`: 311 px at 600 px / 485 px at 1440 px; `Review packet`: 493–503 px before preview).
+- Updated `Session details` (`packages/store/src/index.ts`, `Viewer.tsx`, `workflow-finishing.css`) with human harness names (`Claude Code`, `Codex`), separator-wrapped paths (`<wbr />`), and 120-char `…` title clipping; constrained `Navigate history` inside the Session menu (`interaction-polish.css`); aligned `Usage` -> `Token details` flush (`RecordedUsage.tsx`, `recorded-usage.css`).
+- Added `plural`/`pluralWord` (`apps/ui/src/lib/plural.ts`) across UI and scene summaries (`1 file changed · 1 test run`, `1 capture gap`), keyed Settings section icons by label (`UIVersions.tsx`), grouped the Command Palette under `This session`, `Review`, `Repository`, and `Workspace` with SVG icons and shortcuts (`WorkspaceNavigation.tsx`), and added a `Show uncommitted` jump when `Changes -> This session` has no commits (`CompareWindow.tsx`, `compare-window.css`).
+- Verified on Edge (`--retries=0`), unit tests, `typecheck`, `ui:build`, and real local sessions (`claude-code rec_6fd7fc3d`, `codex rec_aba0ec58`) at 600 & 1440 px in Jet Black, Midnight, and Paper ([review record](review/ship-2h-surfaces.md)).
 ### Yash with Gemini 3.8 Flash (Antigravity) — 12 Nov: SHIP-6f Notes gives the route
 
 - Empty Notes with a selected or expanded step (`expandedOp ?? selectedOp`) now offers `Add a note to the selected step` and opens/focuses `textarea[aria-label="Note on this step"]` in one click (`openStepNoteEditor` in `StepNotes.tsx`, shared with `ProductMenu.tsx` and shortcut `a` in `ReadingKeys.tsx`).

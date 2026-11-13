@@ -15,3 +15,12 @@ it('redacts notes again at the export boundary and excludes resolved questions',
   const questions=[{id:'one',operationId:'op',sequence:1,title:'Note',question:'sk-proj-abcdefghijklmnopqrstuvw0123456789',owner:'',status:'open' as const,createdAt:'',updatedAt:''},{id:'two',operationId:'op',sequence:1,title:'Resolved',question:'DO_NOT_EXPORT_RESOLVED',owner:'',status:'resolved' as const,createdAt:'',updatedAt:''}];
   const packet=reviewPacket(reviewInsights(p),questions);expect(packet).not.toContain('abcdefghijklmnop');expect(packet).not.toContain('DO_NOT_EXPORT_RESOLVED');expect(packet).toContain('Open reviewer questions (1)');
 });
+it('uses singular nouns when packet facts have count 1',()=>{
+  const single={...p,operations:[{id:'edit-1',agentId:'agent',kind:'edit' as const,tool:'edit',title:'Edit a.ts',titleProvenance:{kind:'captured' as const,observationIds:[]},origin:{type:'native' as const,tool:'edit'},status:'ok' as const,startSequence:1,paths:[{path:'a.ts',role:'write' as const}],detail:{kind:'edit' as const,path:'a.ts',hunks:[],created:false,reconstruction:'full' as const},artifactIds:[],observationIds:[],classification:{kind:'derived' as const,rule:'test',observationIds:[]}},{id:'test-1',agentId:'agent',kind:'test' as const,tool:'test',title:'Run tests',titleProvenance:{kind:'captured' as const,observationIds:[]},origin:{type:'native' as const,tool:'test'},status:'ok' as const,startSequence:2,paths:[],detail:{kind:'test' as const,command:'pnpm test'},artifactIds:[],observationIds:[],classification:{kind:'derived' as const,rule:'test',observationIds:[]}}],timeline:[{type:'op-start' as const,id:'s1',operationId:'edit-1',sequence:1,agentId:'agent'},{type:'op-start' as const,id:'s2',operationId:'test-1',sequence:2,agentId:'agent'}]};
+  const packet=reviewPacket(reviewInsights(single),[]);
+  expect(packet).toContain('1 file changed · 0 failed · 1 test run');
+  expect(packet).toContain('1 capture gap');
+  expect(packet).not.toContain('1 files changed');
+  expect(packet).not.toContain('1 test runs');
+  expect(packet).not.toContain('1 gaps captured');
+});

@@ -311,7 +311,7 @@ describe('privacy policy upgrade scrub (SEC-2)', () => {
     expect(cleanedBlob).not.toContain(gl);
 
     expect(store.getRecording('rec_a')!.title).toBe('Setup [REDACTED:pypi-token]');
-    expect(store.getRecording('rec_straddle')!.title).toBe(('A'.repeat(100) + ' [REDACTED:pypi-token]').slice(0, 120));
+    expect(store.getRecording('rec_straddle')!.title).toBe(`${('A'.repeat(100) + ' [REDACTED:pypi-token]').slice(0, 119).trimEnd()}…`);
     expect(store.getProjection('rec_a')).toBeUndefined();
     expect(JSON.stringify(store.getGenerated('rec_a', 'k1'))).not.toContain(sg);
     expect(store.getGraph('/repo')).not.toContain(pypi);
@@ -332,5 +332,17 @@ describe('privacy policy upgrade scrub (SEC-2)', () => {
       }
       expect(content.includes(Buffer.from('py' + 'pi-AgE'))).toBe(false);
     }
+  });
+
+  it('adds an ellipsis when clipping long fallback titles at 120 characters', () => {
+    store.upsertRecording({ id: 'rec_long', adapterId: 'claude-code', harness: 'claude-code', sourcePath: join(dir, 'long.jsonl') });
+    store.upsertSource({ id: 'src_long', recordingId: 'rec_long', path: join(dir, 'long.jsonl'), role: 'main', cursor });
+    const text = 'Investigate the long fallback title formatting inside the session details dialog so words truncated past the limit end cleanly with an ellipsis';
+    store.appendObservations('rec_long', 'src_long', cursor, [
+      { ...obs('obs_long'), recordingId: 'rec_long', payload: { text } },
+    ]);
+    const meta = store.captureMetadata('rec_long');
+    expect(meta.title).toBe(`${text.slice(0, 119).trimEnd()}…`);
+    expect(meta.title!.length).toBeLessThanOrEqual(120);
   });
 });

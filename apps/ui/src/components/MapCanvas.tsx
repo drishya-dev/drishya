@@ -1,7 +1,7 @@
 // Spatial WebGL points/edges with a flat low-resource fallback. Every label is DOM.
 // Only opt-in orbit runs continuously, at a bounded rate and outside manual navigation.
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural, pluralWord } from '../lib/plural.ts';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
@@ -625,7 +625,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
           <div className="map-tip-path">{tip.node.path}</div>
           <div className="muted">
-            {tip.node.members ? `${tip.node.members.length} files · ` : tip.node.lines ? `${tip.node.lines} lines · ` : ''}
+            {tip.node.members ? `${plural(tip.node.members.length, 'file')} · ` : tip.node.lines ? `${plural(tip.node.lines, 'line')} · ` : ''}
             {heatMap.get(tip.node.id) ? 'touched in this run' : 'not touched in this run'}
           </div>
           {tipMembers && <ul className="map-tip-members" aria-label="Files in this group">{tipMembers.paths.map(path => <li key={path}>{path}</li>)}{tipMembers.more > 0 && <li className="muted">+ {tipMembers.more} more</li>}</ul>}
@@ -633,7 +633,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       )}
       {graph && explore && (
         <div className="map-legend">{connections?.root&&graph.temporal==='current'&&<span>Importer → dependency · up to40 static imports</span>}
-          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{connectionsOpen && neighborhood ? `${viewGraph?.nodes.length} neighborhood files · ${viewGraph?.edges.length} shown imports` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
+          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${plural(displayNodes.length, 'map item')} · zoom for detail`}>{connectionsOpen && neighborhood ? `${plural(viewGraph?.nodes.length ?? 0, 'neighborhood file')} · ${plural(viewGraph?.edges.length ?? 0, 'shown import')}` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} ${pluralWord(graph.nodes.length, 'observed file')} · ${plural(viewGraph?.edges.length ?? 0, 'shown import')}` : `${plural(graph.nodes.length, 'file')} · ${plural(graph.edges.length, 'import')}`}</span>
 
           {!!graph.stats.nestedCheckouts&&<span title="Directories with their own .git (agent worktrees, submodules, nested clones) are other checkouts, not this workspace.">{graph.stats.nestedCheckouts} nested checkout{graph.stats.nestedCheckouts===1?'':'s'} not shown</span>}
           <MapActions graph={graph} />
