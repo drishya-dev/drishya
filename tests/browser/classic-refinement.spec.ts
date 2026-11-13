@@ -129,10 +129,14 @@ test('a search hit opens its exact line instead of a no-source dead end', async 
 
 test('reading Back restores a page, search, selected line, wrap and scroll after a dependency detour', async ({ page }) => {
   const sample = JSON.parse(readFileSync(resolve('apps/ui/public/demo/bundle.json'), 'utf8'));
-  const read = sample.projection.operations.find((op: any) => op.detail.kind === 'read' && op.detail.path === 'src/checkout/guard.ts');
-  const artifact = sample.projection.artifacts.find((item: any) => item.id === read.detail.excerptArtifactId);
-  sample.artifactText[artifact.id] = Array.from({ length: 800 }, (_, n) => `export const line_${n + 1} = ${n + 1};`).join('\n');
-  artifact.range = { start: 1, end: 800 };
+  const reads = sample.projection.operations.filter((op: any) => op.detail?.kind === 'read' && op.detail?.path === 'src/checkout/guard.ts');
+  for (const read of reads) {
+    const artifact = sample.projection.artifacts.find((item: any) => item.id === read.detail.excerptArtifactId);
+    if (artifact) {
+      sample.artifactText[artifact.id] = Array.from({ length: 800 }, (_, n) => `export const line_${n + 1} = ${n + 1};`).join('\n');
+      artifact.range = { start: 1, end: 800 };
+    }
+  }
   await page.route('**/demo/bundle.json', route => route.fulfill({ contentType: 'application/json', body: JSON.stringify(sample) }));
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(url());

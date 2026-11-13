@@ -117,10 +117,10 @@ for (const recording of ['claude', 'codex', 'wrap'] as const) for (const width o
   // The row structure is polled with the violations: under load the first clean-looking frame can still be a half-arrived one.
   const frame = async () => { const s = await snapshot(page); return { found: violations(s), rows: s.passages.map(p => rowsOf(p.cards).map(r => r.length).join('/')) }; };
   await expect.poll(frame, { timeout: 15_000, intervals: [250, 250, 500, 1000] }).toEqual({ found: [], rows: GOLDEN[recording][width] });
-  const { passages, wires } = await snapshot(page);
+  const { passages } = await snapshot(page);
   const pairs = passages.reduce((n, p) => n + Math.max(0, p.cards.length - 1), 0);
   expect(pairs).toBeGreaterThan(0);
-  expect(wires).toHaveLength(pairs);
+  await expect.poll(async () => (await snapshot(page)).wires.length, { timeout: 15_000 }).toBe(pairs);
   if (recording === 'wrap' && width === 1920) await page.screenshot({path:resolve(`.local/read4-${process.env.READ4_PHASE??'after'}-1920.png`)});
 });
 
