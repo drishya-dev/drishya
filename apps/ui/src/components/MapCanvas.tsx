@@ -7,7 +7,7 @@ import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 import { groupMemberPaths, mapDetail, type MapGroup } from '../lib/map-detail.ts';
-import { QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
+import { MAP_REST_ALPHA, QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
 import { placeLabels, type LabelCandidate } from '../lib/map-labels.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
@@ -297,7 +297,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     if (spatialActive && spatialCanvas.current && renderer.current && size.w && size.h) {
       const target = spatialCanvas.current;
       if (target.width !== c.width || target.height !== c.height) { target.width = c.width; target.height = c.height; }
-      const opacity = explore ? .96 : .68;
+      const opacity = explore ? .96 : MAP_REST_ALPHA;
       const vertex = (node: MapGroup): MapVertex => {
         const p = project(node);
         return { ...p, size: (node.members ? Math.min(8, 4 + Math.log2(node.members.length) * .4) : 2.5) * p.scale, alpha: (node.opacity ?? 1) * opacity };
@@ -342,7 +342,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
-      const base = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : .68);
+      const base = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : MAP_REST_ALPHA);
       if (base < .02) continue;
       if (!zones.length) {
         g.globalAlpha = base;
@@ -392,7 +392,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       // Group detail crossfades without semantic rings or a changed file position.
-      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : .68) * (zones.length && !sharpIds.has(n.id) ? quietFactor(p.x, p.y, zones, QUIET_NODE_FLOOR) : 1);
+      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : MAP_REST_ALPHA) * (zones.length && !sharpIds.has(n.id) ? quietFactor(p.x, p.y, zones, QUIET_NODE_FLOOR) : 1);
       g.beginPath();
       const radius = n.members ? Math.min(4.5, 2 + Math.log2(n.members.length) * .25) : hoveredPath === n.id ? r0 + .5 : r0;
       g.arc(p.x, p.y, radius, 0, Math.PI * 2);

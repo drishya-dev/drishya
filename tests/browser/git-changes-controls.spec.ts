@@ -74,6 +74,9 @@ test('Changes retains a readable header and contained menus at every supported w
     const bounds=await menu.boundingBox();expect(bounds!.x).toBeGreaterThanOrEqual(0);expect(bounds!.x+bounds!.width).toBeLessThanOrEqual(width);
     await page.keyboard.press('Escape');await expect(menu).toBeHidden();
     await expect(reader.getByRole('button',{name:'Open on disk',exact:true})).toBeVisible();
+    // SHIP-2d: the file's name is never squeezed to a letter by the side switch and actions beside it.
+    const title=await reader.locator('.compare-file-title strong').evaluate(el=>({shown:el.getBoundingClientRect().width,natural:el.scrollWidth}));
+    expect(title.shown+1).toBeGreaterThanOrEqual(Math.min(title.natural,96));
     await page.screenshot({path:`.local/ui5-controls-${width}.png`});
   }
 });

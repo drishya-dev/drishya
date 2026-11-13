@@ -128,28 +128,32 @@ test('buttons are pills in every palette, and Jet Black\'s main action is the cr
   expect(await approve.evaluate(el => getComputedStyle(el).backgroundColor), 'Midnight keeps its own primary').not.toBe(cream);
 });
 
-test('Jet Black\'s canvas sits on the site\'s dot ground; other palettes keep theirs; low resource drops it (UI-39 part 3)', async ({ page }) => {
+test('Jet Black\'s canvas sits on a plain, even dot ground painted on the canvas itself; other palettes keep theirs; low resource drops it (MAP-4)', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.fulfill({ json: { saved: true, revisions: {} } }));
   await page.goto(server.launchUrl);
   await expect(page.locator('.mh-home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern#/r/${id}`);
   await expect(page.locator('.history article.op').first()).toBeVisible();
-  // The site's dots, still: a cream fill on the canvas's own layer, masked by a 288 px tile of 4 px dots on a staggered 12 px grid.
-  const ground = () => page.locator('.connected-workspace').first().evaluate(el => { const b = getComputedStyle(el, '::before'); return { display: b.display, mask: b.maskImage || b.getPropertyValue('-webkit-mask-image'), size: b.maskSize || b.getPropertyValue('-webkit-mask-size'), z: b.zIndex, events: b.pointerEvents, own: getComputedStyle(el).backgroundImage }; });
+  // One uniform grid: a single dot gradient on a straight 12 px tile, as the canvas's own background (it does not scroll, so
+  // scrolling history never repaints it). No glow, no fade, no stagger, no pseudo-element, no mask, no SVG.
+  const ground = () => page.locator('.connected-workspace').first().evaluate(el => {
+    const own = getComputedStyle(el), before = getComputedStyle(el, '::before');
+    return { image: own.backgroundImage, size: own.backgroundSize, beforeContent: before.content, beforeMask: before.maskImage || before.getPropertyValue('-webkit-mask-image') };
+  });
   await palette(page, 'jet');
   const jet = await ground();
-  expect(jet.display).toBe('block');
-  expect(jet.mask).toContain('data:image/svg+xml');
-  expect(jet.size).toBe('288px 288px');
-  expect(jet.z, 'behind everything on the canvas').toBe('-1');
-  expect(jet.events).toBe('none');
-  expect(jet.own, 'the old grid is gone').toBe('none');
+  expect(jet.image.match(/radial-gradient/g)?.length, 'one gradient: the dots, nothing else').toBe(1);
+  expect(jet.image, 'a 0.75 px dot with a soft edge').toContain('1.35px');
+  expect(jet.size, 'a straight 12 px grid').toBe('12px 12px');
+  expect(jet.image).not.toContain('svg');
+  expect(['none', 'normal'], 'no layer behind the canvas').toContain(jet.beforeContent);
+  expect(['none', '']).toContain(jet.beforeMask);
   await palette(page, 'midnight');
-  expect((await ground()).display, 'Midnight keeps its own ground').toBe('none');
+  expect((await ground()).image, 'Midnight keeps its own ground').not.toContain('1.35px');
   await palette(page, 'jet');
   await page.evaluate(() => { document.documentElement.dataset.lowResource = '1'; });
-  expect((await ground()).display, 'low resource drops it').toBe('none');
+  expect((await ground()).image, 'low resource drops it').toBe('none');
 });
 
 test('surfaces nested in a panel keep a fill and lose their outline; a field shows it again on focus; nothing moves (UI-39 part 5)', async ({ page }) => {
