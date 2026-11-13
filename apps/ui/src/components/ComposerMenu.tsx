@@ -8,6 +8,8 @@ export interface ComposerMenuItem {
   /** Present for a choice among alternatives (one item is checked); absent for an action. */
   checked?: boolean;
   disabled?: boolean;
+  /** UI-43: a choice that removes the harness's own safeguards (Claude Code's bypass, Codex's full access) reads as such. */
+  tone?: 'danger';
   select: () => void;
 }
 
@@ -52,7 +54,7 @@ export function ComposerMenu({ label, trigger, items, disabled, title, className
         else if (event.key === 'Tab') popover.current?.hidePopover();
         else if (event.key === 'Escape') { event.preventDefault(); close(); }
       }}>
-      {items.map(item => <button key={item.key} type="button" role={item.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={item.checked} disabled={item.disabled} onClick={() => { item.select(); close(); }}>
+      {items.map(item => <button key={item.key} type="button" role={item.checked === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={item.checked} disabled={item.disabled} data-tone={item.tone} onClick={() => { item.select(); close(); }}>
         <svg className="composer-menu-check" viewBox="0 0 16 16" aria-hidden="true"><path d="m3.5 8.5 3 3 6-7" /></svg>
         <span>{item.label}{item.hint && <small>{item.hint}</small>}</span>
       </button>)}

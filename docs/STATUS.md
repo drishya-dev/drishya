@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
-| UI-43 | @yash + Claude Opus 5.5 | `claude/ui-43-composer-menu` | 2026-11-13 | Composer model menu: `ComposerMenu.tsx`, composer parts of `SessionWorkspace.tsx` and their CSS; the native controller's model/permission data in `apps/daemon/src` if it no longer sends versions or modes; a new browser spec for the menu. Never `workspace-shared-draft.spec.ts`. |
 | MAP-4 | @yash + Claude Opus 5.5 | `claude/gifted-austin-952e56` | 2026-11-13 | Map renderer only: `apps/ui/src/map/spatial-map.ts` (and its reading-column quiet-zone code), the map canvas rule in `apps/ui/src/atelier.css`, map tokens in `tokens.css` if needed, a map spec. TASKS/STATUS. Frames in `.local/map-4/`. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
@@ -58,6 +57,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 (started on Opus 5.5) — 13 Nov: UI-43 composer model menu
+
+- Models show the harness's own description (Claude Code's starts with the version); a Permissions menu lists Claude Code's four modes and Codex's own profiles with the current one checked and Bypass / Full access marked; the chosen mode is passed through `--permission-mode` / `thread/resume` `sandbox` only. PR #465 for Fable's review; not merged. Details and what could not run: `docs/review/ui-43-composer-menu.md`.
+
+### Yash with Claude Sonnet 5.5 (research started on Opus 5.5) — 13 Nov: HARNESS-AG-research, Antigravity as a third harness
+
+- Research only, read-only, counts and structure only: [`docs/review/antigravity-harness.md`](review/antigravity-harness.md) and a ledger section with the public-docs links. Findings: each conversation has an append-only JSONL transcript (`brain/<id>/.system_generated/logs/transcript_full.jsonl`), the best primary source (fits the existing JSONL ingest and tail); `conversation_summaries.db` indexes all 63 conversations with workspace and parent; the per-conversation SQLite is enrichment only (two thirds of its steps are `CLEARED`); the 21 legacy `.pb` files are encrypted (12 are still importable through their transcript); thinking is plaintext; images are files, not inline bytes; no browser, MCP, question or approval case exists in any local session.
+- TASKS: **AG-1 to AG-5 (P0) and AG-6 (P1)** form the build brief for Codex (`HARNESS-AG` is only the umbrella name: the sync script accepts `LETTERS-digits` ids). Schema additions proposed, not agreed: `correlation.basis: 'call-order'`, `ImageOmission 'referenced-file'`, a plan-artifact observation. Decisions needed from Yash and Harsh: image bytes, plan artifacts, showing recorded thinking. Freeze risk flagged: it is P0 as requested; AG-1 + AG-2 is the smallest useful cut. ADAPT-1 now covers Cursor only.
+- Not done: no product code, no real Antigravity session was run (AG-3 and AG-5 need a signed-in account). Docs-only PR for Fable's review; not merged.
 
 ### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: MAP-3 brainstorm directions for lit files on the map
 
