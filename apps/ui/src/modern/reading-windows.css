@@ -84,12 +84,10 @@
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {top:var(--workspace-tools-bottom,134px);}
 }
 
-/* Wide diff cards: the width their longest line needs, read without wrapping and scrolled sideways inside the card. */
+/* Wide diff cards take the width their longest line needs, up to the passage; a longer line wraps inside the card (UI-44), as a Read does. */
 :root[data-ui-version=modern] .connected-workspace .history .op[data-diff] { flex: 0 1 min(var(--reading-width,440px),100%); max-width: 100%; }
 /* Wide patches begin their own row without changing source type or reading motion. */
 :root[data-ui-version=modern] .connected-workspace .history .op.op-edit.shape-wide { flex: 0 0 100%; }
-:root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff { width: max-content; min-width: 100%; }
-:root[data-ui-version=modern] .history .op[data-diff=code] .op-body .diff .ln-tx { white-space: pre; overflow-wrap: normal; flex: 1 0 auto; }
 /* Added/removed counts sit beside the title, in the mono face used by the code. */
 .op-stat { flex: none; display: inline-flex; gap: 7px; margin: 0 4px 0 auto; font: var(--weight-medium) var(--text-2xs)/1 var(--mono); letter-spacing: 0; }
 .op-stat .add { color: var(--pass); font-weight: var(--weight-medium); }
