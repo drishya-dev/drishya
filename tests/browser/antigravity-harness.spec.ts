@@ -22,6 +22,7 @@ test.beforeAll(async () => {
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) rmSync(dir, { recursive: true, force: true }); });
 
 test('Antigravity is filterable and read-only', async ({ page }) => {
+  await page.route('**/v1/sources', route => route.fulfill({ json: { sources: [], errors: [] } }));
   await page.goto(server.launchUrl);
   await expect(page.locator('.home')).toBeVisible();
   await page.getByLabel('Harness', { exact: true }).selectOption('antigravity');
