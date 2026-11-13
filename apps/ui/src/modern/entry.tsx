@@ -27,5 +27,7 @@ import './shell-ink.css';
 import './reader-ink.css';
 // LAYOUT-1: after the sheets whose edge offsets it extends.
 import './large-screens.css';
+// UI-39: agent messages set for reading; after the sheets that set the old prose leading and measure.
+import './reading-type.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
 import './motion.css';

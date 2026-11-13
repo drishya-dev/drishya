@@ -28,6 +28,13 @@ it('preserves nested document headings and quotes and escapes unsafe markup',()=
   expect(html).not.toContain('<script>');
 });
 
+it('sets a bold-only line as a section lead and leaves bold lead-ins inside sentences as paragraphs',()=>{
+  const html=render('**What I did**\n\nIt is small.\n\n**Left to do:**\n\n**Warm text:** cream, not white.');
+  expect(html).toContain('<p class="md-lead"><strong>What I did</strong></p><p>It is small.</p>');
+  expect(html).toContain('<p class="md-lead"><strong>Left to do:</strong></p>');
+  expect(html).toContain('<p><strong>Warm text:</strong> cream, not white.</p>');
+});
+
 it('bounds nesting while retaining deeply nested text',()=>{
   const html=render(Array.from({length:100},(_,i)=>`${'  '.repeat(i)}- item ${i}`).join('\n'));
   expect(html.match(/class="md-list"/g)!.length).toBeLessThanOrEqual(32);

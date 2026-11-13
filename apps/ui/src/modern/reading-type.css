@@ -1,0 +1,16 @@
+/* UI-39 (Yash, 13 Nov): an agent's long message must read as easily as it does in Claude Code or Codex. It was set at
+   a 1.85 line height with lines up to about 110 characters, and its paragraph gap (8 px) was smaller than its line gap
+   (13 px), so paragraphs, bullets and section leads ran together into one even block. Now: a 1.6 line height, lines of
+   about 75 characters, paragraphs and list items clearly apart, and a bold-only line (the agent's section title) set
+   as a lead with room above it. Size, face and ink stay as they were. Prose stays unboxed, directly on the world. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose { line-height:1.6; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose :is(p,li,.md-h,.md-lead) { max-width:75ch; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose p { margin:0 0 .85em; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose :is(ul,ol) { margin:0 0 .95em; padding-left:1.35em; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose li + li { margin-top:.45em; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose li > :is(ul,ol) { margin:.45em 0 0; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose li::marker { color:var(--t3); }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose :is(.md-h,.md-lead) { margin:1.5em 0 .5em; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose :is(.md-h,.md-lead):first-child { margin-top:0; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose > :last-child,
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .prose li > p:last-child { margin-bottom:0; }

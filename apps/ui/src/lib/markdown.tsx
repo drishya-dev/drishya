@@ -108,7 +108,9 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
       if(document && para.length && /^\s*>/.test(lines[i]!))break;
       para.push(lines[i++]!);
     }
-    blocks.push(<p key={key++}>{inline(para.join(' '), onPath, workspaceRoot)}</p>);
+    const text = para.join(' ');
+    // A line that is only bold text ("**What I did**") is how agents title a section; it reads as a lead, not a paragraph.
+    blocks.push(<p key={key++} className={/^\*\*[^*]+\*\*:?$/.test(text.trim()) ? 'md-lead' : undefined}>{inline(text, onPath, workspaceRoot)}</p>);
   }
   return <>{blocks}</>;
 }
