@@ -82,6 +82,12 @@ describe('Antigravity transcript', () => {
     const sealed = seal({ raw, recordingId: 'r', adapter: descriptor, sourceId: 's', generation: 0, byteOffset: 0, observedAt: '2026-11-13T11:00:00Z' });
     expect(sealed.availability).toBe('metadata-only');
     expect(JSON.stringify(sealed)).not.toContain('unidentifiable private');
+    const projection = reduce('r', [{ ...sealed, receivedSequence: 0 }], io, options);
+    expect(projection.links.filter(link => link.relation === 'tool-result')).toHaveLength(0);
+    expect(projection.operations[0]!.status).toBe('error');
+    const unknownRaw = createParser(ctx).parse(row(0, 'GENERIC', { content: 'unidentifiable private content' })).find(o => o.kind === 'tool.result')!;
+    const unknownSealed = seal({ raw: unknownRaw, recordingId: 'r', adapter: descriptor, sourceId: 's', generation: 0, byteOffset: 0, observedAt: '2026-11-13T11:00:00Z' });
+    expect(reduce('r', [{ ...unknownSealed, receivedSequence: 0 }], io, options).operations[0]!.status).toBe('unknown');
   });
   it('orders a backwards source clock by recorded step, without altering the timestamp', () => {
     const parser = createParser(ctx);

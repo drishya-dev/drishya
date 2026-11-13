@@ -16,6 +16,7 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-ag-import-'));
   journal = join(dir, 'brain', 'conversation', '.system_generated', 'logs', 'transcript.jsonl');
   mkdirSync(join(journal, '..'), { recursive: true });
+  mkdirSync(join(dir, 'conversations')); writeFileSync(join(dir, 'conversations', 'conversation.db'), 'Synthetic filename, never opened');
   store = new Store(join(dir, 'store')); ingest = new Ingestor(store, [createAntigravityAdapter([dir])]);
 });
 afterEach(async () => { await ingest.close(); store.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch cleanup'); rmSync(dir, { recursive: true, force: true }); });

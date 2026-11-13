@@ -715,7 +715,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             st.op.endSequence = st.scriptWrapper ? Math.max(0, step() - 1) : step();
             st.op.endTime = o.sourceTime;
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
-            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || st.intent.kind === 'shell' && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
+            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || p.callAvailability === 'not-recorded' || st.intent.kind === 'shell' && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
             if (!p.isError && st.literalPlan !== undefined && literalPlanConfirmed(text(p.text))) {
@@ -754,7 +754,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               }
             }
             if (st.nestedPatch) st.wrapperResult = { observation: o, payload: p };
-            link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: o.correlation?.basis === 'call-order' ? 'deterministic-rule' : 'source-id',
+            if (o.source.adapterId !== 'antigravity' || o.correlation?.basis === 'call-order') link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: o.correlation?.basis === 'call-order' ? 'deterministic-rule' : 'source-id',
               ...(o.correlation?.basis === 'call-order' ? { ruleVersion: 'antigravity-call-order-v1' } : {}), sourceObservationIds: [st.callObservationId ?? o.id, o.id],
               explanation: o.correlation?.basis === 'call-order' ? 'The result follows this call in the recorded planner group order; the transcript has no native call id.' : 'The harness recorded this result for this call id.' });
             // Completed calls no longer need their potentially large edit/command input.
