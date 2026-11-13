@@ -32,6 +32,14 @@ import type { DraftEditorHandle } from './DraftEditor.tsx';
 const DraftEditor=lazy(()=>import('./DraftEditor.tsx'));
 
 
+let pendingWorkspaceFile: string | undefined;
+if (typeof window !== 'undefined') {
+  window.addEventListener('drishya-open-workspace-file', (event: Event) => {
+    const path = (event as CustomEvent).detail;
+    if (typeof path === 'string' && path) pendingWorkspaceFile = path;
+  });
+}
+
 /** Current-disk reading and local drafts; capture and native execution keep their own owners. */
 export function DeveloperWorkspace() {
   const open = useApp(s => s.developerWorkspace), id = useApp(s => s.recordingId), source = useApp(s => s.source);
@@ -56,9 +64,7 @@ export function DeveloperWorkspace() {
   const active = pane === 1 && split ? secondary : primary;
   const activeRoots=useFileRoots(projection?.observationCount??0),activeReason=active?currentReadingTarget(active,activeRoots,workspace?.root??projection?.workspaceRoot).reason:undefined;
   useEffect(() => {
-    const choose = (event: Event) => {
-      const path = (event as CustomEvent).detail;
-      if (typeof path !== 'string' || !path) return;
+    const handleFile = (path: string) => {
       if (!tabs.current.includes(path)) {
         if (tabs.current.length >= 8) { setError('Eight files are open. Close a tab to open another.'); return; }
         tabs.current = [...tabs.current, path]; setFiles(tabs.current);
@@ -69,6 +75,16 @@ export function DeveloperWorkspace() {
         requestAnimationFrame(() => desk.current?.querySelector<HTMLElement>('.desk-pane.active .desk-document')?.focus({ preventScroll: true }));
       }
       setError('');
+    };
+    if (pendingWorkspaceFile) {
+      const p = pendingWorkspaceFile;
+      pendingWorkspaceFile = undefined;
+      handleFile(p);
+    }
+    const choose = (event: Event) => {
+      const path = (event as CustomEvent).detail;
+      if (typeof path !== 'string' || !path) return;
+      handleFile(path);
     };
     window.addEventListener('drishya-open-workspace-file', choose);
     return () => window.removeEventListener('drishya-open-workspace-file', choose);

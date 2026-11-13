@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| BUILD-1 | @yash + Gemini 3.8 Flash (Antigravity) | `gemini/build-1` | 2026-11-13 | `apps/ui/vite.config.ts`, dynamic imports in `apps/ui`, plus docs/TASKS/STATUS. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
@@ -143,6 +142,15 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 px tight Show full prompt / Show less control, flush right-aligned .turn-images / .attachment-chip, wrapping .turn-mode / .turn-ledger, and quiet --text-sm regular styling for unboxed 	urn-source notices. Updated NativeTurn in [apps/ui/src/components/SessionWorkspace.tsx](../apps/ui/src/components/SessionWorkspace.tsx) so live submitted prompts share .turn-capsule.
 - Checked on real local sessions in scratch storage (before/after frames in .local/ui-31/ at 600 and 1440 px in jet, midnight, and paper): Claude Code ec_69977fa0 (0.9 MB, 42 ops, 12 person turns) and Codex ec_aca34202 (0.3 MB, 11 ops, 7 person turns); [completion record](review/ui-31-prompt-capsule.md). Running-turn submission verified via connected-workspace.spec.ts:598 (no live turn active on disk during capture).
 - Checks: corepack pnpm typecheck, corepack pnpm ui:build, pps/ui/test (116 files / 570 passed / 1 skip), and 12 Edge browser specs including new 	ests/browser/prompt-capsule.spec.ts (56 passed / 0 failed / 0 retries).
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: BUILD-1 Split the UI bundle
+
+- Configured Rollup `manualChunks` in `apps/ui/vite.config.ts` separating non-editor vendor dependencies (React 19, ReactDOM, Zustand) into `vendor.js` (225.39 kB / gzip: 71.44 kB).
+- Code-split Changes window (`CompareWindow.tsx`) with a dedicated lightweight `CompareButton.tsx` and dynamic `import()` in `Viewer.tsx`.
+- Code-split Git graph (`GitHistoryReader.tsx`) with dynamic `import()` in `GitHistory.tsx` while retaining synchronous `ReadingDialog` shell, modal focus trapping, and `GitAccess` consent mounting.
+- Preserved `drishya-open-workspace-file` event delivery across dynamic mounting in `DeveloperWorkspace.tsx`.
+- Measured results: main entry `index.js` dropped from 1,213.55 kB (gzip: 366.05 kB) down to 490.12 kB (gzip: 147.19 kB), a 60% reduction in entry chunk size. Every chunk is well under the 800 kB limit (largest is `DraftEditor` at 557.12 kB); Vite emits zero warnings.
+- Verified: `typecheck` passes with 0 errors; all targeted and affected browser specs pass (`git-access`, `git-history-cache`, `git-changes`, `git-compare`, `git-branches`, `workspace-source-controls`, `workspace-toolbar`, `fresh-workspace`). Review record: [build-1-bundle-split.md](review/build-1-bundle-split.md).
 
 ### Yash with Gemini 3.8 Flash (Antigravity) — 13 Nov: DATA-14 History worker waits for cache lock
 
