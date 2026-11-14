@@ -364,6 +364,9 @@ export class SqliteBlobStore extends BlobStore {
   }
 }
 
+/** The repeat check of a lineage reader, as plain data (what a checkpoint keeps of it). */
+export interface LineageSeen { seen: [string, string[]][]; duplicates: number; differing: number }
+
 export class Store {
   readonly db: DatabaseSync;
   readonly blobs: BlobStore;
@@ -852,23 +855,54 @@ export class Store {
     }).slice(0, limit);
   }
 
-  /** Retains physical IDs/provenance. Equality is of sealed parts, never raw secret-bearing content. */
+  /**
+   * Retains physical IDs/provenance. Equality is of sealed parts, never raw secret-bearing content.
+   * PERF-4: read in slices (`read(n)`), so a long fold can yield between them; `lineageObservations` is the same
+   * reader pulled to the end. Each part's ordering query runs when the reader reaches it.
+   */
+  lineageReader(view: SessionLineageView, restored?: LineageSeen): { read(limit: number): Observation[]; filter(added: Observation[]): Observation[]; exportSeen(): LineageSeen; readonly done: boolean } {
+    const store = this;
+    // PERF-4: a reader restored from a checkpoint continues with the repeat check (and its counters) of the fold it resumes.
+    const seen = new Map<string, Set<string>>((restored?.seen ?? []).map(([key, hashes]) => [key, new Set(hashes)]));
+    view.duplicatePartsOmitted = restored?.duplicates ?? 0; view.differingReceiptPartsRetained = restored?.differing ?? 0;
+    let part = 0;
+    let rows: number[] | undefined;
+    let at = 0;
+    /** Whether a part of the lineage is new, or repeats one already seen (the same sealed content, retained by its first copy). */
+    const accept = (observation: Observation): boolean => {
+      if (observation.source.recordId && (/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observation.source.recordId) || observation.kind === 'usage' && /^usage:[a-z0-9_-]{1,160}$/i.test(observation.source.recordId))) {
+        const key = JSON.stringify([observation.agentId, observation.source.recordId, observation.kind, observation.source.part]);
+        const hash = store.lineagePartHash(observation.payload);
+        const variants = seen.get(key) ?? new Set<string>();
+        if (variants.has(hash)) { view.duplicatePartsOmitted++; return false; }
+        if (variants.size && observation.kind === 'usage') view.differingReceiptPartsRetained++;
+        variants.add(hash); seen.set(key, variants);
+      }
+      return true;
+    };
+    return {
+      get done() { return part >= view.recordingIds.length; },
+      read(limit: number): Observation[] {
+        const out: Observation[] = [];
+        while (out.length < limit && part < view.recordingIds.length) {
+          rows ??= store.orderedRowIds(view.recordingIds[part]!);
+          if (at >= rows.length) { part++; rows = undefined; at = 0; continue; }
+          const observation = store.observationByRowId(rows[at++]!);
+          if (observation && accept(observation)) out.push(observation);
+        }
+        return out;
+      },
+      /** Observations stored after the read (a followed lineage grows at its end), through the same repeat check. */
+      filter(added: Observation[]): Observation[] { return added.filter(accept); },
+      exportSeen(): LineageSeen { return { seen: [...seen].map(([key, hashes]) => [key, [...hashes]] as [string, string[]]), duplicates: view.duplicatePartsOmitted, differing: view.differingReceiptPartsRetained }; },
+    };
+  }
+
   lineageObservations(view: SessionLineageView): Iterable<Observation> {
     const store = this;
     return { *[Symbol.iterator]() {
-      const seen = new Map<string, Set<string>>();
-      view.duplicatePartsOmitted = 0; view.differingReceiptPartsRetained = 0;
-      for (const id of view.recordingIds) for (const observation of store.orderedObservations(id)) {
-        if (observation.source.recordId && (/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observation.source.recordId) || observation.kind === 'usage' && /^usage:[a-z0-9_-]{1,160}$/i.test(observation.source.recordId))) {
-          const key = JSON.stringify([observation.agentId, observation.source.recordId, observation.kind, observation.source.part]);
-          const hash = store.lineagePartHash(observation.payload);
-          const variants = seen.get(key) ?? new Set<string>();
-          if (variants.has(hash)) { view.duplicatePartsOmitted++; continue; }
-          if (variants.size && observation.kind === 'usage') view.differingReceiptPartsRetained++;
-          variants.add(hash); seen.set(key, variants);
-        }
-        yield observation;
-      }
+      const reader = store.lineageReader(view);
+      while (!reader.done) yield* reader.read(256);
     } };
   }
 
@@ -1066,69 +1100,128 @@ export class Store {
     return (this.q('SELECT body FROM observations WHERE recording_id = ? AND operation_id = ? ORDER BY seq').all(recordingId, operationId) as { body: string }[]).map((r) => JSON.parse(r.body));
   }
 
-  /** Repeatable disk-backed ordering matching the reducer's source-clock carry-forward. */
-  orderedObservations(recordingId: string | string[]): Iterable<Observation> {
-    const store = this;
+  /**
+   * Row ids of one or several recordings in reading order: the reducer's source-clock carry-forward as one SQL
+   * ordering (the heavy part of an ordered read, run once). Split from the row fetch so a long fold can read
+   * bodies in slices and yield between them (PERF-4).
+   */
+  orderedRowIds(recordingId: string | string[]): number[] {
     const ids = typeof recordingId === 'string' ? [recordingId] : [...new Set(recordingId)];
     const marks = ids.map(() => '?').join(',');
     const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
+    if (ids.length === 1 && this.getRecording(ids[0]!)?.harness === 'antigravity') {
+      // Whole-second source clocks can regress. The harness's step index is authoritative.
+      const rows = this.q(`SELECT rowid AS rid FROM observations WHERE recording_id=? ORDER BY
+        CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
+          CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END, seq`).all(ids[0]!) as { rid: number }[];
+      return rows.map((row) => row.rid);
+    }
+    if (ids.some((id) => this.getRecording(id)?.harness === 'antigravity')) {
+      // Mixed-harness views keep each Antigravity journal's native step order. Its
+      // derived sort clock is clamped, while captured sourceTime stays unchanged.
+      const rows = this.db.prepare(`WITH keyed AS (
+        SELECT rowid AS rid, seq, recording_id, clock_time,
+          json_extract(body, '$.source.sourceId') AS source_id,
+          json_extract(body, '$.source.adapterId') = 'antigravity' AS ag,
+          CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
+            CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END AS native_step,
+          CASE WHEN json_extract(body, '$.payload.derived') IS NULL THEN clock_time END AS native_clock
+        FROM observations WHERE recording_id IN (${marks})
+      ), timed AS (
+        SELECT *, MAX(native_clock) OVER (PARTITION BY recording_id ORDER BY native_step, seq
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ag_clock,
+          MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (PARTITION BY recording_id, source_id ORDER BY seq
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS clock_seq FROM keyed
+      ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock ON clock.recording_id=timed.recording_id AND clock.seq=timed.clock_seq
+      ORDER BY CASE WHEN timed.ag THEN COALESCE(timed.ag_clock, '') ELSE COALESCE(clock.clock_time, '') END,
+        CASE WHEN timed.ag THEN timed.native_step ELSE timed.seq END, timed.seq,
+        CASE timed.recording_id ${rank} END`).all(...ids, ...ids) as { rid: number }[];
+      return rows.map((row) => row.rid);
+    }
+    // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
+    // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
+    const order = this.db.prepare(`
+      WITH timed AS (
+        SELECT rowid AS rid, seq, recording_id,
+          MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
+            PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ) AS clock_seq
+        FROM observations WHERE recording_id IN (${marks})
+      ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock
+        ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
+      ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
+        CASE timed.recording_id ${rank} END
+    `).all(...ids, ...ids) as { rid: number }[];
+    return order.map((row) => row.rid);
+  }
+
+  /** One observation by its row id (as returned by `orderedRowIds`). */
+  observationByRowId(rid: number): Observation | undefined {
+    const row = this.q('SELECT body FROM observations WHERE rowid = ?').get(rid) as { body: string } | undefined;
+    return row ? JSON.parse(row.body) as Observation : undefined;
+  }
+
+  /** Repeatable disk-backed ordering matching the reducer's source-clock carry-forward. */
+  orderedObservations(recordingId: string | string[]): Iterable<Observation> {
+    const store = this;
     return {
       *[Symbol.iterator]() {
-        const antigravity = ids.length === 1 && store.getRecording(ids[0]!)?.harness === 'antigravity';
-        if (antigravity) {
-          // Whole-second source clocks can regress. The harness's step index is authoritative.
-          const rows = store.q(`SELECT body FROM observations WHERE recording_id=? ORDER BY
-            CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
-              CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END, seq`).iterate(ids[0]!) as Iterable<{ body: string }>;
-          for (const row of rows) yield JSON.parse(row.body) as Observation;
-          return;
-        }
-        if (ids.some(id => store.getRecording(id)?.harness === 'antigravity')) {
-          // Mixed-harness views keep each Antigravity journal's native step order. Its
-          // derived sort clock is clamped, while captured sourceTime stays unchanged.
-          const rows = store.db.prepare(`WITH keyed AS (
-            SELECT rowid AS rid, seq, recording_id, clock_time,
-              json_extract(body, '$.source.sourceId') AS source_id,
-              json_extract(body, '$.source.adapterId') = 'antigravity' AS ag,
-              CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
-                CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END AS native_step,
-              CASE WHEN json_extract(body, '$.payload.derived') IS NULL THEN clock_time END AS native_clock
-            FROM observations WHERE recording_id IN (${marks})
-          ), timed AS (
-            SELECT *, MAX(native_clock) OVER (PARTITION BY recording_id ORDER BY native_step, seq
-              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ag_clock,
-              MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (PARTITION BY recording_id, source_id ORDER BY seq
-              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS clock_seq FROM keyed
-          ) SELECT timed.rid FROM timed LEFT JOIN observations clock ON clock.recording_id=timed.recording_id AND clock.seq=timed.clock_seq
-          ORDER BY CASE WHEN timed.ag THEN COALESCE(timed.ag_clock, '') ELSE COALESCE(clock.clock_time, '') END,
-            CASE WHEN timed.ag THEN timed.native_step ELSE timed.seq END, timed.seq,
-            CASE timed.recording_id ${rank} END`).all(...ids, ...ids) as { rid: number }[];
-          const body = store.q('SELECT body FROM observations WHERE rowid=?');
-          for (const { rid } of rows) yield JSON.parse((body.get(rid) as { body: string }).body) as Observation;
-          return;
-        }
-        // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
-        // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
-        const order = store.db.prepare(`
-          WITH timed AS (
-            SELECT rowid AS rid, seq, recording_id,
-              MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
-                PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
-                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-              ) AS clock_seq
-            FROM observations WHERE recording_id IN (${marks})
-          ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock
-            ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
-          ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
-            CASE timed.recording_id ${rank} END
-        `).all(...ids, ...ids) as { rid: number }[];
-        const body = store.q('SELECT body FROM observations WHERE rowid = ?');
-        for (const { rid } of order) {
-          const row = body.get(rid) as { body: string } | undefined;
-          if (row) yield JSON.parse(row.body) as Observation;
+        for (const rid of store.orderedRowIds(recordingId)) {
+          const observation = store.observationByRowId(rid);
+          if (observation) yield observation;
         }
       },
     };
+  }
+
+  /**
+   * PERF-4: the last `prompts` prompts of a recording's main agent and everything stored after the first of them,
+   * by arrival order (one indexed read), capped at `maxObservations` from the end. Not in reading order: the caller
+   * orders it. `complete` is true when the recording has no earlier observation at all.
+   */
+  tailObservations(recordingId: string, prompts: number, maxObservations: number): { observations: Observation[]; complete: boolean } {
+    const from = this.q("SELECT seq FROM observations WHERE recording_id = ? AND kind = 'message.user' AND agent_id = 'agent:main' ORDER BY seq DESC LIMIT 1 OFFSET ?").get(recordingId, Math.max(0, prompts - 1)) as { seq: number } | undefined;
+    const count = this.q('SELECT COUNT(*) AS n FROM observations WHERE recording_id = ?').get(recordingId) as { n: number };
+    let start = from?.seq ?? -1;
+    const after = this.q('SELECT COUNT(*) AS n FROM observations WHERE recording_id = ? AND seq >= ?').get(recordingId, start) as { n: number };
+    if (after.n > maxObservations) {
+      const cut = this.q('SELECT seq FROM observations WHERE recording_id = ? ORDER BY seq DESC LIMIT 1 OFFSET ?').get(recordingId, maxObservations - 1) as { seq: number } | undefined;
+      if (cut) start = Math.max(start, cut.seq);
+    }
+    const rows = this.q('SELECT body FROM observations WHERE recording_id = ? AND seq >= ? ORDER BY seq').all(recordingId, start) as { body: string }[];
+    return { observations: rows.map((r) => JSON.parse(r.body) as Observation), complete: rows.length === count.n };
+  }
+
+  /**
+   * PERF-4: what a reducer that starts mid-recording still needs from the beginning to state the same identity as
+   * the full fold: every `session.meta` observation (workspace root, branch, title, model and agent facts are set
+   * there, in order) and, when `firstPrompt` is set, the main agent's first prompt (the title when none was named).
+   * Arrival order. Indexed by recording and kind; a few percent of a recording.
+   */
+  preludeObservations(recordingId: string, firstPrompt: boolean): Observation[] {
+    const rows = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'session.meta' ORDER BY seq").all(recordingId) as { body: string }[];
+    const out = rows.map((r) => JSON.parse(r.body) as Observation);
+    if (firstPrompt) {
+      const prompt = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'message.user' AND agent_id = 'agent:main' ORDER BY seq LIMIT 1").get(recordingId) as { body: string } | undefined;
+      if (prompt) out.push(JSON.parse(prompt.body) as Observation);
+    }
+    return out.sort((a, b) => a.receivedSequence - b.receivedSequence);
+  }
+
+  /**
+   * Workspace-root evidence of a recording, without reading its observations into JavaScript: the first root by
+   * arrival order (what the reducer takes as the recording's base) and every distinct root, working directory and
+   * operation directory (what decides path namespacing). One scan of the stored rows.
+   */
+  rootEvidence(recordingId: string): { first?: string; all: string[] } {
+    const first = this.q(`SELECT COALESCE(NULLIF(json_extract(body,'$.workspaceRoot'),''), CASE WHEN kind='session.meta' THEN NULLIF(json_extract(body,'$.payload.cwd'),'') END) AS r
+      FROM observations WHERE recording_id = ? AND r IS NOT NULL ORDER BY seq LIMIT 1`).get(recordingId) as { r?: unknown } | undefined;
+    const rows = this.q(`SELECT DISTINCT json_extract(body,'$.workspaceRoot') AS a, json_extract(body,'$.payload.cwd') AS b, json_extract(body,'$.payload.intent.cwd') AS c
+      FROM observations WHERE recording_id = ?`).all(recordingId) as { a: unknown; b: unknown; c: unknown }[];
+    const all = new Set<string>();
+    for (const row of rows) for (const value of [row.a, row.b, row.c]) if (typeof value === 'string' && value) all.add(value);
+    return { ...(typeof first?.r === 'string' ? { first: first.r } : {}), all: [...all] };
   }
 
   observationsOfKinds(recordingId: string, kinds: string[]): Observation[] {
@@ -1144,6 +1237,11 @@ export class Store {
                          UNION SELECT DISTINCT extra.value FROM observations o, json_each(o.body, '$.payload.additionalRoots') extra
                            WHERE o.recording_id=? AND o.kind='session.meta' AND json_extract(o.body, '$.source.adapterId')='antigravity'`).all(recordingId, recordingId, recordingId, recordingId) as { r: unknown }[];
     return rows.map((x) => x.r).filter((r): r is string => typeof r === 'string' && r.length > 0);
+  }
+
+  /** The highest arrival sequence stored for a recording (-1 when it has none). */
+  lastSequence(recordingId: string): number {
+    return Number((this.q('SELECT COALESCE(MAX(seq), -1) AS m FROM observations WHERE recording_id = ?').get(recordingId) as { m: number }).m);
   }
 
   countObservations(recordingId: string): number {

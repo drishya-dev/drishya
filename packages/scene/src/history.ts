@@ -17,9 +17,25 @@ export interface HistoryQuery {
   observationId?: string;
   filter?: ComposeInput['filter'];
   pinnedPassageIds?: string[];
+  /**
+   * PERF-4: the caller (the open page) can show a recent-first view of a large recording while the whole history
+   * is folded in the background; the reply then carries `partial`. Omitted, the reply always waits for the whole view.
+   */
+  tailFirst?: boolean;
+  /** PERF-4: begin the window at this passage (the swap from the recent-first page to the whole one keeps the reader's place). */
+  anchorPassageId?: string;
+  /** PERF-4: while the whole view is being folded, reply that it is loading (the daemon then answers the page 202) instead of holding the request open. */
+  loadingOk?: boolean;
 }
 
 export interface HistoryPage {
+  /**
+   * PERF-4: this page is composed from the recording's latest work alone (the whole history is still being folded).
+   * Its operations, prose and passages are the real ones, with their final identities; step numbers count from the
+   * start of that work, and anything that needs the whole session (file list, totals, counts, earlier history) is
+   * not final. The whole page replaces it, once, when the fold completes.
+   */
+  partial?: { observations: number };
   /** Effective live change interval, retained through same-step paging/re-renders. */
   since?: number;
   /** Last queue event visible at the exact replay cursor, even outside the resident timeline tail. */

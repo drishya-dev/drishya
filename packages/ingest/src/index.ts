@@ -27,6 +27,7 @@ import { ProjectionFold, projectionDigest, reduce, REDUCER_VERSION } from '@dris
 import type { SourceRow, Store } from '@drishya/store';
 
 export { SourceWatch, defaultWatchRoots, type WatchRoot } from './source-watch.ts';
+export { buildTail, ChunkedFold, rootsHintFor, TAIL_OBSERVATIONS, TAIL_PROMPTS, type Tail } from './open-fold.ts';
 
 export const defaultAdapters = (): Adapter[] => [claudeAdapter, codexAdapter, antigravityAdapter];
 
