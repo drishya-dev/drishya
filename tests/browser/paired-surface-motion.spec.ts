@@ -26,11 +26,18 @@ async function openRecording(page: Page) {
 }
 
 test('Changes returns to its true trigger and keeps the same reader if reopened during exit', async ({page}) => {
+  const changesBundles: string[] = [];
+  page.on('request', request => {
+    if (/\/assets\/CompareWindow-.*\.js$/.test(new URL(request.url()).pathname)) changesBundles.push(request.url());
+  });
   await openRecording(page);
   const button = page.locator('[data-compare-open]');
+  await expect(button).toBeVisible();
+  expect(changesBundles).toHaveLength(0);
   await button.click();
   const changes = page.locator('.compare-window');
   await expect(changes).toHaveAttribute('data-surface-phase', 'open');
+  expect(changesBundles).toHaveLength(1);
   const result = await page.evaluate(async () => {
     const trigger = document.querySelector<HTMLElement>('[data-compare-open]')!;
     const window = document.querySelector<HTMLElement>('.compare-window')!;
@@ -133,4 +140,16 @@ test('the narrow Toolbox catalog travels in both directions and ignores keyboard
   await toggle.press('Enter');
   await expect(dock).toBeVisible();
   expect(await dock.evaluate(element => element.getAnimations().length)).toBe(0);
+});
+
+test('keyboard navigation disposes the detached pointer menu surface', async ({page}) => {
+  await openRecording(page);
+  await page.getByLabel('More workspace options',{exact:true}).click();
+  const panel = page.locator('.workspace-menu > .workspace-utilities');
+  await expect(panel).toHaveAttribute('data-surface-phase','open');
+  const node = await panel.elementHandle();
+  // Opening Home with the keyboard closes this Viewer without another pointer down.
+  await page.locator('.modern-session-header').getByRole('button',{name:'Drishya',exact:true}).press('Enter');
+  await expect(page.locator('.home')).toBeVisible();
+  expect(await node!.evaluate(element => ({connected:element.isConnected, marked:element.hasAttribute('data-surface-motion')}))).toEqual({connected:false,marked:false});
 });

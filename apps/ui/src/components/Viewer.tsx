@@ -70,6 +70,9 @@ function WorkspaceViewer() {
   const developerWorkspace = useApp(s => s.developerWorkspace), compareOpen = useApp(s => s.compareOpen);
   // A working window (Workspace or Compare) hides the stage behind it the same way.
   const workingWindow = developerWorkspace || compareOpen;
+  const [changesRequested, setChangesRequested] = useState(false);
+  // Start loading on demand. After the first open the owner must survive a reversible exit.
+  if (compareOpen && !changesRequested) setChangesRequested(true);
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const sessionWait = useWaitNotice({
@@ -330,7 +333,7 @@ function WorkspaceViewer() {
       <HistoryNoteHint />
       <DeveloperWorkspace />
       <Suspense fallback={null}>
-        <CompareWindow />
+        {changesRequested && <CompareWindow />}
       </Suspense>
       <Briefing projection={projection} />
       <Search projection={projection} />
