@@ -360,6 +360,9 @@ export class SqliteBlobStore extends BlobStore {
   }
 }
 
+/** The repeat check of a lineage reader, as plain data (what a checkpoint keeps of it). */
+export interface LineageSeen { seen: [string, string[]][]; duplicates: number; differing: number }
+
 export class Store {
   readonly db: DatabaseSync;
   readonly blobs: BlobStore;
@@ -853,10 +856,11 @@ export class Store {
    * PERF-4: read in slices (`read(n)`), so a long fold can yield between them; `lineageObservations` is the same
    * reader pulled to the end. Each part's ordering query runs when the reader reaches it.
    */
-  lineageReader(view: SessionLineageView): { read(limit: number): Observation[]; filter(added: Observation[]): Observation[]; readonly done: boolean } {
+  lineageReader(view: SessionLineageView, restored?: LineageSeen): { read(limit: number): Observation[]; filter(added: Observation[]): Observation[]; exportSeen(): LineageSeen; readonly done: boolean } {
     const store = this;
-    const seen = new Map<string, Set<string>>();
-    view.duplicatePartsOmitted = 0; view.differingReceiptPartsRetained = 0;
+    // PERF-4: a reader restored from a checkpoint continues with the repeat check (and its counters) of the fold it resumes.
+    const seen = new Map<string, Set<string>>((restored?.seen ?? []).map(([key, hashes]) => [key, new Set(hashes)]));
+    view.duplicatePartsOmitted = restored?.duplicates ?? 0; view.differingReceiptPartsRetained = restored?.differing ?? 0;
     let part = 0;
     let rows: number[] | undefined;
     let at = 0;
@@ -886,6 +890,7 @@ export class Store {
       },
       /** Observations stored after the read (a followed lineage grows at its end), through the same repeat check. */
       filter(added: Observation[]): Observation[] { return added.filter(accept); },
+      exportSeen(): LineageSeen { return { seen: [...seen].map(([key, hashes]) => [key, [...hashes]] as [string, string[]]), duplicates: view.duplicatePartsOmitted, differing: view.differingReceiptPartsRetained }; },
     };
   }
 
@@ -1156,6 +1161,11 @@ export class Store {
                          UNION SELECT DISTINCT json_extract(body, '$.payload.cwd') FROM observations WHERE recording_id = ?
                          UNION SELECT DISTINCT json_extract(body, '$.payload.intent.cwd') FROM observations WHERE recording_id = ?`).all(recordingId, recordingId, recordingId) as { r: unknown }[];
     return rows.map((x) => x.r).filter((r): r is string => typeof r === 'string' && r.length > 0);
+  }
+
+  /** The highest arrival sequence stored for a recording (-1 when it has none). */
+  lastSequence(recordingId: string): number {
+    return Number((this.q('SELECT COALESCE(MAX(seq), -1) AS m FROM observations WHERE recording_id = ?').get(recordingId) as { m: number }).m);
   }
 
   countObservations(recordingId: string): number {

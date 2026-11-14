@@ -24,14 +24,14 @@ import { DatabaseSync } from 'node:sqlite';
 import type { ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, isBlobText } from '@drishya/contracts';
 import { buildTail, ChunkedFold, defaultAdapters } from '@drishya/ingest';
-import { ProjectionFold, REDUCER_VERSION } from '@drishya/projection';
+import { FOLD_FORMAT, ProjectionFold, REDUCER_VERSION, type FoldHead } from '@drishya/projection';
 import { compose, dwellFor, markers, stepOfObservation, type Marker } from '@drishya/scene';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
 import { historySummary } from '../../../packages/scene/src/history.ts';
 import { nowFacts } from '../../../packages/scene/src/now.ts';
 import { turnLedgers } from '../../../packages/scene/src/turns.ts';
 import { contextReportCandidates } from './context-report-turns.ts';
-import { SqliteBlobStore, Store } from '@drishya/store';
+import { SqliteBlobStore, Store, type LineageSeen } from '@drishya/store';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 
 const source = new Store(workerData.dir, { readOnly: true });
@@ -52,6 +52,7 @@ try {
     CREATE TABLE IF NOT EXISTS file_ops(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
       path TEXT NOT NULL, op_id TEXT NOT NULL, position INTEGER NOT NULL, PRIMARY KEY(view_id,path,op_id));
     CREATE INDEX IF NOT EXISTS file_position ON file_ops(view_id,path,position);
+    CREATE TABLE IF NOT EXISTS folds(id TEXT PRIMARY KEY, key TEXT NOT NULL, meta TEXT NOT NULL, state BLOB NOT NULL);
   `);
 } catch (error) {
   if (error instanceof Error && (error.message.includes('database is locked') || error.message.includes('busy'))) {
@@ -89,7 +90,7 @@ interface View { id: string; revision: string; projection: Projection; revisions
 let cached: View | undefined;
 const queueEvidenceFor = createQueueEvidenceCache(source);
 /** The resident full fold of the last view built (PERF-4: the versioned `ProjectionFold`, as the daemon's followed recordings use). */
-let resident: { id: string; ids: string[]; fold: ProjectionFold; lineage?: ChunkedFold['lineage']; sequence: number; ancestors: string } | undefined;
+let resident: { id: string; ids: string[]; fold: ProjectionFold; lineage?: ChunkedFold['lineage']; sequence: number; rows: number; ancestors: string; saved: number } | undefined;
 /** PERF-4: a recent-first view of a large recording, answered while its full fold runs in the background. */
 let tail: { id: string; ids: string[]; fold: ProjectionFold; observations: number; ancestors: string; last?: Projection } | undefined;
 let background: { id: string; ids: string[]; cancelled: boolean; finished: Promise<void> } | undefined;
@@ -119,13 +120,20 @@ function shaped(projection: Projection, ids: string[]): Projection {
 /** Folds a whole view in this thread with no pause, or resumes the resident fold with what was stored after it. */
 function build(id: string, ids: string[], live: boolean, counts: Record<string, number>): { projection: Projection; appended: boolean } {
   const last = ids.at(-1)!;
-  if (resident?.id === id && resident.ids.join('+') === ids.join('+') && resident.ancestors === ancestorRevisions(ids, counts)) {
+  const residentFor = () => resident?.id === id && resident.ids.join('+') === ids.join('+') && resident.ancestors === ancestorRevisions(ids, counts);
+  // A stored view with no fold behind it (a restart) resumes the remembered fold instead of folding the history again.
+  if (!residentFor() && (counts[last] ?? 0) >= TAIL_FIRST_OBSERVATIONS) resume(id, { ids, counts });
+  if (resident && residentFor()) {
     const added = source.observations(last, resident.sequence, APPEND_BATCH + 1);
-    if (added.length <= APPEND_BATCH) {
+    // The rows stored must be exactly the rows folded plus these: a row deleted or rewritten under the fold is a rebuild.
+    const total = source.countObservations(last);
+    if (added.length <= APPEND_BATCH && total === resident.rows + added.length) {
       const accepted = resident.lineage ? resident.lineage.filter(added) : added;
       for (const o of accepted) rememberCapturedBlobs(o.payload);
       if (resident.fold.append(accepted)) {
         resident.sequence = Math.max(resident.sequence, ...added.map((o) => o.receivedSequence));
+        resident.rows = total;
+        scheduleCheckpoint();
         return { projection: shaped(resident.fold.snapshot(live), ids), appended: true };
       }
     }
@@ -135,8 +143,67 @@ function build(id: string, ids: string[], live: boolean, counts: Record<string, 
   const chunked = new ChunkedFold(source, ids, io, reduceOptions(live), (o) => rememberCapturedBlobs(o.payload));
   while (!chunked.step(2000));
   const projection = shaped(chunked.fold.snapshot(live), ids);
-  resident = { id, ids, fold: chunked.fold, lineage: chunked.lineage, sequence: chunked.fold.sequenceOf(last), ancestors: ancestorRevisions(ids, counts) };
+  resident = { id, ids, fold: chunked.fold, lineage: chunked.lineage, sequence: source.lastSequence(last), rows: source.countObservations(last), ancestors: ancestorRevisions(ids, counts), saved: 0 };
+  scheduleCheckpoint();
   return { projection, appended: false };
+}
+
+// ── PERF-4 step 4: a remembered fold per recording ────────────────────────────────────────────────────────────────────
+// The resident fold is written to the history index (Drishya-owned data: the observations it folds are already sealed, so
+// nothing here holds a secret the store does not) and read back after a restart or a session switch, so a cold open appends
+// only what is new. A checkpoint is used only while EVERY input that decides what the fold would produce is the one it was
+// written for; anything else rebuilds, as before.
+const adaptersDigest = createHash('sha256').update(JSON.stringify(adapters)).digest('hex').slice(0, 16);
+/** What a fold's result depends on besides the observations: code, options, privacy policy, adapters, the recordings read. */
+const checkpointKey = (ids: string[]) => JSON.stringify([FOLD_FORMAT, REDUCER_VERSION, HISTORY_VERSION, reduceOptions(false).maxProseChars, reduceOptions(false).maxInputChars, adaptersDigest, ids]);
+const dropCheckpoint = (id: string) => { db.prepare('DELETE FROM folds WHERE id=?').run(id); };
+let checkpointTimer: ReturnType<typeof setTimeout> | undefined;
+/** Rewriting the checkpoint on every live append would cost more than it saves: it follows a quiet spell of the session. */
+const CHECKPOINT_QUIET_MS = process.env.DRISHYA_CHECKPOINT_QUIET_MS ? Number(process.env.DRISHYA_CHECKPOINT_QUIET_MS) : 20_000;
+/** Appended rows since the saved checkpoint that make another one worth writing. */
+const CHECKPOINT_MIN_GAIN = 200;
+
+/** Writes the resident fold. Returns false when there was nothing worth writing. */
+function saveCheckpoint(force = false): boolean {
+  const r = resident;
+  if (!r || (!force && (r.rows < TAIL_FIRST_OBSERVATIONS || (r.saved > 0 && r.rows - r.saved < CHECKPOINT_MIN_GAIN)))) return false;
+  const checkpoint = r.fold.checkpoint();
+  const meta = JSON.stringify({ head: checkpoint.head, blobs: checkpoint.blobs, sequence: r.sequence, rows: r.rows, ancestors: r.ancestors, lineage: r.lineage?.exportSeen() });
+  db.prepare('INSERT INTO folds VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET key=excluded.key, meta=excluded.meta, state=excluded.state').run(r.id, checkpointKey(r.ids), meta, checkpoint.state);
+  r.saved = r.rows;
+  return true;
+}
+function scheduleCheckpoint() {
+  if (checkpointTimer) clearTimeout(checkpointTimer);
+  checkpointTimer = setTimeout(() => { checkpointTimer = undefined; try { saveCheckpoint(); } catch (error) { console.error('history: checkpoint not written:', error instanceof Error ? error.message : error); } }, CHECKPOINT_QUIET_MS);
+  checkpointTimer.unref?.();
+}
+
+/**
+ * Resumes the resident fold from the remembered one, when it is the one this view would build. Everything it checks:
+ * the key (reducer, fold format, privacy policy, options, adapters, the recordings and their order), that no ancestor
+ * of a lineage grew, that the last recording still holds at least the rows folded, that the lineage is the same, that
+ * the head is a head this code can append to (restore), and that the blobs the state names are still stored.
+ */
+function resume(id: string, ctx: Pick<Lookup, 'ids' | 'counts'>): boolean {
+  if (resident?.id === id) return false;
+  const row = db.prepare('SELECT key, meta, state FROM folds WHERE id=?').get(id) as { key: string; meta: string; state: Uint8Array } | undefined;
+  if (!row) return false;
+  const reject = () => { dropCheckpoint(id); return false; };
+  if (row.key !== checkpointKey(ctx.ids)) return reject();
+  let meta: { head: FoldHead; blobs: string[]; sequence: number; rows: number; ancestors: string; lineage?: LineageSeen };
+  try { meta = JSON.parse(row.meta); } catch { return reject(); }
+  const last = ctx.ids.at(-1)!;
+  if (meta.ancestors !== ancestorRevisions(ctx.ids, ctx.counts) || ctx.counts[last]! < meta.rows || source.lastSequence(last) < meta.sequence) return reject();
+  const lineage = ctx.ids.length > 1 ? source.lineageForIds(ctx.ids) : undefined;
+  if (ctx.ids.length > 1 && (!lineage || !meta.lineage)) return reject();
+  const reader = lineage ? source.lineageReader(lineage, meta.lineage) : undefined;
+  if (meta.blobs.some((sha) => !source.blobs.has(sha) && !blobs.has(sha))) return reject();
+  const fold = ProjectionFold.restore({ head: meta.head, state: Buffer.from(row.state.buffer, row.state.byteOffset, row.state.byteLength), blobs: meta.blobs }, io, { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
+  if (!fold) return reject();
+  capturedBlobs.clear();
+  resident = { id, ids: ctx.ids, fold, lineage: reader, sequence: meta.sequence, rows: meta.rows, ancestors: meta.ancestors, saved: meta.rows };
+  return true;
 }
 
 /** What a read of one view needs from the source store, taken in one short read so the revisions and the rows agree. */
@@ -261,6 +328,7 @@ async function full(id: string, wait = true): Promise<View> {
     const ctx = lookup(id);
     const hit = stored(id, ctx);
     if (hit) return hit;
+    if (ctx.observations >= TAIL_FIRST_OBSERVATIONS && attempt === 0) resume(id, ctx);
     const resumable = resident?.id === id && resident.ids.join('+') === ctx.ids.join('+') && resident.ancestors === ancestorRevisions(ctx.ids, ctx.counts);
     if (resumable || ctx.observations < TAIL_FIRST_OBSERVATIONS || attempt === 3) break;
     startBackground(id, ctx);
@@ -325,11 +393,13 @@ function startBackground(id: string, ctx: Lookup): void {
       const projection = shaped(chunked.fold.snapshot(now.live), from.ids);
       const write = persistView(id, now.revision, projection, false, true);
       for (let step = write.next(); !step.done; step = write.next()) { await yieldToLoop(); if (job.cancelled) return; }
-      resident = { id, ids: from.ids, fold: chunked.fold, lineage: chunked.lineage, sequence: Math.max(chunked.fold.sequenceOf(last), ...added.map((o) => o.receivedSequence)), ancestors: ancestorRevisions(from.ids, from.counts) };
+      resident = { id, ids: from.ids, fold: chunked.fold, lineage: chunked.lineage, sequence: Math.max(chunked.fold.sequenceOf(last), ...added.map((o) => o.receivedSequence)), rows: source.countObservations(last), ancestors: ancestorRevisions(from.ids, from.counts), saved: 0 };
       cached = { id, revision: now.revision, projection, revisions: now.revisions };
       tail = undefined;
       if (background === job) background = undefined;
       parentPort!.postMessage({ event: 'full-ready', viewId: id });
+      // The whole fold is the expensive thing to lose: remembered at once (after the swap has gone out), at low priority.
+      setImmediate(() => { try { saveCheckpoint(true); } catch (error) { console.error('history: checkpoint not written:', error instanceof Error ? error.message : error); } });
       return;
     }
     if (background === job) background = undefined;
@@ -343,6 +413,8 @@ async function pageView(id: string, allowPartial: boolean, wait = true): Promise
   const ctx = lookup(id);
   const hit = stored(id, ctx);
   if (hit) return hit;
+  // A remembered fold (after a restart or a session switch) is resumed and appended with the new tail: no recent-first detour.
+  if (ctx.observations >= TAIL_FIRST_OBSERVATIONS) resume(id, ctx);
   const resumable = resident?.id === id && resident.ids.join('+') === ctx.ids.join('+') && resident.ancestors === ancestorRevisions(ctx.ids, ctx.counts);
   if (resumable || ctx.observations < TAIL_FIRST_OBSERVATIONS) return full(id);
   const view = tailView(id, ctx);
@@ -546,6 +618,7 @@ parentPort!.on('message', async (message: { id: number; method: string; args: an
       value = (a.direction > 0 ? candidates[0] : candidates.at(-1))?.step;
     } else if (message.method === 'forget') {
       for (const row of db.prepare('SELECT id FROM views').all()) if (String(row.id).split('+').includes(a.id)) db.prepare('DELETE FROM views WHERE id=?').run(String(row.id));
+      for (const row of db.prepare('SELECT id FROM folds').all()) if (String(row.id).split('+').includes(a.id)) dropCheckpoint(String(row.id));
       cached = undefined;
       resident = undefined;
       tail = undefined;
@@ -559,7 +632,7 @@ parentPort!.on('message', async (message: { id: number; method: string; args: an
       // Derived blobs are disposable. Only rows of our own derived table are swept; captured
       // source blobs and harness paths are untouched.
       for (const sha of [...blobs.shas()]) if (!referenced.has(sha)) blobs.delete(sha);
-    } else if (message.method === 'close') { if (background) background.cancelled = true; background = undefined; cached = undefined; resident = undefined; tail = undefined; db.close(); source.close(); }
+    } else if (message.method === 'close') { if (checkpointTimer) clearTimeout(checkpointTimer); try { if (resident && resident.saved < resident.rows) saveCheckpoint(); } catch { /* the next open rebuilds */ } if (background) background.cancelled = true; background = undefined; cached = undefined; resident = undefined; tail = undefined; db.close(); source.close(); }
     else throw new Error('Unknown history request');
     // The encoder owns this exact-sized buffer; transfer it instead of cloning the
     // page's object graph and re-encoding it on capture's event loop.

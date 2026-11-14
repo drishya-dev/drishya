@@ -25,6 +25,7 @@
 // A persisted state is valid for a journal exactly when its head passes `canAppend` for the stored tail.
 
 import { createHash } from 'node:crypto';
+import { deserialize, serialize } from 'node:v8';
 import type { Observation, Projection } from '@drishya/contracts';
 import { createReducer, REDUCER_VERSION, type BlobIO, type ReduceOptions } from './reduce.ts';
 
@@ -32,6 +33,9 @@ import { createReducer, REDUCER_VERSION, type BlobIO, type ReduceOptions } from 
 export const FOLD_FORMAT = 1;
 
 /** What a fold has consumed. Plain data, JSON-safe. */
+/** A persistable fold: its head and the reducer's state as bytes (v8-serialized, keeping shared object identity). */
+export interface FoldCheckpoint { head: FoldHead; state: Buffer; /** Blobs the state refers to by hash (captured file bases); a checkpoint is only good while they are still stored. */ blobs: string[] }
+
 export interface FoldHead {
   format: number;
   reducerVersion: string;
@@ -106,6 +110,30 @@ export class ProjectionFold {
   feed(ordered: readonly Observation[]): void {
     for (const o of ordered) track(this.h, this.roots, o);
     this.reducer.append(ordered);
+  }
+
+  /**
+   * PERF-4: the fold as bytes. Valid for a recording only while `restore` accepts it (the caller also keys it by the
+   * options the reducer ran with, the privacy policy and the blob store; see the history worker).
+   */
+  checkpoint(): FoldCheckpoint {
+    const state = this.reducer.exportState();
+    return { head: this.head, state: serialize(state), blobs: [...new Set(state.bases.values())] };
+  }
+
+  /**
+   * A fold resumed from a checkpoint, or undefined when it is not one this code can resume (another format or reducer
+   * version, or unreadable bytes). It is then equal to the fold that was checkpointed: `canAppend`/`append` continue from its head.
+   */
+  static restore(checkpoint: FoldCheckpoint, io: BlobIO, opts: ReduceOptions): ProjectionFold | undefined {
+    const head = checkpoint.head;
+    if (head.format !== FOLD_FORMAT || head.reducerVersion !== REDUCER_VERSION) return undefined;
+    let state: ReturnType<ReturnType<typeof createReducer>['exportState']>;
+    try { state = deserialize(checkpoint.state); } catch { return undefined; }
+    const reducer = createReducer(opts.lineage?.currentRecordingId ?? head.recordingId, [], io, { ...opts, ordered: true, rootsHint: { byRecording: state.rootsByRecording, all: head.roots } });
+    reducer.importState(state);
+    const roots = new Set(head.roots);
+    return new ProjectionFold(JSON.parse(JSON.stringify(head)) as FoldHead, reducer, roots);
   }
 
   get head(): FoldHead {

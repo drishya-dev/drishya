@@ -967,7 +967,50 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       ...contextEvidence,
     };
   }
-  return { append, snapshot };
+  /**
+   * PERF-4: everything this reducer has folded, as one object graph for a codec that keeps shared identity (v8's
+   * serializer does: `lastNotice` and `turnByRecord` hold the very objects `notices` and `timeline` hold). Includes
+   * nothing derived from options or from the whole input's roots; those come from `opts` when a reducer is restored.
+   * The state is only meaningful with the head that says what it consumed (see fold.ts).
+   */
+  function exportState() {
+    return {
+      observationCount, lastSequence, workspaceRoot, recordedBranch, title, titleRank, firstPrompt, branchPrimaryRoot, currentRecording,
+      taskPlans, desktopPlans, usage, context, turnRecords,
+      itemReceipts, agents, ops, dirtyOperations, opOrder, opGroups, prose, turnByRecording, turnByRecord, promptRecordLine,
+      pendingTurnImages, unrecorded, turnMessageByRecording, checkpoints, awaitingCheckpoint, notices, availableTools, lastNotice,
+      artifacts, links, timeline, gaps, bases, harnesses, capabilities, lineageStarts,
+      // The first captured root of each recording: a restored reducer takes it as its root hint (it is not recomputed from input it has not got).
+      rootsByRecording: Object.fromEntries(rootsByRecording),
+    };
+  }
+  type ReducerState = ReturnType<typeof exportState>;
+
+  /** Puts a state exported by `exportState` (and carried through a serializer) into this empty reducer. */
+  function importState(state: ReducerState) {
+    const fill = <K, V>(target: Map<K, V>, from: Map<K, V>) => { target.clear(); for (const [key, value] of from) target.set(key, value); };
+    const fillSet = <V>(target: Set<V>, from: Set<V>) => { target.clear(); for (const value of from) target.add(value); };
+    const fillList = <V>(target: V[], from: V[]) => { target.length = 0; for (const value of from) target.push(value); };
+    observationCount = state.observationCount; lastSequence = state.lastSequence; workspaceRoot = state.workspaceRoot; recordedBranch = state.recordedBranch;
+    title = state.title; titleRank = state.titleRank; firstPrompt = state.firstPrompt; branchPrimaryRoot = state.branchPrimaryRoot; currentRecording = state.currentRecording;
+    // Accumulators are class instances; a serializer keeps their fields, not their prototype.
+    Object.assign(taskPlans, state.taskPlans); Object.assign(desktopPlans, state.desktopPlans); Object.assign(usage, state.usage);
+    Object.assign(context, state.context); Object.assign(turnRecords, state.turnRecords);
+    fill(itemReceipts, state.itemReceipts); fill(agents, state.agents); fill(ops, state.ops); fillSet(dirtyOperations, state.dirtyOperations); fillList(opOrder, state.opOrder);
+    fill(opGroups, state.opGroups); fillList(prose, state.prose); fill(turnByRecording, state.turnByRecording); fill(turnByRecord, state.turnByRecord);
+    fill(promptRecordLine, state.promptRecordLine); fill(pendingTurnImages, state.pendingTurnImages); fill(unrecorded, state.unrecorded);
+    fill(turnMessageByRecording, state.turnMessageByRecording); fill(checkpoints, state.checkpoints); fillSet(awaitingCheckpoint, state.awaitingCheckpoint);
+    fillList(notices, state.notices); fill(availableTools, state.availableTools); fill(lastNotice, state.lastNotice); fill(artifacts, state.artifacts);
+    fillList(links, state.links); fillList(timeline, state.timeline); fillList(gaps, state.gaps); fill(bases, state.bases); fillSet(harnesses, state.harnesses);
+    for (const key of Object.keys(capabilities)) delete capabilities[key];
+    Object.assign(capabilities, state.capabilities);
+    fill(lineageStarts, state.lineageStarts);
+    // Snapshots handed out before are rebuilt from the operations on the next snapshot.
+    snapshots.clear();
+    for (const id of ops.keys()) dirtyOperations.add(id);
+  }
+
+  return { append, snapshot, exportState, importState };
 }
 
 // ─── ordering ────────────────────────────────────────────────────────────────────────────
