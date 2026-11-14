@@ -1,7 +1,0 @@
-/* Content containment only. FINISH-3 owns the prose/table visual treatment. */
-.md-prose-table {min-width:0;max-width:100%;}
-.md-prose-table>.md-table-scroll {overflow-x:auto;max-width:100%;}
-.md-prose-table table {border-collapse:collapse;min-width:100%;color:inherit;font:inherit;}
-.md-prose-table :is(th,td) {padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top;min-width:8ch;overflow-wrap:normal;}
-.md-prose-table th {font-weight:var(--weight-medium);}
-.md-prose-table .md-path {max-width:100%;}
