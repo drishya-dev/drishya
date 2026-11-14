@@ -15,20 +15,25 @@ globalThis.fetch = (input, init) => {
   return fetchPublic(input, { ...init, credentials: 'omit' });
 };
 
+const painted = () => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+
 async function start() {
   const bundle = await loadBundle(new URL('demo/bundle.json', location.href).pathname);
   if (bundle.projection.operations.some(o => !o.id.startsWith('rec_x'))) throw Error('Only the synthetic sample may be shown.');
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) setMotion(false);
   createRoot(document.getElementById('replay')!).render(<ModernApp token="" />);
   const total = bundle.projection.timeline.length;
-  addEventListener('message', event => {
-    if (event.origin !== location.origin || typeof event.data !== 'object' || event.data?.type !== 'drishya-seek') return;
+  addEventListener('message', async event => {
+    if (event.source !== parent || event.origin !== location.origin || typeof event.data !== 'object' || event.data?.type !== 'drishya-seek') return;
+    if (!Number.isSafeInteger(event.data.requestId) || !Number.isFinite(event.data.step)) return;
     const step = Math.max(0, Math.min(total, Math.round(Number(event.data.step) || 0)));
     const began = performance.now();
     if (useApp.getState().step !== step || useApp.getState().mode !== 'replay') useApp.getState().seek(step, { hold: true });
-    // What the step cost, so the page can pace the next one (SITE-3).
-    parent.postMessage({ type: 'drishya-seeked', ms: performance.now() - began }, location.origin);
+    // A store write is not a rendered screen. Acknowledge only after the real material can paint.
+    await painted();
+    parent.postMessage({ type: 'drishya-seeked', requestId: event.data.requestId, step, ms: performance.now() - began }, location.origin);
   });
+  await painted();
   parent.postMessage({ type: 'drishya-ready', total }, location.origin);
 }
 void start();
