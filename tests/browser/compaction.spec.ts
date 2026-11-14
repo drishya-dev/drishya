@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
-let dir:string, app:App, server:RunningServer, claude:string, codex:string, missing:string, clean:string, livePath:string;
+let dir:string, app:App, server:RunningServer, claude:string, codex:string, missing:string, clean:string, zero:string, small:string, livePath:string;
 const at=(i:number)=>new Date(Date.UTC(2026,9,30,10,0,i)).toISOString();
 const user=(i:number)=>({type:'response_item',timestamp:at(i),payload:{type:'message',role:'user',content:[{type:'input_text',text:`Synthetic prompt ${i}`}]}});
 const usage=(i:number,n:number)=>({type:'event_msg',timestamp:at(i),payload:{type:'token_count',info:{model_context_window:100000,last_token_usage:{input_tokens:n}}}});
@@ -26,6 +26,9 @@ test.beforeEach(async()=>{
   codex=await imported('codex','codex',[user(0),usage(1,80000),compact(2),usage(3,9000),user(4)]);
   missing=await imported('missing','codex',[compact(1),usage(2,7000),user(3)]);
   clean=await imported('clean','codex',[user(0)]);
+  // Codex records the first reading after a boundary with every input field at 0 before it has sent a request (UI-36b); a real small reading must stay.
+  zero=await imported('zero','codex',[user(0),usage(1,80000),compact(2),usage(3,0),user(4)]);
+  small=await imported('small','codex',[user(0),usage(1,80000),compact(2),usage(3,4000),user(4)]);
   livePath=join(dir,'codex.jsonl');server=await startServer({app,port:0,token:'synthetic-compaction-browser'});
 });
 test.afterEach(async()=>{await server?.close();await app?.close();if(dir&&resolve(dir).startsWith(resolve(tmpdir())+sep))rmSync(dir,{recursive:true,force:true});});
@@ -75,6 +78,14 @@ test('Codex request readings, encrypted/missing states and replay cutoffs',async
   await expect(page.getByRole('region',{name:'Compaction',exact:true})).toContainText('Last request before not recorded');
   await expect(page.locator('.context-track')).toHaveCount(0);
   await open(page,clean);await expect(page.locator('.context-evidence,.context-report')).toHaveCount(0);
+});
+test('a zero first reading after a Codex compaction is not recorded, never "100% freed"',async({page})=>{
+  await open(page,zero);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await receipt.scrollIntoViewIfNeeded();
+  await expect(receipt).toContainText('Last request before 80k · first after not recorded');
+  await expect(receipt).not.toContainText('freed');await expect(receipt).not.toContainText('→');
+  await expect(receipt.locator('.context-track')).toHaveCount(0);
+  await open(page,small);const real=page.getByRole('region',{name:'Compaction',exact:true});await real.scrollIntoViewIfNeeded();
+  await expect(real).toContainText('80k → 4k tokens · 95% freed of 100k');await expect(real.locator('.context-track')).toHaveCount(1);
 });
 test('a later summary stays hidden and live append does not change past evidence',async({page})=>{
   const p=app.projection(claude), c=p.compactions![0]!;await open(page,claude,c.step+1);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await expect(receipt.getByRole('button',{name:'Read summary'})).toHaveCount(0);await expect(page.locator('.context-summary-reader')).toHaveCount(0);
