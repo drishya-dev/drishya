@@ -1,7 +1,7 @@
 // A small, fast tokenizer for display — GitHub Dark colours. Not a parser; it only has to be
 // right often enough to help reading. CodeMirror replaces it in the full reader.
 
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 const KEYWORDS = new Set(
   'abstract as async await break case catch class const continue debugger def default del delete do elif else enum except export extends false finally for from function global if implements import in instanceof interface is lambda let new nonlocal None not null of or pass private protected public raise readonly return static super switch this throw true True False try type typeof undefined var void while with yield fn pub mut impl struct use mod match func package go defer chan select'.split(' '),
@@ -245,8 +245,22 @@ export function tokenize(line: string, lang?: string): Tok[] {
   return out;
 }
 
-export function Highlighted({ line, lang }: { line: string; lang?: string }): ReactNode {
-  return tokenize(line, lang).map((t, i) => (t.t === 'plain' ? t.s : <span key={i} className={`tk-${t.t}`}>{t.s}</span>));
+/** A place to break a long path: after each separator, even where the browser's own rules refuse one (before a dot). An option
+ * such as `-n` or `--detach` never breaks at its hyphen. The text is unchanged, so copy yields the original. */
+function softBreaks(text: string): ReactNode {
+  const pieces = text.split(/((?<![\w-])-{1,2}[A-Za-z][\w-]{0,22}(?![\w-]))/);
+  return pieces.length < 2 ? pathBreaks(text) : pieces.map((piece, i) => i % 2 ? <span key={i} className="cmd-option">{piece}</span> : <Fragment key={i}>{pathBreaks(piece)}</Fragment>);
+}
+function pathBreaks(text: string): ReactNode {
+  const parts = text.split(/(?<=[/\\])(?=[^\s/\\])/);
+  return parts.length < 2 ? text : parts.flatMap((part, i) => i ? [<wbr key={i}/>, part] : [part]);
+}
+
+export function Highlighted({ line, lang, breaks = false }: { line: string; lang?: string; breaks?: boolean }): ReactNode {
+  return tokenize(line, lang).map((t, i) => {
+    const text = breaks ? softBreaks(t.s) : t.s;
+    return t.t === 'plain' ? <Fragment key={i}>{text}</Fragment> : <span key={i} className={`tk-${t.t}`}>{text}</span>;
+  });
 }
 
 export function langOf(path: string | undefined): string | undefined {
