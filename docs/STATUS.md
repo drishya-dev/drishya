@@ -56,11 +56,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
-### Yash with Codex — 14 Nov: AG-3 genuine runs and draft audit
+### Yash with Codex — 14 Nov: AG-3 code blockers fixed, external crash acceptance open
 
-- #469 (AG-1) and #472 (AG-2) are ready for Fable, integration branch only. AG-3 #474 remains draft, source pushed through 9ff6ff28 plus current-main refresh 929a1b56; no PR was merged by Codex.
-- Genuine 660a1ec4: 16,556 bytes, five operations, one child, two background commands. At 600/1440, child opening, Running now, History and restart cursor passed. A genuine five-child spawn in 61769918 also opens correctly. 1,548 units / one existing skip, both types, package verification and 20 targeted Edge browsers passed. No content/screenshots exposed.
-- Keep AG-3 claimed/unticked: cold inspection still rereads transcript variants; a late completed-task file update can show future content in replay. At-most-28-path cursor/projection/as-of expansion is requested before edits. Final-build live timing needs a pre-armed observer (the second run was already finished); native crash/kill not run. README records exact seams, evidence and honest timing limits. AG-4/5 have not started; no full integration gate yet.
+- #469 and #472 remain ready for Fable, integration branch only. AG-3 #474 now has sealed inspection recovery (6e9a1929), correct replay versions (a9486190) and current-main refresh c399d64c. No PR was merged by Codex.
+- Final armed genuine run: six journal updates (89/501 ms p50/p95), 15 log updates (1,570/1,872 ms), visible new card at 1440 and History at 600, restart at cursor 18,861 without duplicate inserts. Separate-process 43.7 MB resume reads 3,072 prefix bytes, zero body bytes. Child and multi-child screens pass; old-harness genuine frames pass.
+- Both types, 1,554 units / one existing skip, 29 targeted Edge browsers, all 25 real live/task cases and package verification pass. Review/merge seams: [antigravity-ag3-live](review/antigravity-ag3-live.md). No full combined gate or human visual certification claimed.
+- AG-3 stays claimed/unticked only for a deliberately interrupted genuine native process case. No isolated signed-in native profile is available; the user's shared native app was not force-crashed. All implementation blockers are resolved. AG-4 and AG-5 are not complete; integration is not ready for main.
 
 ### Yash with Codex — 13 Nov: AG-1 passive Antigravity adapter
 
