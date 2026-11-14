@@ -68,6 +68,7 @@ import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
 import {useDisclosureChoice} from './Disclosure.tsx';
+import { HistoryWaitCard } from './WaitCard.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { PromptRail } from './PromptRail.tsx';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
@@ -895,7 +896,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={keyFor(ps, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
               {fold !== 'hidden' && !unloaded && <SessionLineage projection={projection} passageId={ps.id} visibleStep={scene.step} />}
-              {fold === 'hidden' ? null : unloaded ? <div className="muted" style={{ minHeight: heights.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT }} aria-busy="true">Loading session…</div> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
+              {fold === 'hidden' ? null : unloaded ? <HistoryWaitCard minHeight={heights.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT} /> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
             </div>;
           }),
         ])}
