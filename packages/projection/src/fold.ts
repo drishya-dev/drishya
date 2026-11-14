@@ -81,13 +81,31 @@ export class ProjectionFold {
   static build(parts: string[], ordered: Iterable<Observation>, io: BlobIO, opts: ReduceOptions): ProjectionFold {
     const recordingId = parts.at(-1)!;
     const head: FoldHead = { format: FOLD_FORMAT, reducerVersion: REDUCER_VERSION, recordingId, parts: [...parts], counts: Object.fromEntries(parts.map((p) => [p, 0])), sequences: Object.fromEntries(parts.map((p) => [p, -1])), clock: '', sourceClocks: {}, generations: {}, roots: [] };
-    const roots = new Set<string>();
+    const roots = new Set<string>([...Object.values(opts.rootsHint?.byRecording ?? {}), ...(opts.rootsHint?.all ?? [])]);
     // The reducer reads its input three times (roots, then roots again, then the fold), so a lazy source such as a
     // database cursor would run its query three times; read it once.
     const list = Array.isArray(ordered) ? ordered : [...ordered];
     for (const o of list) track(head, roots, o);
     const reducer = createReducer(opts.lineage?.currentRecordingId ?? recordingId, list, io, { ...opts, ordered: true });
     return new ProjectionFold(head, reducer, roots);
+  }
+
+  /**
+   * PERF-4: an empty fold to be fed the whole ordered input in slices with `feed` (a long history is folded between
+   * yields to the event loop). `opts.rootsHint` must carry the whole input's root evidence: the reducer reads roots
+   * up front, before any slice. The result equals `build` over the same input (parity-tested).
+   */
+  static start(parts: string[], io: BlobIO, opts: ReduceOptions): ProjectionFold {
+    return ProjectionFold.build(parts, [], io, opts);
+  }
+
+  /**
+   * Folds the next slice of an ordered stream begun with `start`. The caller owns the order (a store ordered
+   * read); nothing is checked here, unlike `append`, which guards a fold that is resumed after the fact.
+   */
+  feed(ordered: readonly Observation[]): void {
+    for (const o of ordered) track(this.h, this.roots, o);
+    this.reducer.append(ordered);
   }
 
   get head(): FoldHead {

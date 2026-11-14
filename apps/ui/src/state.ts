@@ -204,7 +204,17 @@ export const useApp = create<State>((set, get) => ({
     const settle = () => { if (opening === mine) opening = undefined; opened(); };
     // Revisions first, then the projection: what is shown is at least as new as what is recorded.
     try {
-      const recordings = await src.recordings();
+      let recordings = await src.recordings();
+      // LIVE-7's stale-open burst: a session the harness kept writing while Drishya looked elsewhere is behind its journal until it
+      // is followed, so the first paint showed the older steps and the rest landed in a second paint. Follow it first (the daemon
+      // reads what is new before it answers); a slow first read does not hold the paint back for more than a moment.
+      const behind = opts.at === undefined && !opts.play && src.kind === 'daemon' ? id.split('+').filter(part => recordings.some(r => r.id === part && !r.live)) : [];
+      if (behind.length) {
+        let refreshed: ReaderRecording[] | undefined;
+        const followed = Promise.all(behind.map(part => src.setLive(part, true))).then(() => src.recordings()).then(fresh => { refreshed = fresh; }, () => undefined);
+        await Promise.race([followed, new Promise(resolve => setTimeout(resolve, 400))]);
+        if (refreshed) recordings = refreshed;
+      }
       const count = recordings.filter((r) => id.split('+').includes(r.id)).reduce((n, r) => n + r.observationCount, 0);
       const bytes = recordings.filter((r) => id.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
       const page = (count > 10_000 || bytes > 32 * 1024 * 1024) && src.history ? await src.history(id, { step: typeof opts.at === 'number' ? opts.at : opts.play ? 0 : undefined, start: saved?.follow === false ? saved.start : undefined, selectedOperationId: saved?.selectedOp, filter: saved?.filter }) : undefined;
@@ -253,7 +263,10 @@ export const useApp = create<State>((set, get) => ({
     const bytes = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
     if (source.history && (get().historyPage || count > 10_000 || bytes > 32 * 1024 * 1024)) {
       set({ recordings, recording: recordings.find((r) => r.id === recordingId) ?? recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording });
-      await get().loadHistoryWindow({ start: get().follow ? undefined : get().historyPage?.start });
+      // PERF-4: the open page may be the recent-first one; its passage numbers are not the whole history's, so a reader
+      // who scrolled away is kept at their place by passage identity when the whole page replaces it.
+      const open = get().historyPage;
+      await get().loadHistoryWindow(get().follow ? {} : open?.partial ? { anchorPassageId: open.loadedPassageIds[0], count: open.loadedPassageIds.length || undefined } : { start: open?.start });
       return;
     }
     const projection = await source.projection(recordingId);
@@ -270,7 +283,9 @@ export const useApp = create<State>((set, get) => ({
     if (!source?.history || !recordingId) return;
     const current = newest('projection');
     const previous = get().historyPage;
-    const liveInterval = mode === 'history' && previous
+    // PERF-4: the swap from the recent-first page to the whole one is not new work: its step numbers count from a
+    // different start, so no "since" is carried and nothing arrives.
+    const liveInterval = mode === 'history' && previous && !previous.partial
       ? { since: previous.scene.step, previousSince: Math.max(0, previous.since ?? previous.scene.step - 1) } : {};
     const page = await source.history(recordingId, { step: mode === 'replay' ? step : undefined, ...liveInterval, filter, selectedOperationId: selectedOp, ...query });
     if (!current() || get().recordingId !== recordingId) return;
@@ -281,6 +296,8 @@ export const useApp = create<State>((set, get) => ({
   seek(step, opts) {
     const p = get().projection;
     if (!p) return;
+    // PERF-4: step numbers of the recent-first page count from its own start; replay waits for the whole history.
+    if (get().historyPage?.partial) return;
     if (get().mode === 'history' && get().source && get().recordingId) workspaceMemory(get().source!).clear(get().recordingId!);
     const s = Math.max(0, Math.min(get().historyPage?.scene.total ?? p.timeline.length, Math.round(step)));
     set({ mode: 'replay', developerWorkspace: false, compareOpen: false, step: s, ...(opts?.hold ? { playing: false, held: true } : {}) });
@@ -303,6 +320,7 @@ export const useApp = create<State>((set, get) => ({
   jump(type, dir = 1) {
     const { projection, step, historyPage, source, recordingId } = get();
     if (!projection) return;
+    if (historyPage?.partial) return;
     if (historyPage && source?.historyMarker && recordingId) {
       void source.historyMarker(recordingId, step, Array.isArray(type) ? type : [type], dir).then((to) => { if (to !== undefined && get().recordingId === recordingId && get().step === step) get().seek(to, { hold: true }); }).catch((error) => { if (get().recordingId === recordingId) set({ error: error.message, playing: false }); });
       return;

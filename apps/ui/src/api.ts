@@ -279,7 +279,8 @@ export const daemon: DataSource = {
   importSource: (path, adapterId, live) => req('/v1/import', { method: 'POST', json: { path, adapterId, live } }),
   imports: async () => (await req<{ imports: { path: string; bytes: number; total: number }[] }>('/v1/imports')).imports,
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
-  history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
+  // PERF-4: the open page can show a large recording's latest work first; the whole page replaces it when ready.
+  history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: { tailFirst: true, ...query } }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
   fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
   graph: async (id, refresh) => {

@@ -78,6 +78,13 @@ export interface ReduceOptions {
   maxInputChars?: number;
   /** Internal store readers supply a repeatable, source-time-ordered iterable. */
   ordered?: boolean;
+  /**
+   * PERF-4: workspace-root evidence of the WHOLE input, for a reducer that is handed only part of it (a tail-first
+   * projection, or a fold fed in slices). `byRecording` is each recording's first captured root; `all` every root,
+   * working directory and operation directory seen. Roots decide path namespacing, so they cannot be learned from
+   * a part. Given the whole input, the reducer computes exactly these itself and the hint changes nothing.
+   */
+  rootsHint?: { byRecording?: Record<string, string>; all?: string[] };
 }
 
 const PREVIEW = 4000;
@@ -176,7 +183,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   let title: string | undefined;
   let titleRank = 0;
   let firstPrompt: string | undefined;
-  const rootsByRecording = new Map<string, string>();
+  const rootsByRecording = new Map<string, string>(Object.entries(opts.rootsHint?.byRecording ?? {}));
   for (const o of obs) {
     const root = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof (o.payload as Rec).cwd === 'string' ? (o.payload as Rec).cwd : undefined);
     if (root && !rootsByRecording.has(o.recordingId)) rootsByRecording.set(o.recordingId, root);
@@ -192,7 +199,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     const r = normalizedRoot(root);
     return p === r || p.startsWith(r + '/');
   };
-  const roots = new Set([...rootsByRecording.values()].map(normalizedRoot));
+  const roots = new Set([...rootsByRecording.values(), ...(opts.rootsHint?.all ?? [])].map(normalizedRoot));
   for (const o of obs) {
     const cwd = (o.payload as Rec).cwd;
     const operationCwd = (o.payload as Rec).intent?.cwd;

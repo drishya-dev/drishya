@@ -310,7 +310,7 @@ function WorkspaceViewer() {
         {mapVisible && mapError && <div className="map-recovery" role="alert">Repository map unavailable: {mapError}<button className="btn" onClick={() => setMapRetry(n => n + 1)}>Retry repository map</button></div>}
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
-        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} followSlot={followSlot} />
+        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} followSlot={followSlot} partial={!!historyPage?.partial} />
         {!workingWindow && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>

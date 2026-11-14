@@ -68,8 +68,21 @@ export class App {
   constructor(dir = dataDir(), opts: { memory?: boolean; graphProbeMs?: number } = {}) {
     this.store = new Store(dir, opts);
     this.ingest = new Ingestor(this.store);
-    this.history = new HistoryService(dir, id => this.ingest.useHistoryWorker(id));
+    this.history = new HistoryService(dir, id => this.ingest.useHistoryWorker(id), id => this.fullViewReady(id));
     this.graphProbeMs = opts.graphProbeMs ?? 15_000;
+  }
+
+  /**
+   * PERF-4: the history worker finished the whole view of a recording it first showed from its latest work only.
+   * A page that is open on it learns the same way it learns of new work (a change notice), so the swap arrives as one
+   * ordinary refresh; nothing is added to the recording.
+   */
+  private fullViewReady(viewId: string): void {
+    const ids = viewId.split('+').filter(Boolean);
+    const id = ids.at(-1);
+    const recording = id ? this.store.getRecording(id) : undefined;
+    if (!id || !recording || this.deleting.has(id)) return;
+    this.ingest.emit('change', { type: 'recording', recordingId: id, revision: recording.revision ?? 0, observationCount: recording.observationCount, added: 0, live: recording.live });
   }
 
   recording(id: string): RecordingSummary {

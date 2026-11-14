@@ -32,8 +32,10 @@ export class HistoryService {
   private closed = false;
   private exitPromise?: Promise<void>;
   private startingWorker?: Promise<Worker>;
-  constructor(privateDir: string, onRead?: (id: string) => void) { this.dir = privateDir; this.onRead = onRead; }
+  constructor(privateDir: string, onRead?: (id: string) => void, onFullReady?: (id: string) => void) { this.dir = privateDir; this.onRead = onRead; this.onFullReady = onFullReady; }
   private readonly onRead?: (id: string) => void;
+  /** PERF-4: the worker finished folding a large recording in the background; its whole view is ready to replace the recent-first one. */
+  private readonly onFullReady?: (id: string) => void;
   private readonly dir: string;
 
   private async ensureWorker(): Promise<Worker> {
@@ -59,7 +61,8 @@ export class HistoryService {
 
       this.worker = worker;
       worker.once('online', () => { if (this.worker === worker) this.onlineWorker = worker; });
-      worker.on('message', (message: { id: number; value?: unknown; error?: string }) => {
+      worker.on('message', (message: { id: number; value?: unknown; error?: string; event?: string; viewId?: string }) => {
+        if (message.event === 'full-ready') { if (this.worker === worker && typeof message.viewId === 'string') this.onFullReady?.(message.viewId); return; }
         const task = this.pending.get(message.id);
         if (!task) return;
         this.pending.delete(message.id);

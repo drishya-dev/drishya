@@ -418,7 +418,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         for (const key of id.split('+')) app.recording(key);
         const body = await readJson(req);
         for (const field of ['start', 'count', 'step', 'promptStep', 'since', 'previousSince']) if (body[field] !== undefined && (!Number.isSafeInteger(body[field]) || Number(body[field]) < 0)) throw new HttpError(400, `invalid ${field}`);
-        for (const field of ['selectedOperationId', 'observationId']) if (body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 512)) throw new HttpError(400, `invalid ${field}`);
+        for (const field of ['selectedOperationId', 'observationId', 'anchorPassageId']) if (body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 512)) throw new HttpError(400, `invalid ${field}`);
+        if (body.tailFirst !== undefined && typeof body.tailFirst !== 'boolean') throw new HttpError(400, 'invalid tailFirst');
         if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');

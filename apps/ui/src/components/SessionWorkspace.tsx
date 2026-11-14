@@ -219,7 +219,8 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const source = useApp(s => s.source);
   const id = useApp(s => s.recordingId);
   const graph = useApp(s => s.graph);
-  const files = useApp(s => s.projection?.files);
+  // PERF-4: the files of the whole session are not known while only its latest work is folded: no marks rather than wrong ones.
+  const files = useApp(s => s.historyPage?.partial ? undefined : s.projection?.files);
   const capturedRoot=useApp(s=>s.checkoutRoot??s.recording?.workspaceRoot);
   const sessionRoot=useApp(s=>s.recording?.workspaceRoot);
   const checkoutPrefix=useApp(s=>s.checkoutPrefix);

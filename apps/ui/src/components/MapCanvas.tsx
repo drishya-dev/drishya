@@ -88,7 +88,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     return () => { renderer.current?.dispose(); node.removeEventListener('webglcontextlost', lost); node.removeEventListener('webglcontextrestored', create); };
   }, [depth, lowResource]);
   const { workspace,approve } = useSessionWorkspace();
-  const source=useApp(s=>s.source),recordingId=useApp(s=>s.recordingId),capturedFiles=useApp(s=>s.projection?.files);
+  const source=useApp(s=>s.source),recordingId=useApp(s=>s.recordingId),capturedFiles=useApp(s=>s.historyPage?.partial?undefined:s.projection?.files);
   const [openingCurrent,setOpeningCurrent]=useState(false),[readError,setReadError]=useState(''),[focusNotice,setFocusNotice]=useState<string>();
   const resolvedTheme = useResolvedTheme();
   const hoveredPath = useApp((s) => s.hoveredPath);

@@ -848,23 +848,52 @@ export class Store {
     }).slice(0, limit);
   }
 
-  /** Retains physical IDs/provenance. Equality is of sealed parts, never raw secret-bearing content. */
+  /**
+   * Retains physical IDs/provenance. Equality is of sealed parts, never raw secret-bearing content.
+   * PERF-4: read in slices (`read(n)`), so a long fold can yield between them; `lineageObservations` is the same
+   * reader pulled to the end. Each part's ordering query runs when the reader reaches it.
+   */
+  lineageReader(view: SessionLineageView): { read(limit: number): Observation[]; filter(added: Observation[]): Observation[]; readonly done: boolean } {
+    const store = this;
+    const seen = new Map<string, Set<string>>();
+    view.duplicatePartsOmitted = 0; view.differingReceiptPartsRetained = 0;
+    let part = 0;
+    let rows: number[] | undefined;
+    let at = 0;
+    /** Whether a part of the lineage is new, or repeats one already seen (the same sealed content, retained by its first copy). */
+    const accept = (observation: Observation): boolean => {
+      if (observation.source.recordId && (/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observation.source.recordId) || observation.kind === 'usage' && /^usage:[a-z0-9_-]{1,160}$/i.test(observation.source.recordId))) {
+        const key = JSON.stringify([observation.agentId, observation.source.recordId, observation.kind, observation.source.part]);
+        const hash = store.lineagePartHash(observation.payload);
+        const variants = seen.get(key) ?? new Set<string>();
+        if (variants.has(hash)) { view.duplicatePartsOmitted++; return false; }
+        if (variants.size && observation.kind === 'usage') view.differingReceiptPartsRetained++;
+        variants.add(hash); seen.set(key, variants);
+      }
+      return true;
+    };
+    return {
+      get done() { return part >= view.recordingIds.length; },
+      read(limit: number): Observation[] {
+        const out: Observation[] = [];
+        while (out.length < limit && part < view.recordingIds.length) {
+          rows ??= store.orderedRowIds(view.recordingIds[part]!);
+          if (at >= rows.length) { part++; rows = undefined; at = 0; continue; }
+          const observation = store.observationByRowId(rows[at++]!);
+          if (observation && accept(observation)) out.push(observation);
+        }
+        return out;
+      },
+      /** Observations stored after the read (a followed lineage grows at its end), through the same repeat check. */
+      filter(added: Observation[]): Observation[] { return added.filter(accept); },
+    };
+  }
+
   lineageObservations(view: SessionLineageView): Iterable<Observation> {
     const store = this;
     return { *[Symbol.iterator]() {
-      const seen = new Map<string, Set<string>>();
-      view.duplicatePartsOmitted = 0; view.differingReceiptPartsRetained = 0;
-      for (const id of view.recordingIds) for (const observation of store.orderedObservations(id)) {
-        if (observation.source.recordId && (/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(observation.source.recordId) || observation.kind === 'usage' && /^usage:[a-z0-9_-]{1,160}$/i.test(observation.source.recordId))) {
-          const key = JSON.stringify([observation.agentId, observation.source.recordId, observation.kind, observation.source.part]);
-          const hash = store.lineagePartHash(observation.payload);
-          const variants = seen.get(key) ?? new Set<string>();
-          if (variants.has(hash)) { view.duplicatePartsOmitted++; continue; }
-          if (variants.size && observation.kind === 'usage') view.differingReceiptPartsRetained++;
-          variants.add(hash); seen.set(key, variants);
-        }
-        yield observation;
-      }
+      const reader = store.lineageReader(view);
+      while (!reader.done) yield* reader.read(256);
     } };
   }
 
@@ -1021,36 +1050,99 @@ export class Store {
     return (this.q('SELECT body FROM observations WHERE recording_id = ? AND operation_id = ? ORDER BY seq').all(recordingId, operationId) as { body: string }[]).map((r) => JSON.parse(r.body));
   }
 
-  /** Repeatable disk-backed ordering matching the reducer's source-clock carry-forward. */
-  orderedObservations(recordingId: string | string[]): Iterable<Observation> {
-    const store = this;
+  /**
+   * Row ids of one or several recordings in reading order: the reducer's source-clock carry-forward as one SQL
+   * ordering (the heavy part of an ordered read, run once). Split from the row fetch so a long fold can read
+   * bodies in slices and yield between them (PERF-4).
+   */
+  orderedRowIds(recordingId: string | string[]): number[] {
     const ids = typeof recordingId === 'string' ? [recordingId] : [...new Set(recordingId)];
     const marks = ids.map(() => '?').join(',');
     const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
+    // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
+    // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
+    const order = this.db.prepare(`
+      WITH timed AS (
+        SELECT rowid AS rid, seq, recording_id,
+          MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
+            PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
+            ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+          ) AS clock_seq
+        FROM observations WHERE recording_id IN (${marks})
+      ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock
+        ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
+      ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
+        CASE timed.recording_id ${rank} END
+    `).all(...ids, ...ids) as { rid: number }[];
+    return order.map((row) => row.rid);
+  }
+
+  /** One observation by its row id (as returned by `orderedRowIds`). */
+  observationByRowId(rid: number): Observation | undefined {
+    const row = this.q('SELECT body FROM observations WHERE rowid = ?').get(rid) as { body: string } | undefined;
+    return row ? JSON.parse(row.body) as Observation : undefined;
+  }
+
+  /** Repeatable disk-backed ordering matching the reducer's source-clock carry-forward. */
+  orderedObservations(recordingId: string | string[]): Iterable<Observation> {
+    const store = this;
     return {
       *[Symbol.iterator]() {
-        // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
-        // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
-        const order = store.db.prepare(`
-          WITH timed AS (
-            SELECT rowid AS rid, seq, recording_id,
-              MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (
-                PARTITION BY recording_id, json_extract(body, '$.source.sourceId') ORDER BY seq
-                ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-              ) AS clock_seq
-            FROM observations WHERE recording_id IN (${marks})
-          ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock
-            ON clock.recording_id = timed.recording_id AND clock.seq = timed.clock_seq
-          ORDER BY COALESCE(clock.clock_time, ''), timed.seq,
-            CASE timed.recording_id ${rank} END
-        `).all(...ids, ...ids) as { rid: number }[];
-        const body = store.q('SELECT body FROM observations WHERE rowid = ?');
-        for (const { rid } of order) {
-          const row = body.get(rid) as { body: string } | undefined;
-          if (row) yield JSON.parse(row.body) as Observation;
+        for (const rid of store.orderedRowIds(recordingId)) {
+          const observation = store.observationByRowId(rid);
+          if (observation) yield observation;
         }
       },
     };
+  }
+
+  /**
+   * PERF-4: the last `prompts` prompts of a recording's main agent and everything stored after the first of them,
+   * by arrival order (one indexed read), capped at `maxObservations` from the end. Not in reading order: the caller
+   * orders it. `complete` is true when the recording has no earlier observation at all.
+   */
+  tailObservations(recordingId: string, prompts: number, maxObservations: number): { observations: Observation[]; complete: boolean } {
+    const from = this.q("SELECT seq FROM observations WHERE recording_id = ? AND kind = 'message.user' AND agent_id = 'agent:main' ORDER BY seq DESC LIMIT 1 OFFSET ?").get(recordingId, Math.max(0, prompts - 1)) as { seq: number } | undefined;
+    const count = this.q('SELECT COUNT(*) AS n FROM observations WHERE recording_id = ?').get(recordingId) as { n: number };
+    let start = from?.seq ?? -1;
+    const after = this.q('SELECT COUNT(*) AS n FROM observations WHERE recording_id = ? AND seq >= ?').get(recordingId, start) as { n: number };
+    if (after.n > maxObservations) {
+      const cut = this.q('SELECT seq FROM observations WHERE recording_id = ? ORDER BY seq DESC LIMIT 1 OFFSET ?').get(recordingId, maxObservations - 1) as { seq: number } | undefined;
+      if (cut) start = Math.max(start, cut.seq);
+    }
+    const rows = this.q('SELECT body FROM observations WHERE recording_id = ? AND seq >= ? ORDER BY seq').all(recordingId, start) as { body: string }[];
+    return { observations: rows.map((r) => JSON.parse(r.body) as Observation), complete: rows.length === count.n };
+  }
+
+  /**
+   * PERF-4: what a reducer that starts mid-recording still needs from the beginning to state the same identity as
+   * the full fold: every `session.meta` observation (workspace root, branch, title, model and agent facts are set
+   * there, in order) and, when `firstPrompt` is set, the main agent's first prompt (the title when none was named).
+   * Arrival order. Indexed by recording and kind; a few percent of a recording.
+   */
+  preludeObservations(recordingId: string, firstPrompt: boolean): Observation[] {
+    const rows = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'session.meta' ORDER BY seq").all(recordingId) as { body: string }[];
+    const out = rows.map((r) => JSON.parse(r.body) as Observation);
+    if (firstPrompt) {
+      const prompt = this.q("SELECT body FROM observations WHERE recording_id = ? AND kind = 'message.user' AND agent_id = 'agent:main' ORDER BY seq LIMIT 1").get(recordingId) as { body: string } | undefined;
+      if (prompt) out.push(JSON.parse(prompt.body) as Observation);
+    }
+    return out.sort((a, b) => a.receivedSequence - b.receivedSequence);
+  }
+
+  /**
+   * Workspace-root evidence of a recording, without reading its observations into JavaScript: the first root by
+   * arrival order (what the reducer takes as the recording's base) and every distinct root, working directory and
+   * operation directory (what decides path namespacing). One scan of the stored rows.
+   */
+  rootEvidence(recordingId: string): { first?: string; all: string[] } {
+    const first = this.q(`SELECT COALESCE(NULLIF(json_extract(body,'$.workspaceRoot'),''), CASE WHEN kind='session.meta' THEN NULLIF(json_extract(body,'$.payload.cwd'),'') END) AS r
+      FROM observations WHERE recording_id = ? AND r IS NOT NULL ORDER BY seq LIMIT 1`).get(recordingId) as { r?: unknown } | undefined;
+    const rows = this.q(`SELECT DISTINCT json_extract(body,'$.workspaceRoot') AS a, json_extract(body,'$.payload.cwd') AS b, json_extract(body,'$.payload.intent.cwd') AS c
+      FROM observations WHERE recording_id = ?`).all(recordingId) as { a: unknown; b: unknown; c: unknown }[];
+    const all = new Set<string>();
+    for (const row of rows) for (const value of [row.a, row.b, row.c]) if (typeof value === 'string' && value) all.add(value);
+    return { ...(typeof first?.r === 'string' ? { first: first.r } : {}), all: [...all] };
   }
 
   observationsOfKinds(recordingId: string, kinds: string[]): Observation[] {
