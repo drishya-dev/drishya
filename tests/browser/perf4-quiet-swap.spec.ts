@@ -31,7 +31,7 @@ function journalText(): string {
 for (const [label, viewport] of [['1440', { width: 1440, height: 900 }], ['600', { width: 600, height: 800 }]] as const) {
   test(`the swap to the whole history is quiet at ${label} px`, async ({ page }) => {
     const saved = { first: process.env.DRISHYA_TAIL_FIRST, prompts: process.env.DRISHYA_TAIL_PROMPTS, hold: process.env.DRISHYA_TAIL_HOLD_MS };
-    process.env.DRISHYA_TAIL_FIRST = '1'; process.env.DRISHYA_TAIL_PROMPTS = '6'; process.env.DRISHYA_TAIL_HOLD_MS = '4500';
+    process.env.DRISHYA_TAIL_FIRST = '1'; process.env.DRISHYA_TAIL_PROMPTS = '6'; process.env.DRISHYA_TAIL_HOLD_MS = '9000';
     const dir = mkdtempSync(join(tmpdir(), 'drishya-perf4-swap-'));
     const journal = join(dir, 'session.jsonl');
     writeFileSync(journal, journalText());
@@ -60,6 +60,14 @@ for (const [label, viewport] of [['1440', { width: 1440, height: 900 }], ['600',
       expect((await state())[0]).toBe(true);
       // Let the first page settle (the follow camera and the measuring of the passages), then watch every frame until a
       // second after the whole history lands. The baseline is the passage's place in the last frame before the swap.
+      // The newest reply opens and settles by itself after it arrives (a timer of the page, nothing to do with the swap); the
+      // swap is compared against the page once that has happened, so a slow machine cannot make it look like the swap's doing.
+      await page.evaluate(() => new Promise<void>((done) => {
+        const last = () => [...document.querySelectorAll<HTMLElement>('.history .passage-slot[data-passage-id]')].at(-1)?.innerText ?? '';
+        let seen = last(), same = 0;
+        const timer = setInterval(() => { const now = last(); same = now === seen ? same + 1 : 0; seen = now; if (same >= 12) { clearInterval(timer); done(); } }, 200);
+        setTimeout(() => { clearInterval(timer); done(); }, 6000);
+      }));
       await page.evaluate(() => new Promise<void>((done) => {
         // Armed once the follow camera is still (the swap must be measured against a view that is at rest).
         const scroller = document.querySelector<HTMLElement>('.history')!;
