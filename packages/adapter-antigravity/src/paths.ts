@@ -36,7 +36,7 @@ export function localPath(value: string): string | undefined {
 }
 
 /** Only journals, their bounded output references and the index are observation inputs.
- * User uploads, scratch files and all credential-bearing siblings are deliberately excluded.
+ * Only explicitly referenced image uploads are permitted as media; scratch files and credential-bearing siblings remain excluded.
  */
 export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 'output' | 'media' | 'artifact'): boolean {
   const p = path.replace(/\\/g, '/');
@@ -45,7 +45,7 @@ export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 
   const tail = p.split('/').slice(2).join('/');
   if (purpose === 'transcript') return /^\.system_generated\/logs\/transcript(?:_full)?\.jsonl$/.test(tail);
   if (purpose === 'output') return /^\.system_generated\/(?:steps\/\d+\/output\.txt|tasks\/task-\d+\.log)$/.test(tail);
-  if (purpose === 'media') return /^\.system_generated\/logs\/media\/step_\d+_media_\d+\.(?:png|jpe?g)$/i.test(tail);
+  if (purpose === 'media') return /^(?:\.system_generated\/logs\/media\/step_\d+_media_\d+|(?:\.user_uploaded|\.tempmediaStorage)\/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199})\.(?:png|jpe?g|gif|webp)$/i.test(tail);
   return /^(?:implementation_plan|task|walkthrough)\.md(?:\.metadata\.json|\.resolved(?:\.\d+)?)?$/.test(tail);
 }
 

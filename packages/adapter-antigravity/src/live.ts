@@ -7,6 +7,10 @@ import { readChildren, type ChildReference } from './subagents.ts';
 import { recordedExitCode } from './tools.ts';
 import type { Summary } from './summaries.ts';
 import { matched } from './pairing.ts';
+import { captureMedia, type MediaResult } from './media.ts';
+import { readArtifactVersions, markdownTasks } from './artifacts.ts';
+import { localPath, within } from './paths.ts';
+import { join, resolve } from 'node:path';
 
 type Row = Record<string, unknown>;
 const object = (value: unknown): Row => value && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
@@ -15,7 +19,9 @@ interface Call { id: string; tool: string; input: Row; protected: boolean }
 interface Task { call: Call; id: string; step: number; terminal?: { step: number; text: string; time?: string; error: boolean }; emitted?: string; nextPollAt?: number }
 
 /** Async reads stay outside parse(), then ingest seals both journal and side-file material. */
-export function liveParser(parser: RecordParser, ctx: ParseContext, root: string, id: string, summary: () => Summary | undefined): RecordParser {
+export function liveParser(parser: RecordParser, ctx: ParseContext, root: string, id: string, summary: () => Summary | undefined, inspectedStep: () => number | undefined = () => undefined): RecordParser {
+  const artifactOwners = new Map<string, { id: string; path: string; name: 'implementation_plan.md' | 'task.md' | 'walkthrough.md'; completed: boolean }>(), artifactsEmitted = new Map<string, string>();
+  let preparedMedia: MediaResult | undefined, artifactRefresh = 0;
   const calls = new Map<string, Call>(), tasks = new Map<string, Task>(), ambiguousTasks = new Set<string>();
   const spawnOwners = new Map<number, Call>(), childrenEmitted = new Map<string, string>();
   let children: ChildReference[] = [], childRefresh = 0, prepared: CapturedOutput | undefined;
@@ -23,7 +29,37 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
   const agentId = ctx.agentId ?? 'agent:main';
   const rememberCall = (operationId: string | undefined, payload: Row) => {
     if (!operationId || typeof payload.tool !== 'string') return;
+    const native = object(payload.nativeArtifact), path = localPath(text(native.path));
+    if (path && within(resolve(join(root, 'brain', id)), resolve(path)) && /^(?:implementation_plan|task|walkthrough)\.md$/.test(text(native.name)) && resolve(path) === resolve(join(root, 'brain', id, text(native.name)))) {
+      const previous = artifactOwners.get(path);
+      artifactOwners.set(path, { id: operationId, path, name: text(native.name) as 'implementation_plan.md' | 'task.md' | 'walkthrough.md', completed: previous?.id === operationId && previous.completed || false });
+    }
     calls.set(operationId, { id: operationId, tool: payload.tool, input: object(payload.input), protected: payload.protected === true || !payload.intent });
+  };
+  const completeArtifact = (operationId: string | undefined, payload: Row) => {
+    if (payload.status === 'running') return;
+    for (const owner of artifactOwners.values()) if (owner.id === operationId) owner.completed = true;
+  };
+  const artifactReceipts = async (): Promise<RawObservation[]> => {
+    // Disk versions have no historical capture time. Observe only after the native backlog
+    // is consumed and the referenced write finishes; never inject today's file into old rows.
+    const latest = inspectedStep();
+    if (latest !== undefined && lastStep < latest) return [];
+    const owners = [...artifactOwners.values()].filter(owner => owner.completed);
+    if (!owners.length || Date.now() - artifactRefresh < 5000) return [];
+    artifactRefresh = Date.now();
+    const versions = await readArtifactVersions(root, id, owners.map(owner => owner.name));
+    const out: RawObservation[] = [];
+    for (const version of versions) {
+      const owner = owners.find(owner => owner.name === version.name);
+      if (!owner) continue;
+      const payload = { forOperationId: owner.id, path: owner.path, name: owner.name, filePath: version.path, version: version.version, current: version.current, updatedAt: version.updatedAt, text: version.text, bytes: version.bytes, truncated: version.truncated, unavailable: version.unavailable, observedAfterNativeStep: lastStep, items: markdownTasks(version.text ?? ''), association: 'captured-path-reference' };
+      const key = `${owner.id}:${version.path}`, signature = createHash('sha256').update(JSON.stringify(sanitize({ ...payload, observedAfterNativeStep: undefined }).value)).digest('hex');
+      if (artifactsEmitted.get(key) === signature) continue;
+      artifactsEmitted.set(key, signature);
+      out.push({ recordId: `${id}:${lastStep}:artifact:${signature}`, part: 0, kind: 'artifact.plan', agentId, operationId: owner.id, contentKeys: ['text', 'items'], availability: version.unavailable ? 'metadata-only' : version.truncated ? 'partial' : 'complete', payload: { ...payload, snapshotFingerprint: signature } });
+    }
+    return out;
   };
   const rememberTask = (call: Call, native: string, step: number) => {
     const previous = tasks.get(native);
@@ -72,6 +108,8 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
         const p = object(o.payload), call = o.operationId ? calls.get(o.operationId) : undefined;
         const step = Number.parseInt(o.source.recordId?.split(':')[1] ?? '', 10);
         if (Number.isSafeInteger(step)) lastStep = Math.max(lastStep, step);
+        if (o.kind === 'artifact.plan' && typeof p.filePath === 'string' && typeof p.forOperationId === 'string') artifactsEmitted.set(`${p.forOperationId}:${p.filePath}`, text(p.snapshotFingerprint));
+        if (o.kind === 'tool.result') completeArtifact(o.operationId, p);
         if (o.kind === 'tool.result' && call) {
           if (call.tool === 'invoke_subagent' && Number.isSafeInteger(step)) spawnOwners.set(step, call);
           const native = taskId(object(object(p.outcome).run).backgroundTaskId);
@@ -88,8 +126,9 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
       }
     },
     async prepare(value) {
-      prepared = undefined;
+      prepared = undefined; preparedMedia = undefined;
       const row = object(value);
+      if (Array.isArray(row.media)) preparedMedia = await captureMedia(root, id, row.media);
       if (Date.now() - childRefresh >= 5000) { children = await readChildren(root, id); childRefresh = Date.now(); }
       const references = [typeof row.full_output_uri === 'string' ? row.full_output_uri : undefined, ...outputReferences(text(row.content))].filter((v): v is string => !!v);
       // Only one bounded persisted-output read per native receipt. Task logs are polled separately.
@@ -102,6 +141,10 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
       const raws = parser.parse(value);
       for (const raw of raws) {
         const p = raw.payload;
+        if (preparedMedia && (raw.kind === 'message.user' || raw.kind === 'tool.result')) {
+          p.images = preparedMedia.images; p.imageReferences = preparedMedia.references;
+        }
+        if (raw.kind === 'tool.result') completeArtifact(raw.operationId, p);
         if (raw.kind === 'tool.call') rememberCall(raw.operationId, p);
         const call = raw.operationId ? calls.get(raw.operationId) : undefined;
         if (raw.kind !== 'tool.result' || !call) continue;
@@ -126,12 +169,12 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
           if (task && state && state !== 'running') { task.terminal = { step, text: content, time: raw.sourceTime, error: state === 'error' }; task.nextPollAt = undefined; }
         }
       }
-      prepared = undefined;
+      prepared = undefined; preparedMedia = undefined;
       return [...raws, ...childReceipts()];
     },
     async refresh() {
       if (Date.now() - childRefresh >= 5000) { children = await readChildren(root, id); childRefresh = Date.now(); }
-      const out = childReceipts();
+      const out = [...childReceipts(), ...await artifactReceipts()];
       // Bound each polling turn even when an old conversation contains hundreds of tasks.
       const pending = [...tasks.values()].filter(task => !task.call.protected && (!task.nextPollAt || Date.now() >= task.nextPollAt));
       const batch = pending.slice(taskOffset, taskOffset + 8); taskOffset = taskOffset + 8 >= pending.length ? 0 : taskOffset + 8;

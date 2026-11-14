@@ -2,7 +2,7 @@
 // Shapes follow docs/review/03-engineering-plan.md §3–4: immutable observations, a versioned
 // projection built from them, typed evidence links, historical artifacts with explicit gaps.
 
-export const CONTRACT_VERSION = '0.2.1-draft';
+export const CONTRACT_VERSION = '0.2.2-draft';
 
 // ─── Observations: what a source actually said, sanitized, never rewritten ─────────────
 
@@ -38,6 +38,7 @@ export type ObservationKind =
   | 'agent.spawn'
   | 'agent.stop'
   | 'compaction'
+  | 'artifact.plan'
   | 'capture.gap'
   | 'usage'
   | 'item.completed'
@@ -77,12 +78,47 @@ export type ObservationPayload =
   | AgentSpawnPayload
   | AgentStopPayload
   | GapPayload
+  | ArtifactPlanPayload
   | UsagePayload
   | CompactionPayload
   | TurnDetailPayload
   | ItemPayload
   | UnknownPayload
   | Record<string, unknown>;
+
+/** A bounded native artifact file snapshot, associated only by its recorded path reference. */
+export interface ArtifactPlanPayload {
+  forOperationId: string;
+  path: string;
+  name: string;
+  filePath: string;
+  version?: string;
+  current: boolean;
+  updatedAt?: string;
+  text?: TextValue;
+  bytes: number;
+  truncated: boolean;
+  unavailable?: 'removed' | 'protected' | 'unreadable';
+  observedAfterNativeStep: number;
+  items: { text: string; status: 'completed' | 'pending' }[];
+  association: 'captured-path-reference';
+}
+
+/** A snapshot observed at a boundary; its association does not imply the call caused it. */
+export interface PlanArtifactVersion {
+  artifactId: string;
+  name: string;
+  filePath: string;
+  version?: string;
+  current: boolean;
+  updatedAt?: string;
+  text?: string;
+  bytes: number;
+  truncated: boolean;
+  unavailable?: 'removed' | 'protected' | 'unreadable';
+  items: { text: string; status: string }[];
+  observationId: string;
+}
 
 export interface SessionMetaPayload {
   harness: HarnessId;
@@ -540,7 +576,7 @@ export type OperationDetail =
   | { kind: 'mcp'; server: string; tool: string; input: unknown; resultPreview?: string; readOnlyHint?: boolean; error?: string }
   | { kind: 'web'; url?: string; query?: string; resultPreview?: string; /** Search results the harness recorded, bounded; links are never loaded automatically. */ results?: WebResult[]; /** What the harness recorded about a page fetch. */ fetch?: { status?: number; statusText?: string; bytes?: number; durationMs?: number } }
   | { kind: 'spawn'; childAgentId?: string; agentType?: string; description?: string; resultPreview?: string; /** The harness recorded the task text only in encrypted form. */ descriptionEncrypted?: boolean }
-  | { kind: 'plan'; items: { id?: string; text: string; status: string }[]; /** Derived native task-list isolation boundary, not a native list id. */ scope?: string; omittedItems?: number; document?: { text: string; truncated: boolean; artifactId: string; source?: 'file' | 'proposal' } }
+  | { kind: 'plan'; items: { id?: string; text: string; status: string }[]; /** Derived native task-list isolation boundary, not a native list id. */ scope?: string; omittedItems?: number; document?: { text: string; truncated: boolean; artifactId: string; source?: 'file' | 'proposal' | 'native-call' }; artifactVersions?: PlanArtifactVersion[] }
   | { kind: 'other'; input: unknown; resultPreview?: string };
 
 export interface WebResult { url: string; title?: string; domain?: string; snippet?: string }

@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r42';
+export const REDUCER_VERSION = 'r43';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -87,6 +87,7 @@ type Rec = Record<string, any>;
 
 interface OpState {
   antigravityChildren?: Set<string>;
+  nativeArtifact?: { path: string; name: string };
   literalPlan?: { text: string; status: string }[];
   taskInput?: unknown;
   taskRedacted?: boolean;
@@ -684,6 +685,20 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const st = newOp(o, baseId, intent, String(p.tool));
           describeCall(st, p, rel);
+          if (o.source.adapterId === 'antigravity' && intent.kind === 'plan' && p.nativeArtifact && typeof p.nativeArtifact.path === 'string' && typeof p.nativeArtifact.name === 'string') {
+            const native = p.nativeArtifact as Rec;
+            st.nativeArtifact = { path: native.path, name: native.name };
+            const content = text(native.text as TextValue);
+            if (content !== undefined && st.op.detail.kind === 'plan') {
+              const artifactId = addArtifact({ id: `art_${o.id}_native_plan`, kind: 'snapshot', observedAtSequence: st.op.startSequence,
+                availability: native.truncated ? 'partial' : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0,
+                ...(isBlobText(native.text) ? { blobRef: native.text } : { content }) });
+              st.op.detail.document = { text: clip(content, maxProse), truncated: native.truncated === true || content.length > maxProse, artifactId, source: 'native-call' };
+              st.op.artifactIds.push(artifactId);
+              st.op.title = native.name;
+              st.op.classification = derived('antigravity-native-plan-v1', [o.id]);
+            }
+          }
           if (o.source.adapterId === 'codex' && (p.tool === 'exec' || p.tool === 'functions.exec') && intent.kind === 'shell') {
             st.literalPlan = literalPlan(text(intent.command as TextValue) ?? '');
           }
@@ -695,6 +710,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             if (st.intent.kind === 'shell') st.intent = { ...st.intent, command: st.op.detail.command };
           }
           timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+          if (st.nativeArtifact) {
+            hasResultVersions = true;
+            st.op.resultVersions = [structuredClone({ availableAfterStep: step(), status: st.op.status, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds })];
+          }
           break;
         }
         case 'tool.result': {
@@ -775,6 +794,12 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (pendingAntigravity ? 1 : 0), status: st.op.status,
                 endSequence: pendingAntigravity ? undefined : st.op.endSequence, endTime: pendingAntigravity ? undefined : st.op.endTime,
                 detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, run: st.op.run, failure: st.op.failure }));
+            }
+            if (st.nativeArtifact) {
+              hasResultVersions = true;
+              (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (pendingAntigravity ? 1 : 0), status: st.op.status,
+                endSequence: pendingAntigravity ? undefined : st.op.endSequence, endTime: pendingAntigravity ? undefined : st.op.endTime,
+                detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, failure: st.op.failure }));
             }
             if (st.op.kind === 'spawn' && st.op.detail.kind === 'spawn' && st.op.detail.childAgentId) {
               timeline.push({ type: 'agent-stop', id: `x_${id}`, sequence: o.receivedSequence, agentId: st.op.detail.childAgentId, time: o.sourceTime });
@@ -866,6 +891,37 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason, time: o.sourceTime });
             if (receipt.boundary) gaps.push({ sequence: step() - 1, reason, detail: 'The harness compacted earlier context here.' });
           }
+          break;
+        }
+        case 'artifact.plan': {
+          if (o.source.adapterId !== 'antigravity') break;
+          ensureAgent(o);
+          const id = typeof p.forOperationId === 'string' ? `${o.recordingId}.${p.forOperationId}` : '';
+          const st = ops.get(id);
+          const content = text(p.text as TextValue);
+          const unavailable = ['removed', 'protected', 'unreadable'].includes(p.unavailable) ? p.unavailable as 'removed' | 'protected' | 'unreadable' : undefined;
+          const artifactId = addArtifact({ id: `art_${o.id}_native_snapshot`, kind: 'snapshot', observedAtSequence: step(),
+            availability: unavailable || content === undefined ? 'unavailable' : p.truncated ? 'partial' : 'complete',
+            provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0,
+            ...(unavailable ? { note: `Native artifact ${unavailable}.` } : {}),
+            ...(content !== undefined ? (isBlobText(p.text) ? { blobRef: p.text } : { content }) : {}) });
+          if (!st?.nativeArtifact || st.op.detail.kind !== 'plan' || st.nativeArtifact.path !== p.path || st.nativeArtifact.name !== p.name || p.association !== 'captured-path-reference') {
+            timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'unresolved-artifact-reference', time: o.sourceTime });
+            gaps.push({ sequence: step() - 1, reason: 'unresolved-artifact-reference', detail: 'A captured artifact snapshot did not match its recorded plan call reference.' });
+            break;
+          }
+          const items = Array.isArray(p.items) ? p.items.filter((item: Rec) => item && typeof item.text === 'string' && (item.status === 'completed' || item.status === 'pending')).slice(0, 50).map((item: Rec) => ({ text: item.text, status: item.status })) : [];
+          (st.op.detail.artifactVersions ??= []).push({ artifactId, name: p.name, filePath: String(p.filePath ?? ''), current: p.current === true,
+            ...(typeof p.version === 'string' ? { version: p.version } : {}), ...(typeof p.updatedAt === 'string' ? { updatedAt: p.updatedAt } : {}),
+            ...(content !== undefined ? { text: clip(content, maxProse) } : {}), bytes: typeof p.bytes === 'number' ? p.bytes : 0,
+            truncated: p.truncated === true || (content !== undefined && content.length > maxProse), ...(unavailable ? { unavailable } : {}), items, observationId: o.id });
+          st.op.artifactIds.push(artifactId);
+          st.op.observationIds.push(o.id);
+          dirtyOperations.add(id);
+          if (st.completed && st.op.status !== 'running') timeline.push({ type: 'op-end', id: `e_${id}_${o.id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+          hasResultVersions = true;
+          (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (st.completed && st.op.status !== 'running' ? 0 : 1), status: st.op.status,
+            endSequence: st.op.endSequence, endTime: st.op.endTime, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, failure: st.op.failure }));
           break;
         }
         case 'capture.gap':

@@ -24,7 +24,7 @@ describe('observation allow-list', () => {
       'AppData/Roaming/Antigravity/state.vscdb', 'AppData/Roaming/Antigravity/credential-user-scope',
       'config/mcp_config.json', 'antigravity-ide/mcp_config.json', 'installation_id', 'machineid',
       'brain/one/.system_generated/logs/chunks/transcript_full/00000001.jsonl',
-      'brain/one/.user_uploaded/secret.png', 'brain/one/.tempmediaStorage/secret.png',
+      'brain/one/.user_uploaded/secret.json', 'brain/one/.tempmediaStorage/secret.json',
     ];
     for (const path of privatePaths) for (const purpose of ['index', 'transcript', 'output', 'media', 'artifact'] as const) {
       expect(allowedRelative(path, purpose), `${purpose}: ${path}`).toBe(false);

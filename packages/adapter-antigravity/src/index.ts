@@ -10,6 +10,7 @@ import { summaries, type Summary } from './summaries.ts';
 import { decodeArgs, intentFor, outcomeFor, recordedExitCode, touchesProtectedFile, isPlanArtifact } from './tools.ts';
 import { CallOrder, unmatched, matched, type PendingCall } from './pairing.ts';
 import { liveParser } from './live.ts';
+import { markdownTasks } from './artifacts.ts';
 
 export const descriptor: AdapterDescriptor = {
   id: 'antigravity', harness: 'antigravity', version: '0.1.0', label: 'Antigravity',
@@ -64,12 +65,16 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
         const calls = Array.isArray(row.tool_calls) ? row.tool_calls : [];
         calls.forEach((value, index) => {
           const call = object(value), tool = text(call.name), args = decodeArgs(call.args);
-          const intent = isPlanArtifact(args) ? { kind: 'other' as const } : intentFor(tool, args);
+          const artifact = isPlanArtifact(args);
+          const artifactText = text(args.Content) || text(args.CodeContent);
+          const artifactPath = localPath(text(args.Path) || text(args.AbsolutePath) || text(args.TargetFile));
+          const nativeArtifact = artifact && artifactPath ? { path: resolve(artifactPath), name: basename(artifactPath), text: artifactText, items: markdownTasks(artifactText), truncated: partial } : undefined;
+          const intent = artifact ? { kind: 'plan' as const, items: markdownTasks(artifactText) } : intentFor(tool, args);
           const operationId = `${id}:${step}:call:${index}`;
           const pending = { id: operationId, tool, args, intent, step };
           pair.add(pending);
           out.push(unmatched(pending, base, 0));
-          emit({ part: 10 + index, kind: 'tool.call', operationId, denyContent: touchesProtectedFile(intent), contentKeys: ['input', 'intent'], payload: { tool, input: args, intent, protected: touchesProtectedFile(intent), antigravityStep: step, correlationBasis: 'call-order' } });
+          emit({ part: 10 + index, kind: 'tool.call', operationId, denyContent: touchesProtectedFile(intent), contentKeys: ['input', 'intent', 'nativeArtifact'], payload: { tool, input: args, intent, nativeArtifact, protected: touchesProtectedFile(intent), antigravityStep: step, correlationBasis: 'call-order' } });
           if (!knownTools.has(tool)) emit({ part: 10000 + index, kind: 'unknown', availability: 'metadata-only', payload: { recordType: `tool:${tool}` } });
         });
       } else if (results.has(type)) {
@@ -90,7 +95,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
           correlation: { operationId: call.id, basis: 'call-order' },
           denyContent: call.protected || touchesProtectedFile(call.intent), contentKeys: ['text', 'outcome', 'error'], availability: running || partial ? 'partial' : 'complete',
           payload: { tool: call.tool, isError: row.status === 'ERROR' || !!row.error || typeof exitCode === 'number' && exitCode !== 0, text: content, error: row.error, exitCode,
-            outcome: isPlanArtifact(call.args) ? { kind: 'other' } : outcomeFor(call.tool, call.args, content), ...(running ? { status: 'running', resultAvailability: 'not-recorded' } : {}) } });
+            outcome: isPlanArtifact(call.args) ? { kind: 'plan', items: markdownTasks(text(call.args.Content) || text(call.args.CodeContent)) } : outcomeFor(call.tool, call.args, content), ...(running ? { status: 'running', resultAvailability: 'not-recorded' } : {}) } });
       } else if (type === 'CHECKPOINT') {
         emit({ part: 1, kind: 'compaction', payload: { source: 'antigravity-checkpoint', phase: 'summary', summary: content, summaryAvailability: 'captured', authoredBy: 'model' } });
       } else if (type === 'ERROR_MESSAGE') {
@@ -135,6 +140,7 @@ async function scan(path: string, previous?: Inspection): Promise<{ result: Scan
 export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { diagnostics(): { code: string; message: string }[]; identity(path: string): string; readPath(path: string): Promise<string> } {
   const metadata = new Map<string, Summary>();
   const selected = new Map<string, string>();
+  const physicalSources = new Map<string, string>();
   const inspections = new Map<string, Inspection>();
   const summaryCache = new Map<string, { at: number; values: Map<string, Summary> }>();
   let diagnostics: { code: string; message: string }[] = [];
@@ -172,7 +178,9 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
       } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     }
     paths.sort((a, b) => b.last - a.last);
-    return paths[0]?.path;
+    const chosen = paths[0]?.path;
+    if (chosen) physicalSources.set(id, chosen);
+    return chosen;
   }
   async function refreshSummary(root: string, id: string, physical: string) {
     let cached = summaryCache.get(root);
@@ -297,7 +305,7 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     },
     createParser(ctx) {
       const { root, id } = locate(ctx.sourcePath);
-      return liveParser(createParser(ctx, metadata.get(id)), ctx, root, id, () => metadata.get(id));
+      return liveParser(createParser(ctx, metadata.get(id)), ctx, root, id, () => metadata.get(id), () => { const physical = physicalSources.get(id); return physical ? inspections.get(physical)?.result.lastStep : undefined; });
     },
     sniff(head) { return head.some(value => { const row = object(value); return Number.isSafeInteger(row.step_index) && typeof row.source === 'string' && typeof row.type === 'string' && Array.isArray(row.tool_calls); }); },
   };

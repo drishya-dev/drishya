@@ -2,6 +2,7 @@ import { liveBatches } from './real-cases/live-batches.ts';
 import { personPrompts } from './real-cases/person-prompts.ts';
 import { midTurnPrompts } from './real-cases/mid-turn-prompts.ts';
 import { antigravity } from './real-cases/antigravity.ts';
+import { antigravityMedia } from './real-cases/antigravity-media.ts';
 import { antigravityLive } from './real-cases/antigravity-live.ts';
 // TEST-3: check a feature's case on real local sessions, read-only, in one command.
 //   node scripts/check-real.ts --list
@@ -55,6 +56,7 @@ const cases: RealCase[] = [redaction, fullProse, liveBatches, personPrompts, mid
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 cases.push(antigravity);
 cases.push(antigravityLive);
+cases.push(antigravityMedia);
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
   process.exit(values.list ? 0 : 2);
