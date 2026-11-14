@@ -36,16 +36,20 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 
 ---
 
-## 2. The story every video follows
+## 2. The story: six problems, six answers (revised 15 Nov)
 
-1. **The familiar moment** (2 to 5 s): a terminal fills with agent text; the developer scrolls, lost.
-2. **The turn:** "What did it actually do?" Drishya opens on the same session.
-3. **The proof:** real material arrives live: a file read, a test run that fails, the edit, the re-run that passes, each where it happened on the repository's map.
-4. **The tools:** jump to a file and see who changed it and why, review the Git change, search the session.
-5. **The trust line:** local, private, no telemetry, open source.
-6. **The ask:** one command to try it, and the GitHub link.
+Yash, 15 Nov: show every current problem and what Drishya does for each, and move the message from "agent visualization" to "agent visualization plus a developer workspace", pointing at the best of it. The product is ready, so the marketing has to be as good as the product.
 
----
+| # | The problem developers have today | What Drishya does |
+|---|---|---|
+| 1 | **A wall of text.** You see the agent's summary, not its work. | The real material, live: every file it read, command it ran, test that failed and edit it made, on a map of your repository. |
+| 2 | **You stop knowing your own codebase.** The agent knows the change; you don't. | You understand it while it happens. Open any file and see its earlier changes: which session changed it, and what the agent read before editing. |
+| 3 | **Reviewing means five tools.** Terminal, IDE, Git client, GitHub, back again. | One workspace beside the agent's work: Files and peek, Workspace, Git review, Compare branches and PRs, the Git graph, search. |
+| 4 | **Every agent has its own place.** | One view for Claude Code, Codex and Antigravity. |
+| 5 | **Long sessions can't be reviewed later.** Scrolling back is hopeless. | Replay any session, at any size; it opens at once. Read it as Work or as Conversation, and search it. Answer the agent's questions in place. |
+| 6 | **Your code shouldn't leave your machine** to be understood. | Local only: no telemetry, secrets redacted before storing, loopback only, open source (Apache-2.0). |
+
+The film shows problems 1 to 3 in its opening, answers all six, and ends on the developer workspace (problem 3) as the strongest image: the agent's work and your tools in one place.
 
 ## 3. The video: one film, and cuts from it
 
@@ -57,21 +61,23 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 
 | Piece | Length and format | Where | Made from |
 |---|---|---|---|
-| **The film** | 75 to 90 s; 16:9, with 1:1 and 9:16 versions | README, the site, Product Hunt, LinkedIn (company and both personal accounts), YouTube | The whole story (section 2) |
+| **The film** | 90 s; 16:9, with 1:1 and 9:16 versions | README, the site, Product Hunt, LinkedIn (company and both personal accounts), YouTube | The whole story (section 2) |
 | **The 30 s cut** | 30 s; 9:16 and 1:1 | X, Reddit, YouTube Shorts, the README GIF (silent) | The film's opening and its proof section |
 | **The side-by-side cut** | 20 s; 16:9 | Harsh's LinkedIn post, X, r/ChatGPTCoding | The film's opening, terminal versus Drishya |
 | **The feature cuts** | 15 to 20 s each, four or five of them; 1:1 | One every two days after launch | The film's tools section, slightly longer per feature |
 
-### The film's script (80 s; no narration, captions plus quiet product sound)
+### The film's script (90 s; captions plus quiet product sound; optional voice track added later)
 
-1. **0–10 s, split screen.** Left: the same agent task in a terminal, text scrolling. Right: Drishya. Caption: "Your agent just changed 14 files. Do you know what it did?"
-2. **10–40 s, Drishya full frame, a live Claude Code session.** It reads a file, runs the tests, a test fails (red), it edits, the tests pass, and its prose rises beneath, each step on the repository map. Captions name each step in 2 to 4 words.
-3. **40–52 s, three harnesses.** A Codex session live, then Home with Claude Code, Codex and Antigravity sessions. Caption: "Claude Code, Codex and Antigravity."
-4. **52–70 s, the tools.** The Files peek on the edited file and its earlier changes, Git review, Compare, search, then a question answered in place. One caption each.
-5. **70–76 s.** Caption: "Everything stays on your machine. No telemetry. Open source."
-6. **76–80 s.** The logo, the install command and the GitHub link.
+1. **0–12 s, the problems.** Real terminal footage of an agent session, cut fast, with three caption cards: "A wall of agent text." → "Which files did it change? Why?" → "Five tools to review it." End on the terminal frozen mid-scroll.
+2. **12–16 s, the turn.** A split screen: the terminal on the left, Drishya opening on the same session on the right. Caption: "See what your agent actually did."
+3. **16–42 s, answer 1: live, real.** Drishya full frame, a live Claude Code session: it reads a file, runs the tests, a test fails (red), it edits, the tests pass, and its prose rises beneath. Each step lands on the repository map. Captions in 2 to 4 words per step.
+4. **42–52 s, answer 2: understand your code.** The Files peek on the edited file, showing its earlier changes and the session that made them. Caption: "Know every change, and why."
+5. **52–70 s, answer 3: the developer workspace (the hero beat).** Workspace, Git review of the change, Compare a branch against main, the Git graph, search, in one continuous move with no tab switch. Caption: "Your agent's work and your tools, in one place."
+6. **70–78 s, answers 4 and 5.** Home with Claude Code, Codex and Antigravity sessions, a large session opening at once, Work and Conversation switched, a question answered in place. Caption: "Every agent. Every session. Any size."
+7. **78–85 s, answer 6.** A calm frame. Caption: "Runs on your machine. No telemetry. Open source."
+8. **85–90 s.** The logo, the install command and the GitHub link.
 
-### Voice: no AI voice, and no narration in the film (decided 15 Nov)
+### Voice: no AI voice; captions carry the film; your voice is an optional later layer (decided 15 Nov)
 
 - **Not an AI voice.** The audience is developers wary of AI-generated content, and the product's whole claim is *real, not generated*. A synthetic voice is detectable, and it undercuts that claim in the first seconds. Product Hunt and HN comments also call it out.
 - **No narration in the film at all.** Most LinkedIn and X video is watched muted. Captions plus the product's own quiet sounds carry the story at any volume. It also needs no recording booth, no retakes and no accent worries, and the same cut works everywhere.
