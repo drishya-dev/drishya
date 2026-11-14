@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Observation } from '@drishya/contracts';
 import { Store } from '../src/index.ts';
+import { PRIVACY_POLICY_VERSION } from '../../privacy/src/index.ts';
 import { orderObservations } from '../../projection/src/reduce.ts';
 
 let dir: string;
@@ -294,8 +295,8 @@ describe('privacy policy upgrade scrub (SEC-2)', () => {
     // Reopen Store: triggers upgradePrivacyPolicy() automatically
     store = new Store(dir);
 
-    expect(store.policyVersions('rec_a')).toEqual(['p4']);
-    expect(store.policyVersions('rec_straddle')).toEqual(['p4']);
+    expect(store.policyVersions('rec_a')).toEqual([PRIVACY_POLICY_VERSION]);
+    expect(store.policyVersions('rec_straddle')).toEqual([PRIVACY_POLICY_VERSION]);
 
     const cleanedObs = store.observations('rec_a');
     expect((cleanedObs[0]!.payload as { text: string }).text).toBe('use [REDACTED:pypi-token] and [REDACTED:sendgrid-key] and AccountKey=[REDACTED:azure-storage-key]');
