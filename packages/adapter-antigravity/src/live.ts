@@ -61,7 +61,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
       artifactsEmitted.set(key, signature);
       const transition = (artifactTransitions.get(key) ?? 0) + 1;
       artifactTransitions.set(key, transition);
-      out.push({ recordId: `${id}:artifact:${owner.id}:${basename(version.path)}:${transition}`, part: 0, kind: 'artifact.plan', agentId, operationId: owner.id, contentKeys: ['text', 'items'], availability: version.unavailable ? 'metadata-only' : version.truncated ? 'partial' : 'complete', payload: { ...payload, snapshotFingerprint: signature, artifactTransition: transition } });
+      out.push({ recordId: `${id}:${lastStep}:artifact:${owner.id}:${basename(version.path)}:${transition}`, part: 0, kind: 'artifact.plan', agentId, operationId: owner.id, contentKeys: ['text', 'items'], availability: version.unavailable ? 'metadata-only' : version.truncated ? 'partial' : 'complete', payload: { ...payload, snapshotFingerprint: signature, artifactTransition: transition } });
     };
     for (const version of versions) {
       const owner = owners.find(owner => owner.name === version.name);

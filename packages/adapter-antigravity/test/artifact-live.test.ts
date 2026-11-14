@@ -1,3 +1,4 @@
+import { reduce } from '../../projection/src/reduce.ts';
 import { afterEach, expect, it, vi } from 'vitest';
 import { appendFile, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -107,6 +108,8 @@ it('does not duplicate an unchanged artifact after a real ingestor restart and u
     const { recordingId } = await ingest.importSource('antigravity', journal);
     const first = store.observationsOfKinds(recordingId, ['artifact.plan']);
     expect(first).toHaveLength(1);
+    const projected = reduce(recordingId, store.observations(recordingId), { get: () => undefined, put: () => ({sha:'synthetic',bytes:0}) }, {adapters:{}});
+    expect(projected.operations.some(op => op.detail.kind === 'plan' && op.detail.artifactVersions?.length === 1)).toBe(true);
     await ingest.close();
     ingest = new Ingestor(store, [createAntigravityAdapter([h.root])]);
     await appendFile(journal, row(3, 'PLANNER_RESPONSE', { content: 'Synthetic later prose', tool_calls: [] }));
