@@ -1026,16 +1026,15 @@ Decided by Yash with Claude, 8 November: [release-1-scope.md](review/release-1-s
     5. **Free and supported:** Apache-2.0 (PUBLIC-1), an integration guide, a small working example, and the community channel.
     6. **First reference integration:** T3 Code, as it is open source. The builders propose it to its maintainers; an agent never does.
   - **Accept:** the contract in `docs/review/embed-1-in-app.md`, answering the six points, agreed by Yash and Harsh.
-- [ ] **EMBED-2 · The embed mode and the integration kit** · P0 · `rel` `ui` — after EMBED-1 and UI-49.
-  - **Do:**
-    1. The embed route: one session, no Home, a full-screen toggle, and the narrow layout.
-    2. The launch command or package.
-    3. The launcher for Claude Code and Codex.
-    4. The integration guide, with a working example in a minimal webview host.
-  - **Accept:**
-    - Real Claude Code and Codex sessions shown in the example host at its narrow and full-screen sizes, live and replayed.
-    - SEC-3's suite passes against the embed.
-    - The guide followed from scratch on a clean checkout works.
+- [ ] **EMBED-2a · Embed daemon and launcher** · P0 · `rel` `ui` — after both builders agree EMBED-1 and UI-49; Codex. Parallel with EMBED-2b, whose view consumes the contract.
+  - **Files:** `apps/daemon/` (CLI, server and tests), launcher-owned new files, `docs/guides/embed-launcher.md`, security cases in `tests/security/` once SEC-3 lands (otherwise `apps/daemon/test/embed-security.test.ts`); TASKS/STATUS. No UI/example-host edits. Reserve exact shared sections before implementation.
+  - **Do:** implement `docs/review/embed-1-in-app.md`: `drishya embed`, safe start/reuse and credential-free discovery; top-level handoff with unchanged request defences; MCP `drishya.open_view` and opt-in Claude Code/Codex `/drishya` instructions. Implement iframe support only if the agreed contract retains it. Never edit native configuration automatically.
+  - **Accept:** launcher works from a clean Windows checkout (record other platforms not run); real Claude Code and Codex sessions resolve correctly, Antigravity too if #490 is merged, in a scratch home; top-level security headers equal normal mode; all contract security/launch/discovery cases and SEC-3 pass (or name the external suite dependency); package verification passes; PR lists every relaxed header and its bounding test, or explicitly none. No tokens in logs/tests.
+- [ ] **EMBED-2b · Embed view, reference host and integration guide** · P0 · `rel` `ui` — after both builders agree EMBED-1 and UI-49; Antigravity. Parallel with EMBED-2a; integrated acceptance needs its launcher.
+  - **Files:** `apps/ui/` embed-specific sections, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. Reserve exact UI files before implementation.
+  - **Do:** reuse the session view with no Home, agreed embed-only narrow layout and paired full-screen control; retain controller restrictions and live/replay; working minimal top-level host plus T3 Code integration instructions. Follow the EMBED-1 security contract; no generic cross-origin bridge.
+  - **Accept:** real Claude Code and Codex (Antigravity too if #490 is merged), scratch home, live and replay in the example host at agreed minimum, 600 and 1440 px; full-screen enter/exit and reduced motion; ordinary History, Conversation, header and live specs stay green; SEC-3 passes against the integrated embed; guide followed from scratch works; screenshots stay in `.local/`, evidence is prefixes/sizes/counts only. If width agreement or launcher is unavailable, name it rather than claim acceptance.
+
 - [ ] **MAP-3 · Lit files on the map** · P1 · `ui` `motion` — **Moved to the next release (Yash, 14 Nov); the brainstorm (#464) stays for it.** Yash, 12 Nov, reference [Personal Memory graph](https://dribbble.com/shots/27852226-Personal-Memory-graph-for-agentic-AI): "not the exact thing from the graph, just the concept of movement and pulling up the file type thing somewhere, or in background ... can make it look premium but only if the placement is looked properly ... without costing too much compute."
   - **Yash, 13 Nov: only if possible.** "map 3 is just if possible thing, if it can be done then keep it"; and on 12 Nov: "the graph thing is for the actual product work, not the home page ... we have to see how we can do those graph animations to look more premium while also not getting too compute heavy." It does not block the release; if it cannot be made to look right at no idle cost, it moves to the first release after.
   - **The idea taken from the reference:** a dark field of faint points; a few named points glow, each with a small label chip; the view eases toward the one in focus. Nothing else is copied.
