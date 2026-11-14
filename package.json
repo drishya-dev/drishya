@@ -18,6 +18,7 @@
     "test": "vitest run",
     "test:browser": "pnpm ui:build && node scripts/test-browser.ts",
     "test:security": "vitest run --config vitest.security.config.ts",
+    "test:security:mutations": "node tests/security/mutations.ts",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.json --noEmit && pnpm --filter @drishya/ui typecheck",
     "check": "pnpm typecheck && pnpm test",
