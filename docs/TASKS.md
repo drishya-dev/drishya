@@ -169,7 +169,7 @@ The launch date is decided at the 18 November review, from where the list stands
 
 ### P0 — Release 1: a finished, packaged product (ship by 18 November)
 
-**102 of 118 done**
+**102 of 115 done**
 
 Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it presents what the agent is doing, faithfully and beautifully, at runtime. Release 1 ships Modern only, and its polish lands in Modern. Feature freeze at the end of 13 November; after that, only fixes from SHIP-10 and the gate. Done items are no longer listed in these tables; their details stay below. Where a detail line names another priority, this table wins.
 
@@ -191,6 +191,12 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
     1. UI-46 (tool-card content) merges.
     2. Then **UI-36b** and **SITE-3**, two Sonnet sessions in parallel.
     3. ~~LIVE-7, MOTION-4, UI-47, UI-48 as below; UI-40 before SHIP-9~~ superseded the same day by the revised order.
+  - **Order from 14 Nov, night (Yash; supersedes the blocks below; one track a day, to fit usage limits):**
+    1. **Tonight:** SEC-3 (Sonnet, #495) and finishing SITE-2 (#498).
+    2. **Then MARKET-1, decided in full by Fable:** the audience, the story, each video's script and shot list, every post's text and description per platform and account, timing and design. Recording the videos is left for 16 and 17 Nov. **In parallel, one at a time on Sonnet:** SEC-5, then SEC-4.
+    3. **Then shipping:** SHIP-9 → REPO-1 → PUBLIC-1 → SHIP-16 (CI) and MAC-1 → SHIP-10.
+    4. **16 and 17 Nov:** VIDEO-1 is recorded from MARKET-1's scripts; the last release steps; SHIP-11 posts.
+    5. **Next release:** EMBED (refined: the agent opens the session in the app's pane), EMBED-2a/2b, AG-3 and the rest of the Antigravity work. MOTION-4 (Harsh) is independent of security.
   - **Order from 14 Nov, late (Yash; supersedes the blocks below where they differ):**
     1. **Now, in flight:** PERF-4 (Sonnet), HARNESS-AG #490 (Sonnet verifying and integrating), UI-41e (Sonnet). Fable merges each when it is green.
     2. **SITE-2: Harsh** builds it ("site 2, harsh will do"). It is wider than new screenshots now; see its entry.
@@ -315,11 +321,8 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☑ | 88b | UI-49 | Narrow windows: the header, the footer veils and the capsules never cover the text being read | `ui` |
 | ☑ | 88c | UI-50 | Text formatting handled the same everywhere: tables, lists, code and long lines in prose and in every card | `ui` `content` |
 | ☑ | 88d | EMBED-1 | Drishya inside a harness app's side window: the design and the contract (one click, full screen, free to integrate) | `rel` `ui` |
-| ☐ | 88e | EMBED-2a | Embed daemon and launcher | `rel` `ui` |
-| ☐ | 88f | EMBED-2b | Embed view, reference host and integration guide | `rel` `ui` |
 | ☑ | 89 | AG-1 | HARNESS-AG: read Antigravity sessions (adapter, discovery, import) from the transcript JSONL and the session index | `data` `native` |
 | ☑ | 90 | AG-2 | HARNESS-AG: Antigravity in the product (harness identity, counts, filters, search, no composer) | `ui` `data` |
-| ☐ | 91 | AG-3 | HARNESS-AG: live tail, background commands and subagent conversations | `live` `data` |
 | ☑ | 92 | AG-4 | HARNESS-AG: images, plan artifacts and recorded thinking (needs the builders' agreement) | `data` `content` |
 | ☑ | 93 | AG-5 | HARNESS-AG: genuine Antigravity sessions for the cases no local session has (browser, MCP, plan review, question, approval) | `native` `data` |
 | ☐ | 94 | SHIP-9 | Package the release candidate: version, install guide, fresh-machine install, release notes, full gate | `rel` |
@@ -336,12 +339,15 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 
 ### P1 — next, after Release 1
 
-**1 of 41 done**
+**1 of 44 done**
 
 | Done | # | ID | Item | Tags |
 |---|---|---|---|---|
 | ☐ | 0a | MAP-3 | **Next release (Yash, 14 Nov).** Lit files: the file the agent is on is pulled forward on the map with its name and type, the rest stays a quiet field | `ui` `motion` |
 | ☐ | 0b | UI-40 | More palettes, each designed as a whole system for a developer tool (a black-and-white class first), chosen from frames of real screens | `ui` |
+| ☐ | 0c | EMBED-2a | **Next release (Yash, 14 Nov).** Embed daemon and launcher | `rel` `ui` |
+| ☐ | 0d | EMBED-2b | **Next release (Yash, 14 Nov).** Embed view, reference host and integration guide | `rel` `ui` |
+| ☐ | 0e | AG-3 | **Next release (Yash, 14 Nov).** HARNESS-AG: live tail, background commands and subagent conversations | `live` `data` |
 | ☐ | 1 | STORE-1 | Manage Drishya's local storage: see what each session uses and clear chosen sessions' data | `data` `ui` |
 | ☐ | 2 | CONNECT-4b | The one-click setup sheet on first open and the remembered-checkouts list in Settings (in Modern) | `ui` `controller` |
 | ☐ | 3 | CONNECT-4 | A repository's permissions are set up once, before its session opens (split: 4a logic, 4b the Modern sheet; close when both merge) | `controller` `files` `ui` |
@@ -1031,11 +1037,16 @@ Decided by Yash with Claude, 8 November: [release-1-scope.md](review/release-1-s
     5. **Free and supported:** Apache-2.0 (PUBLIC-1), an integration guide, a small working example, and the community channel.
     6. **First reference integration:** T3 Code, as it is open source. The builders propose it to its maintainers; an agent never does.
   - **Accept:** the contract in `docs/review/embed-1-in-app.md`, answering the six points, agreed by Yash and Harsh. **Done, 14 Nov:** six decisions, auth and SEC-3 matrix, pinned T3 Code source and implementation boundaries recorded; both-builder agreement confirmed by Yash in chat. Docs-only acceptance, not runtime/security certification.
-- [ ] **EMBED-2a · Embed daemon and launcher** · P0 · `rel` `ui` — after both builders agree EMBED-1 and UI-49; Codex. Parallel with EMBED-2b, whose view consumes the contract.
+- [ ] **EMBED (refined) · Next release (Yash, 14 Nov, night)** — "it was some ease that while working with an agent in any harness or app, the agent auto opens or in the app itself we get some way of opening our drishya in the artifact tab, so they dont switch tabs every now and than, so the owners wont start replicating as users will stay on the app ... it just opens a browser at the side tab." Not a full-screen view and not a new layout: the target is that **the agent, or one command, opens the current session in the app's own browser or artifact pane.**
+  - **Shape:** a `/drishya` slash command or skill (Claude Code, Codex), and the MCP tool `drishya.open_view` from #497, resolve the current session (its id where the harness exposes it, else `--latest --cwd`), run `drishya embed`, and the agent opens the returned URL in its pane: the Claude desktop browser pane, the Codex app's pane, a T3 Code webview, otherwise the system browser.
+  - **What carries over:** #497 (Codex: `drishya embed`, the launch-code exchange, the MCP tool, discovery) is the base. Its PR is closed and its branch `codex/embed-2a` is kept. #499 (Antigravity: the full-screen embed view) is closed and deleted, because it built the wrong target. The EMBED-1 contract stays, except that it assumed a host app writes code; here the agent opens the pane.
+  - **New security point:** the launch URL now passes through the agent's transcript, which Drishya captures. It must be single-use with a short expiry (#497 has both), and redaction must strip launch codes from journals. SEC-3's suite covers it.
+  - **Accept:** in Claude desktop, Codex and one third-party app, typing `/drishya` (or the agent deciding to) opens that same session live in the side pane, with no tab switch; the normal app is unchanged.
+- [ ] **EMBED-2a · Embed daemon and launcher** · P1 (next release, Yash 14 Nov; base for EMBED refined, above) · `rel` `ui` — after both builders agree EMBED-1 and UI-49; Codex. Parallel with EMBED-2b, whose view consumes the contract.
   - **Files:** `apps/daemon/` (CLI, server and tests), launcher-owned new files, `docs/guides/embed-launcher.md`, security cases in `tests/security/` once SEC-3 lands (otherwise `apps/daemon/test/embed-security.test.ts`); TASKS/STATUS. No UI/example-host edits. Reserve exact shared sections before implementation.
   - **Do:** implement `docs/review/embed-1-in-app.md`: `drishya embed`, safe start/reuse and credential-free discovery; top-level handoff with unchanged request defences; MCP `drishya.open_view` and opt-in Claude Code/Codex `/drishya` instructions. Implement iframe support only if the agreed contract retains it. Never edit native configuration automatically.
   - **Accept:** launcher works from a clean Windows checkout (record other platforms not run); real Claude Code and Codex sessions resolve correctly, Antigravity too if #490 is merged, in a scratch home; top-level security headers equal normal mode; all contract security/launch/discovery cases and SEC-3 pass (or name the external suite dependency); package verification passes; PR lists every relaxed header and its bounding test, or explicitly none. No tokens in logs/tests.
-- [ ] **EMBED-2b · Embed view, reference host and integration guide** · P0 · `rel` `ui` — after both builders agree EMBED-1 and UI-49; Antigravity. Parallel with EMBED-2a; integrated acceptance needs its launcher.
+- [ ] **EMBED-2b · Embed view, reference host and integration guide** · P1 (next release; #499 closed, wrong target: see EMBED refined) · `rel` `ui` — after both builders agree EMBED-1 and UI-49; Antigravity. Parallel with EMBED-2a; integrated acceptance needs its launcher.
   - **Files:** `apps/ui/` embed-specific sections, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. Reserve exact UI files before implementation.
   - **Do:** reuse the session view with no Home, agreed embed-only narrow layout and paired full-screen control; retain controller restrictions and live/replay; working minimal top-level host plus T3 Code integration instructions. Follow the EMBED-1 security contract; no generic cross-origin bridge.
   - **Accept:** real Claude Code and Codex (Antigravity too if #490 is merged), scratch home, live and replay in the example host at agreed minimum, 600 and 1440 px; full-screen enter/exit and reduced motion; ordinary History, Conversation, header and live specs stay green; SEC-3 passes against the integrated embed; guide followed from scratch works; screenshots stay in `.local/`, evidence is prefixes/sizes/counts only. If width agreement or launcher is unavailable, name it rather than claim acceptance.
@@ -1493,7 +1504,7 @@ Decided by Yash with Claude, 8 November: [release-1-scope.md](review/release-1-s
   - **Accept:** on real Antigravity sessions beside Claude Code and Codex sessions: Home counts add up for three harnesses; the Harness filter and library search return only Antigravity sessions for `antigravity`; opening one shows no composer and the read-only line; native actions fail explicitly; identity colour and label are legible at 600 and 1440 in every shipped palette and with reduced motion; no Claude Code or Codex screen changes.
   - **13 November implementation, PR #472 (draft; Fable review and AG-1 merge pending):** Antigravity identity, three-way Home counts and filtering, indexed library search, explicit read-only status and unsupported native controls. Scratch imports: Antigravity `660a1ec4` (952 bytes, 6 observations), Codex `01a1c4d2` (186,271 bytes, 11 observations), Claude Code `0d71c5dd` (2,773 bytes, 5 observations). Home counts matched top-level discovery/import inventory (206 Claude Code, 15 Codex, 17 Antigravity); Antigravity filter and library search returned only its sessions. Automated DOM and viewport-bound checks passed 18 viewer frames at 600/1440, three palettes and reduced motion; screenshots remain private in `.local/`. The Fable human legibility and premium review remains pending. Typecheck passed; 1,534 units passed, one existing skip with four workers; 19 targeted Edge browser tests passed. First concurrent unit/typecheck run timed out five tests; the bounded-worker rerun passed. AG-1 #469 is the dependency and must merge first.
 
-- [ ] **AG-3 · HARNESS-AG: live tail, background commands and subagent conversations** · P0 · `live` `data` — after AG-1; separate files from AG-2.
+- [ ] **AG-3 · HARNESS-AG: live tail, background commands and subagent conversations** · P1 (next release, Yash 14 Nov, with the rest of the Antigravity work: AG-6, usage from transcript tokens; the posts say exactly what Release 1 supports) · `live` `data` — after AG-1; separate files from AG-2.
   - **Implementation verified, 14 Nov, PR #474 (integration only):** cold inspection checkpoints and versioned late-result replay fixes are complete. Final armed run: six journal updates, 15 log updates, new card and restart at 600/1440; fresh-process 43.7 MB resume reads only 3 KiB of validation prefixes and zero body bytes. Both types, 1,554 units / one existing skip, 29 targeted Edge browsers, 25 genuine live/task cases and package verification pass. **Item remains open for an isolated genuine native process-interruption case**; no safe isolated signed-in profile exists here, so the user's shared native app was not force-crashed. Exact Accept results, limitations and merge seams: [AG-3 review](review/antigravity-ag3-live.md). No final combined gate yet.
   - **Files (about 9):** `packages/adapter-antigravity/src/tasks.ts` (background output), `src/subagents.ts` (child links), `src/index.ts` (live-safe parsing), tests for both, an ingest live test in `packages/ingest/test`, `scripts/real-cases/antigravity-live.ts`, README.
   - **Do:** (1) live view through the existing JSONL tail: prove the flush cadence on a genuine run (review §9 measured only file birth and modification times); a partial last line waits, a repeated `step_index` is idempotent, time regressions never reorder. (2) `RUNNING` commands: link `manage_task` (`TaskId`) and the harness's `tasks/task-<n>.log` (inside the same `brain/<id>/` only, bounded, redacted) so a command that finished later shows its final output; if no log is complete it stays "no recorded result", never failure. `full_output_uri` (`steps/<n>/output.txt`) is a persisted-output reference with the same containment and bound. (3) Subagents are separate conversations: list each child as its own recording with `parentSessionId`; link the parent's `invoke_subagent` to the child by `subagents/<id>.json` (`conversationId`, `spawnStepIndex`) and never by timing; a missing child is "child not found". (4) Re-read `conversation_summaries.db` (`immutable=1`) for title and step count at a bounded interval; an interrupted or crashed session (a cut last record) imports what is whole and says so.
