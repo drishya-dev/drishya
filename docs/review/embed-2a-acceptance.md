@@ -40,7 +40,7 @@ Orderly private-channel close removes the discovery entry. An explicit forced Wi
 
 ## Validation and merge seams
 
-- Both project typechecks pass; focused daemon/security/MCP units and targeted related units pass (final counts are in the PR).
+- Both project typechecks pass; 159 related units in 21 files pass (two workers). After the final parent-watch/tie-break changes, 14 focused daemon/security/MCP units in three files pass (two workers).
 - Six named Edge browser security cases pass, two workers, zero retries, UI rebuilt. Browser tests assert actual framing refusal via CSP diagnostics and absence of the protected document, rather than assuming Edge's blocked-frame URL.
 - `package:verify` passes: isolated offline install, Claude/Codex import, demo, authenticated API and persisted restart. Additional Windows packaged CLI launch from an external directory succeeds, exchanges the code and stops its owned listener. It uses no checkout node_modules.
 - `check:affected --dry` selects both types, related units and the whole browser suite because server.ts is wide. The explicit task forbids a full browser gate, so types/related units and the named spec were run separately. No full browser gate or hosted CI dispatched.
