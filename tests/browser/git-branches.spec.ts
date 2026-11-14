@@ -35,6 +35,19 @@ test.describe('branch selection fixture',()=>{
     app=new App(join(dir,'store'));id=(await app.ingest.importSource('claude-code',journal)).recordingId;server=await startServer({app,port:0,token:'synthetic-branches-ui'});
   });
   test.afterAll(async()=>{await server?.close();await app?.close();if(dir)remove(dir);});
+  test('graph reports only a genuinely long wait and clears on arrival',async({page})=>{
+    let release!:()=>void,started!:()=>void;
+    const requested=new Promise<void>(resolve=>{started=resolve;});
+    const held=new Promise<void>(resolve=>{release=resolve;});const fallback=setTimeout(()=>release(),8000);
+    await page.route('**/git/history**',async route=>{started();await held;await route.continue();});
+    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+    await openGitDestination(page,'Git graph');const dialog=page.getByRole('dialog',{name:'Git graph',exact:true});
+    const approve=dialog.getByRole('button',{name:'Approve read-only Git',exact:true});await expect(approve.or(dialog.locator('.atlas-layout'))).toBeVisible();if(await approve.isVisible())await approve.click();
+    await requested;try{await page.waitForTimeout(200);await expect(dialog.getByText('Reading local history…',{exact:true})).toHaveCount(0);await expect(dialog.getByText('Reading local history. This may take a while.',{exact:true})).toHaveCount(0);
+    await expect(dialog.getByText('Reading local history. This may take a while.',{exact:true})).toBeVisible({timeout:4000});}finally{clearTimeout(fallback);release();}
+    await expect(dialog.getByRole('combobox',{name:'Read local Git branch'})).toBeEnabled();
+    await expect(dialog.getByText('Reading local history. This may take a while.',{exact:true})).toHaveCount(0);
+  });
   for(const width of [1440,600])test(`reads topic commits and keeps links at ${width}px`,async({page})=>{
     const before=git(root,'rev-parse','HEAD'),dialog=await open(page,server,id,width),picker=dialog.getByRole('combobox',{name:'Read local Git branch'});
     expect(await picker.locator('option').first().textContent()).toBe('main · checked out');

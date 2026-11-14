@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../state.ts';
+import { useWaitState } from '../lib/wait-state.ts';
 import { useReadingWorkspace } from './SessionWorkspace.tsx';
 import { useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { gitHistoryStore } from '../lib/git-history-cache.ts';
@@ -14,6 +15,11 @@ import './git-history-typography.css';
 const GitHistoryReader = lazy(() => import('./GitHistoryReader.tsx').then(m => ({ default: m.GitHistoryReader })));
 
 export const openGitHistory = () => window.dispatchEvent(new Event('drishya-git-history'));
+
+function GitHistoryLoading() {
+  const wait = useWaitState(true);
+  return wait === 'hidden' ? null : <p className="atlas-empty" role="status">{wait === 'long' ? 'Reading local history. This may take a while.' : 'Reading local history…'}</p>;
+}
 
 const FOCUSABLE = 'button:not(:disabled),a[href],input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,[tabindex]:not([tabindex="-1"])';
 let atlasModalRoots = 0;
@@ -149,7 +155,7 @@ function GitHistoryDialog({ id, close }: { id: string; close: () => void }) {
             <section className="atlas-access"><p>This session did not record a workspace, so there is no repository to read.</p></section>
           )
         ) : (
-          <Suspense fallback={<p className="atlas-empty" role="status">Reading local history…</p>}>
+          <Suspense fallback={<GitHistoryLoading />}>
             <GitHistoryReader id={id} close={close} />
           </Suspense>
         )}
