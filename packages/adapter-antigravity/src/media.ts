@@ -1,7 +1,6 @@
-import { open } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { captureImage, MAX_IMAGE_BYTES, type CapturedImage } from '@drishya/privacy';
-import { conversationId, localPath, readablePath } from './paths.ts';
+import { conversationId, localPath, readablePath, openObservation } from './paths.ts';
 
 export interface MediaReference { uri: string; availability: 'captured-file' | 'referenced-file'; reason?: string }
 export interface MediaResult { images: CapturedImage[]; references: MediaReference[] }
@@ -35,7 +34,7 @@ export async function captureMedia(root: string, id: string, value: unknown): Pr
       continue;
     }
     let handle;
-    try { handle = await open(path, 'r'); }
+    try { handle = await openObservation(root, path, 'media', id); }
     catch { result.images.push({ kind: 'captured-image', omitted: 'referenced-file' }); reference.reason = 'The referenced image could not be opened read-only.'; continue; }
     try {
       const before = await handle.stat();

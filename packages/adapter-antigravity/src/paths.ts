@@ -1,4 +1,5 @@
-import { realpath, lstat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { realpath, lstat, open } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,4 +66,20 @@ export async function readablePath(root: string, candidate: string, purpose: Par
   }
   if (!(await lstat(canonical)).isFile()) throw new Error('Antigravity observation input is not a regular file');
   return canonical;
+}
+
+/** Pin a validated regular inode before reading bytes; reject swaps of any path component. */
+export async function openObservation(root: string, candidate: string, purpose: 'media' | 'artifact', id: string) {
+  const canonical = await readablePath(root, candidate, purpose, id);
+  const before = await lstat(canonical, { bigint: true });
+  if (!before.isFile() || before.isSymbolicLink() || before.ino === 0n) throw new Error('Antigravity file identity cannot be verified');
+  const handle = await open(canonical, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  try {
+    const opened = await handle.stat({ bigint: true });
+    const checked = await readablePath(root, candidate, purpose, id);
+    const current = await lstat(checked, { bigint: true });
+    if (checked !== canonical || !opened.isFile() || opened.ino !== before.ino || opened.dev !== before.dev
+      || current.ino !== opened.ino || current.dev !== opened.dev) throw new Error('Antigravity file identity changed during read-only open');
+    return handle;
+  } catch (error) { await handle.close(); throw error; }
 }

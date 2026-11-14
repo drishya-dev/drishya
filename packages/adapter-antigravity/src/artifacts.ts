@@ -1,6 +1,6 @@
-import { open, readdir, realpath } from 'node:fs/promises';
+import { opendir, realpath } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
-import { conversationId, readablePath, readableRoot } from './paths.ts';
+import { conversationId, readablePath, readableRoot, openObservation } from './paths.ts';
 
 export interface ArtifactVersion {
   name: string;
@@ -29,7 +29,7 @@ function unavailable(error: unknown): NonNullable<ArtifactVersion['unavailable']
 
 async function bounded(root: string, path: string, id: string, limit: number) {
   const safePath = await readablePath(root, path, 'artifact', id);
-  const file = await open(safePath, 'r');
+  const file = await openObservation(root, safePath, 'artifact', id);
   try {
     const stat = await file.stat();
     if (!stat.isFile()) throw new Error('Antigravity observation input is not a regular file');
@@ -71,40 +71,63 @@ async function metadata(root: string, path: string, id: string): Promise<{ versi
   } catch { return {}; }
 }
 
-/** Returns raw native material to the caller; it must be sealed before persistence or display. */
-export async function readArtifactVersions(root: string, id: string, names: readonly ArtifactName[] = knownNames): Promise<ArtifactVersion[]> {
-  const selected = [...new Set(names.filter(name => knownNames.includes(name)))];
-  if (!conversationId(id) || selected.length === 0) return [];
+/** Compare native filenames without converting version numbers to JavaScript numbers. */
+function artifactEntry(entry: string): { name: ArtifactName; rank: number; version?: string } | undefined {
+  for (const name of knownNames) {
+    if (entry === name) return { name, rank: 2 };
+    if (entry === `${name}.resolved`) return { name, rank: 0 };
+    const prefix = `${name}.resolved.`;
+    const suffix = entry.startsWith(prefix) ? entry.slice(prefix.length) : '';
+    if (/^\d+$/.test(suffix)) return { name, rank: 1, version: suffix };
+  }
+}
+
+function compareEntries(a: string, b: string): number {
+  const left = artifactEntry(a)!, right = artifactEntry(b)!;
+  return knownNames.indexOf(left.name) - knownNames.indexOf(right.name) || left.rank - right.rank ||
+    (left.version !== undefined && right.version !== undefined ? numericCompare(left.version, right.version) : 0);
+}
+
+/** Returns a bounded page of raw native material; the caller must seal it before persistence or display.
+ * Use the last path's basename as `after`; it remains valid if that file is deleted. */
+export async function readArtifactVersions(root: string, id: string, names: readonly ArtifactName[] = knownNames, page: { after?: string; limit?: number } = {}): Promise<ArtifactVersion[]> {
+  const selected = knownNames.filter(name => names.includes(name));
+  if (!conversationId(id) || selected.length === 0 || (page.after !== undefined && !artifactEntry(page.after))) return [];
+  const limit = typeof page.limit === 'number' && Number.isFinite(page.limit) ? Math.max(1, Math.min(8, Math.floor(page.limit))) : 8;
   const directory = join(resolve(root), 'brain', id);
-  let entries: string[];
+  // Retain only the smallest next candidates, regardless of directory enumeration order.
+  const candidates: string[] = [];
+  const offer = (entry: string) => {
+    const parsed = artifactEntry(entry);
+    if (!parsed || !selected.includes(parsed.name) || (page.after !== undefined && compareEntries(entry, page.after) <= 0)) return;
+    if (candidates.includes(entry)) return;
+    candidates.push(entry);
+    candidates.sort(compareEntries);
+    if (candidates.length > limit) candidates.pop();
+  };
+  // Current paths are candidates even when missing; the read below reports removal.
+  for (const name of selected) offer(name);
+  let directoryError: ArtifactVersion['unavailable'];
   try {
     const canonicalRoot = await readableRoot(root);
     const canonicalDirectory = await realpath(directory);
     if (relative(canonicalRoot, canonicalDirectory).replace(/\\/g, '/') !== `brain/${id}`) throw new Error('Antigravity resolved reference leaves its conversation');
-    entries = await readdir(canonicalDirectory);
-  } catch (error) {
-    if (unavailable(error) === 'removed') return [];
-    return selected.map(name => ({ name, path: join(directory, name), current: true, bytes: 0, truncated: false, unavailable: unavailable(error) }));
-  }
+    const entries = await opendir(canonicalDirectory);
+    for await (const entry of entries) offer(entry.name);
+  } catch (error) { directoryError = unavailable(error); }
   const result: ArtifactVersion[] = [];
-  for (const name of selected) {
-    const historical = entries.filter(entry => entry === `${name}.resolved` || (entry.startsWith(`${name}.resolved.`) && /^\d+$/.test(entry.slice(`${name}.resolved.`.length))));
-    historical.sort((a, b) => {
-      const prefix = `${name}.resolved.`;
-      if (a === `${name}.resolved`) return b === a ? 0 : -1;
-      if (b === `${name}.resolved`) return 1;
-      return numericCompare(a.slice(prefix.length), b.slice(prefix.length));
-    });
-    const files = [...historical, ...(entries.includes(name) ? [name] : [])];
-    for (const entry of files) {
-      const current = entry === name;
-      const path = join(directory, entry);
-      const suffix = entry.startsWith(`${name}.resolved.`) ? entry.slice(`${name}.resolved.`.length) : undefined;
+  for (const entry of candidates) {
+    const parsed = artifactEntry(entry)!;
+    const { name, version } = parsed;
+    const current = parsed.rank === 2;
+    const path = join(directory, entry);
+    const base: ArtifactVersion = { name, path, current, bytes: 0, truncated: false, ...(version !== undefined ? { version } : {}) };
+    if (directoryError) { result.push({ ...base, unavailable: directoryError }); continue; }
+    try {
+      const read = await bounded(root, path, id, TEXT_LIMIT);
       const meta = current ? await metadata(root, join(directory, `${name}.metadata.json`), id) : {};
-      const base: ArtifactVersion = { name, path, current, bytes: 0, truncated: false, ...(suffix !== undefined ? { version: suffix } : {}), ...meta };
-      try { result.push({ ...base, ...await bounded(root, path, id, TEXT_LIMIT) }); }
-      catch (error) { result.push({ ...base, unavailable: unavailable(error) }); }
-    }
+      result.push({ ...base, ...meta, ...read });
+    } catch (error) { result.push({ ...base, unavailable: unavailable(error) }); }
   }
   return result;
 }

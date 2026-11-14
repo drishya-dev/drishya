@@ -68,5 +68,5 @@ export function outcomeFor(tool: string, args: Args, content: string): ToolOutco
 export { touchesProtectedFile };
 /** Artifacts are not edits to the user's repository. */
 export function isPlanArtifact(args: Args): boolean {
-  return args.ArtifactMetadata !== undefined && /(?:^|[\\/])(?:implementation_plan|task|walkthrough)\.md(?:\.resolved\.\d+)?$/i.test(pathFor(args));
+  return args.ArtifactMetadata !== undefined && /(?:^|[\\/])(?:implementation_plan|task|walkthrough)\.md(?:\.resolved(?:\.\d+)?)?$/i.test(pathFor(args));
 }

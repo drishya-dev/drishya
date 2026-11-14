@@ -8,9 +8,9 @@ import { recordedExitCode } from './tools.ts';
 import type { Summary } from './summaries.ts';
 import { matched } from './pairing.ts';
 import { captureMedia, type MediaResult } from './media.ts';
-import { readArtifactVersions, markdownTasks } from './artifacts.ts';
-import { localPath, within } from './paths.ts';
-import { join, resolve } from 'node:path';
+import { readArtifactVersions, markdownTasks, type ArtifactVersion } from './artifacts.ts';
+import { localPath, within, readablePath } from './paths.ts';
+import { join, resolve, basename } from 'node:path';
 
 type Row = Record<string, unknown>;
 const object = (value: unknown): Row => value && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
@@ -21,6 +21,8 @@ interface Task { call: Call; id: string; step: number; terminal?: { step: number
 /** Async reads stay outside parse(), then ingest seals both journal and side-file material. */
 export function liveParser(parser: RecordParser, ctx: ParseContext, root: string, id: string, summary: () => Summary | undefined, inspectedStep: () => number | undefined = () => undefined): RecordParser {
   const artifactOwners = new Map<string, { id: string; path: string; name: 'implementation_plan.md' | 'task.md' | 'walkthrough.md'; completed: boolean }>(), artifactsEmitted = new Map<string, string>();
+  const artifactTransitions = new Map<string, number>(), knownArtifacts = new Map<string, { ownerId: string; version: ArtifactVersion }>();
+  let artifactCursor: string | undefined, missingOffset = 0;
   let preparedMedia: MediaResult | undefined, artifactRefresh = 0;
   const calls = new Map<string, Call>(), tasks = new Map<string, Task>(), ambiguousTasks = new Set<string>();
   const spawnOwners = new Map<number, Call>(), childrenEmitted = new Map<string, string>();
@@ -48,17 +50,34 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
     const owners = [...artifactOwners.values()].filter(owner => owner.completed);
     if (!owners.length || Date.now() - artifactRefresh < 5000) return [];
     artifactRefresh = Date.now();
-    const versions = await readArtifactVersions(root, id, owners.map(owner => owner.name));
+    const versions = await readArtifactVersions(root, id, owners.map(owner => owner.name), { after: artifactCursor, limit: 8 });
+    artifactCursor = versions.length === 8 ? basename(versions.at(-1)!.path) : undefined;
     const out: RawObservation[] = [];
-    for (const version of versions) {
-      const owner = owners.find(owner => owner.name === version.name);
-      if (!owner) continue;
+    const emit = (owner: typeof owners[number], version: ArtifactVersion) => {
       const payload = { forOperationId: owner.id, path: owner.path, name: owner.name, filePath: version.path, version: version.version, current: version.current, updatedAt: version.updatedAt, text: version.text, bytes: version.bytes, truncated: version.truncated, unavailable: version.unavailable, observedAfterNativeStep: lastStep, items: markdownTasks(version.text ?? ''), association: 'captured-path-reference' };
       const key = `${owner.id}:${version.path}`, signature = createHash('sha256').update(JSON.stringify(sanitize({ ...payload, observedAfterNativeStep: undefined }).value)).digest('hex');
-      if (artifactsEmitted.get(key) === signature) continue;
+      knownArtifacts.set(key, { ownerId: owner.id, version: { ...version, text: undefined } });
+      if (artifactsEmitted.get(key) === signature) return;
       artifactsEmitted.set(key, signature);
-      out.push({ recordId: `${id}:${lastStep}:artifact:${signature}`, part: 0, kind: 'artifact.plan', agentId, operationId: owner.id, contentKeys: ['text', 'items'], availability: version.unavailable ? 'metadata-only' : version.truncated ? 'partial' : 'complete', payload: { ...payload, snapshotFingerprint: signature } });
+      const transition = (artifactTransitions.get(key) ?? 0) + 1;
+      artifactTransitions.set(key, transition);
+      out.push({ recordId: `${id}:artifact:${owner.id}:${basename(version.path)}:${transition}`, part: 0, kind: 'artifact.plan', agentId, operationId: owner.id, contentKeys: ['text', 'items'], availability: version.unavailable ? 'metadata-only' : version.truncated ? 'partial' : 'complete', payload: { ...payload, snapshotFingerprint: signature, artifactTransition: transition } });
+    };
+    for (const version of versions) {
+      const owner = owners.find(owner => owner.name === version.name);
+      if (owner) emit(owner, version);
     }
+    // A vanished version is evidence too. Check a bounded rotating slice without reading bytes.
+    const known = [...knownArtifacts.values()].filter(entry => owners.some(owner => owner.id === entry.ownerId));
+    for (const entry of known.slice(missingOffset, missingOffset + 8)) {
+      const owner = owners.find(owner => owner.id === entry.ownerId)!;
+      try { await readablePath(root, entry.version.path, 'artifact', id); }
+      catch (error) {
+        const removed = ['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '');
+        emit(owner, { ...entry.version, text: undefined, bytes: 0, truncated: false, unavailable: removed ? 'removed' : 'protected' });
+      }
+    }
+    missingOffset = missingOffset + 8 >= known.length ? 0 : missingOffset + 8;
     return out;
   };
   const rememberTask = (call: Call, native: string, step: number) => {
@@ -108,7 +127,12 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
         const p = object(o.payload), call = o.operationId ? calls.get(o.operationId) : undefined;
         const step = Number.parseInt(o.source.recordId?.split(':')[1] ?? '', 10);
         if (Number.isSafeInteger(step)) lastStep = Math.max(lastStep, step);
-        if (o.kind === 'artifact.plan' && typeof p.filePath === 'string' && typeof p.forOperationId === 'string') artifactsEmitted.set(`${p.forOperationId}:${p.filePath}`, text(p.snapshotFingerprint));
+        if (o.kind === 'artifact.plan' && typeof p.filePath === 'string' && typeof p.forOperationId === 'string') {
+          const key = `${p.forOperationId}:${p.filePath}`;
+          artifactsEmitted.set(key, text(p.snapshotFingerprint));
+          if (Number.isSafeInteger(p.artifactTransition) && Number(p.artifactTransition) > 0) artifactTransitions.set(key, Number(p.artifactTransition));
+          knownArtifacts.set(key, { ownerId: p.forOperationId, version: { name: text(p.name), path: p.filePath, version: typeof p.version === 'string' ? p.version : undefined, current: p.current === true, updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : undefined, bytes: Number(p.bytes) || 0, truncated: p.truncated === true, unavailable: p.unavailable as ArtifactVersion['unavailable'] } });
+        }
         if (o.kind === 'tool.result') completeArtifact(o.operationId, p);
         if (o.kind === 'tool.result' && call) {
           if (call.tool === 'invoke_subagent' && Number.isSafeInteger(step)) spawnOwners.set(step, call);

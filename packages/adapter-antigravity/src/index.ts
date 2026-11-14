@@ -68,7 +68,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
           const artifact = isPlanArtifact(args);
           const artifactText = text(args.Content) || text(args.CodeContent);
           const artifactPath = localPath(text(args.Path) || text(args.AbsolutePath) || text(args.TargetFile));
-          const nativeArtifact = artifact && artifactPath ? { path: resolve(artifactPath), name: basename(artifactPath), text: artifactText, items: markdownTasks(artifactText), truncated: partial } : undefined;
+          const nativeArtifact = artifact && artifactPath ? { path: resolve(artifactPath.replace(/\.resolved(?:\.\d+)?$/, '')), name: basename(artifactPath).replace(/\.resolved(?:\.\d+)?$/, ''), recordedPath: artifactPath, text: artifactText, items: markdownTasks(artifactText), truncated: partial } : undefined;
           const intent = artifact ? { kind: 'plan' as const, items: markdownTasks(artifactText) } : intentFor(tool, args);
           const operationId = `${id}:${step}:call:${index}`;
           const pending = { id: operationId, tool, args, intent, step };

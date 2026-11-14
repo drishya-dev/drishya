@@ -1,0 +1,42 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { mkdtemp, mkdir, writeFile, rename, rm, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve, sep } from 'node:path';
+import { captureMedia } from '../src/media.ts';
+import { readArtifactVersions } from '../src/artifacts.ts';
+const interception = vi.hoisted(() => ({ beforeOpen: undefined as undefined | (() => Promise<void>), reads: 0 }));
+vi.mock('node:fs/promises', async importOriginal => {
+  const actual = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...actual, open: async (...args: Parameters<typeof actual.open>) => {
+    const hook = interception.beforeOpen; interception.beforeOpen = undefined; await hook?.();
+    const handle = await actual.open(...args), read = handle.read.bind(handle);
+    handle.read = ((...args: unknown[]) => { interception.reads++; return (read as (...args: unknown[]) => unknown)(...args); }) as typeof handle.read;
+    return handle;
+  } };
+});
+const roots: string[] = [];
+afterEach(async () => { interception.beforeOpen = undefined; interception.reads = 0;
+  for (const root of roots.splice(0)) { if (!resolve(root).startsWith(resolve(tmpdir()) + sep)) throw Error('Unsafe scratch cleanup'); await rm(root, { recursive: true, force: true }); }
+});
+for (const kind of ['media', 'artifact']) it(`refuses a directory swap between validation and ${kind} open before reading bytes`, async () => {
+  const root = await mkdtemp(join(tmpdir(), 'ag-swap-')); roots.push(root);
+  const conversation = join(root, 'brain', 'one'), outside = join(root, 'outside');
+  await mkdir(conversation, { recursive: true }); await mkdir(outside);
+  const folder = kind === 'media' ? join(conversation, '.user_uploaded') : conversation;
+  if (kind === 'media') await mkdir(folder);
+  const name = kind === 'media' ? 'shot.png' : 'task.md';
+  await writeFile(join(folder, name), 'inside'); await writeFile(join(outside, name), 'outside-never-read');
+  interception.beforeOpen = async () => {
+    await rename(folder, folder + '-original');
+    await symlink(outside, folder, process.platform === 'win32' ? 'junction' : 'dir');
+  };
+  if (kind === 'media') {
+    const value = await captureMedia(root, 'one', [join(folder, name)]);
+    expect(value.images[0]?.data).toBeUndefined();
+    expect(value.images[0]?.omitted).toBe('referenced-file');
+  } else {
+    const value = await readArtifactVersions(root, 'one', ['task.md']);
+    expect(value[0]?.text).toBeUndefined(); expect(value[0]?.unavailable).toBeDefined();
+  }
+  expect(interception.reads).toBe(0);
+});
