@@ -138,6 +138,7 @@ function build(id: string, ids: string[], live: boolean, counts: Record<string, 
       }
     }
   }
+  if (process.env.DRISHYA_HISTORY_TIMING) console.error('history build: rebuilding;', resident ? `resident matches=${residentFor()} rows=${resident.rows} total=${source.countObservations(last)} seq=${resident.sequence}` : 'no resident');
   resident = undefined;
   capturedBlobs.clear();
   const chunked = new ChunkedFold(source, ids, io, reduceOptions(live), (o) => rememberCapturedBlobs(o.payload));
@@ -297,12 +298,15 @@ function current(id: string): View {
     // Individual histories use repeatable streaming SQL reads. Combined histories retain the
     // reducer's cross-source ordering and worktree identity until their merged disk cursor lands.
     cached = undefined;
+    const t0 = performance.now();
     const built = build(id, ctx.ids, ctx.live, ctx.counts);
+    const t1 = performance.now();
     db.exec('BEGIN IMMEDIATE');
     try {
       for (const _ of persistView(id, ctx.revision, built.projection, built.appended, false));
       db.exec('COMMIT');
     } catch (error) { db.exec('ROLLBACK'); throw error; }
+    if (process.env.DRISHYA_HISTORY_TIMING) console.error('history current: build', Math.round(t1 - t0), 'ms appended', built.appended, 'persist', Math.round(performance.now() - t1), 'ms');
     cached = { id, revision: ctx.revision, projection: built.projection, revisions: ctx.revisions };
     releaseWorkingSet = ctx.ids.some(key => source.sourceBytes(key) > 32 * 1024 * 1024);
     return cached;
@@ -387,19 +391,28 @@ function startBackground(id: string, ctx: Lookup): void {
       const now = lookup(id);
       const last = from.ids.at(-1)!;
       const added = source.observations(last, chunked.fold.sequenceOf(last), APPEND_BATCH + 1);
+      // Counted in the same tick as the read: rows stored while the view is written below are not in this fold (the next append takes them).
+      const rowsFolded = source.countObservations(last);
       const accepted = chunked.lineage ? chunked.lineage.filter(added) : added;
       for (const o of accepted) rememberCapturedBlobs(o.payload);
       if (ancestorRevisions(from.ids, now.counts) !== ancestorRevisions(from.ids, from.counts) || added.length > APPEND_BATCH || !chunked.fold.append(accepted)) continue;
+      const lap = (label: string, since: number) => { if (process.env.DRISHYA_HISTORY_TIMING) console.error('history background', label, Math.round(performance.now() - since), 'ms'); };
+      let mark = performance.now();
       const projection = shaped(chunked.fold.snapshot(now.live), from.ids);
+      lap('snapshot', mark);
       const write = persistView(id, now.revision, projection, false, true);
-      for (let step = write.next(); !step.done; step = write.next()) { await yieldToLoop(); if (job.cancelled) return; }
-      resident = { id, ids: from.ids, fold: chunked.fold, lineage: chunked.lineage, sequence: Math.max(chunked.fold.sequenceOf(last), ...added.map((o) => o.receivedSequence)), rows: source.countObservations(last), ancestors: ancestorRevisions(from.ids, from.counts), saved: 0 };
+      let longest = 0;
+      for (let step = write.next(); !step.done; ) { mark = performance.now(); step = write.next(); longest = Math.max(longest, performance.now() - mark); await yieldToLoop(); if (job.cancelled) return; }
+      lap('longest write chunk', performance.now() - longest);
+      resident = { id, ids: from.ids, fold: chunked.fold, lineage: chunked.lineage, sequence: Math.max(chunked.fold.sequenceOf(last), ...added.map((o) => o.receivedSequence)), rows: rowsFolded, ancestors: ancestorRevisions(from.ids, from.counts), saved: 0 };
       cached = { id, revision: now.revision, projection, revisions: now.revisions };
       tail = undefined;
       if (background === job) background = undefined;
       parentPort!.postMessage({ event: 'full-ready', viewId: id });
-      // The whole fold is the expensive thing to lose: remembered at once (after the swap has gone out), at low priority.
-      setImmediate(() => { try { saveCheckpoint(true); } catch (error) { console.error('history: checkpoint not written:', error instanceof Error ? error.message : error); } });
+      // The whole fold is the expensive thing to lose: remembered shortly after the swap, once the page's burst of requests it
+      // causes has been answered (serialising a large fold holds this thread for about half a second). A close flushes it anyway.
+      if (checkpointTimer) clearTimeout(checkpointTimer);
+      checkpointTimer = setTimeout(() => { checkpointTimer = undefined; try { const began = performance.now(); saveCheckpoint(true); if (process.env.DRISHYA_HISTORY_TIMING) console.error('history background checkpoint', Math.round(performance.now() - began), 'ms'); } catch (error) { console.error('history: checkpoint not written:', error instanceof Error ? error.message : error); } }, process.env.DRISHYA_CHECKPOINT_QUIET_MS ? 50 : 3000).unref();
       return;
     }
     if (background === job) background = undefined;

@@ -10,10 +10,10 @@ import { App } from '../src/app.ts';
 // rebuild gives. Every input the key or the stored state depends on stops it being used.
 let dirs: string[] = [];
 const apps: App[] = [];
-const saved = { first: process.env.DRISHYA_TAIL_FIRST, prompts: process.env.DRISHYA_TAIL_PROMPTS };
-beforeAll(() => { process.env.DRISHYA_TAIL_FIRST = '1'; process.env.DRISHYA_TAIL_PROMPTS = '2'; });
+const saved = { first: process.env.DRISHYA_TAIL_FIRST, prompts: process.env.DRISHYA_TAIL_PROMPTS, quiet: process.env.DRISHYA_CHECKPOINT_QUIET_MS };
+beforeAll(() => { process.env.DRISHYA_TAIL_FIRST = '1'; process.env.DRISHYA_TAIL_PROMPTS = '2'; process.env.DRISHYA_CHECKPOINT_QUIET_MS = '50'; });
 afterAll(() => {
-  for (const [key, value] of [['DRISHYA_TAIL_FIRST', saved.first], ['DRISHYA_TAIL_PROMPTS', saved.prompts]] as const) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
+  for (const [key, value] of [['DRISHYA_TAIL_FIRST', saved.first], ['DRISHYA_TAIL_PROMPTS', saved.prompts], ['DRISHYA_CHECKPOINT_QUIET_MS', saved.quiet]] as const) { if (value === undefined) delete process.env[key]; else process.env[key] = value; }
 });
 afterEach(async () => { for (const app of apps.splice(0)) await app.close(); for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true }); });
 
@@ -98,6 +98,7 @@ describe('the remembered fold', { timeout: 60_000 }, () => {
 
   const stale = (what: string, change: (db: DatabaseSync, f: Awaited<ReturnType<typeof remembered>>) => void) => it(`is not used when ${what}: the view is folded again`, async () => {
     const f = await remembered();
+    const goodKey = folds(f.home)[0]!.key;
     const db = new DatabaseSync(join(f.home, 'history', 'index.db'));
     try { change(db, f); } finally { db.close(); }
     const again = reopen(f.home);
@@ -110,7 +111,8 @@ describe('the remembered fold', { timeout: 60_000 }, () => {
     const after = await again.history.page(f.recordingId, { count: 64 });
     expect(after.projection.prose.some((p) => p.text === 'answer 8')).toBe(true);
     // The unusable checkpoint was replaced by a good one once the new fold finished.
-    expect(folds(f.home)).toHaveLength(1);
+    const rewritten = async () => { for (let i = 0; i < 100; i++) { const rows = folds(f.home); if (rows.length === 1 && rows[0]!.key === goodKey) return true; await new Promise((r) => setTimeout(r, 50)); } return false; };
+    expect(await rewritten()).toBe(true);
   });
 
   const keyPart = (index: number, value: unknown) => (db: DatabaseSync) => {
