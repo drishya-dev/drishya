@@ -271,6 +271,24 @@ export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
   }
 }
 
+/**
+ * Exchanges a single-use embed launch code for an HttpOnly session cookie (EMBED-1 / EMBED-2b).
+ * The code is transmitted via same-origin POST /v1/embed/session with JSON { code, recordingId }.
+ */
+export async function signInEmbed(code: string, recordingId: string): Promise<'ok' | 'no-daemon' | 'signed-out'> {
+  try {
+    await req<{ ok: boolean; recordingId: string }>('/v1/embed/session', {
+      method: 'POST',
+      json: { code, recordingId },
+    });
+    await req('/v1/config');
+    return 'ok';
+  } catch (e) {
+    if (e instanceof HttpError && (e.status === 401 || e.status === 404 || e.status === 400)) return 'signed-out';
+    return 'no-daemon';
+  }
+}
+
 export const daemon: DataSource = {
   queue: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/queue?${new URLSearchParams(Object.entries(query).filter(([,v])=>v!==undefined).map(([k,v])=>[k,String(v)]))}`),
   queueInput: (id, receiptId, through, start = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/queue/${encodeURIComponent(receiptId)}?${new URLSearchParams({start:String(start),...(through?{through}:{})})}`),

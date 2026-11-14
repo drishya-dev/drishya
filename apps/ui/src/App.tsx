@@ -1,7 +1,7 @@
 import {LibrarySearch} from './components/LibrarySearch.tsx';
 import { useEffect } from 'react';
 import { dwellFor } from '@drishya/scene';
-import { bundleSource, daemon, loadBundle, signIn } from './api.ts';
+import { bundleSource, daemon, loadBundle, signIn, signInEmbed } from './api.ts';
 import { ProductShell } from './components/ProductShell.tsx';
 import { Home } from './components/Home.tsx';
 import { Viewer } from './components/Viewer.tsx';
@@ -16,15 +16,35 @@ import { installFocusModality } from './lib/focus-modality.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
+/**
+ * Single-use embed launch credential extracted once from URL fragment and immediately scrubbed.
+ * Never persists to localStorage, never printed to console, never put into DOM or state.
+ */
+function extractEmbedLaunchCode(): string | undefined {
+  const hash = location.hash;
+  const match = /^#launch=([a-zA-Z0-9_-]+)$/.exec(hash);
+  if (match) {
+    history.replaceState(null, '', location.pathname + location.search);
+    return match[1];
+  }
+  return undefined;
+}
+
+const initialEmbedLaunchCode = extractEmbedLaunchCode();
+
 /** Deep links: #/r/<id>, ?at=<step|end>, ?motion=0, ?bundle=<url>, ?demo. */
 function params() {
   const q = new URLSearchParams(location.search);
   const at = q.get('at');
+  const embed = q.get('embed') === '1' || q.get('embed') === 'true' || q.has('embed');
+  const recParam = q.get('recording');
+  const recHash = /^#\/r\/(.+)$/.exec(location.hash)?.[1];
   return {
     at: at === 'end' ? ('end' as const) : at ? Number(at) : undefined,
     bundle: q.get('bundle') ?? (q.has('demo') && q.get('demo') !== 'local' ? DEMO_URL : undefined),
     motion: q.get('motion'),
-    recording: /^#\/r\/(.+)$/.exec(location.hash)?.[1],
+    recording: recParam ? recParam : recHash,
+    embed,
   };
 }
 
@@ -40,6 +60,7 @@ async function openBundle(url: string, growing = false) {
 export function App() {
   const screen = useApp((s) => s.screen);
   const error = useApp((s) => s.error);
+  const isEmbed = useApp((s) => s.embed);
 
   useEffect(() => installFocusModality(), []);
 
@@ -49,6 +70,44 @@ export function App() {
     if (p.motion === '0') setMotion(false);
     (async () => {
       try {
+        if (p.embed) {
+          useApp.setState({ embed: true });
+          document.documentElement.dataset.embed = 'true';
+          const targetId = p.recording ? decodeURIComponent(p.recording) : undefined;
+          if (!targetId || !/^rec_[a-zA-Z0-9_+.-]+$/.test(targetId)) {
+            useApp.setState({
+              screen: 'error',
+              error: 'Session not found. Import this recording before opening it.',
+            });
+            return;
+          }
+
+          let auth: 'ok' | 'no-daemon' | 'signed-out';
+          if (initialEmbedLaunchCode) {
+            auth = await signInEmbed(initialEmbedLaunchCode, targetId);
+          } else {
+            auth = await signIn();
+          }
+
+          if (auth === 'signed-out') return useApp.setState({ screen: 'signed-out' });
+          if (auth === 'no-daemon') return useApp.setState({ screen: 'no-daemon' });
+
+          const cleanUrl = `${location.pathname}?embed=1#/r/${encodeURIComponent(targetId)}`;
+          history.replaceState(null, '', cleanUrl);
+
+          const recordings = await daemon.recordings();
+          const config = await daemon.config();
+          useApp.setState({
+            source: daemon,
+            config,
+            recordings,
+            screen: 'viewer',
+          });
+
+          await useApp.getState().openRecording(targetId, p.at === undefined ? undefined : { at: p.at });
+          return;
+        }
+
         if (p.bundle) return await openBundle(p.bundle, new URLSearchParams(location.search).get('demo') === 'live');
         const auth = await signIn();
         if (auth === 'ok') {
@@ -75,7 +134,7 @@ export function App() {
   // recording link opens that recording.
   useEffect(() => {
     const onHash = () => {
-      if (/token=/.test(location.hash)) return location.reload();
+      if (/token=/.test(location.hash) || /launch=/.test(location.hash)) return location.reload();
       const id = params().recording;
       const s = useApp.getState();
       if (id && s.source?.kind === 'daemon') {
@@ -83,7 +142,9 @@ export function App() {
         if (decodeURIComponent(id) !== s.recordingId || !s.projection) void s.openRecording(decodeURIComponent(id));
         else if (s.screen !== 'viewer') s.set({ screen: 'viewer' });
       }
-      if (!id && s.source?.kind === 'daemon' && s.screen === 'viewer') s.set({ screen: 'home', playing: false });
+      if (!id && s.source?.kind === 'daemon' && s.screen === 'viewer') {
+        if (!s.embed) s.set({ screen: 'home', playing: false });
+      }
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
@@ -96,14 +157,39 @@ export function App() {
 
   const render = () => {
     if (screen === 'loading') return <div className="center muted">Starting…</div>;
-    if (screen === 'signed-out')
+    if (screen === 'signed-out') {
+      if (isEmbed) {
+        return (
+          <div className="center notice">
+            <h2>Session sign-in required</h2>
+            <p className="muted">The single-use launch link has expired or was already used. Launch Drishya again from your host application.</p>
+            <div className="recovery-actions">
+              <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="center notice">
           <h2>Open Drishya from its launch link</h2>
           <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p><button className="btn" onClick={() => location.assign(`${location.pathname}?demo`)}>Open sample workspace</button>
         </div>
       );
-    if (screen === 'no-daemon')
+    }
+    if (screen === 'no-daemon') {
+      if (isEmbed) {
+        return (
+          <div className="center notice">
+            <h2>Drishya is not running</h2>
+            <p className="muted">
+              The local Drishya background process is not reachable. Ensure the host application started Drishya on loopback.
+            </p>
+            <div className="recovery-actions">
+              <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="center notice">
           <h2>Drishya is not running</h2>
@@ -115,22 +201,47 @@ export function App() {
           </button>
         </div>
       );
-    if (screen === 'error') return (
-      <div className="center notice">
-        <h2>Could not open this workspace</h2>
-        <p className="bad" role="alert">{error}</p>
-        <p className="muted">Your sessions remain in the local store.</p>
-        <div className="recovery-actions">
-          <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
-          <button className="btn" onClick={() => location.assign(location.pathname)}>Open local workspace</button>
-          <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ error: e.message }))}>Open synthetic demo</button>
+    }
+    if (screen === 'error') {
+      if (isEmbed) {
+        return (
+          <div className="center notice">
+            <h2>Could not open session</h2>
+            <p className="bad" role="alert">{error}</p>
+            <p className="muted">Your session data remains in the local store.</p>
+            <div className="recovery-actions">
+              <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
+            </div>
+          </div>
+        );
+      }
+      return (
+        <div className="center notice">
+          <h2>Could not open this workspace</h2>
+          <p className="bad" role="alert">{error}</p>
+          <p className="muted">Your sessions remain in the local store.</p>
+          <div className="recovery-actions">
+            <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
+            <button className="btn" onClick={() => location.assign(location.pathname)}>Open local workspace</button>
+            <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ error: e.message }))}>Open synthetic demo</button>
+          </div>
         </div>
-      </div>
-    );
-    if (screen === 'home') return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
+      );
+    }
+    if (screen === 'home') {
+      if (isEmbed) {
+        return (
+          <div className="center notice">
+            <h2>Waiting for session</h2>
+            <p className="muted">Select a session from your host application to view it here.</p>
+          </div>
+        );
+      }
+      return <Home openDemo={(growing = false) => openBundle(DEMO_URL, growing).catch((e) => useApp.setState({ screen: 'error', error: e.message }))} />;
+    }
     return <Viewer />;
   };
-  return <ProductShell>{render()}<LibrarySearch/><ConnectionNotice /><WorkspaceNavigation /></ProductShell>;
+  return <ProductShell>{render()}{!isEmbed && <LibrarySearch/>}<ConnectionNotice />{!isEmbed && <WorkspaceNavigation />}</ProductShell>;
 }
 
 function ConnectionNotice() {

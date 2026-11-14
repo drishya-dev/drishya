@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drishya Embed Host Reference</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-topbar">
+    <div class="brand">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+        <line x1="8" y1="21" x2="16" y2="21"></line>
+        <line x1="12" y1="17" x2="12" y2="21"></line>
+      </svg>
+      <span>DevStudio IDE</span>
+      <span class="brand-badge">Host Example</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="btn-drishya-launch" class="btn drishya-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 2v3m0 14v3M2 12h3m14 0h3m-3.5-6.5l-2.1 2.1m-8.8 8.8l-2.1 2.1m13 0l-2.1-2.1m-8.8-8.8l-2.1-2.1"></path>
+        </svg>
+        <span>Open in Drishya</span>
+      </button>
+      <button id="btn-stop" class="btn" style="display:none;">Stop Drishya</button>
+    </div>
+  </header>
+
+  <main class="workspace-split">
+    <!-- Left: Coding Assistant Chat -->
+    <section class="mock-chat-panel">
+      <div class="chat-header">
+        <span class="chat-title">Task: Fix token expiration handling</span>
+        <span class="agent-role">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          Claude Code (Active)
+        </span>
+      </div>
+
+      <div class="chat-thread">
+        <div class="message user">
+          The session expires after 60 seconds without renewing the HttpOnly cookie. Please investigate and fix the auth expiration handler.
+        </div>
+
+        <div class="message agent">
+          <div class="agent-bubble">
+            I've read <code>src/auth/session.ts</code> and verified the expiry window. Let's patch the expiration check and run unit tests.
+            <div class="code-block">
+              // src/auth/session.ts<br>
+              - const isExpired = now - issuedAt &gt; 60_000;<br>
+              + const isExpired = now - issuedAt &gt; EXPIRATION_TTL_MS;
+            </div>
+          </div>
+        </div>
+
+        <div class="message agent">
+          <div class="agent-bubble">
+            Running verification suite:
+            <div class="code-block">
+              $ vitest run test/session.test.ts<br>
+              ✓ test/session.test.ts (4 tests) 14ms<br>
+              All 4 tests passed.
+            </div>
+            Ready for your review. Click <strong>Open in Drishya</strong> to inspect the recorded diff, tools, and timeline.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Embed Host Viewport -->
+    <section id="embed-pane" class="embed-pane" style="width: 600px;">
+      <div class="embed-pane-controls">
+        <div class="pane-info">
+          <span id="status-dot" class="status-dot"></span>
+          <span id="status-text">Drishya Pane · Idle</span>
+        </div>
+
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <div class="btn-group">
+            <button id="width-360" class="btn" title="Narrow mobile/sidebar width">360px</button>
+            <button id="width-600" class="btn active" title="Standard desktop panel">600px</button>
+            <button id="width-1440" class="btn" title="Wide timeline view">1440px</button>
+          </div>
+          <button id="btn-fullscreen" class="btn" title="Toggle Fullscreen">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div id="embed-viewport" class="embed-viewport">
+        <div id="placeholder" class="embed-placeholder">
+          <h3>Drishya Embed Pane</h3>
+          <p>
+            Click <strong>Open in Drishya</strong> above to launch the daemon and open the live agent replay view in this pane.
+          </p>
+          <div class="embed-window-notice" style="margin-top: 16px;">
+            <h4>Security &amp; Desktop Architecture</h4>
+            <p>
+              Drishya enforces <code>frame-ancestors 'none'</code> and <code>X-Frame-Options: DENY</code> by design.
+            </p>
+            <p style="margin-top: 6px;">
+              In desktop hosts (Electron, Tauri), Drishya runs as a sandboxed <strong>WebContentsView</strong> side pane with its own isolated partition. In standard browsers, click below to open a sized top-level window.
+            </p>
+          </div>
+        </div>
+
+        <div id="active-view-container" style="display: none; height: 100%; flex-direction: column;">
+          <div class="embed-window-notice" style="margin: 20px auto; max-width: 480px;">
+            <h4>Drishya Session Launched</h4>
+            <p>
+              Session: <code id="opened-recording-id">rec_...</code>
+            </p>
+            <p style="margin-top: 8px;">
+              Single-use launch URL has been generated on loopback port <code id="opened-port">...</code>.
+            </p>
+            <div style="margin-top: 14px; display: flex; gap: 8px;">
+              <button id="btn-open-window" class="btn primary">Open Sized Pane Window</button>
+              <button id="btn-copy-clean-url" class="btn">Copy Clean Route</button>
+            </div>
+            <div style="margin-top: 14px; font-size: 11px; color: var(--text-muted);">
+              <strong>Architecture Note:</strong> An Electron application attaches this view natively as a <code>WebContentsView</code> positioned inside this layout rect. See <code>electron-host.cjs</code>.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    const btnLaunch = document.getElementById('btn-drishya-launch');
+    const btnStop = document.getElementById('btn-stop');
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const embedPane = document.getElementById('embed-pane');
+    const placeholder = document.getElementById('placeholder');
+    const activeViewContainer = document.getElementById('active-view-container');
+    const openedRecordingId = document.getElementById('opened-recording-id');
+    const openedPort = document.getElementById('opened-port');
+    const btnOpenWindow = document.getElementById('btn-open-window');
+    const btnCopyCleanUrl = document.getElementById('btn-copy-clean-url');
+    const btnFullscreen = document.getElementById('btn-fullscreen');
+
+    let currentLaunchUrl = null;
+    let cleanRouteUrl = null;
+    let activeWindow = null;
+
+    // Width buttons
+    const widthButtons = {
+      '360': document.getElementById('width-360'),
+      '600': document.getElementById('width-600'),
+      '1440': document.getElementById('width-1440'),
+    };
+
+    function setPaneWidth(widthPx) {
+      embedPane.style.width = widthPx + 'px';
+      Object.keys(widthButtons).forEach(w => {
+        widthButtons[w].classList.toggle('active', w === String(widthPx));
+      });
+      if (activeWindow && !activeWindow.closed) {
+        activeWindow.resizeTo(widthPx, window.innerHeight);
+      }
+    }
+
+    widthButtons['360'].addEventListener('click', () => setPaneWidth(360));
+    widthButtons['600'].addEventListener('click', () => setPaneWidth(600));
+    widthButtons['1440'].addEventListener('click', () => setPaneWidth(1440));
+
+    // Fullscreen toggle
+    btnFullscreen.addEventListener('click', async () => {
+      if (!document.fullscreenElement) {
+        try {
+          await embedPane.requestFullscreen();
+        } catch (e) {
+          console.warn('Fullscreen request failed:', e);
+        }
+      } else {
+        await document.exitFullscreen();
+      }
+    });
+
+    // Launch button
+    btnLaunch.addEventListener('click', async () => {
+      statusDot.className = 'status-dot waiting';
+      statusText.textContent = 'Launching Drishya...';
+      btnLaunch.disabled = true;
+
+      try {
+        const res = await fetch('/api/launch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+
+        const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error?.message || data.error || 'Failed to start launcher');
+        }
+
+        currentLaunchUrl = data.url;
+        const u = new URL(data.url);
+        cleanRouteUrl = `${u.origin}/?embed=1#/r/${encodeURIComponent(data.recordingId)}`;
+
+        statusDot.className = 'status-dot active';
+        statusText.textContent = `Connected (${data.recordingId.slice(0, 12)}…)`;
+        openedRecordingId.textContent = data.recordingId;
+        openedPort.textContent = data.port;
+
+        placeholder.style.display = 'none';
+        activeViewContainer.style.display = 'flex';
+        btnStop.style.display = 'inline-flex';
+
+        // Auto open sized window for host preview
+        openSizedWindow(currentLaunchUrl);
+      } catch (err) {
+        statusDot.className = 'status-dot';
+        statusText.textContent = 'Launch error';
+        alert('Could not start Drishya embed: ' + err.message);
+      } finally {
+        btnLaunch.disabled = false;
+      }
+    });
+
+    btnStop.addEventListener('click', async () => {
+      await fetch('/api/stop', { method: 'POST' });
+      if (activeWindow && !activeWindow.closed) {
+        activeWindow.close();
+      }
+      statusDot.className = 'status-dot';
+      statusText.textContent = 'Drishya Pane · Stopped';
+      placeholder.style.display = 'flex';
+      activeViewContainer.style.display = 'none';
+      btnStop.style.display = 'none';
+    });
+
+    function openSizedWindow(url) {
+      const width = parseInt(embedPane.style.width, 10) || 600;
+      const height = window.innerHeight;
+      const left = window.screenX + window.outerWidth - width;
+      const top = window.screenY;
+      activeWindow = window.open(
+        url,
+        'drishya_embed_pane',
+        `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
+      );
+    }
+
+    btnOpenWindow.addEventListener('click', () => {
+      if (cleanRouteUrl) {
+        openSizedWindow(cleanRouteUrl);
+      }
+    });
+
+    btnCopyCleanUrl.addEventListener('click', async () => {
+      if (cleanRouteUrl) {
+        await navigator.clipboard.writeText(cleanRouteUrl);
+        const prev = btnCopyCleanUrl.textContent;
+        btnCopyCleanUrl.textContent = 'Copied!';
+        setTimeout(() => { btnCopyCleanUrl.textContent = prev; }, 1500);
+      }
+    });
+  </script>
+</body>
+</html>

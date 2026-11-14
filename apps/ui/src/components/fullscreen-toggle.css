@@ -1,0 +1,88 @@
+/* EMBED-2b: Enter / Exit full-screen control and animations */
+.embed-fullscreen-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  min-height: 30px;
+  padding: 0 8px;
+  border-radius: var(--round-sm, 4px);
+  color: var(--t2, #8b949e);
+  cursor: pointer;
+  border: 0;
+  background: transparent;
+  font: var(--text-xs, 12px)/1 var(--sans, sans-serif);
+  white-space: nowrap;
+}
+
+.embed-fullscreen-toggle:hover {
+  background: var(--s2, #21262d);
+  color: var(--t1, #f0f6fc);
+}
+
+.embed-fullscreen-toggle.is-fullscreen {
+  color: var(--t1, #f0f6fc);
+}
+
+.fullscreen-glyph {
+  flex: none;
+  width: 14px;
+  height: 14px;
+}
+
+/* Matching enter and exit transitions */
+.viewer[data-fullscreen="active"] {
+  animation: embedFullscreenEnter 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.viewer[data-fullscreen="exiting"] {
+  animation: embedFullscreenExit 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes embedFullscreenEnter {
+  0% {
+    opacity: 0.94;
+    transform: scale(0.995);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes embedFullscreenExit {
+  0% {
+    opacity: 0.96;
+    transform: scale(1.004);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewer[data-fullscreen="active"],
+  .viewer[data-fullscreen="exiting"] {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+:root[data-low-resource] .viewer[data-fullscreen="active"],
+:root[data-low-resource] .viewer[data-fullscreen="exiting"] {
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Hide label text at narrow widths to preserve header room */
+@media (max-width: 600px) {
+  .embed-fullscreen-toggle {
+    width: 30px;
+    padding: 6px;
+    justify-content: center;
+  }
+  .fullscreen-toggle-label {
+    display: none;
+  }
+}

@@ -14,12 +14,18 @@ const MODES: { mode: HistoryMode; label: string; title: string }[] = [
 export function HistoryModeSwitch() {
   const mode = useApp((s) => s.historyMode);
   const source = useApp((s) => s.source);
+  const isEmbed = useApp((s) => s.embed);
   const setMode = useApp((s) => s.setHistoryMode);
   useLayoutEffect(() => {
     if (!source) return;
-    const saved = workspaceMemory(source).session(HISTORY_MODE_SCOPE).get(HISTORY_MODE_KEY);
-    if ((saved === 'work' || saved === 'conversation') && saved !== useApp.getState().historyMode) useApp.setState({ historyMode: saved });
-  }, [source]);
+    const scope = isEmbed ? '@embed' : HISTORY_MODE_SCOPE;
+    const saved = workspaceMemory(source).session(scope).get(HISTORY_MODE_KEY);
+    if ((saved === 'work' || saved === 'conversation')) {
+      if (saved !== useApp.getState().historyMode) useApp.setState({ historyMode: saved });
+    } else if (isEmbed && useApp.getState().historyMode !== 'conversation') {
+      useApp.setState({ historyMode: 'conversation' });
+    }
+  }, [source, isEmbed]);
   return <div className="history-mode" role="group" aria-label="Read the session as">
     {MODES.map((item) => <button key={item.mode} type="button" className="history-mode-option" aria-pressed={mode === item.mode} title={item.title} onClick={() => mode !== item.mode && setMode(item.mode)}>{item.label}</button>)}
   </div>;

@@ -32,6 +32,7 @@ export const HISTORY_MODE_SCOPE = '@home', HISTORY_MODE_KEY = 'history/mode';
 export type Screen = 'loading' | 'home' | 'viewer' | 'no-daemon' | 'signed-out' | 'error';
 
 interface State {
+  embed: boolean;
   source?: DataSource;
   config?: Config;
   screen: Screen;
@@ -146,6 +147,7 @@ const storedMapVisible = (() => {
 })();
 
 export const useApp = create<State>((set, get) => ({
+  embed: false,
   screen: 'loading',
   recordings: [],
   renderedRevisions: {},
@@ -226,7 +228,10 @@ export const useApp = create<State>((set, get) => ({
       const total = page?.scene.total ?? projection.timeline.length;
       const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
       const { start: _start, ...location } = saved ?? {};
-      set({ ...location, error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
+      const isEmbed = get().embed;
+      const embedSaved = isEmbed ? (workspaceMemory(src).session('@embed').get(HISTORY_MODE_KEY) as HistoryMode | undefined) : undefined;
+      const historyMode = isEmbed ? (embedSaved ?? 'conversation') : get().historyMode;
+      set({ ...location, historyMode, error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
       if (!page?.partial) wholeHistoryArrived();
       // Settle before the live-start reload below, which would otherwise wait on this open.
       settle();
@@ -334,7 +339,10 @@ export const useApp = create<State>((set, get) => ({
 
   setHistoryMode(mode) {
     const source = get().source;
-    if (source) workspaceMemory(source).session(HISTORY_MODE_SCOPE).set(HISTORY_MODE_KEY, mode);
+    if (source) {
+      const scope = get().embed ? '@embed' : HISTORY_MODE_SCOPE;
+      workspaceMemory(source).session(scope).set(HISTORY_MODE_KEY, mode);
+    }
     set({ historyMode: mode });
   },
   select(opId) {

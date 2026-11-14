@@ -41,5 +41,7 @@ import './jet-ground.css';
 import './fewer-outlines.css';
 // UI-41: the Work / Conversation switch and the line a folded run shows.
 import './conversation-view.css';
+// EMBED-2b: embed view layout and narrow boundaries
+import '../components/embed.css';
 // MOTION-1: last, so its gated motion is not overridden by an earlier sheet.
 import './motion.css';
