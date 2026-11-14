@@ -185,7 +185,7 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
   - **Lane 2, Antigravity: small, well-bounded items only (Yash, 13 Nov):** TEST-3 (five specs red on main) → the evidence retake (Fable's 13 Nov list under SHIP-6; if it stalls or comes back short again, Fable takes it over with Sonnet and closes SHIP-2b/2c/2d and SHIP-6) → MAP-3 brainstorm (a short doc in `docs/review/` with two or three directions for lit files on the map, each with a still frame or mock and its idle cost; no product code; Yash picks) → SITE-2 after every UI item. MOTION-4 and PERF-4 move to the Sonnet lane after LIVE-7.
   - **HARNESS-AG (Yash, 13 Nov; the Antigravity *product* as a third harness, not lane 2 above):** Codex builds AG-1 to AG-5 (AG-6 is P1); Fable reviews each PR. Order: AG-1 → AG-2 and AG-3 (separate files, in parallel) → AG-4 (needs the builders' agreement on images and artifacts) → AG-5 (genuine sessions, needs a signed-in Antigravity; it can start beside AG-1). **On its own branch (`codex/harness-antigravity`), joining main only if accepted before release, else the next version (Yash, 13 Nov); Codex starts from [the instructions](review/antigravity-codex-instructions.md).** **Freeze risk:** this is sizeable work landing on the freeze day; it is P0 as requested, not demoted. The smallest useful cut is AG-1 + AG-2 (list and read Antigravity sessions); a decision on the cut is Yash's. AG-2 touches `HomeOverview.tsx`, `SessionHome.tsx` and `LibrarySearch.tsx`: start it only when no UI claim holds those files.
   - **If lane 2 blocks lane 1 or the release:** Fable takes the blocking item over (Yash, 12 Nov: "if its blocking then override"), says so in STATUS and finishes it whole.
-  - **Then, in one line (revised 14 Nov, see below):** SITE-2 (the landing site's product images, after every UI item) → SEC-3 (threat model and `pnpm test:security`, on the finished product) → UI-49, UI-50, EMBED-1, EMBED-2 → SHIP-9 with SEC-5's package checks → SEC-4 → REPO-1 → SEC-5's history scan → PUBLIC-1 → SHIP-16 and MAC-1 → SHIP-10 → VIDEO-1 → SHIP-11.
+  - **Then, in one line (revised 14 Nov, see below):** SITE-2 (the landing site's product images, after every UI item) → SEC-3 (threat model and `pnpm test:security`, on the finished product) → UI-49, UI-50, EMBED-1, EMBED-2a/2b → SHIP-9 with SEC-5's package checks → SEC-4 → REPO-1 → SEC-5's history scan → PUBLIC-1 → SHIP-16 and MAC-1 → SHIP-10 → VIDEO-1 → SHIP-11.
   - **Open for Yash:** whether panels sit at the window's edges on ultrawide and 4K-at-100 % screens (today the stage centres beyond 2560 px; see UI-37).
   - **Order from 14 Nov (Yash):**
     1. UI-46 (tool-card content) merges.
@@ -194,7 +194,7 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
   - **Order from 14 Nov, late (Yash; supersedes the blocks below where they differ):**
     1. **Now, in flight:** PERF-4 (Sonnet), HARNESS-AG #490 (Sonnet verifying and integrating), UI-41e (Sonnet). Fable merges each when it is green.
     2. **SITE-2: Harsh** builds it ("site 2, harsh will do"). It is wider than new screenshots now; see its entry.
-    3. **After PERF-4, HARNESS-AG and SITE-2 finish: SEC-3** (Fable and Sonnet), while **Harsh builds EMBED-1 and EMBED-2**.
+    3. **After PERF-4, HARNESS-AG and SITE-2 finish: SEC-3** (Fable and Sonnet), while **Harsh builds EMBED-1 and EMBED-2a/2b**.
     4. **Then the other security work (SEC-4, SEC-5) and the shipping line** (SHIP-9 → REPO-1 → PUBLIC-1 → SHIP-16 and MAC-1 → SHIP-10).
     5. **Then MARKET-1, the whole marketing strategy, planned first** ("once we do security tests today and shipping, we first plan the whole marketing strategy and than go for those videos and posts accordingly"). Then **VIDEO-1** and **SHIP-11** are carried out from that plan. Yash, 14 Nov: "the main is the videos."
   - **Final order, 14 Nov evening (Yash: "ui (in parallel maybe) live motion perf site ag (if finished) sec"):**
@@ -202,7 +202,7 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
     2. **LIVE-7** (started 14 Nov, Sonnet).
     3. **MOTION-4**, after the UI items it animates (UI-48's wait cards close with its motion).
     4. **PERF-4** (Sonnet).
-    5. **EMBED-1, then EMBED-2** (Drishya in a harness app's side window; Yash's "first target"), after UI-49. Fable's placement: after PERF-4 and before SITE-2, so the site's images come from the finished product. Yash may move it.
+    5. **EMBED-1, then EMBED-2a/2b** (Drishya in a harness app's side window; Yash's "first target"), after UI-49. Fable's placement: after PERF-4 and before SITE-2, so the site's images come from the finished product. Yash may move it.
     6. **SITE-2** (the site's product images; independent of Antigravity).
     7. **HARNESS-AG, if finished:** it is built whole on its own branch and only integrated at the end. Fable reviews and merges #469 → #472 → #474 → #479 into `codex/harness-antigravity`, main is merged in, one PR into main, Yash and Harsh test by hand, merge before SHIP-9.
     8. **Security, all at once, after everything else (Yash: "all security tests will be done at once after everything is done as there can be changes later"):** SEC-3, then SEC-4 and SEC-5, on the finished product.
@@ -315,7 +315,8 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
 | ☑ | 88b | UI-49 | Narrow windows: the header, the footer veils and the capsules never cover the text being read | `ui` |
 | ☑ | 88c | UI-50 | Text formatting handled the same everywhere: tables, lists, code and long lines in prose and in every card | `ui` `content` |
 | ☐ | 88d | EMBED-1 | Drishya inside a harness app's side window: the design and the contract (one click, full screen, free to integrate) | `rel` `ui` |
-| ☐ | 88e | EMBED-2 | The embed mode and the integration kit, shown in a reference host | `rel` `ui` |
+| ☐ | 88e | EMBED-2a | Embed daemon and launcher | `rel` `ui` |
+| ☐ | 88f | EMBED-2b | Embed view, reference host and integration guide | `rel` `ui` |
 | ☑ | 89 | AG-1 | HARNESS-AG: read Antigravity sessions (adapter, discovery, import) from the transcript JSONL and the session index | `data` `native` |
 | ☑ | 90 | AG-2 | HARNESS-AG: Antigravity in the product (harness identity, counts, filters, search, no composer) | `ui` `data` |
 | ☐ | 91 | AG-3 | HARNESS-AG: live tail, background commands and subagent conversations | `live` `data` |
