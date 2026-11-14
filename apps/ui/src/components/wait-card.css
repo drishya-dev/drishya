@@ -1,0 +1,208 @@
+/* UI-48: Shaped wait-card placeholders — zero layout shift when content lands.
+ *
+ * Rules enforced here:
+ *  - Every paint value is a CSS token from tokens.css.
+ *  - One quiet fade-in on mount (no loop, no shimmer, no pulse).
+ *  - prefers-reduced-motion / body.low-resource / [data-motion="0"]: static.
+ *  - Heights and paddings match the incoming surfaces' measured geometry.
+ */
+
+/* ── Fade-in keyframe (single-shot, 160 ms) ─────────────────────────── */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes wc-fade-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+
+/* ── Base card ──────────────────────────────────────────────────────────── */
+.wait-card {
+  animation: wc-fade-in 160ms ease both;
+  /* Intrinsic sizing is whatever the variant sets; no extra margin or padding here. */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wait-card { animation: none; opacity: 1; }
+}
+
+body.low-resource .wait-card,
+[data-motion="0"] .wait-card {
+  animation: none;
+  opacity: 1;
+}
+
+/* ── Shared bar / line primitives ──────────────────────────────────────── */
+
+/* Generic horizontal bar — a single word-shaped block */
+.wc-bar {
+  height: 10px;
+  border-radius: var(--round-xs);
+  background: var(--s3);
+  flex: 1;
+  min-width: 0;
+}
+.wc-bar.wc-bar-xs  { height: 8px; }
+.wc-bar.wc-bar-sm  { height: 9px; }
+.wc-bar.wc-bar-md  { height: 10px; max-width: 60%; }
+.wc-bar.wc-bar-lg  { height: 10px; max-width: 85%; }
+
+/* Line — full-width text line, slightly taller */
+.wc-line {
+  height: 12px;
+  border-radius: var(--round-xs);
+  background: var(--s3);
+}
+.wc-line.wc-line-mono {
+  height: 10px;
+  background: var(--s2);
+}
+
+/* Row — a flex row of bars / icons */
+.wc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wc-row.wc-row-narrow { gap: 6px; }
+
+/* Block — a column of lines */
+.wc-block { display: flex; flex-direction: column; gap: 7px; }
+.wc-block.wc-block-prose { gap: 8px; }
+
+/* ── History variant ─────────────────────────────────────────────────────
+   Matches the passage card geometry:
+   - 48 px header area
+   - Two 32 px op rows
+   - 4 prose lines (20 px each, 8 px gap)
+ */
+.wait-card-history {
+  box-sizing: border-box;
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Git-graph variant ───────────────────────────────────────────────────
+   Matches GitNetworkGraph lane geometry: 32 px per lane with a node circle,
+   flex: 1 to fill .atlas-history with identical bounds.
+ */
+.wait-card-git-graph {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg);
+  box-sizing: border-box;
+}
+
+.wc-git-lane {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+}
+
+.wc-git-node {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--round-full);
+  background: var(--s3);
+  flex: none;
+}
+
+/* ── Files variant ───────────────────────────────────────────────────────
+   Matches FolderExplorer row geometry: 32 px height, 14 px icon.
+ */
+.wait-card-files {
+  display: flex;
+  flex-direction: column;
+}
+
+.wc-file-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+.wc-file-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: var(--s3);
+  flex: none;
+}
+
+/* ── Reader variant ──────────────────────────────────────────────────────
+   Matches WholeSource / CurrentDocument geometry:
+   36 px gutter, 20 px line-height (monospace).
+ */
+.wait-card-reader {
+  display: flex;
+  flex-direction: row;
+  min-height: 200px;
+}
+
+.wc-reader-gutter {
+  width: 36px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 8px 12px 4px;
+  border-right: 1px solid var(--line);
+  box-sizing: border-box;
+}
+
+.wc-reader-lineno {
+  height: 10px;
+  border-radius: 2px;
+  background: var(--s2);
+}
+
+.wc-reader-code {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  min-width: 0;
+}
+
+/* ── Home variant ────────────────────────────────────────────────────────
+   Matches .mh-session geometry: 64–80 px row (CSS var --mh-row-height),
+   harness icon 32×32, two text bars.
+ */
+.wait-card-home {
+  display: flex;
+  flex-direction: column;
+  padding: 0 14px 14px;
+}
+
+.wc-home-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  height: var(--mh-row-height, 64px);
+  border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
+}
+
+.wc-home-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--round-md);
+  background: var(--s3);
+  flex: none;
+}
+
+.wc-home-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}

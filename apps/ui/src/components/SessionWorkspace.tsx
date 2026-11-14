@@ -24,6 +24,7 @@ import { NativeApproval } from './NativeApproval.tsx';
 import { NativeQuestions } from './NativeQuestions.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
 import { useWaitNotice } from '../lib/use-wait-notice.ts';
+import { FilesWaitCard, ReaderWaitCard } from './WaitCard.tsx';
 import { SourceVersionNotice } from './SourceVersions.tsx';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
@@ -538,7 +539,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       {!tree.length && (
         isGraphLoading ? (
           graphWait.isImmediate ? null : (
-            <p className="muted small" role="status">{graphWait.message}</p>
+            graphWait.isLong
+              ? <><FilesWaitCard /><p className="muted small" role="status">{graphWait.message}</p></>
+              : <FilesWaitCard />
           )
         ) : (
           <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>
@@ -648,7 +651,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     {workspace?.approved&&!peek&&<ImportContext path={path} current hideEmpty />}
     {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}.`:'This session recorded no workspace on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? workspace?.approved&&!error&&(peekWait.isImmediate?null:<p className={`muted${peekWait.isLong?' wait-notice-long':''}`} role="status">{peekWait.message}</p>) : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{plural(file.totalLines,'line')}{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&(peekWait.isImmediate?null:peekWait.isLong?<><ReaderWaitCard /><p className={`muted wait-notice-long`} role="status">{peekWait.message}</p></>:<ReaderWaitCard />) : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{plural(file.totalLines,'line')}{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
