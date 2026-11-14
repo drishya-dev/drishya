@@ -490,8 +490,23 @@ export interface Operation {
   detail: OperationDetail;
   artifactIds: string[];
   observationIds: string[];
+  /** Derived snapshots of an Antigravity background command, ordered by observation boundary. */
+  resultVersions?: OperationResultVersion[];
   /** How the kind itself was determined, e.g. a shell command classified as a test run. */
   classification: Provenance;
+}
+
+/** A captured result as it was known at a replay boundary. */
+export interface OperationResultVersion {
+  availableAfterStep: number;
+  status: OperationStatus;
+  endSequence?: number;
+  endTime?: string;
+  detail: OperationDetail;
+  artifactIds: string[];
+  observationIds: string[];
+  run?: CommandRun;
+  failure?: string;
 }
 
 /** Who stopped an action, read from the harness's own result text; `reason` is that text's reason, when it gave one. */

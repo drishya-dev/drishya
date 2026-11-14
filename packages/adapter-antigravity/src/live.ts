@@ -54,12 +54,12 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
     if (task.emitted === signature) return;
     task.emitted = signature;
     const exitCode = terminal ? recordedExitCode(terminal.text) : undefined;
-    return { recordId: `${id}:${terminal?.step ?? lastStep}:task-output:${task.id}:${signature}`, part: 0, agentId, operationId: task.call.id,
-      sourceTime: terminal?.time, kind: 'tool.result', correlation: { operationId: task.call.id, basis: 'source-id' },
-      availability: !terminal || available && output.truncated ? 'partial' : 'complete', contentKeys: ['text', 'outcome', 'taskResultText'],
+    return { recordId: `${id}:${lastStep}:task-output:${task.id}:${signature}`, part: 0, agentId, operationId: task.call.id,
+      kind: 'tool.result', correlation: { operationId: task.call.id, basis: 'source-id' },
+      availability: !terminal || !available || output.truncated ? 'partial' : 'complete', contentKeys: ['text', 'outcome', 'taskResultText'],
       payload: { tool: task.call.tool, text: body, status: terminal ? 'complete' : 'running', isError: terminal?.error ?? false, exitCode,
         resultUpdate: true, nativeTaskId: task.id, taskResultText: terminal?.text, snapshotFingerprint: signature,
-        observedAfterNativeStep: terminal?.step ?? lastStep, derived: 'antigravity-task-reference-v1',
+        observedAfterNativeStep: lastStep, terminalNativeStep: terminal?.step, terminalTime: terminal?.time, derived: 'antigravity-task-reference-v1',
         resultAvailability: terminal ? 'recorded' : 'not-recorded',
         outputSource: available ? { path: output.path, bytes: output.bytes, truncated: output.truncated, source: 'captured-harness-file' } : { unavailable: output?.reason ?? 'not-recorded' },
         outcome: { kind: 'shell', stdout: body, run: { backgroundTaskId: task.id } } } };
@@ -80,7 +80,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
             const task = tasks.get(p.nativeTaskId);
             if (task) {
               task.emitted = text(p.snapshotFingerprint);
-              if (p.status === 'complete') task.terminal = { step, text: text(p.taskResultText), time: o.sourceTime, error: p.isError === true };
+              if (p.status === 'complete') task.terminal = { step: typeof p.terminalNativeStep === 'number' ? p.terminalNativeStep : step, text: text(p.taskResultText), time: typeof p.terminalTime === 'string' ? p.terminalTime : o.sourceTime, error: p.isError === true };
             }
           }
         }

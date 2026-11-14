@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r41';
+export const REDUCER_VERSION = 'r42';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -158,6 +158,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
+  let hasResultVersions = false;
   const gaps: Projection['gaps'] = [];
   // A recording's captured base cannot be used to reconstruct another recording's edit,
   // even when both report the same workspace-relative path.
@@ -710,16 +711,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           for (const id of targets) {
             const st = ops.get(id)!;
             const taskUpdate = o.source.adapterId === 'antigravity' && p.resultUpdate === true && typeof p.nativeTaskId === 'string'
-              && st.op.detail.kind === 'shell' && st.op.run?.backgroundTaskId === p.nativeTaskId;
+              && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.run?.backgroundTaskId === p.nativeTaskId;
             if (st.completed && !taskUpdate) continue; // duplicate result record
             st.completed = true;
             dirtyOperations.add(id);
             st.op.observationIds.push(o.id);
             st.op.endSequence = st.scriptWrapper ? Math.max(0, step() - 1) : step();
-            st.op.endTime = o.sourceTime;
+            st.op.endTime = taskUpdate && typeof p.terminalTime === 'string' ? p.terminalTime : o.sourceTime;
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
-            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || p.callAvailability === 'not-recorded' || (st.intent.kind === 'shell' || st.op.detail.kind === 'shell') && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
+            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || p.callAvailability === 'not-recorded' || (st.intent.kind === 'shell' || st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
+            if (taskUpdate && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.outputArtifactId) {
+              const previousArtifact = st.op.detail.outputArtifactId;
+              st.op.artifactIds = st.op.artifactIds.filter(id => id !== previousArtifact);
+              st.op.detail.outputArtifactId = undefined;
+            }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
             if (!p.isError && st.literalPlan !== undefined && literalPlanConfirmed(text(p.text))) {
               // The wrapper contains exactly one awaited literal call. A failed or
@@ -763,7 +769,13 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             // Completed calls no longer need their potentially large edit/command input.
             const pendingAntigravity = o.source.adapterId === 'antigravity' && p.status === 'running';
             if (!pendingAntigravity) st.intent = { kind: 'other' };
-            if (!st.scriptWrapper && !pendingAntigravity) timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            if (!st.scriptWrapper && !pendingAntigravity) timeline.push({ type: 'op-end', id: taskUpdate ? `e_${id}_${o.id}` : `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            if (o.source.adapterId === 'antigravity' && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && (taskUpdate || typeof st.op.run?.backgroundTaskId === 'string')) {
+              hasResultVersions = true;
+              (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (pendingAntigravity ? 1 : 0), status: st.op.status,
+                endSequence: pendingAntigravity ? undefined : st.op.endSequence, endTime: pendingAntigravity ? undefined : st.op.endTime,
+                detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, run: st.op.run, failure: st.op.failure }));
+            }
             if (st.op.kind === 'spawn' && st.op.detail.kind === 'spawn' && st.op.detail.childAgentId) {
               timeline.push({ type: 'agent-stop', id: `x_${id}`, sequence: o.receivedSequence, agentId: st.op.detail.childAgentId, time: o.sourceTime });
               const child = agents.get(st.op.detail.childAgentId);
@@ -927,6 +939,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     }
 
     const placed = placeChildren(operations, pendingTurnImages.size ? [...timeline, ...[...pendingTurnImages.values()].map(imageOnlyTurn)] : timeline, [...artifacts.values()], prose, [...finalAgents.values()], itemReceipts);
+    // Child placement can insert timeline items; translate result boundaries by their preceding item.
+    if (hasResultVersions) {
+      const placedPositions = new Map(placed.timeline.map((item, index) => [item.id, index]));
+      placed.operations = placed.operations.map(op => op.resultVersions ? { ...op, resultVersions: op.resultVersions.map(version => ({ ...version })) } : op);
+      for (const op of placed.operations) for (const version of op.resultVersions ?? []) {
+        const previous = timeline[version.availableAfterStep - 1];
+        if (previous) version.availableAfterStep = (placedPositions.get(previous.id) ?? version.availableAfterStep - 1) + 1;
+        else if (version.availableAfterStep > timeline.length) version.availableAfterStep += placed.timeline.length - timeline.length;
+        if (version.endSequence !== undefined) {
+          const end = timeline[version.endSequence];
+          if (end) version.endSequence = placedPositions.get(end.id) ?? version.endSequence;
+        }
+      }
+    }
+
     crossLinks(placed.operations, placed.prose, finalLink);
     const placedSteps = new Map(placed.timeline.map((item, index) => [item.id, index]));
     const contextEvidence = context.snapshot(at => at >= timeline.length ? placed.timeline.length : placedSteps.get(timeline[at]!.id) ?? at);
@@ -1309,7 +1336,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       d.summary = parseTestOutput(out);
       d.outputPreview = tail(out, PREVIEW);
       if (out.length > PREVIEW) {
-        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out`, kind: 'output', observedAtSequence: seq, availability: o.source.adapterId === 'antigravity' ? o.availability : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
+        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out${o.source.adapterId === 'antigravity' && (p.resultUpdate === true || typeof op.run?.backgroundTaskId === 'string') ? `_${o.id}` : ''}`, kind: 'output', observedAtSequence: seq, availability: o.source.adapterId === 'antigravity' ? o.availability : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
         op.artifactIds.push(d.outputArtifactId);
       }
       if ((d.summary && d.summary.failed > 0) || (typeof d.exitCode === 'number' && d.exitCode !== 0)) op.status = 'error';
@@ -1329,7 +1356,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       d.exitCode = p.exitCode ?? null;
       d.outputPreview = tail(out, PREVIEW);
       if (out.length > PREVIEW) {
-        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out`, kind: 'output', observedAtSequence: seq, availability: o.source.adapterId === 'antigravity' ? o.availability : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
+        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out${o.source.adapterId === 'antigravity' && (p.resultUpdate === true || typeof op.run?.backgroundTaskId === 'string') ? `_${o.id}` : ''}`, kind: 'output', observedAtSequence: seq, availability: o.source.adapterId === 'antigravity' ? o.availability : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
         op.artifactIds.push(d.outputArtifactId);
       }
       break;
