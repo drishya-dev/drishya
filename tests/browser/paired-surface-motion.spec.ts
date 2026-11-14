@@ -67,3 +67,70 @@ test('reduced motion and keyboard dismiss a modal immediately', async ({page}) =
   await page.getByRole('button', {name:'Close Workspace settings'}).click();
   await expect(dialog).toHaveCount(0);
 });
+
+test('switching to reduced motion finishes an in-flight Changes exit without waiting for it', async ({page}) => {
+  await openRecording(page);
+  const button = page.locator('[data-compare-open]');
+  const changes = page.locator('.compare-window');
+  await button.click();
+  await expect(changes).toHaveAttribute('data-surface-phase','open');
+  await changes.evaluate(element => {
+    const animate = element.animate.bind(element);
+    element.animate = (...args) => {
+      const animation = animate(...args);
+      animation.pause();
+      return animation;
+    };
+  });
+  await button.click();
+  await expect(changes).toHaveAttribute('data-surface-phase','closing');
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await expect(changes).toHaveCount(0);
+  await expect(button).toBeFocused();
+});
+
+test('low resource keeps pointer-opened windows and native popovers immediate', async ({page}) => {
+  await page.addInitScript(() => localStorage.setItem('drishya.lowResource','1'));
+  await openRecording(page);
+  await expect(page.locator('html')).toHaveAttribute('data-low-resource','');
+  const settings = page.getByRole('button',{name:'Workspace settings',exact:true});
+  await settings.click();
+  const dialog = page.locator('.settings-dialog');
+  expect(await dialog.evaluate(element => element.getAnimations().length)).toBe(0);
+  await dialog.getByRole('button',{name:'Close Workspace settings'}).click();
+  await expect(dialog).toHaveCount(0);
+  await page.getByRole('button',{name:'Search',exact:true}).click();
+  const search = page.locator('.search:popover-open');
+  expect(await search.evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.keyboard.press('Escape');
+  await expect(search).toHaveCount(0);
+});
+
+test('the narrow Toolbox catalog travels in both directions and ignores keyboard toggles', async ({page}) => {
+  await page.setViewportSize({ width: 600, height: 900 });
+  await openRecording(page);
+  const dock = page.locator('.modern-tool-station');
+  const toggle = page.locator('.catalog-toggle');
+  const events = () => dock.evaluate(element => (element as HTMLElement & { motionEvents: string[] }).motionEvents);
+  await dock.evaluate(element => {
+    const motionEvents: string[] = [];
+    Object.assign(element, {motionEvents});
+    element.addEventListener('transitionrun', event => {
+      if (event.target !== element) return;
+      motionEvents.push((event as TransitionEvent).propertyName);
+    });
+  });
+  await toggle.click();
+  await expect(dock).toBeVisible();
+  await expect.poll(events).toContain('scale');
+  await dock.evaluate(async element => {
+    await Promise.allSettled(element.getAnimations().map(animation => animation.finished));
+    (element as HTMLElement & { motionEvents: string[] }).motionEvents.length = 0;
+  });
+  await toggle.click();
+  await expect.poll(events).toContain('scale');
+  await expect(dock).toBeHidden();
+  await toggle.press('Enter');
+  await expect(dock).toBeVisible();
+  expect(await dock.evaluate(element => element.getAnimations().length)).toBe(0);
+});

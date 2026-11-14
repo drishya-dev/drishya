@@ -1,4 +1,4 @@
-import {surfaceDuration} from '../lib/surface-motion.ts';
+import {surfaceDuration,surfaceEasing} from '../lib/surface-motion.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { useCallback, useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
@@ -141,10 +141,9 @@ export function ModernToolStation({ projection, scene, agents }: {
       // Keep the translated dock inside the rail even when the open group fills it.
       const offset = Math.max(bounds.top - after.top, Math.min(bounds.bottom - after.bottom, before - after.top));
       if (Math.abs(offset) < 0.5) return;
-      const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.16, 1, .3, 1)';
       recentering.current = node.animate(
         [{ transform: 'translateY(' + offset + 'px)' }, { transform: 'none' }],
-        { duration: surfaceDuration('panel'), easing },
+        { duration: surfaceDuration('panel', wasOpen), easing: surfaceEasing() },
       );
     });
   }

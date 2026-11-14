@@ -30,7 +30,8 @@ export function surfaceDuration(kind: SurfaceKind, closing = false) {
 }
 
 export function surfaceEasing() {
-  return getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || defaultEase;
+  const style = getComputedStyle(document.documentElement);
+  return style.getPropertyValue('--motion-surface-ease').trim() || style.getPropertyValue('--ease-out').trim() || defaultEase;
 }
 
 interface MotionPolicy {
