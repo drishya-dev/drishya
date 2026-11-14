@@ -125,12 +125,37 @@ Run these from the repository root:
 
 ## Privacy and control
 
-- **Local storage.** Recordings live in `~/.drishya` by default (`%USERPROFILE%\.drishya` on Windows). Set `DRISHYA_HOME` before launch to use a different directory. The local daemon binds to loopback and uses an authenticated browser session.
-- **Redaction before persistence.** The ingest path scrubs recognized secrets before local storage, previews, search and export. Pattern matching is best effort. Re-import recordings flagged as using an older privacy policy, and inspect exports yourself.
-- **Independent observation.** Passive viewing reads harness journals without modifying them. Repository/current-file and Git inspection require explicit access. Drishya does not directly write project files; Workspace drafts can be downloaded or prepared for a native agent request.
-- **Explicit native control.** Continuing a session requires workspace consent and acknowledgement that other clients are idle. Submission, interruption and exact approval/question replies use supported harness protocols. Unsupported requests fail explicitly; offline bundles cannot control an agent.
-- **Faithful evidence.** Captured text, derived results and current workspace state have distinct provenance. Exposed reasoning summaries appear only when recorded; encrypted or signature-only material cannot reveal private reasoning. See [tested summary settings and shell-specific guidance](docs/review/data-8-reasoning-persistence.md).
-- **No telemetry.** Core capture and review need no model key. Experimental remote explanations are optional, user-triggered and require consent to the exact previewed payload; live-provider validation remains open.
+Drishya is a local tool. This is exactly what it does with your data.
+
+**What it reads**
+
+- **Agent journals**, read-only: Claude Code's (`~/.claude`) and Codex's (`~/.codex`, or `CODEX_HOME`) session files. Discovery lists them by metadata and path; nothing is imported until you choose **Import** or **Watch live**. Drishya never edits a journal or a harness configuration.
+- **Your repositories**, only after you grant a checkout access. Files and Git state are read through `git` with fixed arguments and no shell. Drishya does not write your project files; Workspace drafts stay in Drishya until you download them or hand them to an agent yourself.
+
+**What it stores**
+
+- **On disk**, in `~/.drishya` (`%USERPROFILE%\.drishya` on Windows; set `DRISHYA_HOME` to move it): a SQLite database of imported recordings, a blob store, previews and a search index. Secrets that match a known pattern are scrubbed *before* anything is written. On Linux and macOS the folder is created private to your account (mode 0700, files 0600). Remove a recording with `pnpm drishya forget RECORDING_ID`, or delete the folder.
+- **In your browser**: a session cookie (`drishya_session`, HttpOnly, SameSite=Strict) and a few interface preferences in `localStorage` under the `drishya` prefix. No service worker, cache storage or IndexedDB. The launch token and session are not written to disk.
+
+**What it sends**
+
+- **Nothing, by default.** No telemetry, no analytics, no update check, no crash reports, and the page loads no font, script or image from another host. A link or image address inside captured content is shown as text and is never fetched.
+- **Opt-in only:** GitHub pull request and issue cards are answered by *your own* signed-in `gh` command, for `github.com` pull-request and issue URLs only, after you turn them on in Settings. Drishya holds no GitHub token of its own. If you resume a native session from the composer, *that* agent talks to its provider under its own settings, exactly as if you had started it yourself.
+- **Exports** are files you save; nothing uploads them. Review one before you share it, because pattern-based redaction is best effort.
+
+**What it listens on**
+
+- **One port, on the loopback address only** (`127.0.0.1:7878` by default; `--port` changes it, and `--host` accepts only `127.0.0.1`, `localhost` or `::1`). Every request needs the per-launch token or the session cookie, and the daemon refuses a request whose `Host` or `Origin` is not its own, which blocks other websites and DNS rebinding.
+- **Do not put that port on a network.** Do not run Drishya behind a reverse proxy or tunnel, and do not forward the port (VS Code *Ports*, SSH `-L`/`-R`, Dev Containers, WSL or Docker publishing, ngrok-style services). Anyone who reaches the port *and* holds your launch link can read everything Drishya has captured, and a proxy that rewrites `Host` defeats the protection above. If you need another machine, open the session there instead.
+- The launch link (`Open:` in the terminal) contains the token. Treat it like a password: do not paste it into an issue, chat or an agent's prompt.
+
+**How the product keeps its own promises**
+
+- **Independent observation.** Passive viewing never modifies harness files. Repository and Git inspection need explicit access.
+- **Explicit native control.** Continuing a session requires workspace consent and an acknowledgement that other clients are idle. Submission, interruption and exact approval or question replies use the harness's supported protocols; unsupported requests fail visibly. Offline bundles cannot control an agent.
+- **Faithful evidence.** Captured text, derived results and current workspace state have distinct provenance. Exposed reasoning summaries appear only when the harness recorded them; encrypted or signature-only material cannot reveal private reasoning. See [tested summary settings and shell-specific guidance](docs/review/data-8-reasoning-persistence.md).
+
+The security checks behind these statements are `pnpm test:security` ([threat model](docs/review/sec-3-threat-model.md)). To report a problem, read [SECURITY.md](SECURITY.md).
 
 For the full boundaries, read the [engineering plan](docs/review/03-engineering-plan.md) and [connected-workspace contract](docs/review/26-connected-workspace.md).
 

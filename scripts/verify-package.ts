@@ -5,12 +5,17 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { checkPackage, foreignImports, localIdentity, outboundProblems } from './lib/package-contents.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const scratch = mkdtempSync(join(tmpdir(), 'drishya-package-'));
 const installed = join(scratch, 'installed');
 const entry = join(installed, 'node_modules', '@drishya-dev', 'cli', 'apps', 'daemon', 'src', 'cli.mjs');
 const env = { ...process.env, DRISHYA_HOME: join(scratch, 'data') };
+// SEC-5: the packed server runs with a recorder preloaded; every network attempt it makes is checked at the end.
+const netLog = join(scratch, 'network-attempts.log');
+const serverEnv = { ...env, DRISHYA_NET_LOG: netLog, NODE_OPTIONS: `--import ${pathToFileURL(join(root, 'scripts/lib/net-recorder.mjs')).href}` };
 const nodeDir = dirname(process.execPath);
 const npmCli = [
   join(nodeDir, 'node_modules/npm/bin/npm-cli.js'),
@@ -36,7 +41,7 @@ async function stopServer() {
 }
 
 async function launchServer(): Promise<{ base: string; cookie: string }> {
-  server = spawn(process.execPath, [entry, 'serve', '--port', '0', '--no-open'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  server = spawn(process.execPath, [entry, 'serve', '--port', '0', '--no-open'], { env: serverEnv, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
   server.stdout!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
   server.stderr!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
@@ -68,6 +73,14 @@ async function verifyRecordings(base: string, cookie: string) {
 }
 
 try {
+  // SEC-5: what `npm pack` would publish is compared with the allowlist before anything is installed.
+  const dry = JSON.parse(command(process.execPath, [npmCli, 'pack', '--dry-run', '--json'], join(root, 'dist/package'))) as { files: { path: string }[] }[];
+  const packedPaths = dry[0]!.files.map((file) => file.path);
+  const contents = checkPackage(join(root, 'dist/package'), packedPaths, localIdentity(root));
+  assert.deepEqual(contents, [], `package contents:\n${contents.join('\n')}`);
+  for (const path of packedPaths.filter((name) => /^apps\/daemon\/src\/.+\.mjs$/.test(name))) {
+    assert.deepEqual(foreignImports(readFileSync(join(root, 'dist/package', path), 'utf8')), [], `${path}: the bundled daemon imports only node: built-ins`);
+  }
   const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
   const tarball = join(scratch, packed[0]!.filename);
   command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
@@ -94,6 +107,9 @@ try {
   await stopServer();
   const second = await launchServer();
   await verifyRecordings(second.base, second.cookie);
+  const outbound = outboundProblems(existsSync(netLog) ? readFileSync(netLog, 'utf8') : '');
+  assert.deepEqual(outbound.problems, [], `the packed server tried to reach beyond loopback:\n${outbound.problems.join('\n')}`);
+  console.log(`Packed CLI network walk: ${outbound.attempts} attempt(s), all loopback; programs started: ${outbound.programs.join(', ') || 'none'}.`);
   console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, authenticated API and persisted restart passed.');
 } finally {
   await stopServer();
