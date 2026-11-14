@@ -242,7 +242,9 @@ The descriptions carry chapters, the install line, the GitHub link and a privacy
 
 The audience is global and US-heavy: 08:30 ET is 19:00 IST.
 
-**D0 is the first Tuesday to Thursday after SHIP-10 signs off.**
+**D0 = Wednesday 18 Nov 2026 (Yash, 15 Nov).** So: Show HN and the LinkedIn and X posts at 08:30 ET (19:00 IST) on 18 Nov, Product Hunt on 19 Nov, and Reddit and dev.to on 20 Nov. It needs SEC-5, SEC-4, SHIP-9, REPO-1, PUBLIC-1 and SHIP-10 done by the evening of 17 Nov. If any slips, D0 moves to Tue 24 Nov. Never launch on an unfinished build.
+
+Original rule:
 - If shipping finishes on 17 Nov: **Wed 18 Nov 2026**.
 - If not, **Tue 24 Nov** (avoid the US Thanksgiving week's Thursday and Friday).
 
@@ -296,7 +298,7 @@ Don't launch HN and Product Hunt on the same day: both need the builders in the 
   - the platforms and order;
   - the design system.
 - **For Yash and Harsh:**
-  1. D0: 18 or 24 Nov.
+  1. ~~D0: 18 or 24 Nov.~~ **18 Nov** (Yash, 15 Nov).
   2. Who posts Show HN (proposed: Yash).
   3. The voice of V2: one builder or both.
   4. Final wording of each post.
