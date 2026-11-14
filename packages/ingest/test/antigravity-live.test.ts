@@ -4,6 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { Store } from '@drishya/store';
 import { Ingestor } from '../src/index.ts';
+import { projectionDigest, reduce } from '@drishya/projection';
 import { createAntigravityAdapter } from '../../adapter-antigravity/src/index.ts';
 import { delegationThread } from '../../../apps/daemon/src/delegation-thread.ts';
 import { DatabaseSync } from 'node:sqlite';
@@ -155,4 +156,23 @@ it('preserves multiple exact children without selecting just one as the spawn ow
   const thread = delegationThread(store, p, spawn.id)!;
   expect(thread.child).toBeUndefined(); expect(thread.identity).toBe('captured');
   expect(thread.children?.map(c => c.recordingId).sort()).toEqual(imported.sort());
+});
+
+it('a followed (live) recording serves the same projection as a full rebuild when a step is journalled again in place', async () => {
+  writeFileSync(journal, line(row(0, 'PLANNER_RESPONSE', '', { tool_calls: [call('run_command', { CommandLine: 'echo synthetic' })] })) + line(row(1, 'GENERIC', 'Task ID: task-1', { status: 'RUNNING' })));
+  const log = join(dir, 'brain', 'parent', '.system_generated', 'tasks', 'task-1.log'); mkdirSync(join(log, '..'), { recursive: true }); writeFileSync(log, 'first line');
+  const result = await ingest.importSource('antigravity', journal);
+  store.updateRecordingMeta(result.recordingId, { live: true });
+  ingest.projection(result.recordingId);
+  const rebuild = () => projectionDigest(reduce(result.recordingId, [...store.orderedObservations(result.recordingId)], store.blobs, { adapters: ingest.descriptors, live: true, ordered: true }));
+  const steps: (() => void)[] = [
+    () => appendFileSync(journal, line(row(1, 'GENERIC', 'Task ID: task-1', { status: 'DONE' }))),
+    () => appendFileSync(log, '\nsecond line\n'),
+    () => appendFileSync(journal, line(row(2, 'PLANNER_RESPONSE', 'later prose'))),
+  ];
+  for (const step of steps) {
+    step();
+    await ingest.sync(result.recordingId);
+    expect(projectionDigest(ingest.projection(result.recordingId))).toBe(rebuild());
+  }
 });

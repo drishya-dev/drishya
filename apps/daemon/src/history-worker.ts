@@ -89,7 +89,8 @@ const queueEvidenceFor = createQueueEvidenceCache(source);
 let incremental: { id: string; reducer: ReturnType<typeof createReducer>; sequence: number; clock: string; roots: Set<string> } | undefined;
 
 function build(id: string, ids: string[], live: boolean): { projection: Projection; appended: boolean } {
-  if (ids.length === 1 && incremental?.id === id) {
+  // Antigravity replaces a step's receipt in place (same id and sequence); an append-only reducer cannot see that, so it is rebuilt.
+  if (ids.length === 1 && incremental?.id === id && source.getRecording(ids[0]!)?.harness !== 'antigravity') {
     const added = source.observations(ids[0]!, incremental.sequence, 10_001);
     const valid = added.length <= 10_000 && added.every((o) => {
       const {cwd, intent} = o.payload as {cwd?: unknown; intent?: {cwd?: unknown}};
