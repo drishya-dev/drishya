@@ -559,9 +559,11 @@ export function CurrentFileReader() {
   const modern=document.documentElement.dataset.uiVersion==='modern';
   const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]},readingId),[error,setError]=useState('');
   const tabs=useMemo(()=>filePeekState(saved),[saved]);
-  const [closingTab,setClosingTab]=useState<FilePeekState|undefined>();
+  const [pendingClose, setPendingClose] = useState<{readingId: string | undefined; path: string; tabs: FilePeekState}>();
+  if (pendingClose && (pendingClose.readingId !== readingId || pendingClose.path !== path || inWorkspace || explore)) setPendingClose(undefined);
+  const closingTab = pendingClose?.readingId === readingId && pendingClose?.path === path && !inWorkspace && !explore ? pendingClose : undefined;
   const qualify=(next:string)=>prefix&&!/^worktree-[a-f0-9]{10}\//.test(next)?`${prefix}/${next}`:next;
-  const select=(next:string)=>{setClosingTab(undefined);useApp.getState().set({currentFile:qualify(next),filePanel:undefined,selectedOp:undefined});};
+  const select=(next:string)=>{setPendingClose(undefined);useApp.getState().set({currentFile:qualify(next),filePanel:undefined,selectedOp:undefined});};
   const open=(next:string,pin=false)=>{next=qualify(next);const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
   useEffect(()=>{if(modern&&path&&!explore&&!tabs.files.includes(path)&&tabs.preview!==path)setSaved(openFilePeek(tabs,path).state);},[modern,path,explore,tabs]);
   useEffect(()=>{
@@ -570,8 +572,14 @@ export function CurrentFileReader() {
   },[modern,id,tabs,prefix]);
   // Keep the selected peek location while the full Workspace owns the screen.
   if(!path||!id||inWorkspace)return null;
-  const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setError('');if(path===file&&!next.preview&&!next.files.length){setClosingTab(next);return;}setSaved(next);if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
-  const dismiss=()=>{if(closingTab)setSaved(closingTab);setClosingTab(undefined);useApp.setState({currentFile:undefined});};
+  const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setError('');if(path===file&&!next.preview&&!next.files.length){setPendingClose({readingId,path,tabs:next});return;}setSaved(next);if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
+  const dismiss = () => {
+    const state = useApp.getState();
+    if ((state.checkoutId ?? state.recordingId) !== readingId || state.currentFile !== path || state.developerWorkspace) return;
+    if (closingTab) setSaved(closingTab.tabs);
+    setPendingClose(undefined);
+    state.set({currentFile:undefined});
+  };
   return <CurrentDocument key={readingId} id={readingId!} path={path} closing={!!closingTab} dismiss={dismiss} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
 }
 function CurrentDocument({ id, path, tabs,closing,dismiss }: { id: string; path: string;tabs?:ReactNode;closing?:boolean;dismiss?:()=>void }) {

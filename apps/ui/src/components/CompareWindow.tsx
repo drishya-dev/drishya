@@ -1,4 +1,4 @@
-import {useSurfacePresence} from '../lib/surface-motion.ts';
+import {useSurfacePresence,type SurfaceIntent} from '../lib/surface-motion.ts';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {workspaceApi} from '../api.ts';
 import type {CompareEvidence,CompareFile,CompareGroup,CompareRef,CompareRefs,ComparePull,ComparePulls,GitCompareResult} from '../../../daemon/src/git-compare-types.ts';
@@ -59,10 +59,10 @@ const nameOf=(ref:{name:string}|undefined)=>ref?.name??'';
 export { CompareButton } from './CompareButton.tsx';
 
 /** Mounted once in the viewer, beside the Workspace. Remembers its sides and file for the session so closing returns to the same place. */
-export function CompareWindow() {
+export function CompareWindow({intent}:{intent:SurfaceIntent}) {
   const checkoutId=useApp(s=>s.checkoutId);
   const open=useApp(s=>s.compareOpen),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),workspaceOpen=useApp(s=>s.developerWorkspace);
-  const surface=useRef<HTMLElement>(null),present=useSurfacePresence(open&&!workspaceOpen?true:undefined,surface,'panel',`${id}:${checkoutId??''}`);
+  const surface=useRef<HTMLElement>(null),present=useSurfacePresence(open&&!workspaceOpen?true:undefined,surface,'panel',`${id}:${checkoutId??''}`,intent);
   useEffect(()=>{if(open&&workspaceOpen)useApp.setState({compareOpen:false});},[open,workspaceOpen]);
   const close=()=>{
     useApp.setState({compareOpen:false});

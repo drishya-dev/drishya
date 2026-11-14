@@ -20,6 +20,7 @@ import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { Fragment, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
+import { captureSurfaceIntent, type SurfaceIntent } from '../lib/surface-motion.ts';
 import { useWaitNotice } from '../lib/use-wait-notice.ts';
 import { HistoryWaitCard } from './WaitCard.tsx';
 import type { Operation, Projection } from '@drishya/contracts';
@@ -70,9 +71,13 @@ function WorkspaceViewer() {
   const developerWorkspace = useApp(s => s.developerWorkspace), compareOpen = useApp(s => s.compareOpen);
   // A working window (Workspace or Compare) hides the stage behind it the same way.
   const workingWindow = developerWorkspace || compareOpen;
-  const [changesRequested, setChangesRequested] = useState(false);
-  // Start loading on demand. After the first open the owner must survive a reversible exit.
-  if (compareOpen && !changesRequested) setChangesRequested(true);
+  const [changesIntent, setChangesIntent] = useState<SurfaceIntent>();
+  // Capture the actual opener before the lazy chunk resolves. Keep the loaded owner for reversal.
+  const [wasComparing, setWasComparing] = useState(false);
+  if (wasComparing !== compareOpen) {
+    setWasComparing(compareOpen);
+    if (compareOpen) setChangesIntent(captureSurfaceIntent());
+  }
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const sessionWait = useWaitNotice({
@@ -333,7 +338,7 @@ function WorkspaceViewer() {
       <HistoryNoteHint />
       <DeveloperWorkspace />
       <Suspense fallback={null}>
-        {changesRequested && <CompareWindow />}
+        {changesIntent && <CompareWindow intent={changesIntent} />}
       </Suspense>
       <Briefing projection={projection} />
       <Search projection={projection} />

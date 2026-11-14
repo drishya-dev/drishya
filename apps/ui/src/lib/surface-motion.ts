@@ -3,6 +3,7 @@ import { useApp } from '../state.ts';
 
 export type SurfaceKind = 'menu' | 'panel' | 'dialog';
 type Origin = { x: number; y: number };
+export type SurfaceIntent = { origin?: Origin; pointer: boolean };
 const timings = {menu: [180, 140], panel: [220, 160], dialog: [240, 180]};
 const motionQuery = '(prefers-reduced-motion: reduce)';
 const defaultEase = 'cubic-bezier(.16,1,.3,1)';
@@ -50,6 +51,16 @@ function triggerOrigin(surface: HTMLElement): Origin | undefined {
     if (rect.width && rect.height) return {x: rect.left + rect.width / 2, y: rect.top + rect.height / 2};
   }
   return trigger.point;
+}
+
+/** Snapshot an opening intent before a lazy surface or asynchronous read can move it. */
+export function captureSurfaceIntent(): SurfaceIntent {
+  if (!surfaceMotionAllowed()) return {pointer:false};
+  const rect = pointerOrigin?.node.getBoundingClientRect();
+  return {
+    pointer: true,
+    origin: rect?.width && rect.height ? {x:rect.left + rect.width / 2,y:rect.top + rect.height / 2} : pointerOrigin?.point,
+  };
 }
 
 const policy: MotionPolicy = {allowed: surfaceMotionAllowed, duration: surfaceDuration, style: node => getComputedStyle(node), easing: surfaceEasing, origin: triggerOrigin};
@@ -132,7 +143,7 @@ export function watchSurfaceMotion(disabled: () => void) {
 }
 
 /** Keep the real conditional surface through its exit while its state changes immediately. */
-export function useSurfacePresence<T>(value: T | undefined, ref: RefObject<HTMLElement | null>, kind: SurfaceKind, identity?: unknown): T | undefined {
+export function useSurfacePresence<T>(value: T | undefined, ref: RefObject<HTMLElement | null>, kind: SurfaceKind, identity?: unknown, intent?: SurfaceIntent): T | undefined {
   const [retained, setRetained] = useState({identity, value});
   if (retained.identity !== identity || value !== undefined && retained.value !== value) setRetained({identity, value});
   const shown = value ?? (retained.identity === identity ? retained.value : undefined);
@@ -145,8 +156,10 @@ export function useSurfacePresence<T>(value: T | undefined, ref: RefObject<HTMLE
     const current = controller.current;
     if (current?.node !== node) {
       current?.motion.dispose();
-      controller.current = node ? {node, motion: surfaceMotion(node, kind), wanted} : undefined;
-      if (wanted) controller.current?.motion.open(true);
+      const rules = intent ? {...policy, origin: () => intent.origin} : policy;
+      controller.current = node ? {node, motion:surfaceMotion(node,kind,rules), wanted} : undefined;
+      if (wanted && intent?.pointer !== false) controller.current?.motion.open(true);
+      else if (wanted) controller.current?.motion.cancel();
     } else if (current.wanted !== wanted) {
       current.wanted = wanted;
       if (wanted) current.motion.open();
