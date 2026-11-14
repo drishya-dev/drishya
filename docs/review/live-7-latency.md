@@ -147,3 +147,111 @@ Nothing in the capture path waits on a viewer: the tail runs without one (the gu
 
 - `tests/browser/material-motion.spec.ts:71` ("scrolling a result keeps live follow") fails the same way on clean main (the result body never overflows); not from this work.
 - Three daemon unit tests (`images`, `compaction`, `file-roots`) time out at 5 s when the whole `apps/daemon` folder runs in parallel, also on clean main; each passes alone.
+
+
+---
+
+# LIVE-7b: the fold, the file watch, and the cases LIVE-7 could not run
+
+14 November 2026 · Claude (Sonnet 5.5) · branch `claude/live-7b`. Design and what PERF-4 adds to persist it: [live-7b-fold-checkpoint.md](live-7b-fold-checkpoint.md).
+
+## What changed
+
+1. **A resident, versioned fold** of a followed recording's projection (`packages/projection/src/fold.ts`, wired into `Ingestor.projection`): the daemon appends only the observations stored since, instead of rebuilding the whole projection after every update. Falls back to one full rebuild when an observation sorts before the fold's head, a source is replaced, a new workspace root appears, the reducer or format version differs, or a lineage part changed. Parity-tested against the full rebuild at every split point; `DRISHYA_FOLD_CHECK=N` compares every Nth update with a rebuild.
+2. **The ordered read happens once.** The reducer reads its input three times, so each rebuild ran the ordered SQL query (and parsed every row) three times; the full path now reads once. Opening a 24 MB Claude journal fell from 7.8 s to 1.4 s click-to-viewer.
+3. **An event-driven tail.** A read-only `fs.watch` on each followed journal triggers an immediate read; the poll stays as the fallback (100 ms while a viewer is connected, 2 s with none, 500 ms if watches are off). Adopted because the soak below shows no missed appends and no idle CPU increase.
+4. **No resident cost without a viewer.** The poll relaxes and resident folds are released when the last event stream closes (`setViewerPresent`, `releaseFolds`).
+5. **A followed recording is no longer written to the stored-projection table after every update** (about 60 ms of the old rebuild); it is stored when following stops.
+
+## Before and after (the same method, paired runs, machine and load alike)
+
+"Before" is `origin/main` at the LIVE-7 merge plus the probe; "after" is this branch. Case notes as above; `claudelive` is a **real live Claude Code run** (headless `claude -p`, Haiku, throwaway repository, new session): the first real Claude Code run, now that the sign-in works.
+
+#### End to end (journal append → painted), live steps
+
+| Case | Journal | Steps | before p50 | before p95 | after p50 | after p95 |
+|---|---|---:|---:|---:|---:|---:|
+| claude157 | 156.8 MB | 360 / 360 | 348 ms | 1.01 s | 283 ms | 595 ms |
+| claude24 | 24.0 MB | 81 / 81 | 752 ms | 888 ms | 205 ms | 241 ms |
+| claudelive | 0.4 MB | 21 / 21 | 74 ms | 127 ms | 38 ms | 145 ms |
+| claudepick | 24.0 MB | 16 / 16 | 450 ms | 731 ms | 186 ms | 225 ms |
+| codex26 | 25.6 MB | 31 / 31 | 187 ms | 320 ms | 177 ms | 204 ms |
+| codex39 | 39.2 MB | 33 / 33 | 107 ms | 194 ms | 69 ms | 203 ms |
+| codexresume | 0.3 MB | 16 / 18 | 86 ms | 193 ms | 49 ms | 214 ms |
+| small | 0.0 MB | 220 / 220 | 84 ms | 189 ms | 35 ms | 194 ms |
+
+#### By step kind (all live cases pooled)
+
+| Step | before p50 | before p95 | after p50 | after p95 | n before / after |
+|---|---:|---:|---:|---:|---:|
+| prompt | 337 ms | 801 ms | 219 ms | 331 ms | 20 / 20 |
+| tool-start | 101 ms | 255 ms | 34 ms | 189 ms | 146 / 147 |
+| tool-result | 334 ms | 971 ms | 228 ms | 583 ms | 538 / 539 |
+| prose | 79 ms | 425 ms | 162 ms | 202 ms | 29 / 29 |
+| plan-or-question | 446 ms | 731 ms | 75 ms | 200 ms | 4 / 4 |
+| turn-end | 37 ms | 193 ms | 25 ms | 187 ms | 6 / 6 |
+| reasoning | 123 ms | 450 ms | 145 ms | 207 ms | 35 / 35 |
+
+#### Where the time went (p50 / p95, pooled)
+
+| Stage | before | after |
+|---|---:|---:|
+| append → committed | 53 ms / 323 ms | 4 ms / 16 ms |
+| committed → page notified | 3 ms / 29 ms | 2 ms / 21 ms |
+| notified → data in page | 135 ms / 696 ms | 159 ms / 534 ms |
+| data → painted | 17 ms / 48 ms | 15 ms / 45 ms |
+
+#### Steps that arrive in one render
+
+| Case | before (renders, largest group) | after (renders, largest group) |
+|---|---|---|
+| claude157 | 93, 12 | 95, 8 |
+| claude24 | 28, 4 | 54, 3 |
+| claudelive | 10, 5 | 9, 6 |
+| claudepick | 6, 3 | 11, 2 |
+| codex26 | 24, 2 | 26, 2 |
+| codex39 | 23, 2 | 27, 2 |
+| codexresume | 14, 2 | 17, 2 |
+| small | 113, 3 | 158, 3 |
+
+#### Opening a session
+
+| Case | before | after |
+|---|---|---|
+| claude157 | click → viewer 2.01 s | click → viewer 2.01 s |
+| claude24 | click → viewer 7.80 s | click → viewer 1.41 s |
+| claudelive | on Home 317 ms after first write; click → viewer 530 ms | on Home 341 ms after first write; click → viewer 550 ms |
+| claudepick | click → viewer 6.51 s | click → viewer 1.84 s |
+| codex26 | click → viewer 2.61 s | click → viewer 2.25 s |
+| codex39 | click → viewer 11.48 s | click → viewer 19.96 s |
+| small | click → viewer 171 ms | click → viewer 191 ms |
+
+How to read it:
+
+- **Targets.** Ordinary journals p95 under 250 ms: small invented 194 ms, small real Codex 214 ms, real Claude Code 145 ms (21 steps, indicative). Every non-paged size up to the threshold under 500 ms: 24 MB Claude 241 ms (was 888 ms), 25.6 MB Codex 204 ms, 39 MB Codex 203 ms. Paged journals under 1 s: 157 MB Claude 595 ms (three runs, 360 steps; was 1.01 s). All met.
+- **Notified to data is larger after, end to end is smaller.** The commit now lands within a few milliseconds of the write, so the page is told earlier and more of its own refresh (the 150 ms throttle, one fetch in flight) falls after the notice instead of before it. The whole append-to-paint line is what the person sees, and it fell.
+- **The 157 MB row** also shows run-to-run spread (first pair 190 ms before, 276 ms after; the three-run pool above is the figure to use). Paged sessions are served by the history worker, which this work does not touch.
+- **Opening** a non-paged session is faster (24 MB Claude 7.8 s to 1.4 s) because of the single ordered read. The 39 MB Codex open (a paged journal's cold history page) is PERF-4's and varies 11-24 s between runs either way.
+
+## "Fetch only what changed" (item 5): measured, not built
+
+With the fold hot, one `GET /projection` of the 24 MB Claude journal (3.4k observations, 4.0 MB of JSON) takes 30-50 ms on the daemon and about 10 ms to parse in the page; the page's reload (recordings, then projection) spent a median of 4 ms and 75 ms in the two requests during the run. The remaining stages are the 150 ms refresh throttle and rendering. With every size under its target, a delta protocol (diffing the projection per client and patching it in the page, with a full fetch as the fallback) would add a divergence risk for about 60 ms, so it is not built. It would pay for sessions near 10,000 observations; paged sessions already fetch windows.
+
+## The file-watch soak and idle cost
+
+- `packages/ingest/test/tail-watch.test.ts`: with the poll set to ten minutes (only the first look and watch events can read), three journals receive 1,500 appends in uneven bursts and every record is committed within the deadline; a forced read afterwards finds nothing left behind. A second case switches watches off and shows the relaxed poll alone still follows.
+- `scripts/bench-tail-idle.ts` (CPU time per second while nothing is written, 20 followed journals, 20 s; process CPU clock resolution is about 15 ms, so small values are rounded): before LIVE-7 (500 ms poll) 0-7 ms; LIVE-7 (100 ms poll) 23 ms; **now, no viewer 0-2 ms**; now with a viewer connected 26 ms. Idle with nobody looking is no higher than before LIVE-7.
+
+## The cases LIVE-7 could not run
+
+The Claude Code CLI sign-in works again (Yash refreshed it). All on throwaway repositories, through the same probe:
+
+| Case | Result (append to paint) |
+|---|---|
+| Real Claude Code, new session, tools | 21 live steps, p50 38 ms, p95 145 ms; the session was discoverable 0.3-0.5 s after its first write and opened in 0.5 s |
+| **Sub-agent start** (real Claude Code `Task` call) | 2 `subagent-start` steps painted 37 ms after the write |
+| **Plan** | Claude Code in plan mode (headless) and Codex given an `update_plan` prompt answered in prose and made no plan tool call, so there is still **no live `ExitPlanMode` or Codex plan sample**. The 4 plan-or-question samples are real `AskUserQuestion` calls from a 24 MB Claude journal appended to (before 450 ms p50, after 186 ms) |
+| **Question answered from Drishya, Claude Code (SHIP-5's end-to-end check)** | Through the controller, a real `AskUserQuestion` with one question and two options arrived as an input request; the question step painted 49 ms after it was written; answering it from Drishya's `POST /controller/answer` returned 200 in 9 ms; the harness took the answer (a `tool-result` followed, painted in 33 ms) and went on to its edit, which then waited for approval as the controller's default mode requires. It works as designed; nothing to fix. |
+| Question answered from Drishya, Codex | **Could not be run.** Codex asked no question on three explicit prompts: it answers by tool use. Its `request_user_input` is only offered in plan collaboration mode, which the controller does not select and offers no option for. |
+
+Not measured: a live Codex sub-agent (`codex exec` does not spawn one by itself).

@@ -108,8 +108,20 @@ const browser = await chromium.launch({ channel: process.env.DRISHYA_BROWSER_CHA
 const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, reducedMotion: 'reduce' });
 await context.addInitScript(() => { localStorage.setItem('drishya.liveProbe', '1'); localStorage.setItem('drishya.mapVisible', '0'); });
 const page = await context.newPage();
+if (process.env.BENCH_REQUESTS) {
+  // Developer aid: how long each API request the page makes takes (start to last byte), by path, so the slow neighbour of a live update shows.
+  const started = new Map<unknown, number>();
+  page.on('request', r => { if (new URL(r.url()).pathname.startsWith('/v1/')) started.set(r, epoch()); });
+  page.on('requestfinished', r => { const t = started.get(r); if (t !== undefined) console.error('REQ', Math.round(epoch() - t), new URL(r.url()).pathname.replace(/rec_[0-9a-f]+/, 'REC')); });
+}
 const commits: { count: number; at: number }[] = [];
 app.ingest.on('change', (e: { recordingId: string; observationCount: number }) => commits.push({ count: e.observationCount, at: epoch() }));
+
+/** Opens a recording the way Home does for a click: through its address, then waits for the viewer. Home's own list changes shape with the machine's sessions, so the bench does not depend on it. */
+async function openRecordingInPage(id: string) {
+  await page.evaluate((rid) => { location.hash = `#/r/${rid}`; }, id);
+  await page.reload();
+}
 
 const result: Record<string, unknown> = { label, mode, harness: arg('source') ?? harness, scenario, ...(process.argv.includes('--resume') ? { resume: true } : {}) };
 try {
@@ -131,7 +143,7 @@ try {
     writeFileSync(join(repo, 'README.md'), '# live7 throwaway\n');
     const run = (c: string[]) => new Promise<void>(ok => spawn('git', c, { cwd: repo, stdio: 'ignore' }).on('close', () => ok()));
     await run(['init', '-q']); await run(['add', '-A']); await run(['-c', 'user.email=a@b.c', '-c', 'user.name=t', 'commit', '-qm', 'init']);
-    const roots = harness === 'codex' ? [join(process.env.DRISHYA_CODEX_HOME ?? process.env.CODEX_HOME ?? join(homedir(), '.codex'), 'sessions')] : [join(process.env.DRISHYA_CLAUDE_HOME ?? join(homedir(), '.claude'), 'projects')];
+    const roots = harness === 'codex' ? [join(process.env.DRISHYA_CODEX_HOME ?? process.env.CODEX_HOME ?? join(homedir(), '.codex'), 'sessions')] : [join(process.env.DRISHYA_CLAUDE_HOME ?? join(homedir(), '.claude'), 'projects', repo.replace(/[^A-Za-z0-9]/g, '-'))];
     const adapterId = harness === 'codex' ? 'codex' : 'claude-code';
     const staleMode = process.argv.includes('--stale');
     const resumeMode = process.argv.includes('--resume') || staleMode;
@@ -154,7 +166,7 @@ try {
         await page.waitForSelector('.mh-session-open');
         await sleep(1500);
         const clickAt = epoch();
-        await page.locator('.mh-session-open').filter({ hasText: new RegExp(token, 'i') }).first().click();
+        await openRecordingInPage(app.store.listRecordings()[0]!.id);
         await page.waitForSelector('.viewer', { timeout: 60_000 });
         const viewerAt = epoch();
         await sleep(6000);
@@ -165,7 +177,7 @@ try {
         throw Object.assign(new Error('stale-done'), { staleDone: true });
       }
       await page.reload();
-      await page.locator('.mh-session-open').filter({ hasText: new RegExp(token, 'i') }).first().click();
+      await openRecordingInPage(app.store.listRecordings()[0]!.id);
       await page.waitForSelector('.viewer', { timeout: 60_000 });
       await sleep(3000);
       before = new Set(roots.flatMap(r => listJsonl(r)));
@@ -178,26 +190,41 @@ try {
         const call = (path: string, body: unknown, method = 'POST') => fetch(`${server.url}/v1/recordings/${recId}${path}`, { method, headers: { authorization: 'Bearer live7-bench', 'content-type': 'application/json' }, body: method === 'GET' ? undefined : JSON.stringify(body) });
         result.approve = (await call('/workspace/approve', {})).status;
         const sentAt = epoch();
-        const started = await call('/controller/prompt', { prompt: `${token}: Read math.ts and README.md, then run git log --oneline -1 and tell me in one sentence what this repository is.`, exclusive: true });
+        const started = await call('/controller/prompt', { prompt: process.argv.includes('--question') ? `${token}: Call your request_user_input tool (Codex) or AskUserQuestion tool (Claude Code) now, not plain text, to ask me exactly one question: which function should be added to math.ts, subtract or divide (two options). When I answer, add that function to math.ts and say in one sentence what you added.` : `${token}: Read math.ts and README.md, then run git log --oneline -1 and tell me in one sentence what this repository is.`, exclusive: true });
         result.controllerPostMs = Math.round(epoch() - sentAt); result.controllerStatus = started.status;
-        running = (async () => { for (let i = 0; i < 240; i++) { await sleep(500); const st = await (await call('/controller', {}, 'GET')).json() as { state?: string; error?: unknown; approvals?: unknown[] }; if (!['connecting', 'running', 'approval'].includes(st.state ?? 'running')) { result.controllerFinal = `${st.state}${st.error ? ' ' + JSON.stringify(st.error).slice(0, 160) : ''}`; return st.state === 'failed' ? 1 : 0; } } return 2; })();
+        running = (async () => { for (let i = 0; i < 240; i++) { await sleep(500); const st = await (await call('/controller', {}, 'GET')).json() as { state?: string; runId?: string; error?: unknown; approvals?: unknown[]; inputRequests?: { id: string; questions: { id: string; options: { id: string }[] }[] }[] };
+          const ask = st.inputRequests?.[0];
+          if (ask && result.questionAnswered === undefined) {
+            // SHIP-5's end-to-end check: answer a genuine question the harness asked, from Drishya's own answer route.
+            const askedAt = epoch();
+            const answers = Object.fromEntries(ask.questions.map((q) => [q.id, { options: q.options.length ? [q.options[0]!.id] : [], ...(q.options.length ? {} : { text: 'subtract' }) }]));
+            const res = await call('/controller/answer', { runId: st.runId, requestId: ask.id, answers });
+            result.questionAnswered = res.status; result.questionCount = ask.questions.length; result.questionOptions = ask.questions.map((q) => q.options.length);
+            result.questionAnswerMs = Math.round(epoch() - askedAt);
+            if (res.status !== 200) result.questionAnswerError = (await res.text()).slice(0, 200);
+          } if (!['connecting', 'running', 'approval'].includes(st.state ?? 'running')) { result.controllerFinal = `${st.state}${st.error ? ' ' + JSON.stringify(st.error).slice(0, 160) : ''}`; return st.state === 'failed' ? 1 : 0; } } return 2; })();
       } else running = runHarness(repo, token, true);
     } else {
       tail = new Tail(() => roots.flatMap(r => listJsonl(r)).filter(p => !before.has(p)));
       // Home must show the new session by its own polling; the repo folder name is the unique token.
-      const seen = page.evaluate(token => new Promise<number>(ok => { const t = token.toLowerCase(); const look = () => { if ((document.body.textContent ?? '').toLowerCase().includes(t)) { ok(performance.timeOrigin + performance.now()); return true; } return false; }; if (!look()) new MutationObserver((_m, o) => { if (look()) o.disconnect(); }).observe(document.body, { subtree: true, childList: true, characterData: true }); }), token);
+      // Home's own list changes shape with the machine's sessions, so this measures when discovery lists the journal (what Home's refresh asks for).
+      const listed = async (path: string) => { for (let n = 0; n < 600; n++) { const found = await page.evaluate(async (want) => { const r = await fetch('/v1/sources'); const norm = (v: string) => v.split(String.fromCharCode(92)).join('/').toLowerCase(); return ((await r.json()) as { sources: { path: string }[] }).sources.some((x) => norm(x.path) === norm(want)); }, path); if (found) return epoch(); await sleep(50); } return undefined; };
       const started = epoch();
       running = runHarness(repo, token);
       // The first journal line is the moment the session exists on disk.
       while (!tail.lines.length && epoch() - started < 60_000) await sleep(5);
       createdAt = tail.lines[0]?.appendAt ?? 0;
       journalPath = tail.lines[0]?.path ?? '';
-      const rowAt = await Promise.race([seen, sleep(40_000).then(() => undefined)]);
+      if (process.env.BENCH_REQUESTS) console.error('PROGRESS first line', journalPath.slice(-30));
+      const rowAt = await listed(journalPath);
       result.homeAppearAfterFirstWriteMs = rowAt === undefined ? null : Math.round(rowAt - createdAt);
+      if (process.env.BENCH_REQUESTS) console.error('PROGRESS listed', result.homeAppearAfterFirstWriteMs);
       if (rowAt !== undefined) {
         const clickAt = epoch();
-        await page.locator('.mh-session-open').filter({ hasText: new RegExp(token, 'i') }).first().click();
-        await page.waitForSelector('.viewer', { timeout: 60_000 });
+        // Opening a session Home listed: the same import request its click makes (live), then the viewer.
+        const importedId = await page.evaluate(async (body) => (await (await fetch('/v1/import', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })).json() as { recordingId: string }).recordingId, { path: journalPath, adapterId, live: true });
+        await openRecordingInPage(importedId);
+        await page.waitForSelector('.viewer', { timeout: 60_000 }).catch(async (e) => { console.error('OPEN FAILED', (await page.locator('[role=alert], .notice, .mh-error, .error').allInnerTexts()).join(' | ').slice(0, 300)); throw e; });
         result.clickToViewerMs = Math.round(epoch() - clickAt);
       }
     }
@@ -251,7 +278,7 @@ try {
     app.ingest.startLive(imported.recordingId);
     await page.reload();
     const openAt = epoch();
-    await page.locator('.mh-session-open').first().click();
+    await openRecordingInPage(imported.recordingId);
     await page.waitForSelector('.viewer', { timeout: 180_000 });
     result.clickToViewerMs = Math.round(epoch() - openAt);
     await sleep(Number(arg('settle-ms', '6000')));
@@ -296,7 +323,7 @@ try {
   // ── join: journal lines → observations → page marks ───────────────────────────────────────
   const recordings = app.store.listRecordings().filter(r => r.sourcePath && journals.some(j => resolve(j) === resolve(r.sourcePath!)));
   const rec = recordings[0] ?? app.store.listRecordings()[0];
-  if (!rec) throw new Error('nothing was recorded');
+  if (!rec) { console.error('NOTHING', JSON.stringify(result), 'journals', journals.length, 'lines', tail!.lines.length); throw new Error('nothing was recorded'); }
   const sourcePaths = new Map(app.store.getSources(rec.id).map(s => [s.id, s.path]));
   const lineAt = new Map(tail!.lines.map(l => [`${resolve(l.path)}#${l.offset}`, l]));
   const observations = [...app.store.orderedObservations(rec.id)] as Observation[];
@@ -313,7 +340,16 @@ try {
     steps.push({ rank: i + 1, kind: stepKind({ rank: i + 1, kind: o.kind, tool: (o.payload as { tool?: string }).tool }), appendAt: line.appendAt, committedAt: committed[i], noticeAt: noticeAt[i], dataAt: dataAt[i], paintAt: paintAt[i] });
   });
   const live = steps.filter(s => s.kind !== 'other');
+  {
+    // Where a page reload spends its time: start to recordings answered, recordings to projection answered.
+    const ordered = marks.filter(m => m.kind === 'refresh-start' || m.kind === 'recordings-done' || m.kind === 'projection-done').sort((a, b) => a.at - b.at);
+    const gaps: Record<string, number[]> = { recordings: [], projection: [] };
+    for (let i = 0; i + 2 < ordered.length; i++) if (ordered[i]!.kind === 'refresh-start' && ordered[i + 1]!.kind === 'recordings-done' && ordered[i + 2]!.kind === 'projection-done') { gaps.recordings!.push(ordered[i + 1]!.at - ordered[i]!.at); gaps.projection!.push(ordered[i + 2]!.at - ordered[i + 1]!.at); }
+    const med = (xs: number[]) => xs.length ? Math.round([...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)]!) : null;
+    result.reloadStages = { n: gaps.recordings!.length, recordingsMs: med(gaps.recordings!), projectionMs: med(gaps.projection!) };
+  }
   result.recording = rec.id.slice(0, 12);
+  result.foldStats = (app.ingest as unknown as { foldStats?: unknown }).foldStats ?? null;
   result.journalBytes = result.journalBytes ?? statSync(journalPath).size;
   result.observations = observations.length;
   result.steps = live.length;

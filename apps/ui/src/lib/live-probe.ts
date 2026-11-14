@@ -5,7 +5,7 @@
 import type { Projection } from '@drishya/contracts';
 
 export type LiveProbeMark = {
-  kind: 'notice' | 'data' | 'paint';
+  kind: 'notice' | 'data' | 'paint' | 'refresh-start' | 'recordings-done' | 'projection-done';
   /** Epoch milliseconds, comparable with a journal's own append times on the same machine. */
   at: number;
   recordingId?: string;
@@ -26,8 +26,14 @@ export function liveProbeEnabled(): boolean {
   try { return localStorage.getItem(KEY) === '1'; } catch { return false; }
 }
 
+/** A stage of the page's reload (developer probe only): where the time between a notice and the data goes. */
+export function probeStage(kind: 'refresh-start' | 'recordings-done' | 'projection-done') {
+  if (typeof window === 'undefined' || !window.__drishyaLiveProbe) return;
+  push({ kind, at: now() });
+}
+
 export function probeNotice(recordingId: string, observationCount: number | undefined) {
-  if (!window.__drishyaLiveProbe) return;
+  if (typeof window === 'undefined' || !window.__drishyaLiveProbe) return;
   push({ kind: 'notice', at: now(), recordingId, observationCount });
 }
 

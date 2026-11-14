@@ -2,7 +2,7 @@
 // Capture never waits on presentation: nothing here depends on a viewer being connected.
 
 import { EventEmitter } from 'node:events';
-import { createReadStream } from 'node:fs';
+import { createReadStream, watch, type FSWatcher } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { createInterface } from 'node:readline';
 import { resolve } from 'node:path';
@@ -23,12 +23,21 @@ import {
 } from '@drishya/capture-core';
 import type { AdapterDescriptor, CaptureState, DiscoveredSource, Projection, RecordingHealth } from '@drishya/contracts';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
-import { reduce, REDUCER_VERSION } from '@drishya/projection';
+import { ProjectionFold, projectionDigest, reduce, REDUCER_VERSION } from '@drishya/projection';
 import type { SourceRow, Store } from '@drishya/store';
 
 export { SourceWatch, defaultWatchRoots, type WatchRoot } from './source-watch.ts';
 
 export const defaultAdapters = (): Adapter[] => [claudeAdapter, codexAdapter, antigravityAdapter];
+
+/** Observations a resident fold appends in one go; a bigger backlog is rebuilt in one ordered read instead. */
+const FOLD_BATCH = 5000;
+/** A resident fold nobody has asked for in this long is released (the next request rebuilds it). */
+const FOLD_IDLE_MS = 60_000;
+/** At most this many followed recordings keep a folded state resident. */
+const FOLD_RESIDENT = 2;
+
+export interface FoldStats { appended: number; rebuilt: number; checked: number; mismatches: number }
 
 export interface ChangeEvent {
   type: 'recording';
@@ -86,6 +95,8 @@ const SLICE_BYTES = 1024 * 1024;
  * record is read (LIVE-7: 500 ms before, p95 about 460 ms of every step's delay).
  */
 const LIVE_POLL_MS = 100;
+/** With no viewer nobody is waiting on a step; the file watch still reads at once, so this is only the safety net behind it (500 ms when watches are off). */
+const IDLE_POLL_MS = 2000;
 /** A followed recording looks for new companion journals (a sub-agent's) about every two seconds. */
 const COMPANION_EVERY_TICKS = 20;
 // Scheduling budget only: complete-record commit size and hard limits stay unchanged.
@@ -109,6 +120,12 @@ interface HealthRecord {
 
 interface LiveRun {
   timer: NodeJS.Timeout;
+  /** Wakes the tail: a poll tick, a file-watch event or a start. Coalesces like every other wake. */
+  wake?: () => void;
+  /** The caller named an interval: it is used as given, whoever is watching. */
+  explicitMs?: number;
+  /** File watches on the followed journals: an append reads at once instead of waiting for the next tick. */
+  watchers: Map<string, FSWatcher>;
   /** The turn in flight, if any, so stopping can wait for it instead of racing it. */
   current?: Promise<void>;
 }
@@ -121,6 +138,19 @@ export class Ingestor extends EventEmitter {
   private live = new Map<string, LiveRun>();
   private projectionCache = new Map<string, { count: number; projection: Projection }>();
   private workerOwnedRecordings = new Set<string>();
+  /**
+   * LIVE-7b: a followed recording's folded projection state, kept so an update folds only what is new instead of
+   * rebuilding the whole projection. Capture never reads it; it exists only because a viewer asked for the
+   * projection, and is released after a quiet minute, when the recording stops being followed, is forgotten, or
+   * the process closes. Never more than FOLD_RESIDENT of them.
+   */
+  private folds = new Map<string, { fold: ProjectionFold; updates: number; timer: NodeJS.Timeout }>();
+  /** Developer switch: every Nth incremental update is compared with a full rebuild (DRISHYA_FOLD_CHECK=N). Local only. */
+  private foldCheckEvery = Number(process.env.DRISHYA_FOLD_CHECK) > 0 ? Math.floor(Number(process.env.DRISHYA_FOLD_CHECK)) : 0;
+  /** Unknown until the server says; the short poll is the safe assumption. */
+  private viewerPresent = true;
+  private tailWatch = process.env.DRISHYA_TAIL_WATCH !== '0';
+  readonly foldStats: FoldStats = { appended: 0, rebuilt: 0, checked: 0, mismatches: 0 };
   private healthRecords = new Map<string, HealthRecord>();
   private lastEmitted = new Map<string, string>();
   private cacheProjection(key: string, count: number, projection: Projection) {
@@ -629,19 +659,83 @@ export class Ingestor extends EventEmitter {
     const count = this.store.countObservations(recordingId);
     const cached = this.projectionCache.get(recordingId);
     if (cached && cached.count === count && cached.projection.reducerVersion === REDUCER_VERSION) return cached.projection;
-    const stored = this.store.getProjection(recordingId);
     const live = this.store.getRecording(recordingId)?.live ?? false;
-    let projection: Projection;
-    if (stored && stored.observationCount === count && stored.reducerVersion === REDUCER_VERSION && !live) {
-      projection = JSON.parse(stored.body);
-    } else {
-      projection = reduce(recordingId, this.store.orderedObservations(recordingId), this.store.blobs, { adapters: this.descriptors, live, ordered: true });
-      if (count <= 10_000) this.store.putProjection(recordingId, REDUCER_VERSION, count, JSON.stringify(projection));
+    let projection: Projection | undefined;
+    if (!live) {
+      const stored = this.store.getProjection(recordingId);
+      if (stored && stored.observationCount === count && stored.reducerVersion === REDUCER_VERSION) projection = JSON.parse(stored.body);
+    } else if (count <= 10_000 && this.store.getRecording(recordingId)?.harness !== 'antigravity') {
+      // Antigravity replaces a step's receipt in place (same id and sequence), which an append-only fold cannot see: it is rebuilt.
+      // A recording the history worker also reads is folded here too: the Files tree, Toolbox and the like ask the
+      // worker, but the reader's own projection request lands here and would otherwise rebuild on every update.
+      projection = this.foldedProjection(recordingId, count);
+    }
+    if (!projection) {
+      // One ordered read: the reducer reads its input three times, and a database cursor would run its query each time.
+      const input = count <= 10_000 ? [...this.store.orderedObservations(recordingId)] : this.store.orderedObservations(recordingId);
+      projection = reduce(recordingId, input, this.store.blobs, { adapters: this.descriptors, live, ordered: true });
+      // A followed recording changes again within a moment; it is stored when it stops being followed.
+      if (count <= 10_000 && !live) this.store.putProjection(recordingId, REDUCER_VERSION, count, JSON.stringify(projection));
     }
     const lineage = this.store.lineageView(recordingId);
     if (lineage?.recordingIds.length === 1) projection.lineage = lineage;
     this.cacheProjection(recordingId, count, projection);
     return projection;
+  }
+
+  /**
+   * The projection of a followed recording from its resident fold: appends the observations stored since the fold's
+   * head, or (when ProjectionFold says they would not equal a rebuild, the journal was replaced, or nothing is
+   * resident) folds the whole recording once and keeps that.
+   */
+  private foldedProjection(recordingId: string, count: number): Projection {
+    const opts = { adapters: this.descriptors, live: true, ordered: true } as const;
+    let entry = this.folds.get(recordingId);
+    let fold = entry?.fold;
+    let appended = false;
+    if (fold) {
+      const added = this.store.observations(recordingId, fold.sequenceOf(recordingId), FOLD_BATCH + 1);
+      if (added.length <= FOLD_BATCH && fold.observationCount + added.length === count && fold.append(added)) { appended = true; this.foldStats.appended++; }
+      else { fold = undefined; this.foldStats.rebuilt++; }
+    }
+    if (!fold) fold = ProjectionFold.build([recordingId], [...this.store.orderedObservations(recordingId)], this.store.blobs, opts);
+    entry = this.keepFold(recordingId, fold, appended ? (entry?.updates ?? 0) + 1 : 0);
+    let projection = fold.snapshot(true);
+    if (appended && this.foldCheckEvery && entry.updates % this.foldCheckEvery === 0) {
+      // The runtime check: a full rebuild must hash the same. A mismatch is logged locally, the rebuild is served and the fold replaced.
+      this.foldStats.checked++;
+      const rebuilt = reduce(recordingId, [...this.store.orderedObservations(recordingId)], this.store.blobs, opts);
+      if (projectionDigest(rebuilt) !== projectionDigest(projection)) {
+        this.foldStats.mismatches++;
+        console.warn(`[drishya] fold check: the incremental projection of ${recordingId.slice(0, 12)} differs from a full rebuild at ${count} observations; serving the rebuild`);
+        this.dropFold(recordingId);
+        projection = rebuilt;
+      }
+    }
+    return projection;
+  }
+
+  private keepFold(recordingId: string, fold: ProjectionFold, updates: number) {
+    const old = this.folds.get(recordingId);
+    if (old) clearTimeout(old.timer);
+    this.folds.delete(recordingId);
+    const timer = setTimeout(() => this.folds.delete(recordingId), FOLD_IDLE_MS);
+    timer.unref();
+    const entry = { fold, updates, timer };
+    this.folds.set(recordingId, entry);
+    while (this.folds.size > FOLD_RESIDENT) this.dropFold(this.folds.keys().next().value!);
+    return entry;
+  }
+
+  private dropFold(recordingId: string) {
+    const entry = this.folds.get(recordingId);
+    if (entry) clearTimeout(entry.timer);
+    this.folds.delete(recordingId);
+  }
+
+  /** Releases every resident fold (nobody is watching, or the process is closing). */
+  releaseFolds() {
+    for (const id of [...this.folds.keys()]) this.dropFold(id);
   }
 
   /**
@@ -685,7 +779,7 @@ export class Ingestor extends EventEmitter {
     const sizes = new Map<string, number>();
     let tick = 0;
     let pending = false;
-    const run: LiveRun = { timer: undefined as unknown as NodeJS.Timeout };
+    const run: LiveRun = { timer: undefined as unknown as NodeJS.Timeout, watchers: new Map(), ...(intervalMs !== LIVE_POLL_MS ? { explicitMs: intervalMs } : {}) };
     const turns = async () => {
       do {
         pending = false;
@@ -694,6 +788,7 @@ export class Ingestor extends EventEmitter {
         tick++;
         let changed = tick === 1 || tick % COMPANION_EVERY_TICKS === 0 || (this.healthRecords.get(recordingId)?.backlog ?? false); // the first look, then a periodic look for new companions
         for (const s of this.store.getSources(recordingId)) {
+          this.watchSource(run, s.path, wake);
           const size = (await stat(s.path).catch(() => undefined))?.size ?? -1;
           if (sizes.get(s.path) !== size) changed = true;
           sizes.set(s.path, size);
@@ -716,8 +811,8 @@ export class Ingestor extends EventEmitter {
         this.announceHealth(recordingId); // following → idle shows up even without new data
       });
     };
-    run.timer = setInterval(wake, intervalMs);
-    run.timer.unref();
+    run.wake = wake;
+    this.retime(run);
     this.live.set(recordingId, run);
     // Look at once: what the agent wrote since the last read should not wait for the first tick.
     wake();
@@ -725,10 +820,52 @@ export class Ingestor extends EventEmitter {
     this.emit('change', { type: 'recording', recordingId, revision: this.store.getRecording(recordingId)?.revision ?? 0, observationCount: this.store.countObservations(recordingId), added: 0, live: true } satisfies ChangeEvent);
   }
 
+  /** (Re)starts a followed recording's poll at the interval that fits who is watching. */
+  private retime(run: LiveRun) {
+    clearInterval(run.timer);
+    run.timer = setInterval(run.wake!, run.explicitMs ?? (this.viewerPresent ? LIVE_POLL_MS : this.tailWatch ? IDLE_POLL_MS : 500));
+    run.timer.unref();
+  }
+
+  /** Ends a run's poll and file watches. */
+  private endRun(run: LiveRun) {
+    clearInterval(run.timer);
+    for (const w of run.watchers.values()) w.close();
+    run.watchers.clear();
+  }
+
+  /**
+   * Reading is triggered by a file-watch event as well as by the poll (LIVE-7b). Watches are an accelerator, never
+   * the only trigger: some platforms and drives drop events, so the poll still runs. They are read-only handles
+   * on the harness's file and are closed with the run.
+   */
+  private watchSource(run: LiveRun, path: string, wake: () => void) {
+    if (!this.tailWatch || run.watchers.has(path)) return;
+    try {
+      const w = watch(path, { persistent: false }, (event) => {
+        if (event === 'rename') { w.close(); run.watchers.delete(path); } // replaced or removed: watched again on a later look
+        wake();
+      });
+      w.on('error', () => { w.close(); run.watchers.delete(path); });
+      run.watchers.set(path, w);
+    } catch { /* the poll still follows it */ }
+  }
+
+  /**
+   * Tells the tail whether anyone is looking. With a viewer the poll is the short fallback behind the file
+   * watch; with none it relaxes, so an idle daemon costs what it did before LIVE-7. Capture is unaffected.
+   */
+  setViewerPresent(present: boolean) {
+    if (this.viewerPresent === present) return;
+    this.viewerPresent = present;
+    for (const run of this.live.values()) if (run.wake && run.explicitMs === undefined) this.retime(run);
+  }
+
   async stopLive(recordingId: string) {
     const run = this.live.get(recordingId);
-    if (run) clearInterval(run.timer);
+    if (run) this.endRun(run);
     this.live.delete(recordingId);
+    this.dropFold(recordingId);
     await run?.current; // let a turn in flight finish rather than overlap the final read
     this.store.updateRecordingMeta(recordingId, { live: false });
     // Read the final bytes, including an unterminated last line, now that it is complete.
@@ -753,8 +890,9 @@ export class Ingestor extends EventEmitter {
   }
 
   stopAll() {
-    for (const run of this.live.values()) clearInterval(run.timer);
+    for (const run of this.live.values()) this.endRun(run);
     this.live.clear();
+    this.releaseFolds();
   }
 
   /** Stops tailing and waits for any read in flight, so the store can be closed safely. */
@@ -771,13 +909,14 @@ export class Ingestor extends EventEmitter {
    */
   async forget(recordingId: string): Promise<{ blobsRemoved: number }> {
     const run = this.live.get(recordingId);
-    if (run) clearInterval(run.timer);
+    if (run) this.endRun(run);
     this.live.delete(recordingId);
     await run?.current;
     return this.locked(recordingId, async () => {
       for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
       for (const key of this.projectionCache.keys()) if (key.split('\u0000')[0]!.split('+').includes(recordingId)) this.projectionCache.delete(key);
       this.workerOwnedRecordings.delete(recordingId);
+      this.dropFold(recordingId);
       this.healthRecords.delete(recordingId);
       this.lastEmitted.delete(recordingId);
       return this.store.deleteRecording(recordingId);

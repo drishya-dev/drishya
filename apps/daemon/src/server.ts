@@ -124,6 +124,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   let lastDiscovery: { at: number; sources: Awaited<ReturnType<typeof app.ingest.discover>> } | undefined;
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
+  app.ingest.setViewerPresent(false); // until a viewer connects to /v1/changes
   const token = opts.token ?? randomBytes(24).toString('hex');
   // The launch token is valid for this server's lifetime: it is the credential printed to the
   // person who started it, and scripts may use it as a bearer token. Browser sessions derived from
@@ -271,12 +272,18 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       // converges even if nothing new is ever written (audit A07).
       res.write(`event: sync\ndata: ${JSON.stringify({ revisions: app.store.revisions() })}\n\n`);
       clients.add(res);
+      app.ingest.setViewerPresent(true);
       sourceWatch.start();
       const beat = setInterval(() => writeEvent(res, ': beat\n\n') || clients.delete(res), 25_000);
       req.on('close', () => {
         clearInterval(beat);
         clients.delete(res);
-        if (!clients.size) sourceWatch.stop();
+        if (!clients.size) {
+          sourceWatch.stop();
+          // Nobody is looking: the tail relaxes its poll and a resident fold is released (capture continues).
+          app.ingest.setViewerPresent(false);
+          app.ingest.releaseFolds();
+        }
       });
       return;
     }

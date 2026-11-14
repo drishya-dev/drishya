@@ -15,11 +15,21 @@ export function GitBranchHeader({data,reference,choose,loading}:{data?:GitHistor
       {branches.map(ref=><option key={ref.id} value={ref.id}>{ref.kind==='branch'?'':`${ref.kind} · `}{ref.name}{ref.current?' · checked out':''}</option>)}
       <option value="all">All local history</option>
     </select></label>
-    {data&&<div className="atlas-branch-facts" aria-label="Local branch details">
+    {data ? <div className="atlas-branch-facts" aria-label="Local branch details">
       <span>Checked out · {data.branch}</span>
       {selected&&<><span>{selected.kind!=='branch'?`Reading ${selected.kind} · ${selected.name}`:selected.upstream?`Upstream · ${selected.upstream} (local state)`:'No upstream configured'}</span>{selected.lastCommit&&<span>Last commit · <time dateTime={selected.lastCommit}>{new Date(selected.lastCommit).toLocaleString()}</time></span>}</>}
       {data.branchComparison&&<><Comparison label="Current" value={data.branchComparison.current}/><Comparison label="Default" value={data.branchComparison.default}/></>}
       {(data.localBranchTotal??data.referenceTotal)>Math.min(data.localBranches?.length??data.references.length,100)&&<span>More refs available in Branches &amp; tags</span>}
+    </div> : <div className="atlas-branch-facts" aria-hidden="true">
+      <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, minWidth: 200 }}>
+        <span className="wc-bar wc-bar-xs" style={{ width: 200, height: 8 }} />
+      </span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, minWidth: 170 }}>
+        <span className="wc-bar wc-bar-xs" style={{ width: 170, height: 8 }} />
+      </span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', height: 18, minWidth: 140 }}>
+        <span className="wc-bar wc-bar-xs" style={{ width: 140, height: 8 }} />
+      </span>
     </div>}
   </div>;
 }
