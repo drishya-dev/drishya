@@ -1,4 +1,5 @@
-# STATUS — where we are
+# STATUS — where we a| VIDEO-1 | @yash + Claude Sonnet 5.5 | `claude/video-1-film-b5b0f0` | 2026-11-15 | The launch film and its cuts per market-1-plan sections 2 to 4 and 7: demo repo at `C:demo`, real sessions, scratch-home capture, Remotion project. All files in gitignored `.local/launch-video/`; docs notes only in the repository. No product code. |
+re
 
 **For *what* we are building, start at [`VISION.md`](VISION.md) and the [precedence map](README.md). This file is *where we are*.**
 
