@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { App } from '../../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer, type ServerOptions } from '../../../apps/daemon/src/server.ts';
+import { HarnessController } from '../../../apps/daemon/src/controller.ts';
 
 export interface Reply {
   status: number;
@@ -35,6 +36,8 @@ export interface Scratch {
   token: string;
   /** Console output the daemon wrote while this scratch ran. */
   logs: string[];
+  /** Native programs the daemon tried to start (the default scratch has none installed, and refuses to start any). */
+  launches: string[];
   bearer: Record<string, string>;
   call(path: string, opts?: CallOptions): Promise<Reply>;
   /** Exchanges the launch token for a session cookie, as the page does. */
@@ -121,11 +124,17 @@ export async function startScratch(opts: ScratchOptions = {}): Promise<Scratch> 
   const realError = console.error, realLog = console.log, realWarn = console.warn;
   const capture = (...args: unknown[]) => { logs.push(args.map(String).join(' ')); };
   console.error = capture; console.log = capture; console.warn = capture;
+  const launches: string[] = [];
   const app = opts.app ?? new App(dataDir);
-  const run = await startServer({ port: 0, uiDir, watchRoots: [], ...opts, app });
+  // The person's own claude and codex are never started by a security test.
+  const controllerFactory: ServerOptions['controllerFactory'] = (a, workspace) => new HarnessController(a, workspace, {
+    resolveExecutable: () => undefined,
+    launch: ((bin: string, args: string[]) => { launches.push(`${bin} ${args.join(' ')}`.slice(0, 200)); throw new Error('security tests never start a native harness'); }) as never,
+  });
+  const run = await startServer({ port: 0, uiDir, watchRoots: [], controllerFactory, ...opts, app });
   const port = Number(new URL(run.url).port);
   const scratch: Scratch = {
-    dir, home, dataDir: app.store.dataDir, run, port, token: run.token, logs,
+    dir, home, dataDir: app.store.dataDir, run, port, token: run.token, logs, launches,
     bearer: { authorization: `Bearer ${run.token}` },
     call: (path, o) => rawCall(port, path, o),
     async signIn() {

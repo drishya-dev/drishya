@@ -95,6 +95,10 @@ export function hostileScenario(cwd: string): Scenario {
   };
 }
 
+/** A real 1x1 PNG, and an SVG with script that claims to be one. */
+export const PNG_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+export const SVG_B64 = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" onload="window.__pwned=1"><script>window.__pwned="svg-image-script"</script></svg>').toString('base64');
+
 type Writer = (file: string, scenario: Scenario) => void;
 
 const jsonl = (file: string, records: unknown[]) => {
@@ -126,6 +130,12 @@ const claudeWriter: Writer = (file, s) => {
     tool(9, 'toolu_sec_mcp', `mcp__${s.mcpServer}__${s.mcpTool}`, { query: s.prompt.slice(0, 4000) }),
     result(10, 'toolu_sec_mcp', s.output),
     base(11, 10, 'assistant', { id: 'msg_11', type: 'message', role: 'assistant', model: 'claude-opus-5', content: [{ type: 'text', text: 'Done. ' + s.reply.slice(0, 3000) }], stop_reason: 'end_turn' }),
+    base(12, 11, 'user', { role: 'user', content: [
+      { type: 'text', text: 'Images ' + s.prompt.slice(0, 2000) },
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: PNG_B64 } },
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: SVG_B64 } },
+      { type: 'image', source: { type: 'url', url: SINK + '/remote.png' } },
+    ] }),
   ]);
 };
 
@@ -145,7 +155,13 @@ const codexWriter: Writer = (file, s) => {
     item(8, { type: 'custom_tool_call_output', call_id: 'call_sec_3', output: JSON.stringify({ output: 'Success. Updated the following files:\nM ' + s.editPath + '\n' + s.output.slice(0, 5000), metadata: { exit_code: 0 } }) }),
     item(9, { type: 'function_call', name: `${s.mcpServer}__${s.mcpTool}`, arguments: JSON.stringify({ query: s.prompt.slice(0, 4000) }), call_id: 'call_sec_4' }),
     item(10, { type: 'function_call_output', call_id: 'call_sec_4', output: s.output }),
-    { timestamp: at(11), type: 'event_msg', payload: { type: 'task_complete', turn_id: 'turn-1' } },
+    item(12, { type: 'message', role: 'user', content: [
+      { type: 'input_text', text: 'Images ' + s.prompt.slice(0, 2000) },
+      { type: 'input_image', image_url: 'data:image/png;base64,' + PNG_B64 },
+      { type: 'input_image', image_url: 'data:image/png;base64,' + SVG_B64 },
+      { type: 'input_image', image_url: SINK + '/remote.png' },
+    ] }),
+    { timestamp: at(13), type: 'event_msg', payload: { type: 'task_complete', turn_id: 'turn-1' } },
   ]);
 };
 
