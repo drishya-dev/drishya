@@ -23,7 +23,8 @@ test.beforeAll(async () => {
   write(join(repo, 'src', HOSTILE_FILE_NAMES[0]!), '// changed after the commit\n');
   for (const { descriptor } of defaultAdapters()) {
     const id = await importHostile(s, descriptor.id, repo);
-    await grantAccess(s, id);
+    // Antigravity's transcript names no workspace, so it has no checkout to grant (its Files and Changes stay unreachable).
+    if (descriptor.id !== 'antigravity') await grantAccess(s, id);
     recordings.push({ adapter: descriptor.id, id });
   }
 });

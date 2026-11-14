@@ -124,7 +124,9 @@ describe('4. packages/explain makes outbound requests when a key is set', () => 
 });
 
 describe('5. a repository’s own Git configuration can make git run programs', () => {
-  // Finding: not exploitable. The repository below names a marker program for every Git extension point
+  // Finding: real, fixed. Git's own `status` (run for history, and for a submodule through the default
+  // `--ignore-submodules=none`) evaluated `filter.process` and clean/smudge drivers; `readGit` is now
+  // default-deny and the snapshot calls use `--ignore-submodules=dirty`. The repository below names a marker program for every Git extension point
   // (fsmonitor, pager, editor, ssh, hooks, external diff, textconv, clean/smudge/process filters, merge
   // driver, credential helper, gpg, aliases, an ext:: remote) and every Git surface of the product reads
   // it. The control proves the markers fire when Git itself reads the repository without our flags.
