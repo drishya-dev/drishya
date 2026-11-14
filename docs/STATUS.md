@@ -55,13 +55,19 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
 | MAP-3 | @yash + Claude Fable 5.2 | brainstorm merged (#464, `docs/review/map-3-lit-files.md`); Yash picks a direction | 2026-11-12 | The repository map component and a new chip layer. |
-| SHIP-5 | @yash + Antigravity | `ag-builder/ship-5-question-answer` | 2026-11-14 | `apps/ui/src/components/QuestionCard.tsx`, `apps/ui/src/components/question-card.css`, `apps/ui/test/question-card.test.ts`, new `tests/browser/question-card.spec.ts`, `docs/TASKS.md`, `docs/STATUS.md`. No daemon, no live-path files (LIVE-7 owns those). |
 
 
 ---
 
 ## Last session
 
+### Yash with Antigravity — 14 Nov: SHIP-5 "Needs you" native question answering in Drishya
+
+- In Drishya-driven sessions (`QuestionCard.tsx`): pending questions render interactive forms with options (radio for single-choice, checkbox for multi-select, free-text textarea when allowed), Send answer (shows "Sending…", disables inputs while submitting, calls `workspaceApi.answer(...)`) and Stop turn (calls `workspaceApi.stop(...)`). Submissions record receipts and render "Sent by Drishya" distinct from captured answers.
+- In CLI-started sessions (observer mode): options render read-only without bullet circles, showing a clear "Answer in Claude Code" or "Answer in Codex" badge and "Waiting for your answer in <harness>", with zero controls that look clickable.
+- Answered questions mark chosen options (`data-chosen`), display typed text, and keep "Sent by Drishya" controller receipt distinct from captured answers.
+- Deliberate stop shows "Stopped by you". State words in `SessionWorkspace.tsx` updated (`Needs an answer`, `Needs approval`, `Working`, `Stopped by you`).
+- Checks: `check:real -- questions` passes both harnesses (Claude Code 19 sessions, 67 hits, `rec_024517cd` 9 questions; Codex 1 session, 1 hit, `rec_c777ea7f` 1 question, 2 options); unit tests `apps/ui/test/question-card.test.ts` (7/7 pass) and `apps/ui/test/ask-question.test.ts` (17/17 pass); paint policy passes; full browser suite in `tests/browser/question-card.spec.ts` (7/7 pass at 600 and 1440 px with frames in `.local/`); `check:affected` completely green (71 units, UI build, 39 browser tests pass).
 ### Yash with Antigravity — 14 Nov: UI-50, text formatting handled the same everywhere
 
 - Fixed Yash's screenshot case: a Shell card whose output was a Markdown table printed by `node table.cjs` wrapped mid-row and read as broken text. Under AGENTS.md non-negotiable 4 (*captured ≠ derived*), captured command stdout/stderr stays literal and is never re-rendered as HTML Markdown. Instead, table-shaped or wide literal output is detected by `isTableShaped` (`lib/tool-output.ts`), receives `.output-scroll` (`white-space: pre !important; overflow-x: auto !important; tab-size: 4;`) and scrolls sideways within its card without wrapping mid-row, preserving column alignment across lines. `LineClamp` measures real text line boxes and cuts between lines, preserving UI-46's whole-line clamp.
