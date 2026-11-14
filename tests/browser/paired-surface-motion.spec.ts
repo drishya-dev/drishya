@@ -191,6 +191,20 @@ test('the narrow Toolbox catalog travels in both directions and ignores keyboard
   expect(await dock.evaluate(element => element.getAnimations().length)).toBe(0);
 });
 
+test('resizing to the narrow layout hides an untouched Toolbox immediately', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await openRecording(page);
+  const dock=page.locator('.modern-tool-station');
+  await dock.locator('.md-agents > summary').click();
+  await expect(dock).toBeVisible();
+  await dock.evaluate(async element=>{await Promise.allSettled(element.getAnimations().map(animation=>animation.finished));});
+  await page.setViewportSize({width:600,height:900});
+  const state=await dock.evaluate(element=>({visible:element.checkVisibility(),displayTransition:element.getAnimations().some(animation=>animation instanceof CSSTransition&&animation.transitionProperty==='display')}));
+  expect(state).toEqual({visible:false,displayTransition:false});
+  await page.locator('.catalog-toggle').click();
+  await expect(dock).toBeVisible();
+});
+
 test('keyboard navigation disposes the detached pointer menu surface', async ({page}) => {
   await openRecording(page);
   await page.getByLabel('More workspace options',{exact:true}).click();

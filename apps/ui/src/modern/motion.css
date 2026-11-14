@@ -51,15 +51,15 @@
  @starting-style {:root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.product-dialog,.screen-view,.image-reader)::backdrop {opacity:0;}}
  /* The 600px catalog toggles this existing dock in place from its right-hand control. */
  @media (max-width:820px) {
-  :root[data-ui-version=modern][data-experience=classic][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace:not(.file-peek-open):not(.developer-workspace-open) .modern-tool-station {
+  :root[data-ui-version=modern][data-experience=classic][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace[data-catalog-motion]:not(.file-peek-open):not(.developer-workspace-open) .modern-tool-station {
    transform-origin:bottom right;
    transition:opacity var(--motion-panel-enter) var(--motion-surface-ease),scale var(--motion-panel-enter) var(--motion-surface-ease),display var(--motion-panel-exit) allow-discrete;
   }
-  :root[data-ui-version=modern][data-experience=classic][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace:not(.file-peek-open):not(.developer-workspace-open):not(.catalog-open) .modern-tool-station {
+  :root[data-ui-version=modern][data-experience=classic][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace[data-catalog-motion]:not(.file-peek-open):not(.developer-workspace-open):not(.catalog-open) .modern-tool-station {
    opacity:0;scale:.97;transition-duration:var(--motion-panel-exit);pointer-events:none;
   }
   @starting-style {
-   :root[data-ui-version=modern][data-experience=classic][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace.catalog-open:not(.file-peek-open):not(.developer-workspace-open) .modern-tool-station {opacity:0;scale:.97;}
+   :root[data-ui-version=modern][data-experience=classic][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace[data-catalog-motion].catalog-open:not(.file-peek-open):not(.developer-workspace-open) .modern-tool-station {opacity:0;scale:.97;}
   }
  }
 }

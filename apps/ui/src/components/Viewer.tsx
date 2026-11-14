@@ -110,6 +110,13 @@ function WorkspaceViewer() {
   const [reading, setReading] = useState<{ left: number; width: number }>();
   const [followSlot, setFollowSlot] = useState<HTMLElement | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  // A viewport change must settle the dock immediately, including when a previous click enabled motion.
+  useEffect(() => {
+    const media = matchMedia('(max-width: 820px)');
+    const reset = () => viewer.current?.removeAttribute('data-catalog-motion');
+    media.addEventListener('change', reset);
+    return () => media.removeEventListener('change', reset);
+  }, []);
   const [mapError, setMapError] = useState<string>();
   const [mapRetry, setMapRetry] = useState(0);
   const [catchupError,setCatchupError]=useState<string>();
@@ -329,7 +336,7 @@ function WorkspaceViewer() {
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
-      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
+      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={event => { viewer.current?.toggleAttribute('data-catalog-motion', event.detail > 0); setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} followSlot={setFollowSlot} />
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
