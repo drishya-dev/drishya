@@ -36,3 +36,12 @@ export async function importHostile(scratch: Scratch, adapterId: string, cwd: st
   const imported = await scratch.run.app.ingest.importSource(adapterId, file);
   return imported.recordingId;
 }
+
+/** Person-consent steps the page walks through: read the workspace, then separately read its Git. */
+export async function grantAccess(scratch: Scratch, recording: string): Promise<void> {
+  const json = { ...scratch.bearer, 'content-type': 'application/json' };
+  const workspace = await scratch.call(`/v1/recordings/${encodeURIComponent(recording)}/workspace/approve`, { method: 'POST', headers: json, body: '{}' });
+  if (workspace.status !== 200) throw new Error(`workspace approval failed (${workspace.status}): ${workspace.text.slice(0, 120)}`);
+  const gitAccess = await scratch.call(`/v1/recordings/${encodeURIComponent(recording)}/git/approve`, { method: 'POST', headers: json, body: '{}' });
+  if (gitAccess.status !== 200) throw new Error(`git approval failed (${gitAccess.status}): ${gitAccess.text.slice(0, 120)}`);
+}
