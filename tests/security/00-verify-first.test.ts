@@ -1,6 +1,6 @@
 // SEC-3, "to verify first": the five suspicions written down before the suite, each ending as a test.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, chmodSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, chmodSync, existsSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { request } from 'node:http';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -115,7 +115,8 @@ describe('3. style-src allows inline styles', () => {
 describe('4. packages/explain makes outbound requests when a key is set', () => {
   // Finding: gone. CLEAN-2 removed the package, its key and its endpoint.
   it('no explain package, no model endpoint and no API key variable remain in the product', () => {
-    const packages = readdirSync(join(root, 'packages'));
+    // Only real packages count: a leftover folder holding node_modules after a package was deleted is not product code.
+    const packages = readdirSync(join(root, 'packages')).filter((d) => existsSync(join(root, 'packages', d, 'package.json')));
     expect(packages).not.toContain('explain');
     const offenders = [...walk(join(root, 'apps', 'daemon', 'src')), ...walk(join(root, 'packages')), ...walk(join(root, 'apps', 'ui', 'src'))]
       .filter((f) => /\.(tsx?|json)$/.test(f) && /NEBIUS|nemotron|api\.studio\.nebius|explain-model/i.test(readFileSync(f, 'utf8')));
