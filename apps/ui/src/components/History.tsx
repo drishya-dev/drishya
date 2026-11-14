@@ -40,7 +40,7 @@ import { Markdown } from '../lib/markdown.tsx';
 import { FullProse } from './FullProse.tsx';
 import {prosePath} from '../lib/prose-path.ts';
 import './captured-file-path.css';
-import { useApp } from '../state.ts';
+import { useApp, type HistoryMode } from '../state.ts';
 import { CodeView, DiffView, Output, CapturedTime, useArtifact } from './common.tsx';
 import { ArtifactReader, DiffReader } from './ArtifactReader.tsx';
 import { presentationOf, readingWidth } from '../lib/presentation.ts';
@@ -189,7 +189,12 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const switching = useRef(false);
   // The exact thing at the top of the view when the mode changed: a prompt, a message, or a run's cards (or its line), with the
   // pixels from the top of the view to it. It is read before React re-renders, and put back after.
-  const modeAnchor = useRef<{ passageId: string; kind: 'turn' | 'prose' | 'ops'; index: number; offset: number } | undefined>(undefined);
+  type ModeAnchor = { passageId: string; kind: 'turn' | 'prose' | 'ops'; index: number; offset: number };
+  const modeAnchor = useRef<ModeAnchor | undefined>(undefined);
+  // The place the reader left in the other mode, until they move: scrolling, keys, a scrollbar drag or opening a run end it.
+  const modeHome = useRef<{ mode: HistoryMode; anchor: ModeAnchor; moved: boolean } | undefined>(undefined);
+  const leaveHome = () => { if (modeHome.current) modeHome.current.moved = true; };
+  const correctionBurst = useRef({ count: 0 });
   const shownMode = useRef(historyMode);
   if (shownMode.current !== historyMode) { shownMode.current = historyMode; switching.current = true; }
   const lastTravel = useRef(0);
@@ -367,6 +372,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   // from where they were, and a held extent stops the document shrinking under the reader.
   const toggleRun = useCallback((runId: string, passageId: string) => {
     const el = ref.current;
+    if (modeHome.current) modeHome.current.moved = true;
     for (const animation of foldAnimations.current) animation.finish();
     foldAnimations.current = [];
     const closing = !!el?.querySelector(`.passage-slot[data-passage-id="${CSS.escape(passageId)}"] .ops-row`);
@@ -529,6 +535,16 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     followFrame.current = requestAnimationFrame(tick);
   };
 
+  // Heights that change with the scroll position (estimates giving way to measurements as the window slides) can make each
+  // correction undo the last. They settle within a few passes; a view that keeps correcting itself in the same instant is not
+  // converging, and React would end it with "maximum update depth" and a blank view (UI-41e: Conversation in a long session).
+  const correctionRoom = () => {
+    // Passes chained in one commit run before the next frame, so the count is per chain, not per time.
+    const burst = correctionBurst.current;
+    if (burst.count === 0) requestAnimationFrame(() => { burst.count = 0; });
+    return ++burst.count <= 12;
+  };
+
   const restoreReading = (committedLayout=false) => {
     const el = ref.current;
     const anchor = readingAnchor.current;
@@ -586,7 +602,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
         // A tall run's cards that fold to one line cannot keep an offset deep inside them: the line itself stays in view.
         const height = part.getBoundingClientRect().height, offset = Math.max(wanted.offset, Math.min(0, Math.min(height, 12) - height));
         const delta = part.getBoundingClientRect().top - el.getBoundingClientRect().top - offset;
-        if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+        if (Math.abs(delta) > 0.5 && correctionRoom()) setScrollTop(el.scrollTop + delta);
         const partSlot = part.closest<HTMLElement>('.passage-slot[data-passage-id]');
         const anchorId = partSlot?.dataset.passageId ?? wanted.passageId;
         const anchorOffset = partSlot ? partSlot.getBoundingClientRect().top - el.getBoundingClientRect().top : offset;
@@ -601,7 +617,14 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       const targetId = hasVisibleSlot ? wanted.passageId : lead;
       const index = scene.passages.findIndex((ps) => ps.id === targetId);
       if (index >= 0 && layout.prefix[index] !== undefined) {
-        setScrollTop(layout.prefix[index]! - wanted.offset);
+        // Same rule as for a mounted part (UI-41e): the pixels the reader was deep inside a tall run's cards do not exist in the
+        // one line that stands for them in Conversation. Applied as they were, they put the view hundreds of pixels past the run,
+        // on a later turn, or at the end of the page.
+        const size = heights.get(targetId) ?? layout.prefix[index + 1]! - layout.prefix[index]!;
+        const offset = Math.max(wanted.offset, Math.min(0, Math.min(size, 12) - size));
+        // Remember the place as the passage and this offset, so the pass that mounts it aligns that, not the other mode's anchor.
+        readingAnchor.current = { id: targetId, offset };
+        if (correctionRoom()) setScrollTop(layout.prefix[index]! - offset);
         return;
       }
     }
@@ -609,12 +632,13 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       const index = scene.passages.findIndex((ps) => ps.id === anchor.id);
       const height = node ? node.getBoundingClientRect().height : heights.get(anchor.id) ?? 0;
       anchor.offset = Math.max(anchor.offset, Math.min(0, 24 - height));
-      if (!node && index >= 0) { setScrollTop(layout.prefix[index]! - anchor.offset); return; }
+      if (!node && index >= 0) { if (correctionRoom()) setScrollTop(layout.prefix[index]! - anchor.offset); return; }
     }
     if (!node) return;
     const delta = node.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
     if (Math.abs(delta) > 0.5) {
       const requested = el.scrollTop + delta;
+      if (!correctionRoom()) return;
       setScrollTop(requested);
       // A shorter allocation can clamp the scroll at either boundary. Keep the
       // attained offset so later growth cannot replay the unapplied correction.
@@ -676,10 +700,16 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     const parts = [...el.querySelectorAll<HTMLElement>('.passage-slot:not([data-folded=hidden]):not([data-unloaded=true]) :is(.turn, .prose, .ops-row, .run-line)')];
     const hit = parts.find((part) => part.getBoundingClientRect().bottom > box.top + 1);
     const slot = hit?.closest<HTMLElement>('.passage-slot');
-    if (!hit || !slot?.dataset.passageId) { modeAnchor.current = undefined; return; }
+    const home = modeHome.current;
+    if (!hit || !slot?.dataset.passageId) { modeAnchor.current = undefined; modeHome.current = undefined; return; }
     const kind = hit.matches('.turn') ? 'turn' : hit.matches('.prose') ? 'prose' : 'ops';
     const same = [...slot.querySelectorAll<HTMLElement>(kind === 'ops' ? '.ops-row, .run-line' : kind === 'turn' ? '.turn' : '.prose')];
-    modeAnchor.current = { passageId: slot.dataset.passageId, kind, index: kind === 'ops' ? 0 : Math.max(0, same.indexOf(hit)), offset: hit.getBoundingClientRect().top - box.top };
+    const here: ModeAnchor = { passageId: slot.dataset.passageId, kind, index: kind === 'ops' ? 0 : Math.max(0, same.indexOf(hit)), offset: hit.getBoundingClientRect().top - box.top };
+    // Back where the reader just came from, with no scrolling in between: put them exactly there. The other view may have had to
+    // approximate (a tall run's cards are one line in Conversation, and a place near the end cannot sit at the top of a short
+    // page), and approximating back from the approximation would drift.
+    modeAnchor.current = home && home.mode === state.historyMode && !home.moved ? home.anchor : here;
+    modeHome.current = { mode: previous.historyMode, anchor: here, moved: false };
   }), []);
 
   useLayoutEffect(() => {
@@ -922,6 +952,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     <>
     <div className="history" role={modern?"region":undefined} aria-label={modern?"Session work":undefined} tabIndex={modern?0:undefined} ref={ref} onPointerDownCapture={() => { pointerFocus.current = true; }} onPointerUpCapture={() => { pointerFocus.current = false; }} onPointerCancelCapture={() => { pointerFocus.current = false; }} onScroll={onScroll} onWheel={(e) => {
       if (scrollsInsideMaterial(e.target)) { e.stopPropagation(); return; }
+      leaveHome();
       // A slot still moving after a fold would be remembered at its moving position.
       for (const animation of foldAnimations.current) animation.finish();
       foldAnimations.current = [];
@@ -940,7 +971,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
           rememberReading(); navigating.current = false; navigationFrame.current = undefined;
         });
       });
-    }} onPointerDown={(e) => { if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { readingAtStart.current = false; cancelledNavigation.current = intent; pendingNavigation.current = undefined; } if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
+    }} onPointerDown={(e) => { if (e.target === ref.current) leaveHome(); if (e.target === ref.current || e.pointerType === 'touch' && !scrollsInsideMaterial(e.target) && !(e.target as HTMLElement).closest('button, input, select, a')) { userScrollUntil.current = performance.now() + 750; readingAtStart.current = false; } }} onKeyDown={(e) => { pointerFocus.current = false; if (scrollsInsideMaterial(e.target)) return; if (['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End', ' '].includes(e.key)) { leaveHome(); readingAtStart.current = false; cancelledNavigation.current = intent; pendingNavigation.current = undefined; } if (['ArrowUp', 'PageUp', 'Home'].includes(e.key)) { userScrollUntil.current = performance.now() + 750; if (follow) { rememberReading(); set({ follow: false }); } } }} onClickCapture={(e) => {
       // Pin the interacted material after activation without disabling Follow.
       if ((e.target as HTMLElement).closest('button, input, select, a')) {
         const id = (e.target as HTMLElement).closest<HTMLElement>('[data-passage-id]')?.dataset.passageId;
