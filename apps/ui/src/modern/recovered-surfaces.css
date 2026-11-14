@@ -103,11 +103,16 @@
 :root[data-ui-version=modern] .modern-session-header .studio-actions { grid-column:3; grid-row:1; }
 
 
-/* Narrow windows stack controls above the measured composer without hardcoding widths. */
+/* UI-49: Narrow windows share one bottom row at 12px for Tools, composer, and Follow latest.
+   Below 560px where widths would collide, Tools and Follow stack neatly at 56px. */
 @media(max-width:820px) {
- :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:calc(var(--composer-gap,12px) + 4px);}
- :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .catalog-toggle {left:14px;right:auto;bottom:calc(var(--composer-gap,12px) + 4px);}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:12px;}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .catalog-toggle {left:14px;right:auto;bottom:12px;}
  :root[data-ui-version=modern] .connected-workspace:has(.modern-replay-transport) .catalog-toggle {left:14px;right:auto;bottom:92px;}
+}
+@media(max-width:560px) {
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:56px;}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .catalog-toggle {left:14px;right:auto;bottom:56px;}
 }
 :root[data-ui-version=modern] .modern-native-composer #prompt-size-status:not(.sr-only) { padding:2px 15px 4px; }
 :root[data-ui-version=modern] .modern-native-composer.composer-minimized>.queued-input-receipts { display:block!important; }

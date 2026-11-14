@@ -22,9 +22,25 @@ const mode = (page: Page, name: 'Work' | 'Conversation') => page.getByRole('grou
 const topPart = (page: Page) => page.evaluate((selector) => {
   const history = document.querySelector('.history')!, box = history.getBoundingClientRect();
   const part = [...history.querySelectorAll<HTMLElement>(selector)].find((el) => el.getBoundingClientRect().bottom > box.top + 1);
+  const slot = part?.closest<HTMLElement>('.passage-slot[data-passage-id]');
   const kind = part?.matches('.turn') ? 'turn' : part?.matches('.prose') ? 'prose' : part?.matches('.ops-row') ? 'cards' : part?.matches('.run-line') ? 'line' : 'none';
-  return { kind, text: (part?.textContent ?? '').slice(0, 60), offset: part ? Math.round(part.getBoundingClientRect().top - box.top) : NaN };
+  return { passageId: slot?.dataset.passageId, kind, text: (part?.textContent ?? '').slice(0, 60), offset: part ? Math.round(part.getBoundingClientRect().top - box.top) : NaN };
 }, PART);
+
+async function placeNear(page: Page, fraction: number, kind: 'turn' | 'prose' | 'ops' = 'ops') {
+  const history = page.locator('.history');
+  await history.hover();
+  await page.mouse.wheel(0, -200); // disable follow
+  await history.evaluate((el, f) => { el.scrollTop = Math.floor((el.scrollHeight - el.clientHeight) * f); }, fraction);
+  await page.waitForTimeout(1500);
+  const selector = kind === 'turn' ? '.turn' : kind === 'prose' ? '.prose' : '.ops-row, .run-line';
+  await history.evaluate((el, sel) => {
+    const box = el.getBoundingClientRect();
+    const part = [...el.querySelectorAll<HTMLElement>(`.passage-slot:not([data-folded=hidden]):not([data-unloaded=true]) :is(${sel})`)].find((p) => p.getBoundingClientRect().top > box.top + 80);
+    if (part) el.scrollTop += part.getBoundingClientRect().top - box.top + 8;
+  }, selector);
+  await page.waitForTimeout(1200);
+}
 
 async function placeInMiddle(page: Page, kind: 'turn' | 'prose' | 'ops') {
   const history = page.locator('.history');
@@ -86,4 +102,84 @@ ${error.message}`); });
     expect(end, 'never thrown to the latest').toBeLessThan(0.8);
   });
 }
+
+// UI-41d: Switching Work to Conversation near the top, near the bottom, and at narrow 600 px window width.
+test('switching Work to Conversation near the top keeps the reading place at 1440 and 600', async ({ page }) => {
+  for (const width of [1440, 600]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+    await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
+    await expect(page.locator('.history .passage-slot').first()).toBeVisible();
+    await page.waitForTimeout(1000);
+    await placeNear(page, 0.05, 'turn');
+    const start = await topPart(page);
+    expect(start.kind).toBe('turn');
+
+    await mode(page, 'Conversation').click();
+    await expect.poll(async () => {
+      const now = await topPart(page);
+      return now.kind === 'turn' && now.passageId === start.passageId && Math.abs(now.offset - start.offset) <= 6;
+    }, { timeout: 15000 }).toBe(true);
+
+    await mode(page, 'Work').click();
+    await expect.poll(async () => {
+      const now = await topPart(page);
+      return now.kind === 'turn' && now.passageId === start.passageId && Math.abs(now.offset - start.offset) <= 6;
+    }, { timeout: 15000 }).toBe(true);
+  }
+});
+
+test('switching Work to Conversation near the bottom keeps the same passage and never falls back to the bottom', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
+  await expect(page.locator('.history .passage-slot').first()).toBeVisible();
+  await page.waitForTimeout(1000);
+  await placeNear(page, 0.82, 'ops');
+  const start = await topPart(page);
+  expect(start.kind).toBe('cards');
+  const middle = await page.locator('.history').evaluate((el) => el.scrollTop / (el.scrollHeight - el.clientHeight));
+  expect(middle).toBeGreaterThan(0.7);
+
+  await mode(page, 'Conversation').click();
+  await expect.poll(async () => {
+    const now = await topPart(page);
+    return now.kind === 'line' && now.passageId === start.passageId && Math.abs(now.offset - start.offset) <= 6;
+  }, { timeout: 15000 }).toBe(true);
+
+  const convEnd = await page.locator('.history').evaluate((el) => el.scrollTop / (el.scrollHeight - el.clientHeight));
+  expect(convEnd, 'never thrown to the bottom').toBeLessThan(0.95);
+
+  await mode(page, 'Work').click();
+  await expect.poll(async () => {
+    const now = await topPart(page);
+    return now.kind === 'cards' && now.passageId === start.passageId && Math.abs(now.offset - start.offset) <= 6;
+  }, { timeout: 15000 }).toBe(true);
+
+  const workEnd = await page.locator('.history').evaluate((el) => el.scrollTop / (el.scrollHeight - el.clientHeight));
+  expect(workEnd, 'never thrown to the bottom').toBeLessThan(0.95);
+});
+
+test('switching both ways at 600 px keeps a run cards (or line) where it was', async ({ page }) => {
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+  await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
+  await expect(page.locator('.history .passage-slot').first()).toBeVisible();
+  await page.waitForTimeout(1000);
+  await placeInMiddle(page, 'ops');
+  const start = await topPart(page);
+  expect(start.kind).toBe('cards');
+
+  for (const [target, wantKind] of [['Conversation', 'line'], ['Work', 'cards'], ['Conversation', 'line'], ['Work', 'cards']] as const) {
+    await mode(page, target).click();
+    await expect.poll(async () => {
+      const now = await topPart(page);
+      return now.kind === wantKind && Math.abs(now.offset - start.offset) <= 6;
+    }, { timeout: 15000 }).toBe(true);
+  }
+});
+
 
