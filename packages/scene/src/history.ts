@@ -24,6 +24,8 @@ export interface HistoryQuery {
   tailFirst?: boolean;
   /** PERF-4: begin the window at this passage (the swap from the recent-first page to the whole one keeps the reader's place). */
   anchorPassageId?: string;
+  /** PERF-4: while the whole view is being folded, reply that it is loading (the daemon then answers the page 202) instead of holding the request open. */
+  loadingOk?: boolean;
 }
 
 export interface HistoryPage {

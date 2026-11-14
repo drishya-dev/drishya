@@ -23,6 +23,12 @@ import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store
 import type {GitSessionQuery,GitSessionEvidence} from './git-session-evidence.ts';
 import type {DelegationThread} from './delegation-types.ts';
 
+/** The whole history of a large recording is still being folded; ask again when it is ready (PERF-4). */
+export class HistoryLoading extends Error { constructor() { super('The whole history is still loading.'); } }
+
+/** Requests that are answered from the recent-first view (or none) while the whole history folds; every other reader of the history needs the whole of it. */
+const ANSWERED_PARTIAL = new Set(['page', 'page-bytes', 'artifact', 'artifact-chunk', 'artifact-find', 'turns', 'now', 'forget', 'close', 'diagnostic-sqlite', 'search-library']);
+
 /** One worker owns the derived history index. Capture's SQLite writer remains the ingestor. */
 export class HistoryService {
   private worker?: Worker;
@@ -61,12 +67,12 @@ export class HistoryService {
 
       this.worker = worker;
       worker.once('online', () => { if (this.worker === worker) this.onlineWorker = worker; });
-      worker.on('message', (message: { id: number; value?: unknown; error?: string; event?: string; viewId?: string }) => {
+      worker.on('message', (message: { id: number; value?: unknown; error?: string; loading?: boolean; event?: string; viewId?: string }) => {
         if (message.event === 'full-ready') { if (this.worker === worker && typeof message.viewId === 'string') this.onFullReady?.(message.viewId); return; }
         const task = this.pending.get(message.id);
         if (!task) return;
         this.pending.delete(message.id);
-        if (message.error) task.reject(new Error(message.error)); else task.resolve(message.value);
+        if (message.error) task.reject(message.loading ? new HistoryLoading() : new Error(message.error)); else task.resolve(message.value);
         if (!this.pending.size) worker.unref();
       });
 
@@ -108,7 +114,8 @@ export class HistoryService {
     const id = ++this.sequence;
     const result = new Promise<T>((resolve, reject) => this.pending.set(id, { resolve: (value) => resolve(value as T), reject }));
     worker.ref();
-    worker.postMessage({ id, method, args });
+    // A reader that needs the whole history is not held open while it folds: it is told it is loading (HTTP 202) and asks again.
+    worker.postMessage({ id, method, args: ANSWERED_PARTIAL.has(method) ? args : { ...(args as object), wait: false }, sentAt: Date.now() });
     return result;
   }
 

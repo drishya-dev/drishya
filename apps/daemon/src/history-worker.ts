@@ -91,14 +91,17 @@ const queueEvidenceFor = createQueueEvidenceCache(source);
 /** The resident full fold of the last view built (PERF-4: the versioned `ProjectionFold`, as the daemon's followed recordings use). */
 let resident: { id: string; ids: string[]; fold: ProjectionFold; lineage?: ChunkedFold['lineage']; sequence: number; ancestors: string } | undefined;
 /** PERF-4: a recent-first view of a large recording, answered while its full fold runs in the background. */
-let tail: { id: string; ids: string[]; fold: ProjectionFold; observations: number; ancestors: string } | undefined;
+let tail: { id: string; ids: string[]; fold: ProjectionFold; observations: number; ancestors: string; last?: Projection } | undefined;
 let background: { id: string; ids: string[]; cancelled: boolean; finished: Promise<void> } | undefined;
 /** Observations a followed view appends in one go; a bigger backlog is rebuilt. */
 const APPEND_BATCH = 5000;
 /** A recording of at least this many observations opens from its tail first (a cold full fold of ~6,000 takes ~0.8 s here). */
-const TAIL_FIRST_OBSERVATIONS = process.env.DRISHYA_TAIL_FIRST === '0' ? Infinity : 6000; // DRISHYA_TAIL_FIRST=0 switches recent-first opening off
-/** The revisions of every part but the last: a followed lineage grows only at its end, so a change in an ancestor means a rebuild. */
-const ancestorRevisions = (ids: string[], revisions: Record<string, number>) => JSON.stringify(ids.slice(0, -1).map((key) => revisions[key]));
+// DRISHYA_TAIL_FIRST=0 switches recent-first opening off; a number sets the size (tests and measurements); DRISHYA_TAIL_PROMPTS sets how many prompts a tail holds.
+const TAIL_FIRST_OBSERVATIONS = process.env.DRISHYA_TAIL_FIRST === '0' ? Infinity : Number(process.env.DRISHYA_TAIL_FIRST) > 0 ? Number(process.env.DRISHYA_TAIL_FIRST) : 6000;
+const TAIL_HOLD_MS = Number(process.env.DRISHYA_TAIL_HOLD_MS) > 0 ? Number(process.env.DRISHYA_TAIL_HOLD_MS) : 0;
+const TAIL_PROMPT_COUNT = Number(process.env.DRISHYA_TAIL_PROMPTS) > 0 ? Number(process.env.DRISHYA_TAIL_PROMPTS) : undefined;
+/** What every part but the last holds: a followed lineage grows only at its end, so growth in an ancestor means a rebuild. (Counts, not revisions: following or pausing an ancestor changes its revision and not its content.) */
+const ancestorRevisions = (ids: string[], counts: Record<string, number>) => JSON.stringify(ids.slice(0, -1).map((key) => counts[key]));
 const reduceOptions = (live: boolean) => ({ adapters, live, ordered: true, maxProseChars: 4096, maxInputChars: 4096 }) as const;
 const yieldToLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
 
@@ -114,9 +117,9 @@ function shaped(projection: Projection, ids: string[]): Projection {
 }
 
 /** Folds a whole view in this thread with no pause, or resumes the resident fold with what was stored after it. */
-function build(id: string, ids: string[], live: boolean, revisions: Record<string, number>): { projection: Projection; appended: boolean } {
+function build(id: string, ids: string[], live: boolean, counts: Record<string, number>): { projection: Projection; appended: boolean } {
   const last = ids.at(-1)!;
-  if (resident?.id === id && resident.ids.join('+') === ids.join('+') && resident.ancestors === ancestorRevisions(ids, revisions)) {
+  if (resident?.id === id && resident.ids.join('+') === ids.join('+') && resident.ancestors === ancestorRevisions(ids, counts)) {
     const added = source.observations(last, resident.sequence, APPEND_BATCH + 1);
     if (added.length <= APPEND_BATCH) {
       const accepted = resident.lineage ? resident.lineage.filter(added) : added;
@@ -132,7 +135,7 @@ function build(id: string, ids: string[], live: boolean, revisions: Record<strin
   const chunked = new ChunkedFold(source, ids, io, reduceOptions(live), (o) => rememberCapturedBlobs(o.payload));
   while (!chunked.step(2000));
   const projection = shaped(chunked.fold.snapshot(live), ids);
-  resident = { id, ids, fold: chunked.fold, lineage: chunked.lineage, sequence: chunked.fold.sequenceOf(last), ancestors: ancestorRevisions(ids, revisions) };
+  resident = { id, ids, fold: chunked.fold, lineage: chunked.lineage, sequence: chunked.fold.sequenceOf(last), ancestors: ancestorRevisions(ids, counts) };
   return { projection, appended: false };
 }
 
@@ -144,8 +147,9 @@ function lookup(id: string) {
   try {
     const recordings = ids.map((key) => { const rec = source.getRecording(key); if (!rec) throw new Error('Recording not found'); return rec; });
     const revisions = Object.fromEntries(recordings.map((r) => [r.id, r.revision ?? 0]));
+    const counts = Object.fromEntries(recordings.map((r) => [r.id, r.observationCount]));
     const revision = JSON.stringify(recordings.map((r) => [r.id, r.revision, r.live, REDUCER_VERSION, HISTORY_VERSION]));
-    return { ids, recordings, revisions, revision, live: recordings.some((r) => r.live), observations: recordings.reduce((n, r) => n + r.observationCount, 0) };
+    return { ids, recordings, revisions, counts, revision, live: recordings.some((r) => r.live), observations: recordings.reduce((n, r) => n + r.observationCount, 0) };
   } finally { source.db.exec('COMMIT'); }
 }
 type Lookup = ReturnType<typeof lookup>;
@@ -226,7 +230,7 @@ function current(id: string): View {
     // Individual histories use repeatable streaming SQL reads. Combined histories retain the
     // reducer's cross-source ordering and worktree identity until their merged disk cursor lands.
     cached = undefined;
-    const built = build(id, ctx.ids, ctx.live, ctx.revisions);
+    const built = build(id, ctx.ids, ctx.live, ctx.counts);
     db.exec('BEGIN IMMEDIATE');
     try {
       for (const _ of persistView(id, ctx.revision, built.projection, built.appended, false));
@@ -246,23 +250,42 @@ function current(id: string): View {
   }
 }
 
-/** The whole view, waiting for a background fold of it if one is running. */
-async function full(id: string): Promise<View> {
-  const ids = [...new Set(id.split('+').filter(Boolean))];
-  for (let wait = 0; wait < 4 && background && !background.cancelled && background.ids.join('+') === ids.join('+'); wait++) await background.finished;
+/**
+ * The whole view. A large recording is folded in the background even when nobody asked for its latest work first (the
+ * Files tree or the toolbox may be the first request to arrive): building it here would hold this thread for seconds,
+ * with the recent-first page of the same recording queued behind it. Small recordings are built at once.
+ */
+class Loading extends Error { constructor() { super('loading'); } }
+async function full(id: string, wait = true): Promise<View> {
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const ctx = lookup(id);
+    const hit = stored(id, ctx);
+    if (hit) return hit;
+    const resumable = resident?.id === id && resident.ids.join('+') === ctx.ids.join('+') && resident.ancestors === ancestorRevisions(ctx.ids, ctx.counts);
+    if (resumable || ctx.observations < TAIL_FIRST_OBSERVATIONS || attempt === 3) break;
+    startBackground(id, ctx);
+    // A caller that would only hold a connection open until the whole view exists is told it is still loading and asks again.
+    if (!wait) throw new Loading();
+    await background?.finished;
+  }
   return current(id);
 }
 
 /** PERF-4 step 1: the last prompts of a large recording, reduced on their own. Appends what is stored since, or rebuilds. */
 function tailView(id: string, ctx: Lookup): View {
   const last = ctx.ids.at(-1)!;
-  if (tail?.id === id && tail.ids.join('+') === ctx.ids.join('+') && tail.ancestors === ancestorRevisions(ctx.ids, ctx.revisions)) {
+  if (tail?.id === id && tail.ids.join('+') === ctx.ids.join('+') && tail.ancestors === ancestorRevisions(ctx.ids, ctx.counts)) {
     const added = source.observations(last, tail.fold.sequenceOf(last), APPEND_BATCH + 1);
-    if (added.length <= APPEND_BATCH && tail.fold.append(added)) return { id, revision: ctx.revision, projection: shaped(tail.fold.snapshot(ctx.live), ctx.ids), revisions: ctx.revisions, partial: { observations: tail.observations + added.length } };
+    if (added.length <= APPEND_BATCH && tail.fold.append(added)) {
+      const projection = shaped(tail.fold.snapshot(ctx.live), ctx.ids);
+      tail.last = projection;
+      return { id, revision: ctx.revision, projection, revisions: ctx.revisions, partial: { observations: tail.observations + added.length } };
+    }
   }
-  const built = buildTail(source, ctx.ids, io, reduceOptions(ctx.live));
-  tail = { id, ids: ctx.ids, fold: built.fold, observations: built.observations, ancestors: ancestorRevisions(ctx.ids, ctx.revisions) };
-  return { id, revision: ctx.revision, projection: shaped(built.fold.snapshot(ctx.live), ctx.ids), revisions: ctx.revisions, ...(built.complete ? {} : { partial: { observations: built.observations } }) };
+  const built = buildTail(source, ctx.ids, io, reduceOptions(ctx.live), { prompts: TAIL_PROMPT_COUNT });
+  const projection = shaped(built.fold.snapshot(ctx.live), ctx.ids);
+  tail = { id, ids: ctx.ids, fold: built.fold, observations: built.observations, ancestors: ancestorRevisions(ctx.ids, ctx.counts), last: projection };
+  return { id, revision: ctx.revision, projection, revisions: ctx.revisions, ...(built.complete ? {} : { partial: { observations: built.observations } }) };
 }
 
 /**
@@ -276,43 +299,51 @@ function startBackground(id: string, ctx: Lookup): void {
   const job: NonNullable<typeof background> = { id, ids: ctx.ids, cancelled: false, finished: Promise.resolve() };
   job.finished = (async () => {
     await yieldToLoop(); // the response that started this goes out first
-    capturedBlobs.clear();
-    const chunked = new ChunkedFold(source, ctx.ids, io, reduceOptions(ctx.live), (o) => rememberCapturedBlobs(o.payload));
-    for (;;) {
-      const start = performance.now();
-      let done = false;
-      while (!done && performance.now() - start < 20) done = chunked.step(200);
+    if (TAIL_HOLD_MS) await new Promise((resolve) => setTimeout(resolve, TAIL_HOLD_MS)); // a test switch: lets a browser spec look at the recent-first page
+    // Folded again (at most twice more) if an ancestor of the lineage grew or the catch-up cannot append while it ran; then the
+    // next request that needs the whole view builds it in one go.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const from = attempt === 0 ? ctx : lookup(id);
+      capturedBlobs.clear();
+      const chunked = new ChunkedFold(source, from.ids, io, reduceOptions(from.live), (o) => rememberCapturedBlobs(o.payload));
+      for (;;) {
+        const start = performance.now();
+        let done = false;
+        while (!done && performance.now() - start < 20) done = chunked.step(200);
+        if (job.cancelled) return;
+        if (done) break;
+        await yieldToLoop();
+      }
       if (job.cancelled) return;
-      if (done) break;
-      await yieldToLoop();
+      // Catch up with what was stored while the fold ran: one short read, then the append.
+      const now = lookup(id);
+      const last = from.ids.at(-1)!;
+      const added = source.observations(last, chunked.fold.sequenceOf(last), APPEND_BATCH + 1);
+      const accepted = chunked.lineage ? chunked.lineage.filter(added) : added;
+      for (const o of accepted) rememberCapturedBlobs(o.payload);
+      if (ancestorRevisions(from.ids, now.counts) !== ancestorRevisions(from.ids, from.counts) || added.length > APPEND_BATCH || !chunked.fold.append(accepted)) continue;
+      const projection = shaped(chunked.fold.snapshot(now.live), from.ids);
+      const write = persistView(id, now.revision, projection, false, true);
+      for (let step = write.next(); !step.done; step = write.next()) { await yieldToLoop(); if (job.cancelled) return; }
+      resident = { id, ids: from.ids, fold: chunked.fold, lineage: chunked.lineage, sequence: Math.max(chunked.fold.sequenceOf(last), ...added.map((o) => o.receivedSequence)), ancestors: ancestorRevisions(from.ids, from.counts) };
+      cached = { id, revision: now.revision, projection, revisions: now.revisions };
+      tail = undefined;
+      if (background === job) background = undefined;
+      parentPort!.postMessage({ event: 'full-ready', viewId: id });
+      return;
     }
-    if (job.cancelled) return;
-    // Catch up with what was stored while the fold ran: one short read, then the append.
-    const now = lookup(id);
-    const last = ctx.ids.at(-1)!;
-    const added = source.observations(last, chunked.fold.sequenceOf(last), APPEND_BATCH + 1);
-    const accepted = chunked.lineage ? chunked.lineage.filter(added) : added;
-    for (const o of accepted) rememberCapturedBlobs(o.payload);
-    if (ancestorRevisions(ctx.ids, now.revisions) !== ancestorRevisions(ctx.ids, ctx.revisions) || added.length > APPEND_BATCH || !chunked.fold.append(accepted)) { if (background === job) background = undefined; return; } // the next request rebuilds in one go
-    const projection = shaped(chunked.fold.snapshot(now.live), ctx.ids);
-    const write = persistView(id, now.revision, projection, false, true);
-    for (let step = write.next(); !step.done; step = write.next()) { await yieldToLoop(); if (job.cancelled) return; }
-    resident = { id, ids: ctx.ids, fold: chunked.fold, lineage: chunked.lineage, sequence: Math.max(chunked.fold.sequenceOf(last), ...added.map((o) => o.receivedSequence)), ancestors: ancestorRevisions(ctx.ids, ctx.revisions) };
-    cached = { id, revision: now.revision, projection, revisions: now.revisions };
-    tail = undefined;
     if (background === job) background = undefined;
-    parentPort!.postMessage({ event: 'full-ready', viewId: id });
   })().catch((error) => { if (background === job) background = undefined; console.error('history: background fold failed:', error instanceof Error ? error.message : error); });
   background = job;
 }
 
 /** What a page is answered from: the whole view when it exists, else (when the caller allows) the recent-first one. */
-async function pageView(id: string, allowPartial: boolean): Promise<View> {
-  if (!allowPartial) return full(id);
+async function pageView(id: string, allowPartial: boolean, wait = true): Promise<View> {
+  if (!allowPartial) return full(id, wait);
   const ctx = lookup(id);
   const hit = stored(id, ctx);
   if (hit) return hit;
-  const resumable = resident?.id === id && resident.ids.join('+') === ctx.ids.join('+') && resident.ancestors === ancestorRevisions(ctx.ids, ctx.revisions);
+  const resumable = resident?.id === id && resident.ids.join('+') === ctx.ids.join('+') && resident.ancestors === ancestorRevisions(ctx.ids, ctx.counts);
   if (resumable || ctx.observations < TAIL_FIRST_OBSERVATIONS) return full(id);
   const view = tailView(id, ctx);
   if (view.partial) startBackground(id, ctx);
@@ -320,7 +351,7 @@ async function pageView(id: string, allowPartial: boolean): Promise<View> {
 }
 
 async function page(id: string, query: HistoryQuery): Promise<HistoryPage> {
-  const view = await pageView(id, !!query.tailFirst);
+  const view = await pageView(id, !!query.tailFirst, !query.loadingOk);
   const { projection: full, revisions } = view;
   const requestedStep = query.step !== undefined && query.observationId ? stepOfObservation(full, query.observationId) ?? query.step : query.step;
   const step = Math.max(0, Math.min(full.timeline.length, Math.floor(requestedStep ?? full.timeline.length)));
@@ -377,11 +408,25 @@ async function page(id: string, query: HistoryQuery): Promise<HistoryPage> {
     markers: allMarkers.filter((_, i) => i % stride === 0), dwell: dwellFor(full, step) };
 }
 
-async function artifact(id: string, artifactId: string, start: number, count: number): Promise<ArtifactSlice> {
+
+/**
+ * PERF-4: while a view is shown from its latest work only, the material of those operations (their result previews, their
+ * prose, their outputs) is read from that same recent-first projection: a card must not wait for the whole history to show
+ * what the page already has. Anything the recent-first projection does not hold waits for the whole view.
+ */
+function shownFromTail(id: string): Projection | undefined {
+  return tail?.id === id && tail.last && background && !background.cancelled && background.id === id ? tail.last : undefined;
+}
+async function artifactDescriptor(id: string, artifactId: string): Promise<Projection['artifacts'][number] | undefined> {
+  const early = shownFromTail(id)?.artifacts.find((a) => a.id === artifactId);
+  if (early) return early;
   await full(id);
   const row = db.prepare("SELECT body FROM items WHERE view_id=? AND kind='artifacts' AND id=?").get(id, artifactId) as { body: string } | undefined;
-  if (!row) throw new Error('Artifact not found');
-  const artifact = JSON.parse(row.body) as Projection['artifacts'][number];
+  return row ? JSON.parse(row.body) as Projection['artifacts'][number] : undefined;
+}
+async function artifact(id: string, artifactId: string, start: number, count: number): Promise<ArtifactSlice> {
+  const artifact = await artifactDescriptor(id, artifactId);
+  if (!artifact) throw new Error('Artifact not found');
   const empty = { artifact, start, text: '', returnedLines: 0, totalLines: 0, totalBytes: 0, truncated: false, hasMore: false };
   if (!artifact.blob) return { ...empty, available: false, reason: 'not-captured' };
   const slice = source.blobs.readLines(artifact.blob, start, count) ?? blobs.readLines(artifact.blob, start, count);
@@ -391,8 +436,9 @@ async function artifact(id: string, artifactId: string, start: number, count: nu
 async function artifactChunk(id: string, artifactId: string, start: number, requestedField?: 'text'|'structured') {
   if (artifactId.startsWith('result:')) {
     const operationId = artifactId.slice(7);
-    const projection = (await full(id)).projection;
-    const op = projection.operations.find(op => op.id === operationId);
+    const early = shownFromTail(id)?.operations.find(op => op.id === operationId);
+    const projection = early ? shownFromTail(id)! : (await full(id)).projection;
+    const op = early ?? projection.operations.find(op => op.id === operationId);
     if (!op || !['mcp','other'].includes(op.detail.kind) || op.endSequence === undefined) throw Error('Recorded result not found');
     const owner = id.split('+').find(recording => operationId.startsWith(recording + '.'));
     if (!owner) throw Error('Recorded result owner not found');
@@ -424,7 +470,9 @@ async function artifactChunk(id: string, artifactId: string, start: number, requ
   if (!descriptor.available || !descriptor.artifact.blob) return descriptor;
   // Prose is bounded in history pages, but its recorded body must remain readable
   // even when one line exceeds the line-slice response budget.
-  const prose = descriptor.artifact.kind === 'excerpt' && db.prepare("SELECT id FROM items WHERE view_id=? AND kind='prose' AND id=?").get(id, artifactId.replace(/^art_(.*)_prose$/, '$1'));
+  const proseId = artifactId.replace(/^art_(.*)_prose$/, '$1');
+  const early = shownFromTail(id);
+  const prose = descriptor.artifact.kind === 'excerpt' && (early?.prose.some((item) => item.id === proseId) || (await full(id), db.prepare("SELECT id FROM items WHERE view_id=? AND kind='prose' AND id=?").get(id, proseId)));
   if (descriptor.artifact.kind !== 'output' && !prose) throw Error('Only recorded output or prose supports text continuation');
   const sha = descriptor.artifact.blob;
   const chunk = source.blobs.readTextChunk(sha, start) ?? blobs.readTextChunk(sha, start);
@@ -432,10 +480,8 @@ async function artifactChunk(id: string, artifactId: string, start: number, requ
 }
 
 async function artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) {
-  await full(id);
-  const row = db.prepare("SELECT body FROM items WHERE view_id=? AND kind='artifacts' AND id=?").get(id, artifactId) as { body: string } | undefined;
-  if (!row) throw new Error('Artifact not found');
-  const item = JSON.parse(row.body) as Projection['artifacts'][number];
+  const item = await artifactDescriptor(id, artifactId);
+  if (!item) throw new Error('Artifact not found');
   if (!item.blob) return undefined;
   const store = source.blobs.has(item.blob) ? source.blobs : blobs;
   return store.findLines(item.blob, query, start, continuation);
@@ -447,7 +493,9 @@ async function file(id: string, path: string, start: number, count: number, step
   return fileOperationPage(historical.operations, path, start, count, query, selectedOperationId);
 }
 
-parentPort!.on('message', async (message: { id: number; method: string; args: any }) => {
+parentPort!.on('message', async (message: { id: number; method: string; args: any; sentAt?: number }) => {
+  const began = Date.now();
+  if (process.env.DRISHYA_HISTORY_TIMING) console.error('history', message.method, 'queued', began - (message.sentAt ?? began), 'ms');
   try {
     const a = message.args;
     let value: unknown;
@@ -456,22 +504,22 @@ parentPort!.on('message', async (message: { id: number; method: string; args: an
       value = { captured: config(source.db), derived: config(db), fullProjectionResident: !!cached, reducerResident: !!resident };
     }
     else if (message.method === 'search-library') value = source.searchLibrary(a.query);
-    else if(message.method==='finding-members')value=findingMembers((await full(a.id)).projection,a.key,a.page,a.q);
-    else if(message.method==='review-insights')value=reviewInsights((await full(a.id)).projection,a.page,a.kind);
-    else if (message.method === 'commands') value=commandPage((await full(a.id)).projection.operations,a.query);
-    else if (message.method === 'tools') value=toolInventory(a.step===undefined?(await full(a.id)).projection:asOfProjection((await full(a.id)).projection,a.step));
-    else if (message.method === 'tool-trail') value=toolTrail(a.step===undefined?(await full(a.id)).projection:asOfProjection((await full(a.id)).projection,a.step),a.filter,a.from);
+    else if(message.method==='finding-members')value=findingMembers((await full(a.id, a.wait !== false)).projection,a.key,a.page,a.q);
+    else if(message.method==='review-insights')value=reviewInsights((await full(a.id, a.wait !== false)).projection,a.page,a.kind);
+    else if (message.method === 'commands') value=commandPage((await full(a.id, a.wait !== false)).projection.operations,a.query);
+    else if (message.method === 'tools') value=toolInventory(a.step===undefined?(await full(a.id, a.wait !== false)).projection:asOfProjection((await full(a.id, a.wait !== false)).projection,a.step));
+    else if (message.method === 'tool-trail') value=toolTrail(a.step===undefined?(await full(a.id, a.wait !== false)).projection:asOfProjection((await full(a.id, a.wait !== false)).projection,a.step),a.filter,a.from);
     else if (message.method === 'queue') {
-      const view=await full(a.id), revision=JSON.stringify(view.revisions);
+      const view=await full(a.id, a.wait !== false), revision=JSON.stringify(view.revisions);
       value=queuePage(view.projection.timeline,a.owner,a.query,queueEvidenceFor(view.projection,a.owner,revision,a.id));
     }
-    else if (message.method === 'screen') value=screenRun((a.step===undefined?(await full(a.id)).projection:asOfProjection((await full(a.id)).projection,a.step)).operations);
+    else if (message.method === 'screen') value=screenRun((a.step===undefined?(await full(a.id, a.wait !== false)).projection:asOfProjection((await full(a.id, a.wait !== false)).projection,a.step)).operations);
     else if(message.method==='git-session-evidence'){
-      const projection=(await full(a.id)).projection;
+      const projection=(await full(a.id, a.wait !== false)).projection;
       value=gitSessionEvidence(projection,a.query,op=>commandAtWorkspace(op.observationIds.slice(0,8).map(id=>source.observationById(a.id,id)).filter((o):o is Observation=>!!o),projection.workspaceRoot));
     }
     else if(message.method==='delegation-thread'){
-      const projection=(await full(a.id)).projection;
+      const projection=(await full(a.id, a.wait !== false)).projection;
       value=delegationThread(source,projection,a.operationId,a.start,a.step,a.taskStart);
     }
     else if (message.method === 'page') value = await page(a.id, a.query);
@@ -480,20 +528,20 @@ parentPort!.on('message', async (message: { id: number; method: string; args: an
     else if (message.method === 'artifact-chunk') value = await artifactChunk(a.id, a.artifactId, a.start, a.field);
     else if (message.method === 'artifact-find') value = await artifactFind(a.id, a.artifactId, a.query, a.start, a.continuation);
     else if (message.method === 'file') value = await file(a.id, a.path, a.start, a.count, a.step, a.query, a.selectedOperationId);
-    else if (message.method === 'summary') value = historySummary((await full(a.id)).projection, a.from);
-    else if (message.method === 'reading-target') value = readingTarget((await full(a.id)).projection, a.query);
-    else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? (await full(a.id)).projection : asOfProjection((await full(a.id)).projection, a.step), a.paths);
-    else if (message.method === 'compare-evidence') value = compareEvidence((await full(a.id)).projection, a.paths);
-    else if(message.method==='file-roots') value=withFileRootEvidence(a.roots,(await full(a.id)).projection,a.workspaceRoot);
-    else if (message.method === 'now') value = nowFacts((await full(a.id)).projection);
-    else if (message.method === 'context-report') value = contextReportCandidates((await full(a.id)).projection.timeline);
-    else if (message.method === 'turns') value = turnLedgers((await full(a.id)).projection).slice(-2000);
-    else if (message.method === 'since') value = sinceSnapshot((await full(a.id)).projection, a.after, a.page);
-    else if (message.method === 'read-before') value = readBeforeWriteFor((await full(a.id)).projection, a.operationId) ?? null;
-    else if (message.method === 'fix-chain') value = fixChainFor((await full(a.id)).projection, a.operationId) ?? null;
-    else if (message.method === 'verification') value = verificationFor((await full(a.id)).projection, a.operationId) ?? null;
+    else if (message.method === 'summary') value = historySummary((await full(a.id, a.wait !== false)).projection, a.from);
+    else if (message.method === 'reading-target') value = readingTarget((await full(a.id, a.wait !== false)).projection, a.query);
+    else if (message.method === 'file-evidence') value = fileEvidence(a.step === undefined ? (await full(a.id, a.wait !== false)).projection : asOfProjection((await full(a.id, a.wait !== false)).projection, a.step), a.paths);
+    else if (message.method === 'compare-evidence') value = compareEvidence((await full(a.id, a.wait !== false)).projection, a.paths);
+    else if(message.method==='file-roots') value=withFileRootEvidence(a.roots,(await full(a.id, a.wait !== false)).projection,a.workspaceRoot);
+    else if (message.method === 'now') value = nowFacts(shownFromTail(a.id) ?? (await full(a.id, a.wait !== false)).projection);
+    else if (message.method === 'context-report') value = contextReportCandidates((await full(a.id, a.wait !== false)).projection.timeline);
+    else if (message.method === 'turns') value = turnLedgers(shownFromTail(a.id) ?? (await full(a.id, a.wait !== false)).projection).slice(-2000);
+    else if (message.method === 'since') value = sinceSnapshot((await full(a.id, a.wait !== false)).projection, a.after, a.page);
+    else if (message.method === 'read-before') value = readBeforeWriteFor((await full(a.id, a.wait !== false)).projection, a.operationId) ?? null;
+    else if (message.method === 'fix-chain') value = fixChainFor((await full(a.id, a.wait !== false)).projection, a.operationId) ?? null;
+    else if (message.method === 'verification') value = verificationFor((await full(a.id, a.wait !== false)).projection, a.operationId) ?? null;
     else if (message.method === 'marker') {
-      const p = (await full(a.id)).projection;
+      const p = (await full(a.id, a.wait !== false)).projection;
       const candidates = markers(p).filter((m) => a.types.includes(m.type) && (a.direction > 0 ? m.step > a.step : m.step < a.step));
       value = (a.direction > 0 ? candidates[0] : candidates.at(-1))?.step;
     } else if (message.method === 'forget') {
@@ -517,7 +565,9 @@ parentPort!.on('message', async (message: { id: number; method: string; args: an
     // page's object graph and re-encoding it on capture's event loop.
     if (message.method === 'page-bytes') parentPort!.postMessage({ id: message.id, value }, [(value as Uint8Array<ArrayBuffer>).buffer]);
     else parentPort!.postMessage({ id: message.id, value });
+    if (process.env.DRISHYA_HISTORY_TIMING) console.error('history', message.method, 'done in', Date.now() - began, 'ms', message.method === 'page-bytes' ? JSON.stringify(message.args.query).slice(0, 80) : '');
   } catch (error) {
+    if (error instanceof Loading) { parentPort!.postMessage({ id: message.id, error: 'loading', loading: true }); return; }
     if (error instanceof Error && (error.message.includes('database is locked') || error.message.includes('busy'))) {
       console.error(`history: cache database ${dbPath} remained locked after 5s wait`);
     }

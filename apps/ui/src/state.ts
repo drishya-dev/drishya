@@ -1,4 +1,4 @@
-import {setCheckoutContext} from './api.ts';
+import {setCheckoutContext, wholeHistoryArrived} from './api.ts';
 import { probeStage } from './lib/live-probe.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
 // always compose(projection, cursor) — the store never holds a hand-built scene.
@@ -10,6 +10,7 @@ import { nextMarker, type ComposeInput, type Marker } from '@drishya/scene';
 import type { Config, DataSource, ReaderRecording } from './api.ts';
 import { latestOnly } from './lib/sync.ts';
 import { materialCache } from './lib/artifact-cache.ts';
+import { shiftTurns } from './lib/turns-store.ts';
 import { workspaceMemory } from './lib/workspace-memory.ts';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
 
@@ -226,6 +227,7 @@ export const useApp = create<State>((set, get) => ({
       const step = mode === 'history' || opts.at === 'end' ? total : Math.max(0, Math.min(opts.at ?? 0, total));
       const { start: _start, ...location } = saved ?? {};
       set({ ...location, error: undefined, projection, historyPage: page, recording, recordings, renderedRevisions: page?.revisions ?? revisionsOf(recordings), mode, step, playing: mode === 'replay' && !!opts.play && step < total });
+      if (!page?.partial) wholeHistoryArrived();
       // Settle before the live-start reload below, which would otherwise wait on this open.
       settle();
       // Watching is a history default, never a side effect of the camera's Follow switch.
@@ -291,6 +293,7 @@ export const useApp = create<State>((set, get) => ({
     if (!current() || get().recordingId !== recordingId) return;
       set({ error: undefined, historyPage: page, projection: page.projection, renderedRevisions: page.revisions,
       step: mode === 'history' ? page.scene.total : page.scene.step });
+    if (!page.partial) { if (previous?.partial) shiftTurns(page.scene.total - previous.scene.total); wholeHistoryArrived(); }
   },
 
   seek(step, opts) {
