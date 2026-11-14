@@ -23,6 +23,7 @@ import { acceptInvestigation } from '../lib/native-return.ts';
 import { NativeApproval } from './NativeApproval.tsx';
 import { NativeQuestions } from './NativeQuestions.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
+import { useWaitNotice } from '../lib/use-wait-notice.ts';
 import { SourceVersionNotice } from './SourceVersions.tsx';
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './EvidenceNavigation.tsx';
@@ -280,6 +281,13 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
   const [graphRetry, setGraphRetry] = useState(0);
+  const isGraphLoading = !graph && !error && source?.kind === 'daemon';
+  const graphWait = useWaitNotice({
+    waiting: isGraphLoading,
+    firstTime: true,
+    quietMessage: 'Reading repository files…',
+    longMessage: 'Indexing repository files for the first time. This can take a moment; leave the window open.',
+  });
   useLayoutEffect(() => {
     const viewer = document.querySelector<HTMLElement>('.viewer');
     if (!viewer || !modern || narrow) return;
@@ -526,7 +534,15 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: checkoutId?row.path:currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
       }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} />{row.metadata?<span className="worktree-root-text" title={row.description}><FileRowName name={row.name} folder={row.folder}/><small className="muted">{row.metadata}</small></span>:<FileRowName name={row.name} folder={row.folder}/>}{row.count!==undefined&&<small className="muted" aria-hidden="true">{row.count}</small>}<FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
-      {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>}
+      {!tree.length && (
+        isGraphLoading ? (
+          graphWait.isImmediate ? null : (
+            <p className="muted small" role="status">{graphWait.message}</p>
+          )
+        ) : (
+          <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>
+        )
+      )}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
   </aside></>;
@@ -564,6 +580,11 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
   const [granting,setGranting]=useState(false),[grantError,setGrantError]=useState('');
   const [start, setStart] = useEvidenceState('disk/start', 0);
   const current=useCurrentSource(id,target.path??path,workspace?.approved===true&&!!target.path),file=current.shown,error=current.error;
+  const peekWait = useWaitNotice({
+    waiting: !file && workspace?.approved === true && !error,
+    quietMessage: 'Reading current file…',
+    longMessage: 'Reading current file from disk. This can take a moment for large files.',
+  });
   const [readingVersion, setReadingVersion] = useEvidenceState<string | undefined>('disk/version', undefined);
   const [query, setQuery] = useEvidenceState('disk/query', '');
   const [activeLine, setActiveLine] = useEvidenceState<number | undefined>('disk/line', undefined);
@@ -626,7 +647,7 @@ function CurrentDocument({ id, path, tabs }: { id: string; path: string;tabs?:Re
     {workspace?.approved&&!peek&&<ImportContext path={path} current hideEmpty />}
     {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}.`:'This session recorded no workspace on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{plural(file.totalLines,'line')}{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&(peekWait.isImmediate?null:<p className={`muted${peekWait.isLong?' wait-notice-long':''}`} role="status">{peekWait.message}</p>) : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{plural(file.totalLines,'line')}{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
