@@ -189,5 +189,8 @@ describe('an image bomb', () => {
     const observations = JSON.stringify(s.run.app.store.observations(id, -1, 1000));
     expect(observations).toContain('"omitted":"too-large"');
     expect(observations.includes(bomb)).toBe(false);
+    // The page can say what it refused: the declared size is kept (it is a number, not pixels), for every harness alike.
+    expect(observations).toMatch(/"width":30000/);
+    expect(observations).toMatch(/"height":30000/);
   });
 });
