@@ -31,7 +31,7 @@ export function makeRepo(root: string): string {
 export async function importHostile(scratch: Scratch, adapterId: string, cwd: string, scenario: Scenario = hostileScenario(cwd), tag = ''): Promise<string> {
   const entry = JOURNAL_WRITERS[adapterId];
   if (!entry) throw new Error(`no hostile journal writer for ${adapterId}: add one to tests/security/lib/corpus.ts`);
-  const file = join(scratch.dir, 'journals', tag ? entry.file.replace('.jsonl', `-${tag}.jsonl`) : entry.file);
+  const file = join(scratch.dir, 'journals', entry.file(tag));
   entry.writer(file, scenario);
   const imported = await scratch.run.app.ingest.importSource(adapterId, file);
   return imported.recordingId;

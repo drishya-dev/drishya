@@ -120,9 +120,11 @@ function shaped(projection: Projection, ids: string[]): Projection {
 /** Folds a whole view in this thread with no pause, or resumes the resident fold with what was stored after it. */
 function build(id: string, ids: string[], live: boolean, counts: Record<string, number>): { projection: Projection; appended: boolean } {
   const last = ids.at(-1)!;
-  const residentFor = () => resident?.id === id && resident.ids.join('+') === ids.join('+') && resident.ancestors === ancestorRevisions(ids, counts);
+  // Antigravity replaces a step's receipt in place (same id and sequence): a fold that only appends cannot see that, so its views are always rebuilt and never resumed.
+  const replaces = ids.some((key) => source.getRecording(key)?.harness === 'antigravity');
+  const residentFor = () => !replaces && resident?.id === id && resident.ids.join('+') === ids.join('+') && resident.ancestors === ancestorRevisions(ids, counts);
   // A stored view with no fold behind it (a restart) resumes the remembered fold instead of folding the history again.
-  if (!residentFor() && (counts[last] ?? 0) >= TAIL_FIRST_OBSERVATIONS) resume(id, { ids, counts });
+  if (!replaces && !residentFor() && (counts[last] ?? 0) >= TAIL_FIRST_OBSERVATIONS) resume(id, { ids, counts });
   if (resident && residentFor()) {
     const added = source.observations(last, resident.sequence, APPEND_BATCH + 1);
     // The rows stored must be exactly the rows folded plus these: a row deleted or rewritten under the fold is a rebuild.
@@ -188,6 +190,7 @@ function scheduleCheckpoint() {
  */
 function resume(id: string, ctx: Pick<Lookup, 'ids' | 'counts'>): boolean {
   if (resident?.id === id) return false;
+  if (ctx.ids.some((key) => source.getRecording(key)?.harness === 'antigravity')) return false; // in-place receipt replacement: never resumed
   const row = db.prepare('SELECT key, meta, state FROM folds WHERE id=?').get(id) as { key: string; meta: string; state: Uint8Array } | undefined;
   if (!row) return false;
   const reject = () => { dropCheckpoint(id); return false; };

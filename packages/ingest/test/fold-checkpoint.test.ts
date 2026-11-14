@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,7 @@ import type { Observation, Projection } from '@drishya/contracts';
 import { FOLD_FORMAT, orderObservations, projectionDigest, ProjectionFold, reduce, REDUCER_VERSION, type FoldCheckpoint } from '@drishya/projection';
 import { Store } from '@drishya/store';
 import { Ingestor } from '../src/index.ts';
+import { createAntigravityAdapter } from '../../adapter-antigravity/src/index.ts';
 
 // PERF-4 guard: a fold written out as a checkpoint (the head as JSON, the reducer's state as bytes), read back and appended
 // with the rest of the recording, gives exactly what a full rebuild gives, at every split point, for every synthetic fixture
@@ -88,6 +89,32 @@ describe('a fold restored from a checkpoint and appended equals a full rebuild a
       const live = check(recordingId, true);
       expect(finished.resumed + live.resumed).toBeGreaterThan(0);
       if (!path.includes('checkout-fix')) { expect(finished.refused).toBe(0); expect(live.refused).toBe(0); }
+    });
+  }
+});
+
+// Antigravity replaces a step's receipt in place and orders by step index, so a checkpoint of it must never be appended to:
+// each split either gives exactly the rebuild's projection or refuses (and the caller rebuilds). It never serves a different one.
+describe('Antigravity: a restored checkpoint is refused or equals a rebuild at any split point', () => {
+  const names = ['corpus', 'native-cases'];
+  const root = () => join(dir, 'ag-fixtures');
+  const journalOf = (name: string) => join(root(), 'brain', `synthetic-${name}`, '.system_generated', 'logs', 'transcript.jsonl');
+  const index = () => ingest.adapters.findIndex(a => a.descriptor.id === 'antigravity');
+  let original: (typeof ingest.adapters)[number];
+  beforeAll(() => {
+    for (const name of names) { mkdirSync(join(journalOf(name), '..'), { recursive: true }); copyFileSync(join(fixtures, 'antigravity', `${name}.ndjson`), journalOf(name)); }
+    original = ingest.adapters[index()]!;
+    ingest.adapters.splice(index(), 1, createAntigravityAdapter([root()]));
+  });
+  afterAll(() => { ingest.adapters.splice(index(), 1, original); });
+  for (const name of names) {
+    it(`antigravity/${name}.ndjson`, async () => {
+      const { recordingId } = await ingest.importSource('antigravity', journalOf(name));
+      for (const live of [false, true]) {
+        const result = check(recordingId, live);
+        expect(result.resumed).toBe(0);
+        expect(result.refused).toBeGreaterThan(0);
+      }
     });
   }
 });

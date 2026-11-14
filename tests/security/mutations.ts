@@ -61,6 +61,7 @@ export const MUTATIONS: Mutation[] = [
   { name: 'outbound: no network client in the daemon', edits: [{ file: S, find: 'const MAX_STREAMS = 64;', replace: "const MAX_STREAMS = 64; void fetch('http://example.com/ping').catch(() => undefined);" }], tests: ['06-outbound-traffic'] },
   // 7. secrets
   { name: 'secrets: a redaction rule (github-token)', edits: [{ file: 'packages/privacy/src/index.ts', find: "{ id: 'github-token', pattern: /\\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{60,255})\\b/g },", replace: '' }], tests: ['07-secrets'] },
+  { name: 'secrets: text encoded inside a string is redacted (Antigravity MCP arguments)', edits: [{ file: 'packages/privacy/src/index.ts', find: 'return redactNested(input, redactPlain(input), 0);', replace: 'return redactPlain(input);' }], tests: ['07-secrets'] },
   { name: 'secrets: error bodies are redacted', edits: [{ file: S, find: 'return { status, body: { error: redactText(message).text.slice(0, 2000) } };', replace: 'return { status, body: { error: message.slice(0, 2000) } };' }], tests: ['07-secrets'] },
   // 8. limits
   { name: 'limits: request body size', edits: [rm(S, "if (n > limit) throw new HttpError(413, 'body too large');")], tests: ['08-limits'] },

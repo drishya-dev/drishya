@@ -10,7 +10,7 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
   const proseIds = new Set(applied.filter((item) => item.type === 'prose').map((item) => item.proseId));
   const noticeIds = new Set(applied.filter((item) => item.type === 'notice').map((item) => item.noticeId));
   const parents = new Set(projection.operations.filter(op => started.has(op.id)).map(op => op.parentOperationId).filter(Boolean));
-  const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
+  const operations = projection.operations.filter((op) => started.has(op.id) || parents.has(op.id)).map((op) => op.resultVersions ? versionAt(op, step) : ended.has(op.id) || parents.has(op.id) && op.endSequence !== undefined && op.endSequence < step ? op : pending(op));
   const visibleArtifacts = new Set(operations.flatMap((op) => op.artifactIds));
   for (const id of proseIds) visibleArtifacts.add(`art_${id}_prose`);
   for (const item of applied) if (item.type === 'queue' && item.inputArtifactId) visibleArtifacts.add(item.inputArtifactId);
@@ -41,6 +41,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     })),
     // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
     turns: undefined,
+    // Antigravity child metadata can be observed after its parent's completed call.
+    agents: projection.agents.filter(agent => agent.harness !== 'antigravity' || agent.firstSequence < step).map(agent => agent.harness === 'antigravity' && agent.stoppedSequence !== undefined && agent.stoppedSequence >= step ? { ...agent, stoppedSequence: undefined } : agent),
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     gaps: projection.gaps.filter(g => g.sequence < step),
@@ -51,6 +53,15 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     links: projection.links.filter((link) => link.sourceObservationIds.every((id) => visibleEvidence.has(id))),
     files: projection.files.filter((f) => f.firstStep < step).map((f) => ({ ...f, lastStep: Math.min(f.lastStep, step - 1) })),
   };
+}
+
+function versionAt(op: Operation, step: number): Operation {
+  const version = op.resultVersions?.filter(v => v.availableAfterStep <= step).at(-1);
+  // Do not expose future snapshots through the historical response itself.
+  const { resultVersions: _versions, ...base } = op;
+  if (!version) return { ...pending(base), failure: undefined, run: undefined };
+  const { availableAfterStep: _boundary, ...result } = version;
+  return { ...base, ...result };
 }
 
 function pending(op: Operation): Operation {

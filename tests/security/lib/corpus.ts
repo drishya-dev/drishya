@@ -4,7 +4,7 @@
 // to the network points at 127.0.0.1:9 (the discard port), so even a failure of the defence stays on
 // this machine.
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join } from 'node:path';
 
 export const SINK = 'http://127.0.0.1:9';
 
@@ -171,11 +171,42 @@ const codexWriter: Writer = (file, s) => {
   ]);
 };
 
+const antigravityWriter: Writer = (file, s) => {
+  // Antigravity keeps no inline image: an attachment is a file under the conversation's .user_uploaded folder, named by a relative URI.
+  const uploads = join(dirname(dirname(dirname(file))), '.user_uploaded');
+  mkdirSync(uploads, { recursive: true });
+  const attach = (name: string, bytes: Buffer) => { writeFileSync(join(uploads, name), bytes); return { mime_type: 'image/png', uri: '.user_uploaded/' + name }; };
+  const media = [
+    { mime_type: 'image/png', uri: SINK + '/remote.png' },
+    attach('genuine.png', Buffer.from(PNG_B64, 'base64')),
+    attach('script.png', Buffer.from(SVG_B64, 'base64')),
+    ...(s.extraImages ?? []).map((data, n) => attach('extra-' + n + '.png', Buffer.from(data, 'base64'))),
+  ];
+  const row = (n: number, type: string, source: string, content: string, extra: Record<string, unknown> = {}) => ({ step_index: n, source, type, status: 'DONE', created_at: at(n), content, tool_calls: [], thinking: '', ...extra });
+  const call = (name: string, args: Record<string, unknown>) => ({ name, args: Object.fromEntries(Object.entries(args).map(([key, value]) => [key, JSON.stringify(value)])) });
+  jsonl(file, [
+    row(0, 'USER_INPUT', 'USER_EXPLICIT', s.prompt, { media }),
+    row(1, 'PLANNER_RESPONSE', 'MODEL', s.reply),
+    row(2, 'PLANNER_RESPONSE', 'MODEL', '', { tool_calls: [call('run_command', { CommandLine: s.command, Cwd: s.cwd })] }),
+    row(3, 'RUN_COMMAND', 'MODEL', s.output),
+    row(4, 'PLANNER_RESPONSE', 'MODEL', '', { tool_calls: [call('view_file', { AbsolutePath: s.readPath })] }),
+    row(5, 'VIEW_FILE', 'MODEL', s.readOutput ?? s.output),
+    row(6, 'PLANNER_RESPONSE', 'MODEL', '', { tool_calls: [call('replace_file_content', { TargetFile: s.editPath, TargetContent: s.editOld, ReplacementContent: s.editNew })] }),
+    row(7, 'GENERIC', 'MODEL', 'The file was updated.\n' + s.output.slice(0, 5000)),
+    row(8, 'PLANNER_RESPONSE', 'MODEL', '', { tool_calls: [call('call_mcp_tool', { ServerName: s.mcpServer, ToolName: s.mcpTool, Arguments: JSON.stringify({ query: s.prompt.slice(0, 4000) }) })] }),
+    row(9, 'GENERIC', 'MODEL', s.output),
+    row(10, 'PLANNER_RESPONSE', 'MODEL', 'Done. ' + s.reply.slice(0, 3000)),
+  ]);
+};
+
 /**
  * One journal writer per harness adapter, keyed by the adapter id. `adapters.test.ts` fails when the
  * ingest package lists an adapter that has no entry here, so adding a harness means adding one line.
  */
-export const JOURNAL_WRITERS: Record<string, { writer: Writer; file: string }> = {
-  'claude-code': { writer: claudeWriter, file: 'claude/hostile.jsonl' },
-  codex: { writer: codexWriter, file: 'codex/rollout-hostile.jsonl' },
+export const JOURNAL_WRITERS: Record<string, { writer: Writer; file: (tag: string) => string }> = {
+  'claude-code': { writer: claudeWriter, file: (tag) => `claude/hostile${tag ? '-' + tag : ''}.jsonl` },
+  codex: { writer: codexWriter, file: (tag) => `codex/rollout-hostile${tag ? '-' + tag : ''}.jsonl` },
+  // Antigravity reads <brain>/<conversation>/.system_generated/logs/transcript.jsonl, and only inside its allowed
+  // root, which the scratch daemon sets to <scratch>/journals/antigravity (never the person's own).
+  antigravity: { writer: antigravityWriter, file: (tag) => `antigravity/brain/hostile${tag ? '-' + tag : ''}/.system_generated/logs/transcript.jsonl` },
 };

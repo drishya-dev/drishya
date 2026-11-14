@@ -39,4 +39,6 @@ export const CANARIES: Canary[] = [
   c('bearer', 'q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIu', 'Authorization: Bearer q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIu'),
   c('url-credentials', 'hunter2canaryPW', 'postgres://admin:hunter2canaryPW@db.internal.example:5432/app'),
   c('secret-assignment', 'x9Kq2Lm7Vb4Tn8Rw3Zc6Yp1', 'db_password = "x9Kq2Lm7Vb4Tn8Rw3Zc6Yp1"'),
+  // The link the CLI prints (and opens) carries the launch token in its fragment, so an agent's shell output can hold it.
+  c('secret-assignment', 'Zk3q9XvLm2Rt7YpWa5NcB8dE', 'Open:  http://127.0.0.1:7878/#token=Zk3q9XvLm2Rt7YpWa5NcB8dE'),
 ];

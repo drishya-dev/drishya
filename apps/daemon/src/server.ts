@@ -303,11 +303,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     if(a==='search-library'&&m==='GET') {
       const q=url.searchParams.get('q')??'',root=url.searchParams.get('root')??undefined,harness=url.searchParams.get('harness')??undefined;
       const from=url.searchParams.get('from')??undefined,to=url.searchParams.get('to')??undefined;
-      if(q.trim().length<2||q.length>200||/[\r\n]/.test(q)||(root&&root.length>2048)||(harness&&!['codex','claude-code'].includes(harness)))throw new HttpError(400,'Invalid library search');
+      if(q.trim().length<2||q.length>200||/[\r\n]/.test(q)||(root&&root.length>2048)||(harness&&!['codex','claude-code','antigravity'].includes(harness)))throw new HttpError(400,'Invalid library search');
       for(const value of [from,to])if(value&&(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(value).toISOString()!==value))throw new HttpError(400,'Invalid search date');
       if(from&&to&&from>to)throw new HttpError(400,'Search date range is reversed');
       const positive=(key:string,max:number)=>{const raw=url.searchParams.get(key);if(raw===null)return undefined;const value=Number(raw);if(!/^\d+$/.test(raw)||!Number.isSafeInteger(value)||value<1||value>max)throw new HttpError(400,`Invalid search ${key}`);return value;};
-      return json(res,await app.history.searchLibrary({q,root,harness:harness as 'codex'|'claude-code'|undefined,from,to,count:positive('count',50),before:positive('before',Number.MAX_SAFE_INTEGER)}));
+      return json(res,await app.history.searchLibrary({q,root,harness:harness as 'codex'|'claude-code'|'antigravity'|undefined,from,to,count:positive('count',50),before:positive('before',Number.MAX_SAFE_INTEGER)}));
     }
     if (a === 'import' && m === 'POST') {
       const body = await readJson(req);

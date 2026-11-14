@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { App } from '../../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer, type ServerOptions } from '../../../apps/daemon/src/server.ts';
+import { createAntigravityAdapter } from '../../../packages/adapter-antigravity/src/index.ts';
 import { HarnessController } from '../../../apps/daemon/src/controller.ts';
 
 export interface Reply {
@@ -135,6 +136,9 @@ export async function startScratch(opts: ScratchOptions = {}): Promise<Scratch> 
   console.error = capture; console.log = capture; console.warn = capture;
   const launches: string[] = [];
   const app = opts.app ?? new App(dataDir);
+  // Antigravity may read only the scratch folder, never the person's own (its default roots are under their home).
+  const agIndex = app.ingest.adapters.findIndex((x) => x.descriptor.id === 'antigravity');
+  if (agIndex >= 0) app.ingest.adapters.splice(agIndex, 1, createAntigravityAdapter([join(dir, 'journals', 'antigravity')]));
   // The person's own claude and codex are never started by a security test.
   const controllerFactory: ServerOptions['controllerFactory'] = (a, workspace) => new HarnessController(a, workspace, {
     resolveExecutable: () => undefined,
