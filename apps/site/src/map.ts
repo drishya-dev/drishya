@@ -94,8 +94,11 @@ export function createMap(canvas: HTMLCanvasElement, labels: HTMLElement | null,
     if (labels) for (const [id, el] of labelEls) { const q = proj.get(id); if (q) el.style.transform = `translate(${Math.round(q.x + 10)}px, ${Math.round(q.y - 9)}px)`; }
   }
 
+  // The turn is about 20 px a second at the rim, so 60 drawn frames a second show it as smoothly as 240 would: on a fast
+  // display the map no longer redraws on every refresh (SITE-3).
   function frame(t: number) {
     if (!running) return;
+    if (t - last < 15.5) { requestAnimationFrame(frame); return; }
     const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
     if (spin) angle += dt * 0.07;
     draw(); requestAnimationFrame(frame);
