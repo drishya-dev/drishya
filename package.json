@@ -13,7 +13,7 @@
     "ui:dev": "pnpm --filter @drishya/ui dev",
     "ui:build": "pnpm --filter @drishya/ui build",
     "package:build": "pnpm ui:build && node scripts/build-package.ts",
-    "package:verify": "pnpm package:build && node scripts/verify-package.ts",
+    "package:verify": "pnpm package:build && node scripts/verify-package.ts && pnpm test:security",
     "demo:bundle": "node apps/daemon/src/cli.ts demo-bundle --out apps/ui/public/demo/bundle.json",
     "test": "vitest run",
     "test:browser": "pnpm ui:build && node scripts/test-browser.ts",

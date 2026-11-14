@@ -116,8 +116,8 @@ export function rawCall(port: number, path: string, opts: CallOptions = {}): Pro
 }
 
 export interface ScratchOptions extends Partial<ServerOptions> {
-  /** Keep the daemon's own console output (default: captured). */
-  quiet?: boolean;
+  /** Leave HOME, USERPROFILE and the application-data folders alone (for a test that launches a real browser). */
+  keepOperatingSystemHome?: boolean;
 }
 
 export async function startScratch(opts: ScratchOptions = {}): Promise<Scratch> {
