@@ -66,6 +66,8 @@ export interface Scenario {
   reply: string;
   command: string;
   output: string;
+  /** What a read of `readPath` returns (default: `output`). */
+  readOutput?: string;
   readPath: string;
   editPath: string;
   editOld: string;
@@ -121,10 +123,10 @@ const claudeWriter: Writer = (file, s) => {
     { type: 'custom-title', customTitle: 'Hostile ' + PAYLOADS[1]!.text, sessionId: 'c0ffee00-5ec3-4000-8000-000000000003' },
     base(1, null, 'user', { role: 'user', content: s.prompt }),
     base(2, 1, 'assistant', { id: 'msg_2', type: 'message', role: 'assistant', model: 'claude-opus-5', content: [{ type: 'text', text: s.reply }], stop_reason: null }),
-    tool(3, 'toolu_sec_bash', 'Bash', { command: s.command, description: s.reply.slice(0, 200) }),
+    tool(3, 'toolu_sec_bash', 'Bash', { command: s.command, description: PAYLOADS[1]!.text }),
     result(4, 'toolu_sec_bash', s.output),
     tool(5, 'toolu_sec_read', 'Read', { file_path: s.readPath }),
-    result(6, 'toolu_sec_read', s.output),
+    result(6, 'toolu_sec_read', s.readOutput ?? s.output),
     tool(7, 'toolu_sec_edit', 'Edit', { file_path: s.editPath, old_string: s.editOld, new_string: s.editNew }),
     result(8, 'toolu_sec_edit', 'The file has been updated.\n' + s.output.slice(0, 5000)),
     tool(9, 'toolu_sec_mcp', `mcp__${s.mcpServer}__${s.mcpTool}`, { query: s.prompt.slice(0, 4000) }),
