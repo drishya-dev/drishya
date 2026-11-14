@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
 import {workspaceApi} from '../api.ts';
+import {useWaitState} from '../lib/wait-state.ts';
 import type {CompareEvidence,CompareFile,CompareGroup,CompareRef,CompareRefs,ComparePull,ComparePulls,GitCompareResult} from '../../../daemon/src/git-compare-types.ts';
 import type {GitFile,GitSnapshot} from '../../../daemon/src/git-types.ts';
 import {useApp} from '../state.ts';
@@ -93,6 +94,7 @@ function CompareContent({id}:{id:string}) {
   const [result,setResult]=useState<GitCompareResult>(),[snapshot,setSnapshot]=useState<GitSnapshot>();
   const loaded=useRef('');
   const [loading,setLoading]=useState(false),[error,setError]=useState<string>(),[refresh,setRefresh]=useState(0);
+  const loadWait=useWaitState(loading,`${preset}/${pageStart}/${refresh}`);
   const [evidence,setEvidence]=useState<CompareEvidence>(),[evidenceFor,setEvidenceFor]=useState('');
   const [patch,setPatch]=useState<{key:string;file:GitFile}>(),[patchError,setPatchError]=useState<{key:string;message:string}>();
   const [marks,setMarks]=useState(()=>loadReviewMarks(cid)),[saveError,setSaveError]=useState<string>();
@@ -321,7 +323,7 @@ function CompareContent({id}:{id:string}) {
       <div className={`compare-body${!loading&&!error&&!rows.length&&!row&&!(preset==='uncommitted'&&snapshot?.omissions?.length)?' compare-body-empty':''}`}>
         <aside className="compare-files" aria-label="Changed files" aria-busy={loading||filtering&&!evidenceReady}>
           {preset==='pr'&&!pull?<p className="compare-note">{pulls?.status==='ready'&&!pulls.pulls.length?'No open pull requests.':'Choose a pull request.'}</p>
-          :loading&&!rows.length?<p className="compare-note" role="status">Reading…</p>
+          :loading&&!rows.length?loadWait==='hidden'?null:<p className="compare-note" role="status">{loadWait==='long'?'Reading changes. This may take a while.':'Reading…'}</p>
           :<>
             {preset==='uncommitted'&&snapshot?.totalAllowed!==undefined&&snapshot.totalAllowed>snapshot.limit&&<nav className="compare-pages" aria-label="Changed file pages">
               <button className="btn ghost" disabled={loading||checking||!snapshot.pageStart} onClick={()=>{setPageStart(Math.max(0,(snapshot.pageStart??0)-snapshot.limit));setSelected('');}}>Previous files</button>

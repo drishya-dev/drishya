@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openGitDestination, openChanges } from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,readFileSync,statSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -47,6 +47,17 @@ test.describe('branch selection fixture',()=>{
     await expect(dialog.getByText('Reading local history. This may take a while.',{exact:true})).toBeVisible({timeout:4000});}finally{clearTimeout(fallback);release();}
     await expect(dialog.getByRole('combobox',{name:'Read local Git branch'})).toBeEnabled();
     await expect(dialog.getByText('Reading local history. This may take a while.',{exact:true})).toHaveCount(0);
+  });
+  test('Changes reports a long wait and clears when it completes',async({page})=>{
+    let release!:()=>void,started!:()=>void;const requested=new Promise<void>(resolve=>{started=resolve;});
+    const held=new Promise<void>(resolve=>{release=resolve;});const fallback=setTimeout(()=>release(),8000);
+    await page.route('**/git/snapshot**',async route=>{started();await held;await route.continue();});
+    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
+    const changes=await openChanges(page,'Uncommitted');const approve=changes.getByRole('button',{name:'Approve read-only Git'});
+    await expect(approve.or(changes.locator('.compare-body'))).toBeVisible();if(await approve.isVisible())await approve.click();
+    await requested;try{await page.waitForTimeout(200);await expect(changes.getByText('Reading changes. This may take a while.',{exact:true})).toHaveCount(0);
+    await expect(changes.getByText('Reading changes. This may take a while.',{exact:true})).toBeVisible({timeout:4000});}finally{clearTimeout(fallback);release();}
+    await expect(changes.getByText('Reading changes. This may take a while.',{exact:true})).toHaveCount(0);
   });
   for(const width of [1440,600])test(`reads topic commits and keeps links at ${width}px`,async({page})=>{
     const before=git(root,'rev-parse','HEAD'),dialog=await open(page,server,id,width),picker=dialog.getByRole('combobox',{name:'Read local Git branch'});
