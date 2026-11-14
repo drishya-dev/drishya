@@ -94,3 +94,16 @@ Request before further existing-file edits: expand AG-3 to at most 28 paths for 
 ## AG-3 current state (14 November)
 
 The cold-inspection and late-replay blockers above are **resolved** by 6e9a1929 and a9486190. Yash approved the at-most-28-path expansion before implementation; the derived reducer moves to r42 without new native event kinds. Final-build live measurement, large-session fresh-process I/O, multi-child navigation and restart evidence are in [the review record](../../docs/review/antigravity-ag3-live.md). Types, 1,554 units, 29 targeted browsers, all 25 matching real cases and package verification pass. Both old harnesses have fresh genuine frames at both supported widths. A deliberate native process-crash case remains external/unrun because no isolated signed-in profile is available; TASKS stays unticked and the claim stays active. No forced interruption of the user's real native app was performed. No whole-integration/full browser gate or human visual review is claimed.
+
+## AG-4 implementation plan and requested seams (14 November; draft)
+
+Stacked on frozen AG-3 #474 and AG-1 #469. PR base stays codex/harness-antigravity; Fable merges dependencies first, not Codex. Yash's later decision copies same-conversation images (4 MiB/signature checks), refuses outside paths, shows artifacts as plans and attributes the recorded thinking by its native name. Existing image and Markdown/plan readers are reused without restyling.
+
+Before editing existing files beyond TASKS' list, requesting at most 22 paths for the whole task:
+
+- adapter paths.ts: exact allow-listed same-conversation image locations and artifact version files, with canonical containment and never-read denial preserved; index.ts/live.ts: bounded asynchronous media/artifact preparation, no controller or old adapter changes.
+- projection reduce.ts (existing plan/read-model branches): derive a plan document from explicitly recorded artifact metadata/Markdown, never a repository edit; retain version metadata and captured provenance. Use existing observations/intents if they carry the Markdown rather than adding a native event kind. Additive captured-contract change only if unavoidable and already approved; document/version it before use.
+- check-real.ts: register antigravity-media only; source-specific new real-case and focused units/browser test. README, TASKS/STATUS and a review record hold acceptance.
+- History.tsx Prose label expression only: label Antigravity's recorded thinking as such while preserving Claude/Codex labels. This is a section reservation beside UI-46/MOTION-3; tool-card formatting, layout, scrolling and motion remain untouched.
+
+Privacy image helper/test, contracts/schema and existing plan reader are TASKS-listed; change only if the implementation actually needs them. All bytes pass seal before storage, images use existing signature/budget controls, links never auto-fetch, and source files remain read-only. Real screenshots stay in .local. This expansion and shared Prose section are pending approval; only new isolated modules/tests may proceed meanwhile.
