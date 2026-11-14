@@ -2,9 +2,23 @@
 
 Yash, 14 Nov: the four UI items go to Antigravity, so that Claude Sonnet stays on LIVE-7 and PERF-4. Paste **the shared preamble plus one item block** into a new Antigravity conversation, one item per conversation.
 
-**Lanes.**
-- UI-49 and UI-50 can run at the same time; they touch different files.
-- UI-47 runs next, then UI-48. UI-48's wait cards appear inside UI-47's thresholds.
+**Who has what (claims on main, 14 Nov evening):**
+- Antigravity has claimed UI-49 and UI-50.
+- Harsh and Codex have claimed **UI-47 and UI-48**, so those two blocks below are kept for reference only.
+- Claude Sonnet is building LIVE-7, which owns the daemon's live path and the page's live merge and render scheduling.
+
+**Can run in parallel?**
+
+| Item | Builder | Parallel with | Waits for |
+|---|---|---|---|
+| UI-49 narrow chrome | Antigravity (claimed) | everything below | nothing |
+| UI-50 formatting | Antigravity (claimed) | everything below | nothing |
+| UI-41d Work → Conversation place | Antigravity | UI-49, UI-50, SHIP-5, UI-47 | LIVE-7, **if** the fix needs `History.tsx`'s live-merge or scroll-follow code. The mode-switch anchor (`switching`, `modeAnchor`) is UI-41c's and free. |
+| SHIP-5 answer questions in Drishya | Antigravity (the heaviest of these) | UI-49, UI-50, UI-41d, UI-47 | nothing, if it stays in the controller and the question card (not the tail or SSE) |
+| UI-47 loading messages | Harsh and Codex (claimed) | all | nothing |
+| UI-48 wait cards | Harsh and Codex (claimed) | all | UI-47 |
+
+Three Antigravity conversations at once at most (UI-49, UI-50, then UI-41d or SHIP-5), each in its own worktree; two items never edit the same file at the same time.
 
 Fable reviews and merges every PR. Antigravity never merges.
 
@@ -193,3 +207,82 @@ ACCEPT
 - Frames of each surface before, during and after loading at 600 and 1440, kept in .local/.
 - The ten-minute test still holds: after ten minutes of real reading, nothing distracts.
 ```
+
+---
+
+## UI-41d · Switching from Work to Conversation keeps the reading place too
+
+```text
+YOUR ITEM: UI-41d (docs/TASKS.md, "Switching from Work to Conversation keeps the reading place too").
+
+Yash, after UI-41c merged: "now toggling from conversation to work keeps the page the same but the other way it
+doesnt." Conversation → Work keeps the passage in view; Work → Conversation does not.
+
+BEFORE ANYTHING: check `node scripts/claims.ts`. LIVE-7 owns the page's live merge and render scheduling. The
+mode-switch code below is UI-41c's and is free, but if your fix needs the live merge or the follow/scroll-to-latest
+code in History.tsx, stop and wait for LIVE-7 to merge.
+
+WHERE TO LOOK: UI-41c's mode-switch anchor in apps/ui/src/components/History.tsx. These are the `switching` and
+`modeAnchor` refs, and the useApp.subscribe layout effect that captures the top-of-view anchor (turn, prose, or an
+ops row / run line) before re-render and restores its offset after the switch. Read UI-41c in TASKS and its PR #478.
+Likely cause, to confirm on a real session first: in Work the anchor is often an ops row or a run line inside a
+passage, which Conversation does not render the same way, so the restore finds nothing and falls back.
+
+DO
+1. Reproduce on a real session and log (counts only) which anchor kind is captured in Work, and what the restore
+   looks for in Conversation.
+2. Map a Work anchor to the nearest element Conversation renders for the same passage: its turn, its prose, or that
+   operation's line in the conversation's run. Restore its offset.
+3. Never fall back to the bottom when the passage exists in both views.
+
+ACCEPT
+- Real Claude Code and Codex sessions at 600 and 1440. Check scrolled near the top, in the middle (anchor on prose,
+  on a card, on a run line), and near the bottom. Work → Conversation → Work keeps the same passage in view each way.
+- Work → Conversation cases added beside UI-41c's in tests/browser/. UI-41c's existing cases still pass.
+```
+
+---
+
+## SHIP-5 · Answer a question in Drishya
+
+```text
+YOUR ITEM: SHIP-5 (docs/TASKS.md, '"Needs you"'). It is P0 again since 14 Nov. Read the whole entry: items 1 to 3 under
+"Native questions" are the core and must be finished; the wider "one decision surface" redesign may wait, and if
+it does, say so in the PR.
+
+Yash, 14 Nov: "there is still that question answer thing which is not answerable in drishya." Yash, 10 Nov: a
+harness question appears in Drishya, but there is no way to answer it there, and the view does not update to show
+what the answer was.
+
+THE RULES (AGENTS.md non-negotiables 1 and 2)
+- Drishya answers ONLY a session it is driving itself through its opt-in controller, using the harness's supported
+  protocol (the way it already sends prompts and answers one-time approvals).
+- It never attaches to another client's terminal, and never writes a harness file or fakes a journal event.
+- A session started from the CLI or the native app shows the options read-only, with "Answer in Claude Code" or
+  "Answer in Codex", unless a supported controller path exists for it.
+
+WHERE TO LOOK
+- apps/daemon/src/controller.ts (how prompts and approvals reach Claude Code and Codex today; its tests).
+- apps/ui/src/components/QuestionCard.tsx and apps/ui/src/lib/ask-question.ts (the captured question card).
+- packages/projection/src/reduce.ts and packages/scene/src/now.ts (how a pending question becomes state).
+- docs/review/04-research-ledger.md and the harness docs: how Claude Code's AskUserQuestion is answered when it runs
+  under a controller (stream-json / permission prompt), and how Codex's request_user_input is answered over its
+  app-server protocol. Verify the mechanism on the real harness before you build. If one harness has no supported
+  path, that harness gets the read-only form, and the PR says why with the evidence.
+
+DO
+1. In a session Drishya drives: every option and the free-text answer is clickable, shows a sending state and a
+   sent state, and reaches the harness. The agent resumes exactly once.
+2. In a CLI- or app-started session: the read-only form described above, never controls that look clickable.
+3. After answering: show the chosen options or the free-text answer under the question, and mark it resolved. When
+   the native capture records an answer made in another client, reflect it. Keep "sent by Drishya" (a controller
+   receipt) distinct from the captured answer, and never lose the question when the live view updates.
+4. An approval is never labelled as a question.
+5. A deliberate stop shows "Stopped by you" beside the preserved exit status.
+
+ACCEPT
+- Genuine sessions of BOTH harnesses for case 1 and case 2. Make them yourself on a throwaway repository, driven
+  from a scratch Drishya home on its own port (never 7878), by asking the agent to ask you a multiple-choice
+  question before it changes anything.
+- Units for the controller path. A browser spec for the card's states (pending, sending, sent, answered,
+  answer-elsewhere). Frames at 600 and 1440, kept in .local/.
