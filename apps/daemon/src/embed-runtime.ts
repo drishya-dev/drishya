@@ -41,8 +41,8 @@ $acl.SetOwner($sid)
 $acl.SetAccessRuleProtection($true, $false)
 $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
 $acl.AddAccessRule($rule)
-Set-Acl -LiteralPath $p -AclObject $acl
-$actual = Get-Acl -LiteralPath $p
+[System.IO.Directory]::SetAccessControl($p, $acl)
+$actual = [System.IO.Directory]::GetAccessControl($p)
 if (-not $actual.AreAccessRulesProtected) { throw 'ACL not protected' }
 foreach ($r in $actual.Access) {
  if ($r.AccessControlType -eq 'Allow' -and $r.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) { throw 'ACL too broad' }
@@ -76,7 +76,7 @@ export interface EmbedSupervisor {
 }
 /** Each host owns its worker; discovery files never authorize reuse of an unrelated server. */
 export function embedSupervisor(entry = process.argv[1]!, env = process.env): EmbedSupervisor {
-  const child = spawn(process.execPath, [entry, 'embed-worker'], {stdio: ['ignore', 'ignore', 'ignore', 'pipe'], windowsHide: true, env});
+  const child = spawn(process.execPath, [entry, 'embed-worker'], {stdio: ['ignore', 'ignore', 'ignore', 'overlapped'], windowsHide: true, env});
   const channel = child.stdio[3] as Socket;
   let nextId = 0, ended = false;
   const pending = new Map<string, {resolve: (v: EmbedLaunch) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout>}>();
@@ -86,7 +86,7 @@ export function embedSupervisor(entry = process.argv[1]!, env = process.env): Em
     pending.clear();
   };
   const stop = () => {fail(); channel.destroy(); if (child.exitCode === null) child.kill();};
-  child.on('error', fail); child.on('exit', fail); channel.on('error', fail);
+  child.on('error', fail); child.on('exit', fail); channel.on('error', fail); channel.on('close', fail);
   jsonLines(channel, 8192, value => {
     const r = value as {version?: unknown; requestId?: unknown; result?: EmbedLaunch; error?: {code?: unknown}};
     if (!r || r.version !== 1 || typeof r.requestId !== 'string') return stop();
@@ -109,7 +109,7 @@ export function embedSupervisor(entry = process.argv[1]!, env = process.env): Em
       });
     },
     async close() {
-      if (child.exitCode !== null) {fail(); return;}
+      if (child.exitCode !== null || child.signalCode !== null || child.pid === undefined) {fail(); return;}
       const exit = new Promise<void>(resolve => child.once('exit', () => resolve()));
       channel.end();
       const timer = setTimeout(() => child.kill(), 5000);
@@ -136,7 +136,7 @@ export async function embedWorker(): Promise<void> {
     codes.clear();
     await running?.close(); await app?.close(); await cleanup?.(); channel.destroy();
   };
-  channel.on('error', () => {void close();}); channel.on('end', () => {void close();});
+  channel.on('error', () => {void close();}); channel.on('end', () => {void close();}); channel.on('close', () => {void close();});
   process.on('SIGINT', () => {void close();}); process.on('SIGTERM', () => {void close();});
   jsonLines(channel, 8192, value => {
     const v = value as Record<string, unknown>;
