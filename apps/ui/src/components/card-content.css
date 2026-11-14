@@ -58,3 +58,10 @@
 .history .op[data-hover-reading] .op-body[data-cut] { overflow: auto !important; -webkit-mask-image: none !important; mask-image: none !important; }
 /* An option (-n, --detach) stays whole: the browser would otherwise break it after its hyphen. */
 .cmd-option { white-space: nowrap; }
+
+/* ── search hits: a path and its excerpt wrap at its separators instead of ending in an ellipsis that drops the file name ── */
+.history .op .hit { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; text-align: left; }
+.history .op .hit-path { display: inline; flex: none; overflow-wrap: anywhere; }
+
+/* A collapsed browser result is clamped to whole lines like the other previews, not a 180 px scroll box of its own. */
+.browser-excerpt:not(.full):has(> .line-clamp) { max-height: none; overflow: visible; }
