@@ -34,7 +34,19 @@ Skills read: emil-design-eng, Taste, Impeccable, animate. Impeccable's Windows c
 - Approved captures and coordinates are complete. The validated publisher binds metadata and all frame bytes to one digest, checks actual pointer-event coordinates within 4 px, rejects partial captures, and writes only the exact reviewed buffers. A mismatched approval was tested and refused.
 - Human frame review is complete. Only the 16 approved public JPEGs were committed; journals, scratch stores, alternate shots, metadata and local galleries stay under .local.
 - Final complete capture and website walk, Edge/Firefox at both widths; performance comparison using SITE-3's three-run, 4x-throttled whole-visit protocol at 1440/2000. Baseline is saved privately; do not claim the smoothness floor cleared before the after measurement.
-- Run affected checks at the completed boundary. Its completed plan selected both typechecks, related units and 59 browser specs through shared class/import matches. Typechecks, related-unit invocation (no related unit tests) and UI build passed. Browsers: 446 parallel passed / four failed; 20 serial passed / one skipped / one failed. Final named site checks and isolated classifications are in progress. The full gate has not run for this task.
+- Run affected checks at the completed boundary. Its completed plan selected both typechecks, related units and 59 browser specs through shared class/import matches. Typechecks, related-unit invocation (no related unit tests) and UI build passed. Browsers: 446 parallel passed / four failed; 20 serial passed / one skipped / one failed. Final approved-asset site checks pass: eight Edge (13.7 s) and eight Firefox (15.7 s), no retries, 600/1440. All five failures reproduce in a one-worker isolated run without capture running (five failed / one additional composer case passed). The full gate has not run for this task.
 - Completion tick/claim removal and task sync only after acceptance, or an exact external blocker is documented. No merge by Codex.
 
 Reference: https://superconscious-app.webflow.io/ (composition and pacing; no copied code/assets).
+
+## Broader affected-check failures (not concealed as green)
+
+The first 59-spec run used two parallel workers plus the one-worker serial pass. Its five failures are outside the site source changes:
+
+- `composer-typography:107` at 390 px: the Tools toggle intercepts the composer click. This is below the supported 600 px desktop minimum; no phone UI is changed for SITE-2.
+- `fresh-workspace:153`: an old geometry assertion reports a large displacement (expected under 1 px). The product/composer sources are unchanged here.
+- `fresh-workspace:1444`: the spec expects “Answer requested”; the current product says “Needs an answer”. This branch changes neither string nor that test.
+- `toolbox-window:172`: the composer Attach control intercepts a Toolbox interaction. Keep with the product/motion owner; do not work around it in the site.
+- `p1-pacing:722`: the next-page replay text assertion fails. Product history and paging code are unchanged here.
+
+All five failures reproduced without the capture workload, using one browser worker and no retries; the additional minimized-composer case passed. They are not dismissed as timing flakes. No clean-main reproduction is claimed. No product UI/daemon/package source differs from origin/main; only the explicitly required synthetic public bundle metadata changed outside the site. Fable should route these five findings to the product/test owners; SITE-2 does not work around them. The broad affected run remains red, while all eight site cases pass in both browsers.
