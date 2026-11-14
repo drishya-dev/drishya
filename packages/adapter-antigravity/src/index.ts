@@ -23,7 +23,7 @@ const object = (value: unknown): Row => value && typeof value === 'object' && !A
 const text = (value: unknown) => typeof value === 'string' ? value : '';
 const ignored = new Set(['SYSTEM_MESSAGE', 'EPHEMERAL_MESSAGE', 'CONVERSATION_HISTORY']);
 const results = new Set(['GENERIC', 'VIEW_FILE', 'LIST_DIRECTORY', 'CODE_ACTION', 'RUN_COMMAND', 'SEARCH_WEB', 'GREP_SEARCH', 'INVOKE_SUBAGENT', 'READ_URL_CONTENT']);
-const knownTools = new Set(['read_file', 'view_file', 'write_file', 'write_to_file', 'edit_file', 'replace_file_content', 'multi_replace_file_content', 'grep_search', 'find_by_name', 'list_dir', 'run_command', 'manage_task', 'search_web', 'read_url_content', 'invoke_subagent', 'define_subagent', 'manage_subagents', 'send_message', 'schedule', 'search_marketplace', 'ask_permission', 'ask_question', 'call_mcp_tool']);
+const knownTools = new Set(['read_file', 'view_file', 'write_file', 'write_to_file', 'edit_file', 'replace_file_content', 'multi_replace_file_content', 'grep_search', 'find_by_name', 'list_dir', 'run_command', 'manage_task', 'search_web', 'read_url_content', 'invoke_subagent', 'define_subagent', 'manage_subagents', 'send_message', 'schedule', 'search_marketplace', 'ask_permission', 'ask_question', 'webview_browser', 'call_mcp_tool']);
 
 export function createParser(ctx: ParseContext, summary?: Summary): RecordParser {
   const id = basename(dirname(dirname(dirname(ctx.sourcePath))));
@@ -65,9 +65,9 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
         const calls = Array.isArray(row.tool_calls) ? row.tool_calls : [];
         calls.forEach((value, index) => {
           const call = object(value), tool = text(call.name), args = decodeArgs(call.args);
-          const artifact = isPlanArtifact(args);
           const artifactText = text(args.Content) || text(args.CodeContent);
           const artifactPath = localPath(text(args.Path) || text(args.AbsolutePath) || text(args.TargetFile));
+          const artifact = isPlanArtifact(args) && !!artifactPath && resolve(dirname(artifactPath)) === resolve(dirname(dirname(dirname(ctx.sourcePath))));
           const nativeArtifact = artifact && artifactPath ? { path: resolve(artifactPath.replace(/\.resolved(?:\.\d+)?$/, '')), name: basename(artifactPath).replace(/\.resolved(?:\.\d+)?$/, ''), recordedPath: artifactPath, text: artifactText, items: markdownTasks(artifactText), truncated: partial } : undefined;
           const intent = artifact ? { kind: 'plan' as const, items: markdownTasks(artifactText) } : intentFor(tool, args);
           const operationId = `${id}:${step}:call:${index}`;
@@ -95,7 +95,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
           correlation: { operationId: call.id, basis: 'call-order' },
           denyContent: call.protected || touchesProtectedFile(call.intent), contentKeys: ['text', 'outcome', 'error'], availability: running || partial ? 'partial' : 'complete',
           payload: { tool: call.tool, isError: row.status === 'ERROR' || !!row.error || typeof exitCode === 'number' && exitCode !== 0, text: content, error: row.error, exitCode,
-            outcome: isPlanArtifact(call.args) ? { kind: 'plan', items: markdownTasks(text(call.args.Content) || text(call.args.CodeContent)) } : outcomeFor(call.tool, call.args, content), ...(running ? { status: 'running', resultAvailability: 'not-recorded' } : {}) } });
+            outcome: call.intent.kind === 'plan' ? { kind: 'plan', items: markdownTasks(text(call.args.Content) || text(call.args.CodeContent)) } : outcomeFor(call.tool, call.args, content), ...(running ? { status: 'running', resultAvailability: 'not-recorded' } : {}) } });
       } else if (type === 'CHECKPOINT') {
         emit({ part: 1, kind: 'compaction', payload: { source: 'antigravity-checkpoint', phase: 'summary', summary: content, summaryAvailability: 'captured', authoredBy: 'model' } });
       } else if (type === 'ERROR_MESSAGE') {

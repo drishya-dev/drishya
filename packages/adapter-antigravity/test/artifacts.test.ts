@@ -85,7 +85,7 @@ describe('artifact versions', () => {
   it('ignores invalid conversation identifiers and names', async () => {
     const { root } = await conversation();
     expect(await readArtifactVersions(root, '../one')).toEqual([]);
-    expect(await readArtifactVersions(root, 'one', ['other.md' as 'task.md'])).toEqual([]);
+    expect(await readArtifactVersions(root, 'one', ['../other.md'])).toEqual([]);
   });
 });
 

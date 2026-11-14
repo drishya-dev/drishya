@@ -24,3 +24,25 @@ describe('genuinely observed Antigravity native tool shapes', () => {
     expect(projection.links.filter(l => l.relation === 'tool-result').every(l => l.basis === 'deterministic-rule' && l.ruleVersion === 'antigravity-call-order-v1')).toBe(true);
   });
 });
+
+it('retains a complete native browser script as captured input, not a fake MCP or inferred actions', () => {
+ const parser=createParser(ctx),script='/* synthetic input */'+ 'x'.repeat(2000);
+ const rows=[row(0,'PLANNER_RESPONSE',{tool_calls:[{name:'webview_browser',args:{script:JSON.stringify(script),urls:JSON.stringify(['http://127.0.0.1:4317/'])}}]}),row(1,'GENERIC',{content:'Synthetic browser result'})];
+ const raws=rows.flatMap(r=>parser.parse(r));
+ expect(raws.some(o=>o.kind==='unknown')).toBe(false);
+ const observations=raws.map((raw,n)=>({...seal({raw,recordingId:'r',adapter:descriptor,sourceId:'s',generation:0,byteOffset:n,observedAt:'2026-01-01T00:00:00Z'}),receivedSequence:n}));
+ const blobs=new Map<string,string>();
+ const projection=reduce('r',observations,{get:sha=>blobs.get(sha),put:content=>{const sha='synthetic-'+blobs.size;blobs.set(sha,content);return{sha,bytes:content.length}}},{adapters:{antigravity:descriptor}});
+ const operation=projection.operations[0]!;
+ expect(operation.detail.kind).toBe('other');
+ const captured=projection.artifacts.find(a=>operation.artifactIds.includes(a.id)&&a.id.endsWith('_native_browser_input'))!;
+ expect(captured.provenance.kind).toBe('captured');expect(blobs.get(captured.blob!)).toContain(script);
+});
+
+it('does not confuse a denied-looking stdout marker with a native permission refusal', () => {
+ const parser=createParser(ctx);
+ const rows=[row(0,'PLANNER_RESPONSE',{tool_calls:[{name:'run_command',args:{CommandLine:JSON.stringify('node -e "console.log(\'ag5-denied\')"')}}]}),row(1,'GENERIC',{content:'ag5-denied'})];
+ const observations=rows.flatMap(r=>parser.parse(r)).map((raw,n)=>({...seal({raw,recordingId:'r',adapter:descriptor,sourceId:'s',generation:0,byteOffset:n,observedAt:'2026-01-01T00:00:00Z'}),receivedSequence:n}));
+ const p=reduce('r',observations,{get:()=>undefined,put:()=>({sha:'synthetic',bytes:0})},{adapters:{antigravity:descriptor}});
+ expect(p.operations[0]?.declined).toBeUndefined();expect(p.operations[0]?.status).toBe('unknown');
+});

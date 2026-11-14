@@ -116,3 +116,34 @@ it('reads native Codex keyed answer arrays without treating an acknowledgement a
   expect(askQuestions(input,'{"answers":{"other":{"answers":["Alpha"]}}}')[0]!.answer).toBeUndefined();
   expect(askQuestions(input,'{"accepted":true}')[0]!.answer).toBeUndefined();
 });
+
+
+const nativeInput = {questions:[{question:'Choose a panel?',is_multi_select:false,options:['Left','Right']}]};
+const nativeReply = (body: string) => `Created At: 2026-01-01T00:00:00Z\nCompleted At: 2026-01-01T00:00:01Z\n${body}`;
+it('reads Antigravity ordinal answers only under its exact native protocol', () => {
+ expect(isQuestionTool('ask_question')).toBe(true);
+ expect(askQuestions(nativeInput,nativeReply('A1: Right'),'ask_question')[0]).toMatchObject({answer:'Right',chosen:['Right'],native:true,multiSelect:false});
+ expect(askQuestions(nativeInput,'A1: Right','ask_question')[0]?.answer).toBeUndefined();
+ expect(askQuestions(nativeInput,nativeReply('A1: Right'))[0]?.answer).toBeUndefined();
+ expect(askQuestions(nativeInput,'Created At: not-a-time\nCompleted At: not-a-time\nA1: Right','ask_question')[0]?.answer).toBeUndefined();
+});
+it('keeps skipped questions distinct from answers and guards sentinel-label collisions', () => {
+ const q=askQuestions(nativeInput,nativeReply('A1: User Skipped'),'ask_question')[0]!;
+ expect(q.skipped).toBe(true);expect(q.answer).toBeUndefined();expect(q.chosen).toEqual([]);
+ const collision={questions:[{question:'Choose?',is_multi_select:false,options:['User Skipped']}]};
+ const ambiguous=askQuestions(collision,nativeReply('A1: User Skipped'),'ask_question')[0]!;
+ expect(ambiguous.skipped).toBeUndefined();expect(ambiguous.answer).toBeUndefined();
+});
+it('does not shift native ordinals after malformed questions or choose duplicate receipts/options', () => {
+ const input={questions:[null,...nativeInput.questions]};
+ expect(askQuestions(input,nativeReply('A1: Right'),'ask_question')[0]?.answer).toBeUndefined();
+ expect(askQuestions(input,nativeReply('A2: Right'),'ask_question')[0]?.chosen).toEqual(['Right']);
+ expect(askQuestions(nativeInput,nativeReply('A1: Right\nA1: Left'),'ask_question')[0]?.answer).toBeUndefined();
+ const duplicates={questions:[{question:'Choose?',is_multi_select:false,options:['Right','Right']}]};
+ expect(askQuestions(duplicates,nativeReply('A1: Right'),'ask_question')[0]?.chosen).toEqual([]);
+});
+it('keeps native multiline/unrecognised and visibly clipped results literal instead of claiming a complete answer', () => {
+ expect(askQuestions(nativeInput,nativeReply('A1: Right\nextra unframed line'),'ask_question')[0]?.answer).toBeUndefined();
+ expect(askQuestions(nativeInput,nativeReply('A1: '+'x'.repeat(4000)+'…'),'ask_question')[0]?.answer).toBeUndefined();
+ expect(askQuestions(nativeInput,nativeReply('A9: Right'),'ask_question')[0]?.answer).toBeUndefined();
+});

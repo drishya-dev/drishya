@@ -9,7 +9,7 @@ import type { Summary } from './summaries.ts';
 import { matched } from './pairing.ts';
 import { captureMedia, type MediaResult } from './media.ts';
 import { readArtifactVersions, markdownTasks, type ArtifactVersion } from './artifacts.ts';
-import { localPath, within, readablePath } from './paths.ts';
+import { localPath, within, readablePath, artifactName } from './paths.ts';
 import { join, resolve, basename } from 'node:path';
 
 type Row = Record<string, unknown>;
@@ -20,7 +20,7 @@ interface Task { call: Call; id: string; step: number; terminal?: { step: number
 
 /** Async reads stay outside parse(), then ingest seals both journal and side-file material. */
 export function liveParser(parser: RecordParser, ctx: ParseContext, root: string, id: string, summary: () => Summary | undefined, inspectedStep: () => number | undefined = () => undefined): RecordParser {
-  const artifactOwners = new Map<string, { id: string; path: string; name: 'implementation_plan.md' | 'task.md' | 'walkthrough.md'; completed: boolean }>(), artifactsEmitted = new Map<string, string>();
+  const artifactOwners = new Map<string, { id: string; path: string; name: string; completed: boolean }>(), artifactsEmitted = new Map<string, string>();
   const artifactTransitions = new Map<string, number>(), knownArtifacts = new Map<string, { ownerId: string; version: ArtifactVersion }>();
   let artifactCursor: string | undefined, missingOffset = 0;
   let preparedMedia: MediaResult | undefined, artifactRefresh = 0;
@@ -32,9 +32,9 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
   const rememberCall = (operationId: string | undefined, payload: Row) => {
     if (!operationId || typeof payload.tool !== 'string') return;
     const native = object(payload.nativeArtifact), path = localPath(text(native.path));
-    if (path && within(resolve(join(root, 'brain', id)), resolve(path)) && /^(?:implementation_plan|task|walkthrough)\.md$/.test(text(native.name)) && resolve(path) === resolve(join(root, 'brain', id, text(native.name)))) {
+    if (path && within(resolve(join(root, 'brain', id)), resolve(path)) && artifactName(text(native.name)) && resolve(path) === resolve(join(root, 'brain', id, text(native.name)))) {
       const previous = artifactOwners.get(path);
-      artifactOwners.set(path, { id: operationId, path, name: text(native.name) as 'implementation_plan.md' | 'task.md' | 'walkthrough.md', completed: previous?.id === operationId && previous.completed || false });
+      artifactOwners.set(path, { id: operationId, path, name: text(native.name), completed: previous?.id === operationId && previous.completed || false });
     }
     calls.set(operationId, { id: operationId, tool: payload.tool, input: object(payload.input), protected: payload.protected === true || !payload.intent });
   };
@@ -71,7 +71,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
     const known = [...knownArtifacts.values()].filter(entry => owners.some(owner => owner.id === entry.ownerId));
     for (const entry of known.slice(missingOffset, missingOffset + 8)) {
       const owner = owners.find(owner => owner.id === entry.ownerId)!;
-      try { await readablePath(root, entry.version.path, 'artifact', id); }
+      try { await readablePath(root, entry.version.path, 'artifact', id, owner.name); }
       catch (error) {
         const removed = ['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException).code ?? '');
         emit(owner, { ...entry.version, text: undefined, bytes: 0, truncated: false, unavailable: removed ? 'removed' : 'protected' });

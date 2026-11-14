@@ -685,6 +685,13 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const st = newOp(o, baseId, intent, String(p.tool));
           describeCall(st, p, rel);
+          if (o.source.adapterId === 'antigravity' && p.tool === 'webview_browser' && intent.kind === 'other' && p.input !== undefined) {
+            // The compact input is bounded. Preserve the sealed original for deliberate reading.
+            const original = resolveBlobs(p.input, text);
+            const content = JSON.stringify(original, null, 2);
+            if (content !== undefined) st.op.artifactIds.push(addArtifact({ id: `art_${o.id}_native_browser_input`, kind: 'excerpt', observedAtSequence: st.op.startSequence,
+              availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content }));
+          }
           if (o.source.adapterId === 'antigravity' && intent.kind === 'plan' && p.nativeArtifact && typeof p.nativeArtifact.path === 'string' && typeof p.nativeArtifact.name === 'string') {
             const native = p.nativeArtifact as Rec;
             st.nativeArtifact = { path: native.path, name: native.name };
@@ -1671,6 +1678,6 @@ export const encryptedToken = (value: unknown): boolean => typeof value === 'str
 
 /** How deep a tool's input is kept. A question's offered options sit four levels down
  *  (questions → question → options → option); summarising them left the card unable to list them. */
-const inputDepth = (tool: unknown) => (['AskUserQuestion', 'request_user_input', 'request_user_input_async'].includes(String(tool)) ? 5 : 3);
+const inputDepth = (tool: unknown) => (['AskUserQuestion', 'request_user_input', 'request_user_input_async', 'ask_question'].includes(String(tool)) ? 5 : 3);
 
 export type { OperationDetail };

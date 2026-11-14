@@ -1,3 +1,5 @@
+import { basename } from 'node:path';
+import { artifactName } from './paths.ts';
 import { touchesProtectedFile, type ToolIntent, type ToolOutcome } from '@drishya/capture-core';
 
 /** Argument values in the transcript are individually JSON encoded, not the whole object. */
@@ -72,5 +74,6 @@ export function outcomeFor(tool: string, args: Args, content: string): ToolOutco
 export { touchesProtectedFile };
 /** Artifacts are not edits to the user's repository. */
 export function isPlanArtifact(args: Args): boolean {
-  return args.ArtifactMetadata !== undefined && /(?:^|[\\/])(?:implementation_plan|task|walkthrough)\.md(?:\.resolved(?:\.\d+)?)?$/i.test(pathFor(args));
+  const name = basename(pathFor(args).replace(/\\/g, '/')).replace(/\.resolved(?:\.\d+)?$/, '');
+  return args.ArtifactMetadata !== undefined && artifactName(name);
 }

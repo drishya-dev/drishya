@@ -33,3 +33,17 @@ Yash's next run produced parent `4085ec97` (175,465 bytes) and MCP child `7d6746
 Observed wrapper fields are `ServerName` (string), `ToolName` (string), `Arguments` (object). The adapter now maps exactly those explicit identities to the existing MCP intent. Missing identities stay literal/unknown, never guessed from argument text. Parallel calls retain call-order correlation. Focused tools/native-shape tests (7) and backend typecheck pass; scratch import unknown-tool observations drop from three to zero. This is initial mapping, not whole-item UI/regression acceptance. Browser mapping and the remaining genuine interaction cases are still pending in draft #482.
 
 Next capture: the native implementation-plan review workflow, with a user comment/revision followed by explicit approval. Keep model/permissions unchanged except selecting the native Planning/review mode when required; do not infer approval merely from the agent saying it was approved.
+
+## Recorded follow-up cases and main reconciliation (14 November)
+
+AG-5 remains in progress, not accepted. Native browser input now retains a captured full-input artifact; the browser reader uses existing artifact/result readers. The adapter recognises explicitly recorded same-conversation Markdown artifacts without assuming every document is a plan. Native questions decode only the recorded timestamp/A-number receipt shape, including an explicit skip; ambiguous or clipped receipts remain unresolved.
+
+- Plan/artifact capture: `cbb29ec1`, 13,617 bytes. A metadata-bearing Markdown artifact and later implementation writes/edits are recorded. The sequence does not prove a revised plan before approval or a typed native approval state.
+- Answered question: `00c5ee91`, 2,072 bytes; one native question and one recorded answer.
+- Skipped question: `78dd1e85`, 2,013 bytes; one native question and one native skip receipt.
+- Permission-tool attempt: `79f24c42`, 1,855 bytes; no native approval call. The assistant's availability report is not proof about all native settings.
+- Command-review attempt: `b510d82d`, 2,409 bytes; both commands executed. No approval/denial acceptance is claimed, and command output containing a denial marker must never be interpreted as refusal.
+
+Before reconciliation, 44 focused units pass across the native decoder, browser evidence and artifact readers. Real-session acceptance and the final regression checks are still pending. Screenshots and scratch imports remain local.
+
+Yash requested preservation of current main's performance and presentation improvements and one final integration review. Merge current main into this item branch rather than replacing shared files. In particular, preserve SHIP-5's question card/controllers, UI-50 formatting, UI-49 clearance, UI-47 loading and LIVE-7 capture scheduling. Antigravity adds only passive recorded-data handling. Item PRs remain internal dependencies targeting `codex/harness-antigravity`; the final review is one PR from that integration branch into main, never independent item merges into main.

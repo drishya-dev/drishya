@@ -1,19 +1,21 @@
-/** The tools that put a question to the person: Claude's AskUserQuestion and Codex's request_user_input_async. */
-export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || tool === 'request_user_input_async' || tool === 'request_user_input';
+/** Native question tools from Claude Code, Codex and Antigravity; display only. */
+export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || tool === 'request_user_input_async' || tool === 'request_user_input' || tool === 'ask_question';
 
 /** A question read from its captured input and result text (Claude's AskUserQuestion, Codex's request_user_input_async). Display only; unknown shapes return nothing. */
 export interface AskOption { label: string; description?: string }
-export interface AskQuestion { id?: string; question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
+export interface AskQuestion { id?: string; question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Recorded Antigravity ordinal protocol, not an inferred answer. */ native?: boolean; skipped?: boolean; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
 
 const text = (value: unknown, max = 600) => typeof value === 'string' ? value.slice(0, max) : undefined;
 
-export function askQuestions(input: unknown, result?: string): AskQuestion[] {
+export function askQuestions(input: unknown, result?: string, tool?: string): AskQuestion[] {
+  const native = tool === 'ask_question';
+  const ordinals = new Map<number, AskQuestion>();
   const raw = (input as { questions?: unknown } | null)?.questions;
   if (!Array.isArray(raw)) return [];
-  const questions = raw.slice(0, 6).flatMap((item): AskQuestion[] => {
+  const questions = raw.slice(0, 6).flatMap((item, ordinal): AskQuestion[] => {
     if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
     // Codex names the question `title` and lists options as plain strings, or none at all; Claude uses `question` and {label, description}.
-    const entry = item as { id?: unknown; question?: unknown; title?: unknown; header?: unknown; multiSelect?: unknown; options?: unknown };
+    const entry = item as { id?: unknown; question?: unknown; title?: unknown; header?: unknown; multiSelect?: unknown; is_multi_select?: unknown; options?: unknown };
     const question = text(entry.question ?? entry.title, 800);
     if (!question) return [];
     const offered = Array.isArray(entry.options) ? entry.options : [];
@@ -24,9 +26,36 @@ export function askQuestions(input: unknown, result?: string): AskQuestion[] {
       const label = text((option as { label?: unknown })?.label, 200);
       return label ? [{ label, ...(text((option as { description?: unknown }).description) ? { description: text((option as { description?: unknown }).description) } : {}) }] : [];
     });
-    return [{ ...(typeof entry.id === 'string' ? { id: entry.id } : {}), question, ...(text(entry.header, 60) ? { header: text(entry.header, 60) } : {}), multiSelect: entry.multiSelect === true, options, chosen: [] }];
+    const parsed: AskQuestion = { ...(typeof entry.id === 'string' ? { id: entry.id } : {}), question, ...(text(entry.header, 60) ? { header: text(entry.header, 60) } : {}), multiSelect: native ? entry.is_multi_select === true : entry.multiSelect === true, options, chosen: [], ...(native ? { native: true } : {}) };
+    if (native) ordinals.set(ordinal + 1, parsed);
+    return [parsed];
   });
   if (!result) return questions;
+  if (native) {
+    if (result.length >= 4000 && result.endsWith('…')) return questions;
+    // The native tool returns timestamps and one-based A<n> receipts, not arbitrary prose.
+    const lines = result.trimEnd().split(/\r?\n/);
+    const created = /^Created At:\s*(.+)$/.exec(lines[0] ?? ''), completed = /^Completed At:\s*(.+)$/.exec(lines[1] ?? '');
+    if (!created || !completed || !Number.isFinite(Date.parse(created[1]!)) || !Number.isFinite(Date.parse(completed[1]!))) return questions;
+    const receipts = lines.slice(2).map(line => /^A([1-9]\d*): (.*)$/.exec(line));
+    if (!receipts.length || receipts.some(receipt => !receipt)) return questions;
+    for (const receipt of receipts) {
+      const ordinal = Number(receipt![1]), question = ordinals.get(ordinal);
+      if (!question || receipts.filter(other => other![1] === receipt![1]).length !== 1) continue;
+      const answer = receipt![2]!;
+      if (!answer) continue;
+      if (answer === 'User Skipped') {
+        // The sentinel can also be a literal option; that collision is unresolved.
+        if (!question.options.some(option => option.label === answer)) question.skipped = true;
+        continue;
+      }
+      question.answer = answer;
+      const matching = question.options.filter(option => option.label === answer);
+      question.chosen = matching.length === 1 ? [answer] : [];
+      if (!question.chosen.length) question.typed = answer;
+    }
+    return questions;
+  }
   // Native Codex returns keyed answer arrays. Match only the question's captured id;
   // accepted acknowledgements and later user prose are never evidence of an answer.
   try {

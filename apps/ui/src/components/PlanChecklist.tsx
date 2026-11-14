@@ -41,9 +41,9 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
     const artifactId = selected?.artifactId ?? doc.artifactId;
     const truncated = selected?.truncated ?? doc.truncated;
     const items = selected?.items ?? op.detail.items;
-    return <section className="plan-card plan-document" aria-label="Recorded plan document">
-      <div className="plan-bar"><span className="plan-head"><b>{selected?.name ?? 'Plan'}</b> · {selected ? selected.current ? 'Current file' : 'File snapshot' : 'Recorded call input'}{selected?.version !== undefined ? ` · version ${selected.version}` : ''}{selected?.updatedAt ? ` · ${selected.updatedAt}` : ''}</span>
-        {versions.length > 0 && <span className="plan-steps"><button type="button" className="link" disabled={shown === 0} onClick={() => setArtifactAt(shown - 1)} aria-label="Earlier plan evidence">‹</button><button type="button" className="link" disabled={shown >= versions.length} onClick={() => setArtifactAt(shown + 1)} aria-label="Later plan evidence">›</button></span>}
+    return <section className="plan-card plan-document" aria-label="Recorded artifact document">
+      <div className="plan-bar"><span className="plan-head"><b>{selected?.name ?? 'Artifact'}</b> · {selected ? selected.current ? 'Current file' : 'File snapshot' : 'Recorded call input'}{selected?.version !== undefined ? ` · version ${selected.version}` : ''}{selected?.updatedAt ? ` · ${selected.updatedAt}` : ''}</span>
+        {versions.length > 0 && <span className="plan-steps"><button type="button" className="link" disabled={shown === 0} onClick={() => setArtifactAt(shown - 1)} aria-label="Earlier artifact evidence">‹</button><button type="button" className="link" disabled={shown >= versions.length} onClick={() => setArtifactAt(shown + 1)} aria-label="Later artifact evidence">›</button></span>}
       </div>
       <small className="plan-basis">{selected ? 'File snapshot linked by recorded path; timing does not establish cause.' : 'Captured tool input.'}{truncated ? ' Partial content.' : ''}</small>
       {selected?.unavailable ? <small className="plan-basis">File {selected.unavailable}.</small> : content !== undefined ? truncated ? <ArtifactReader id={artifactId} kind="output" fallback={content} /> : <Markdown text={content} document /> : <small className="plan-basis">Content unavailable.</small>}

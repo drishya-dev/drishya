@@ -1059,7 +1059,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   const command = op.detail.kind === 'shell' || op.detail.kind === 'test' ? commandDisplay(op.detail.command) : undefined;
   const file=op.detail.kind==='read'||op.detail.kind==='edit'?{path:op.detail.path}:undefined;
-  const asked=op.tool==='AskUserQuestion'||op.tool==='request_user_input';
+  const asked=op.tool==='AskUserQuestion'||op.tool==='request_user_input'||op.tool==='ask_question';
   const said=op.detail.kind==='shell'||op.detail.kind==='test'?op.detail.description:undefined;
   // A card is named by what differs between cards: the file, the agent's own words, the tool of a server.
   const displayTitle = asked ? 'Asked you' : said ?? (file ? fileName(file.path) : op.detail.kind === 'mcp' ? op.detail.tool : command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, ''));

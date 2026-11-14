@@ -1,3 +1,4 @@
+import {ArtifactReader} from './ArtifactReader.tsx';
 import {LineClamp} from '../lib/line-clamp.tsx';
 import {StoredToolResult} from './StoredToolResult.tsx'; import {plural} from '../lib/plural.ts';
 import {OriginalToggle} from './OriginalToggle.tsx';
@@ -25,13 +26,14 @@ export function RecordedUrl({ url }: { url: string }) {
 export function BrowserEvidence({ op, full = false }: { op: Operation; full?: boolean }) {
   const step = browserStep(op);
   if (!step) return null;
+  const nativeInput = op.tool === 'webview_browser' && op.detail.kind === 'other' ? op.artifactIds.find(id => id.endsWith('_native_browser_input')) : undefined;
   return <div className="browser-evidence">
     <div className="browser-address">{step.url ? <><RecordedUrl url={step.url}/>{step.urlFromResult && <span className="browser-url-source" title="Taken from the returned page text; the call input did not record a URL">from result</span>}</> : <span className="muted">No page URL captured</span>}</div>
     <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not recorded'}</small></div>
     {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}
-    {full&&op.detail.kind==='mcp'?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Browser result excerpt">{full?<ToolOutput text={step.excerpt}/>:<LineClamp lines={6}><ToolOutput text={step.excerpt}/></LineClamp>}</div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text recorded'}</p>}
-    {full && op.detail.kind === 'mcp' && <details><summary>Browser input</summary><ToolInput value={op.detail.input}/></details>}
+    {full&&(op.detail.kind==='mcp'||op.detail.kind==='other'&&op.tool==='webview_browser')?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Browser result excerpt">{full?<ToolOutput text={step.excerpt}/>:<LineClamp lines={6}><ToolOutput text={step.excerpt}/></LineClamp>}</div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text recorded'}</p>}
+    {full && (op.detail.kind === 'mcp' || op.detail.kind === 'other' && op.tool === 'webview_browser') && <details><summary>Browser input</summary>{nativeInput ? <ArtifactReader id={nativeInput} kind="code" provenance/> : <ToolInput value={op.detail.input}/>}</details>}
   </div>;
 }
 

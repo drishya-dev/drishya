@@ -36,10 +36,18 @@ export function localPath(value: string): string | undefined {
   } catch { return undefined; }
 }
 
+/** A root-level Markdown basename only; reject paths, streams, Windows devices and dotfiles. */
+export function artifactName(value: string): boolean {
+  return value.length <= 180 && /^[a-zA-Z0-9][a-zA-Z0-9_.-]*\.md$/.test(value)
+    && !/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(value)
+    && !value.includes('..');
+}
+const defaultArtifacts = ['implementation_plan.md', 'task.md', 'walkthrough.md'];
+
 /** Only journals, their bounded output references and the index are observation inputs.
  * Only explicitly referenced image uploads are permitted as media; scratch files and credential-bearing siblings remain excluded.
  */
-export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 'output' | 'media' | 'artifact'): boolean {
+export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 'output' | 'media' | 'artifact', recordedArtifact?: string): boolean {
   const p = path.replace(/\\/g, '/');
   if (purpose === 'index') return p === 'conversation_summaries.db';
   if (!/^brain\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}\//.test(p)) return false;
@@ -47,19 +55,20 @@ export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 
   if (purpose === 'transcript') return /^\.system_generated\/logs\/transcript(?:_full)?\.jsonl$/.test(tail);
   if (purpose === 'output') return /^\.system_generated\/(?:steps\/\d+\/output\.txt|tasks\/task-\d+\.log)$/.test(tail);
   if (purpose === 'media') return /^(?:\.system_generated\/logs\/media\/step_\d+_media_\d+|(?:\.user_uploaded|\.tempmediaStorage)\/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199})\.(?:png|jpe?g|gif|webp)$/i.test(tail);
-  return /^(?:implementation_plan|task|walkthrough)\.md(?:\.metadata\.json|\.resolved(?:\.\d+)?)?$/.test(tail);
+  const names = recordedArtifact === undefined ? defaultArtifacts : artifactName(recordedArtifact) ? [recordedArtifact] : [];
+  return names.some(name => tail === name || tail === `${name}.metadata.json` || tail === `${name}.resolved` || (tail.startsWith(`${name}.resolved.`) && /^\d+$/.test(tail.slice(`${name}.resolved.`.length))));
 }
 
-export async function readablePath(root: string, candidate: string, purpose: Parameters<typeof allowedRelative>[1], id?: string): Promise<string> {
+export async function readablePath(root: string, candidate: string, purpose: Parameters<typeof allowedRelative>[1], id?: string, recordedArtifact?: string): Promise<string> {
   const absolute = resolve(candidate);
   rejectPrivateLocation(absolute);
-  if (!within(root, absolute) || !allowedRelative(relative(root, absolute), purpose)) throw new Error('Antigravity path is outside the observation allow-list');
+  if (!within(root, absolute) || !allowedRelative(relative(root, absolute), purpose, recordedArtifact)) throw new Error('Antigravity path is outside the observation allow-list');
   if (id && (!conversationId(id) || !within(join(root, 'brain', id), absolute))) throw new Error('Antigravity reference leaves its conversation');
   const canonicalRoot = await readableRoot(root);
   const canonical = await realpath(absolute);
   rejectPrivateLocation(canonical);
   // Validate the resolved path too, rejecting junctions/symlinks into sibling or private files.
-  if (!within(canonicalRoot, canonical) || !allowedRelative(relative(canonicalRoot, canonical), purpose)) throw new Error('Antigravity resolved path is outside the observation allow-list');
+  if (!within(canonicalRoot, canonical) || !allowedRelative(relative(canonicalRoot, canonical), purpose, recordedArtifact)) throw new Error('Antigravity resolved path is outside the observation allow-list');
   if (id) {
     const canonicalConversation = await realpath(join(root, 'brain', id));
     if (!within(canonicalConversation, canonical) || relative(canonicalRoot, canonicalConversation).replace(/\\/g, '/') !== `brain/${id}`) throw new Error('Antigravity resolved reference leaves its conversation');
@@ -69,14 +78,14 @@ export async function readablePath(root: string, candidate: string, purpose: Par
 }
 
 /** Pin a validated regular inode before reading bytes; reject swaps of any path component. */
-export async function openObservation(root: string, candidate: string, purpose: 'media' | 'artifact', id: string) {
-  const canonical = await readablePath(root, candidate, purpose, id);
+export async function openObservation(root: string, candidate: string, purpose: 'media' | 'artifact', id: string, recordedArtifact?: string) {
+  const canonical = await readablePath(root, candidate, purpose, id, recordedArtifact);
   const before = await lstat(canonical, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink() || before.ino === 0n) throw new Error('Antigravity file identity cannot be verified');
   const handle = await open(canonical, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
     const opened = await handle.stat({ bigint: true });
-    const checked = await readablePath(root, candidate, purpose, id);
+    const checked = await readablePath(root, candidate, purpose, id, recordedArtifact);
     const current = await lstat(checked, { bigint: true });
     if (checked !== canonical || !opened.isFile() || opened.ino !== before.ino || opened.dev !== before.dev
       || current.ino !== opened.ino || current.dev !== opened.dev) throw new Error('Antigravity file identity changed during read-only open');

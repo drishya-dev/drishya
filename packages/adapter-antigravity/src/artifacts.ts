@@ -1,6 +1,6 @@
 import { opendir, realpath } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
-import { conversationId, readablePath, readableRoot, openObservation } from './paths.ts';
+import { artifactName, conversationId, readablePath, readableRoot, openObservation } from './paths.ts';
 
 export interface ArtifactVersion {
   name: string;
@@ -15,7 +15,6 @@ export interface ArtifactVersion {
 }
 
 const knownNames = ['implementation_plan.md', 'task.md', 'walkthrough.md'] as const;
-type ArtifactName = typeof knownNames[number];
 const TEXT_LIMIT = 1024 * 1024;
 const METADATA_LIMIT = 64 * 1024;
 
@@ -27,9 +26,9 @@ function unavailable(error: unknown): NonNullable<ArtifactVersion['unavailable']
   return 'unreadable';
 }
 
-async function bounded(root: string, path: string, id: string, limit: number) {
-  const safePath = await readablePath(root, path, 'artifact', id);
-  const file = await openObservation(root, safePath, 'artifact', id);
+async function bounded(root: string, path: string, id: string, limit: number, name: string) {
+  const safePath = await readablePath(root, path, 'artifact', id, name);
+  const file = await openObservation(root, safePath, 'artifact', id, name);
   try {
     const stat = await file.stat();
     if (!stat.isFile()) throw new Error('Antigravity observation input is not a regular file');
@@ -55,9 +54,9 @@ function numericCompare(a: string, b: string): number {
   return left.length - right.length || (left < right ? -1 : left > right ? 1 : 0) || (a < b ? -1 : a > b ? 1 : 0);
 }
 
-async function metadata(root: string, path: string, id: string): Promise<{ version?: string; updatedAt?: string }> {
+async function metadata(root: string, path: string, id: string, name: string): Promise<{ version?: string; updatedAt?: string }> {
   try {
-    const read = await bounded(root, path, id, METADATA_LIMIT);
+    const read = await bounded(root, path, id, METADATA_LIMIT, name);
     if (read.truncated) return {};
     const value: unknown = JSON.parse(read.text);
     if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
@@ -72,26 +71,22 @@ async function metadata(root: string, path: string, id: string): Promise<{ versi
 }
 
 /** Compare native filenames without converting version numbers to JavaScript numbers. */
-function artifactEntry(entry: string): { name: ArtifactName; rank: number; version?: string } | undefined {
-  for (const name of knownNames) {
-    if (entry === name) return { name, rank: 2 };
-    if (entry === `${name}.resolved`) return { name, rank: 0 };
-    const prefix = `${name}.resolved.`;
-    const suffix = entry.startsWith(prefix) ? entry.slice(prefix.length) : '';
-    if (/^\d+$/.test(suffix)) return { name, rank: 1, version: suffix };
-  }
+function artifactEntry(entry: string): { name: string; rank: number; version?: string } | undefined {
+  const match = /^(.*\.md)(?:\.resolved(?:\.(\d+))?)?$/.exec(entry);
+  if (!match || !artifactName(match[1]!)) return;
+  return { name: match[1]!, rank: entry === match[1] ? 2 : match[2] === undefined ? 0 : 1, ...(match[2] !== undefined ? { version: match[2] } : {}) };
 }
 
 function compareEntries(a: string, b: string): number {
   const left = artifactEntry(a)!, right = artifactEntry(b)!;
-  return knownNames.indexOf(left.name) - knownNames.indexOf(right.name) || left.rank - right.rank ||
+  return (left.name < right.name ? -1 : left.name > right.name ? 1 : 0) || left.rank - right.rank ||
     (left.version !== undefined && right.version !== undefined ? numericCompare(left.version, right.version) : 0);
 }
 
 /** Returns a bounded page of raw native material; the caller must seal it before persistence or display.
  * Use the last path's basename as `after`; it remains valid if that file is deleted. */
-export async function readArtifactVersions(root: string, id: string, names: readonly ArtifactName[] = knownNames, page: { after?: string; limit?: number } = {}): Promise<ArtifactVersion[]> {
-  const selected = knownNames.filter(name => names.includes(name));
+export async function readArtifactVersions(root: string, id: string, names: readonly string[] = knownNames, page: { after?: string; limit?: number } = {}): Promise<ArtifactVersion[]> {
+  const selected = [...new Set(names.filter(artifactName))].sort();
   if (!conversationId(id) || selected.length === 0 || (page.after !== undefined && !artifactEntry(page.after))) return [];
   const limit = typeof page.limit === 'number' && Number.isFinite(page.limit) ? Math.max(1, Math.min(8, Math.floor(page.limit))) : 8;
   const directory = join(resolve(root), 'brain', id);
@@ -124,8 +119,8 @@ export async function readArtifactVersions(root: string, id: string, names: read
     const base: ArtifactVersion = { name, path, current, bytes: 0, truncated: false, ...(version !== undefined ? { version } : {}) };
     if (directoryError) { result.push({ ...base, unavailable: directoryError }); continue; }
     try {
-      const read = await bounded(root, path, id, TEXT_LIMIT);
-      const meta = current ? await metadata(root, join(directory, `${name}.metadata.json`), id) : {};
+      const read = await bounded(root, path, id, TEXT_LIMIT, name);
+      const meta = current ? await metadata(root, join(directory, `${name}.metadata.json`), id, name) : {};
       result.push({ ...base, ...meta, ...read });
     } catch (error) { result.push({ ...base, unavailable: unavailable(error) }); }
   }
