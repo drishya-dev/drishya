@@ -5,11 +5,11 @@ export interface RealCase {
   name: string;
   /** What the case looks for, one line. */
   about: string;
-  harnesses: ('claude-code' | 'codex')[];
+  harnesses: ('claude-code' | 'codex' | 'antigravity')[];
   /** Cheap substring test on a raw journal line; only matching lines are parsed. */
-  prefilter: string | Partial<Record<'claude-code' | 'codex', string>>;
+  prefilter: string | Partial<Record<'claude-code' | 'codex' | 'antigravity', string>>;
   /** Hits on one parsed journal line, or undefined. `only` counts the stricter subset (for example an image with no text). */
-  scan(row: Record<string, unknown>, harness: 'claude-code' | 'codex'): { hits: number; only?: number } | undefined;
+  scan(row: Record<string, unknown>, harness: 'claude-code' | 'codex' | 'antigravity'): { hits: number; only?: number } | undefined;
   /** Called before each journal is scanned, for a case that remembers rows within one file. */
   reset?(): void;
   /** Counts read back from the imported recording. Lines starting with "FAIL" fail the check. */

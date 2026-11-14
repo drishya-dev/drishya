@@ -997,7 +997,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
     root.addEventListener('pointerdown', cancel); window.addEventListener('keydown', cancel);
     return () => { cancel(); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };
   }, [arriving, pr.id]);
-  const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
+  const label = pr.role === 'reasoning' ? (agent?.harness === 'antigravity' ? 'Thinking recorded by Antigravity' : pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   if (label && detail === 'hidden') return null;
   if (pr.exposure === 'none') return <ReasoningGapLine pr={pr} agent={agent} />;
   return (

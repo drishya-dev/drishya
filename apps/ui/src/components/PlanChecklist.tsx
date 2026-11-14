@@ -32,6 +32,24 @@ export function PlanChecklist({ op, full = false }: { op: Operation; full?: bool
     ? planThreads(projection, candidate => (candidate.detail.kind === 'plan' && candidate.detail.scope ? candidate.endSequence ?? Infinity : candidate.startSequence) < step)
     : threadsOf(projection)).get(op.id) : undefined), [projection, op.id, mode, step]);
   const [at, setAt] = useState<number>();
+  const [artifactAt, setArtifactAt] = useState<number>();
+  if (op.detail.kind === 'plan' && op.detail.document?.source === 'native-call') {
+    const doc = op.detail.document, versions = op.detail.artifactVersions ?? [];
+    const shown = Math.min(artifactAt ?? versions.length, versions.length);
+    const selected = shown === 0 ? undefined : versions[shown - 1];
+    const content = selected ? selected.text : doc.text;
+    const artifactId = selected?.artifactId ?? doc.artifactId;
+    const truncated = selected?.truncated ?? doc.truncated;
+    const items = selected?.items ?? op.detail.items;
+    return <section className="plan-card plan-document" aria-label="Recorded plan document">
+      <div className="plan-bar"><span className="plan-head"><b>{selected?.name ?? 'Plan'}</b> · {selected ? selected.current ? 'Current file' : 'File snapshot' : 'Recorded call input'}{selected?.version !== undefined ? ` · version ${selected.version}` : ''}{selected?.updatedAt ? ` · ${selected.updatedAt}` : ''}</span>
+        {versions.length > 0 && <span className="plan-steps"><button type="button" className="link" disabled={shown === 0} onClick={() => setArtifactAt(shown - 1)} aria-label="Earlier plan evidence">‹</button><button type="button" className="link" disabled={shown >= versions.length} onClick={() => setArtifactAt(shown + 1)} aria-label="Later plan evidence">›</button></span>}
+      </div>
+      <small className="plan-basis">{selected ? 'File snapshot linked by recorded path; timing does not establish cause.' : 'Captured tool input.'}{truncated ? ' Partial content.' : ''}</small>
+      {selected?.unavailable ? <small className="plan-basis">File {selected.unavailable}.</small> : content !== undefined ? truncated ? <ArtifactReader id={artifactId} kind="output" fallback={content} /> : <Markdown text={content} document /> : <small className="plan-basis">Content unavailable.</small>}
+      {items.length > 0 && <><Items revision={{ items }} /><small className="plan-basis">Checklist derived from literal Markdown markers.</small></>}
+    </section>;
+  }
   if (op.detail.kind === 'plan' && op.detail.document) {
     const doc = op.detail.document;
     return <section className="plan-card plan-document" aria-label={doc.source === 'file' ? 'Plan file' : 'Proposed plan'}><small className="plan-basis">{doc.source === 'file' ? 'File · plan-path convention' : 'Proposal'} · not an approval</small>{doc.truncated ? <ArtifactReader id={doc.artifactId} kind="output" fallback={doc.text} /> : <Markdown text={doc.text} document />}</section>;
