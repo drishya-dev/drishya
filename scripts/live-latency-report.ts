@@ -11,7 +11,7 @@ interface Run { journalBytes?: number; observations?: number; importedObservatio
 const dir = process.argv[2] ?? '.local/live7';
 const runs = new Map<string, Run[]>();
 for (const f of readdirSync(dir)) {
-  const m = /^(before|after)-(codexnew|codexresume|codexstale|codexctl|codexplan|claudepick|small|40mb|codex39|codex26|claude24|claude157)\d?-(live|synthetic)-.*\.json$/.exec(f);
+  const m = /^(before|after)-(codexnew|codexresume|codexstale|codexctl|codexplan|claudepick|claudelive|small|40mb|codex39|codex26|claude24|claude157)\d?-(live|synthetic)-.*\.json$/.exec(f);
   if (!m) continue;
   const key = `${m[2]}|${m[1]}`;
   (runs.get(key) ?? runs.set(key, []).get(key)!).push(JSON.parse(readFileSync(join(dir, f), 'utf8')) as Run);

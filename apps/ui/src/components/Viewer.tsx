@@ -21,6 +21,7 @@ import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { Fragment, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
 import { useWaitNotice } from '../lib/use-wait-notice.ts';
+import { HistoryWaitCard } from './WaitCard.tsx';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -290,7 +291,12 @@ function WorkspaceViewer() {
     }
     return (
       <div className={`center notice${sessionWait.isLong ? ' wait-notice-long' : ''}`} role="status">
-        {sessionWait.isImmediate ? null : sessionWait.message}
+        {sessionWait.isImmediate ? null : (
+          <>
+            <HistoryWaitCard minHeight={240} />
+            {sessionWait.message && <p className="muted small">{sessionWait.message}</p>}
+          </>
+        )}
       </div>
     );
   }
