@@ -5,13 +5,17 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
-import { checkPackage, foreignImports, localIdentity } from './lib/package-contents.ts';
+import { pathToFileURL } from 'node:url';
+import { checkPackage, foreignImports, localIdentity, outboundProblems } from './lib/package-contents.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const scratch = mkdtempSync(join(tmpdir(), 'drishya-package-'));
 const installed = join(scratch, 'installed');
 const entry = join(installed, 'node_modules', '@drishya-dev', 'cli', 'apps', 'daemon', 'src', 'cli.mjs');
 const env = { ...process.env, DRISHYA_HOME: join(scratch, 'data') };
+// SEC-5: the packed server runs with a recorder preloaded; every network attempt it makes is checked at the end.
+const netLog = join(scratch, 'network-attempts.log');
+const serverEnv = { ...env, DRISHYA_NET_LOG: netLog, NODE_OPTIONS: `--import ${pathToFileURL(join(root, 'scripts/lib/net-recorder.mjs')).href}` };
 const nodeDir = dirname(process.execPath);
 const npmCli = [
   join(nodeDir, 'node_modules/npm/bin/npm-cli.js'),
@@ -37,7 +41,7 @@ async function stopServer() {
 }
 
 async function launchServer(): Promise<{ base: string; cookie: string }> {
-  server = spawn(process.execPath, [entry, 'serve', '--port', '0', '--no-open'], { env, stdio: ['ignore', 'pipe', 'pipe'] });
+  server = spawn(process.execPath, [entry, 'serve', '--port', '0', '--no-open'], { env: serverEnv, stdio: ['ignore', 'pipe', 'pipe'] });
   let output = '';
   server.stdout!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
   server.stderr!.on('data', (chunk: Buffer) => { output += chunk.toString(); });
@@ -103,6 +107,9 @@ try {
   await stopServer();
   const second = await launchServer();
   await verifyRecordings(second.base, second.cookie);
+  const outbound = outboundProblems(existsSync(netLog) ? readFileSync(netLog, 'utf8') : '');
+  assert.deepEqual(outbound.problems, [], `the packed server tried to reach beyond loopback:\n${outbound.problems.join('\n')}`);
+  console.log(`Packed CLI network walk: ${outbound.attempts} attempt(s), all loopback; programs started: ${outbound.programs.join(', ') || 'none'}.`);
   console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, authenticated API and persisted restart passed.');
 } finally {
   await stopServer();

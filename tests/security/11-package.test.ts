@@ -237,3 +237,54 @@ describe('SEC-5 the real built package', () => {
     expect(checkPackage(dir, listing[0]!.files.map((f) => f.path), localIdentity(root))).toEqual([]);
   });
 });
+
+describe('SEC-5 outbound-traffic recorder (the walk of the built package)', () => {
+  it('records a loopback connect, a connect beyond loopback, a name lookup and a started program', async () => {
+    const { createServer } = await import('node:net');
+    const { mkdtempSync, readFileSync: read, rmSync } = await import('node:fs');
+    const { tmpdir } = await import('node:os');
+    const { pathToFileURL } = await import('node:url');
+    const { spawnSync } = await import('node:child_process');
+    const { outboundProblems } = await import('../../scripts/lib/package-contents.ts');
+    const dir = mkdtempSync(join(tmpdir(), 'drishya-recorder-'));
+    const log = join(dir, 'log');
+    const listener = createServer((socket) => socket.end());
+    await new Promise<void>((done) => listener.listen(0, '127.0.0.1', done));
+    const port = (listener.address() as { port: number }).port;
+    const script = [
+      "const net = require('node:net'); const cp = require('node:child_process');",
+      `net.connect(${port}, '127.0.0.1').on('error', () => {});`,
+      // 192.0.2.0/24 is documentation space: never routed, so this attempt cannot reach anyone.
+      "net.connect({ host: '192.0.2.1', port: 9 }).on('error', () => {});",
+      "require('node:dns').lookup('example.invalid', () => {});",
+      "cp.spawnSync(process.execPath, ['-e', '0']);",
+      'setTimeout(() => process.exit(0), 300);',
+    ].join(' ');
+    try {
+      const run = spawnSync(process.execPath, ['--import', pathToFileURL(join(root, 'scripts/lib/net-recorder.mjs')).href, '-e', script], {
+        env: { ...process.env, DRISHYA_NET_LOG: log }, timeout: 15_000, encoding: 'utf8',
+      });
+      expect(run.status, run.stderr).toBe(0);
+      const seen = outboundProblems(read(log, 'utf8'));
+      expect(seen.problems).toContain('tcp 192.0.2.1:9');
+      expect(seen.problems).toContain('dns example.invalid');
+      expect(seen.problems.join()).not.toMatch(/127\.0\.0\.1/);
+      expect(seen.programs).toContain('node.exe'.replace('.exe', process.platform === 'win32' ? '.exe' : ''));
+    } finally {
+      listener.close();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts only loopback, name lookups of localhost and local sockets', async () => {
+    const { outboundProblems } = await import('../../scripts/lib/package-contents.ts');
+    const lines = [
+      { kind: 'tcp', target: '127.0.0.1:7878' }, { kind: 'tcp', target: 'localhost:80' }, { kind: 'tcp', target: '::1:80' },
+      { kind: 'tcp', target: 'ipc:\\\\.\\pipe\\x' }, { kind: 'dns', target: 'localhost' }, { kind: 'program', target: 'git' },
+    ].map((e) => JSON.stringify(e)).join('\n');
+    expect(outboundProblems(lines).problems).toEqual([]);
+    expect(outboundProblems(JSON.stringify({ kind: 'tcp', target: '203.0.113.9:443' })).problems).toEqual(['tcp 203.0.113.9:443']);
+    expect(outboundProblems(JSON.stringify({ kind: 'dns', target: 'registry.npmjs.org' })).problems).toEqual(['dns registry.npmjs.org']);
+    expect(outboundProblems(JSON.stringify({ kind: 'udp', target: '8.8.8.8:53' })).problems).toEqual(['udp 8.8.8.8:53']);
+  });
+});

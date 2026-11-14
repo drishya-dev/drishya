@@ -194,3 +194,23 @@ export function foreignImports(source: string): string[] {
   }
   return [...found].sort();
 }
+
+/**
+ * Reads the destinations the recorder (scripts/lib/net-recorder.mjs) wrote while the built package ran,
+ * and returns every attempt that was not loopback. The programs it started are returned separately.
+ */
+export function outboundProblems(logText: string): { problems: string[]; attempts: number; programs: string[] } {
+  const loopback = /^(?:127(?:\.\d{1,3}){3}|localhost|::1|\[::1\]|ipc)$/i;
+  const problems: string[] = [];
+  const programs = new Set<string>();
+  let attempts = 0;
+  for (const line of logText.split('\n')) {
+    if (!line.trim()) continue;
+    const entry = JSON.parse(line) as { kind: string; target: string };
+    if (entry.kind === 'program') { programs.add(entry.target); continue; }
+    attempts++;
+    const host = entry.kind === 'dns' ? entry.target : entry.target.startsWith('ipc:') ? 'ipc' : entry.target.replace(/:\d*$/, '');
+    if (!loopback.test(host)) problems.push(`${entry.kind} ${entry.target}`);
+  }
+  return { problems: [...new Set(problems)], attempts, programs: [...programs].sort() };
+}
