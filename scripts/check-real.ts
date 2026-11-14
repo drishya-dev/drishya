@@ -106,8 +106,11 @@ try {
         const observations = app.store.observations(imported.recordingId);
         const receipts = new Set(observations.filter(o => o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number').map(o => o.source.recordId));
         if (chosen.name === 'antigravity') {
-          console.log(`  ${receipts.size === f.hits ? 'PASS' : 'FAIL'} distinct step receipts: ${receipts.size}/${f.hits}`);
-          if (receipts.size !== f.hits) failed = true;
+          // A session Antigravity is still writing can grow between the scan and the import: more receipts than scanned is then correct.
+          const grew = statSync(f.file).size > f.size;
+          const ok = grew ? receipts.size >= f.hits : receipts.size === f.hits;
+          console.log(`  ${ok ? 'PASS' : 'FAIL'} distinct step receipts: ${receipts.size}/${f.hits}${grew ? ' (journal grew while checking)' : ''}`);
+          if (!ok) failed = true;
         }
         const finalResults = new Set(observations.filter(o => o.kind === 'tool.result' && (o.payload as { status?: string }).status !== 'running').map(o => o.operationId));
         const gaps = new Set(observations.filter(o => o.kind === 'capture.gap').map(o => o.operationId));
