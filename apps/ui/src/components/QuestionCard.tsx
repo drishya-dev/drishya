@@ -38,18 +38,19 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
   const [answers, setAnswers] = useState<Record<string, { options: string[]; text?: string }>>({});
 
   const detail = op.detail.kind === 'other' ? op.detail : undefined;
-  const questions = askQuestions(detail?.input, detail?.resultPreview);
+  const questions = askQuestions(detail?.input, detail?.resultPreview, op.tool);
   if (!questions.length) return null;
 
   const harnessName = recording?.harness ?? controller?.harness ?? (op.tool === 'AskUserQuestion' ? 'claude-code' : (op.tool === 'request_user_input' || op.tool === 'request_user_input_async') ? 'codex' : undefined);
-  const harnessLabel = harnessName === 'claude-code' ? 'Claude Code' : harnessName === 'codex' ? 'Codex' : 'the native client';
+  const harnessLabel = harnessName === 'claude-code' ? 'Claude Code' : harnessName === 'codex' ? 'Codex' : harnessName === 'antigravity' || op.tool === 'ask_question' ? 'Antigravity' : 'the native client';
 
-  const isDriven = Boolean(
+  const passiveNative = op.tool === 'ask_question' || harnessName === 'antigravity';
+  const isDriven = !passiveNative && Boolean(
     liveRequest ||
     (controller?.runId && (controller?.state === 'approval' || controller?.state === 'running'))
   );
 
-  const matchingRequest: NativeInputRequest | undefined = liveRequest ?? (
+  const matchingRequest: NativeInputRequest | undefined = (!passiveNative ? liveRequest : undefined) ?? (
     isDriven
       ? controller?.inputRequests?.find((req) => {
           if (controller.inputRequests?.length === 1) return true;
@@ -58,8 +59,8 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
       : undefined
   );
 
-  const receipt = getQuestionReceipt(recordingId, op.id) ?? (matchingRequest ? getQuestionReceipt(recordingId, matchingRequest.id) : undefined);
-  const stopped = isQuestionStopped(recordingId, op.id) || (matchingRequest ? isQuestionStopped(recordingId, matchingRequest.id) : false) || controller?.state === 'stopped';
+  const receipt = passiveNative ? undefined : getQuestionReceipt(recordingId, op.id) ?? (matchingRequest ? getQuestionReceipt(recordingId, matchingRequest.id) : undefined);
+  const stopped = !passiveNative && (isQuestionStopped(recordingId, op.id) || (matchingRequest ? isQuestionStopped(recordingId, matchingRequest.id) : false) || controller?.state === 'stopped');
 
   // Deliberate stop state
   if (stopped && op.status === 'running') {
@@ -298,9 +299,10 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
                 );
               })}
             </ul>
+            {item.skipped && questions.length > 1 && <small className="question-state">Skipped</small>}
             {typedText && (
               <p className="question-typed">
-                <small>{!item.options.length ? 'Answer' : chosenOptions.length ? 'Also wrote' : 'Wrote'}</small> {typedText}
+                <small>{item.native ? 'Recorded answer' : !item.options.length ? 'Answer' : chosenOptions.length ? 'Also wrote' : 'Wrote'}</small> {typedText}
               </p>
             )}
           </section>
@@ -316,6 +318,10 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
             ? 'Waiting for agent to resume'
             : questions.some((item) => item.answer) || receipt
             ? 'Question and answer'
+            : questions.some((item) => item.skipped)
+            ? 'Question skipped'
+            : questions.some((item) => item.native)
+            ? 'Answer not identified in this capture'
             : accepted === true
             ? 'Codex recorded the question as accepted; the answer is not part of this record'
             : accepted === false

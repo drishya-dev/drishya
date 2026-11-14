@@ -1133,7 +1133,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
     root.addEventListener('pointerdown', cancel); window.addEventListener('keydown', cancel);
     return () => { cancel(); root.removeEventListener('pointerdown', cancel); window.removeEventListener('keydown', cancel); };
   }, [arriving, pr.id]);
-  const label = pr.role === 'reasoning' ? (pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
+  const label = pr.role === 'reasoning' ? (agent?.harness === 'antigravity' ? 'Thinking recorded by Antigravity' : pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   if (label && detail === 'hidden') return null;
   if (pr.exposure === 'none') return <ReasoningGapLine pr={pr} agent={agent} />;
   return (
@@ -1195,7 +1195,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
   const originLabel = so.origin.type === 'mcp' ? so.origin.server : KIND_LABEL[op.kind];
   const command = op.detail.kind === 'shell' || op.detail.kind === 'test' ? commandDisplay(op.detail.command) : undefined;
   const file=op.detail.kind==='read'||op.detail.kind==='edit'?{path:op.detail.path}:undefined;
-  const asked=op.tool==='AskUserQuestion'||op.tool==='request_user_input';
+  const asked=op.tool==='AskUserQuestion'||op.tool==='request_user_input'||op.tool==='ask_question';
   const said=op.detail.kind==='shell'||op.detail.kind==='test'?op.detail.description:undefined;
   // A card is named by what differs between cards: the file, the agent's own words, the tool of a server.
   const displayTitle = asked ? 'Asked you' : said ?? (file ? fileName(file.path) : op.detail.kind === 'mcp' ? op.detail.tool : command?.decoded ? command.text : op.title.replace(/^(Read|Edit|Write|Create|Search|Test ·|Run) /, ''));
@@ -1212,7 +1212,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
     {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
     {!imagePath&&['mcp','web'].includes(op.detail.kind)
       ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={resolving} onSource={measureSource}/>
-      :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
+      :<details className="image-original" onClick={op.tool === 'webview_browser' ? event => event.stopPropagation() : undefined}><summary>Original input and output</summary>{imageOriginal}</details>}
   </>:null;
   return (
     <article ref={card}

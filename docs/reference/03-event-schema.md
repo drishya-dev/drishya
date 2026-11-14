@@ -1,5 +1,9 @@
 # Reference 03 — Normalized Event Schema & Adapter Contract
 
+**13 November 2026, AG-1 (integration branch only):** Yash confirmed both builders' approval of positional `correlation.basis: 'call-order'`, with no native ID implied. Yash also approved `CompactionPayload.source: 'antigravity-checkpoint'` so the existing compaction representation names the actual harness. Contract `0.2.1-draft` and reducer `r41` move together. Existing Claude Code/Codex meanings and source values are unchanged. Images and artifacts remain AG-4's separate work; these additions do not authorize copying image bytes.
+
+**14 November 2026, AG-4 (integration branch only):** Both builders approved reading explicitly referenced image bytes only within the same Antigravity conversation's allow-listed media/upload directories, subject to canonical containment, read-only opens, signature validation and the existing 4 MiB image limit. `ImageOmission` adds `referenced-file` for unavailable bytes. Normalized `artifact.plan` observations describe bounded native artifact file versions, not tool calls. They link only to a recorded artifact-write operation by exact path/name, remain outside repository writes/map locations, and enter replay at observation boundaries rather than their file metadata timestamps. Checklist statuses are derived from literal Markdown markers. Contract `0.2.2-draft` and reducer `r43` move together; existing harness meanings are unchanged.
+
 > **19 October 2026:** the type definitions in [`packages/contracts/src/index.ts`](../../packages/contracts/src/index.ts) are what the code uses; this document is the older design. The pending additions are proposed in [review 125](../review/125-event-schema-proposal.md).
 
 **Schema version `1.0.0-draft`.** Semver, with a stability policy (§7), because third-party adapters depend on it.

@@ -372,7 +372,7 @@ function WorkbenchExport() {
   return url ? <a className="btn ghost" href={url} download>Export recording</a> : null;
 }
 
-const HARNESS_NAME: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
+const HARNESS_NAME: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
 
 /**
  * Which session this is, beside the brand and inside its outline (UI-1): the title, then the repository, harness and the

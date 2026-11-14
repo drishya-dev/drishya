@@ -79,3 +79,26 @@ describe('captured browser presentation', () => {
   expect(safeWebUrl('https://example.invalid/?q=test')).toBe(true);
  });
 });
+
+
+describe('recorded Antigravity native browser scripts', () => {
+ const native = (id: string, input: unknown): Operation => ({ id, agentId: 'a', tool: 'webview_browser', detail: { kind: 'other', input, resultPreview: 'Captured browser result' } } as Operation);
+ it('uses native script evidence without inventing MCP identity or executing/interpreting code', () => {
+  const input = { intention: 'Captured instruction', observation: 'Model-authored observation', script: 'throw new Error("never execute"); /* click https://invented.invalid */', urls: ['http://127.0.0.1:4317/'] };
+  const operation = native('a', input), step = browserStep(operation)!;
+  expect(step.server).toBe('webview_browser'); expect(step.action).toBe('Run browser script');
+  expect(step.url).toBe('http://127.0.0.1:4317/'); expect(step.query).toBeUndefined();
+  expect(step.excerpt).toBe('Captured browser result'); expect(operation.detail.kind).toBe('other');
+  expect(operation.detail.kind === 'other' && operation.detail.input).toBe(input);
+ });
+ it('does not borrow a URL from script text, a prior action, or choose among several declared pages', () => {
+  expect(browserStep(native('a',{script:'location.href="https://invented.invalid"'}))?.url).toBeUndefined();
+  expect(browserStep(native('b',{script:'return 3',urls:['https://one.invalid','https://two.invalid']}))?.url).toBeUndefined();
+  const value=browserStep(native('c',{script:'return 3',urls:['javascript:alert(1)']}))!;
+  expect(safeWebUrl(value.url!)).toBe(false);
+ });
+ it('groups adjacent native script receipts without merging their input or result material', () => {
+  const all=[native('a',{script:'first'}),native('b',{script:'second'}),op('c')];
+  expect(groupBrowserSteps(all.map(o=>({id:o.id})),new Map(all.map(o=>[o.id,o]))).map(g=>g.map(o=>o.id))).toEqual([['a','b'],['c']]);
+ });
+});

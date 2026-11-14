@@ -26,10 +26,14 @@ const PREVIEW = 2048;
 const IMAGE_BUDGET = 256 * 1024 * 1024;
 
 export interface StoredCursor {
+  /** Optional physical transcript variant; the source path remains the recording identity. */
+  readPath?: string;
   offset: number;
   generation: number;
   fingerprint: string;
   inOversized?: boolean;
+  /** Sanitized adapter-owned inspection checkpoint; cursor JSON needs no DB migration. */
+  adapterCheckpoint?: unknown;
 }
 
 export interface SourceRow {
@@ -989,15 +993,56 @@ export class Store {
    * stable id) are skipped — re-importing a source adds nothing.
    */
   appendObservations(recordingId: string, sourceId: string, cursor: StoredCursor, obs: Omit<Observation, 'receivedSequence'>[]): Observation[] {
+    if (obs.some(o => o.source.adapterId === 'antigravity')) {
+      // A call and its recorded result commonly share one ingest batch. Materialize only
+      // the latest receipt per ID, avoiding an FTS insert/delete for a provisional gap
+      // that was already resolved before this transaction became visible.
+      const latest = new Map(obs.filter(o => o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number').map(o => [o.source.recordId, o.source.byteOffset]));
+      obs = obs.filter(o => !latest.has(o.source.recordId) || (o.payload as { derived?: unknown }).derived === 'antigravity-unmatched-call-v1' || o.source.byteOffset === latest.get(o.source.recordId));
+      const calls = new Set(obs.filter(o => o.kind === 'tool.call').map(o => o.operationId));
+      obs = obs.filter(o => (o.payload as { derived?: unknown }).derived !== 'antigravity-unmatched-call-v1' || !latest.has(o.source.recordId) || calls.has(o.operationId));
+      obs = [...new Map(obs.map(o => [o.id, o])).values()];
+    }
     const stored = this.tx(() => {
       const added: Observation[] = [];
+      let inserted = 0;
+      let removed = 0;
       let seq = (this.q('SELECT COALESCE(MAX(seq), -1) AS m FROM observations WHERE recording_id = ?').get(recordingId) as { m: number }).m;
       const exists = this.q('SELECT 1 FROM observations WHERE id = ?');
       const ins = this.q('INSERT INTO observations(id, recording_id, seq, kind, agent_id, operation_id, source_time, body) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
       const fts = this.q('INSERT INTO search(text, recording_id, observation_id) VALUES (?, ?, ?)');
+      const reconciled = new Set<string>();
+      for (const receipt of obs.filter(o => o.source.adapterId === 'antigravity' && o.kind === 'checkpoint' && typeof (o.payload as { stepIndex?: unknown }).stepIndex === 'number' && exists.get(o.id))) {
+        const incoming = new Set(obs.filter(o => o.source.recordId === receipt.source.recordId).map(o => o.id));
+        const previous = this.q("SELECT id FROM observations WHERE recording_id=? AND json_extract(body, '$.source.sourceId')=? AND json_extract(body, '$.source.recordId')=?")
+          .all(recordingId, sourceId, receipt.source.recordId!) as { id: string }[];
+        for (const previousPart of previous) if (!incoming.has(previousPart.id)) {
+          this.q('DELETE FROM search WHERE observation_id=?').run(previousPart.id);
+          this.q('DELETE FROM observations WHERE id=?').run(previousPart.id);
+          removed++;
+          reconciled.add(receipt.id);
+        }
+      }
       for (const o of obs) {
-        if (exists.get(o.id)) continue;
+        if (exists.get(o.id)) {
+          if (o.source.adapterId !== 'antigravity') continue;
+          const previous = this.observationById(recordingId, o.id)!;
+          const next: Observation = { ...o, payload: this.externalize(o.payload, recordingId) as Observation['payload'], receivedSequence: previous.receivedSequence };
+          // Antigravity appends replacement receipts for a step. Preserve its position and
+          // stable identity, update the latest materialized receipt, and replace its FTS text.
+          const material = (value: Observation) => JSON.stringify([value.kind, value.agentId, value.operationId, value.correlation, value.workspaceRoot, value.sourceTime, value.payload, value.availability, value.redactions]);
+          if (material(previous) === material(next) && !reconciled.has(o.id)) continue;
+          this.q('UPDATE observations SET kind=?, agent_id=?, operation_id=?, source_time=?, clock_time=?, body=? WHERE id=?')
+            .run(next.kind, next.agentId, next.operationId ?? null, next.sourceTime ?? null, clockTime(next.sourceTime), JSON.stringify(next), next.id);
+          if (previous.kind !== 'checkpoint' && previous.kind !== 'capture.gap') this.q('DELETE FROM search WHERE observation_id=?').run(next.id);
+          const updatedText = searchableText(o);
+          if (updatedText) fts.run(updatedText, recordingId, next.id);
+          this.q('DELETE FROM projections WHERE recording_id=?').run(recordingId);
+          added.push(next);
+          continue;
+        }
         seq += 1;
+        inserted++;
         const full: Observation = { ...o, payload: this.externalize(o.payload, recordingId) as Observation['payload'], receivedSequence: seq };
         ins.run(full.id, recordingId, seq, full.kind, full.agentId, full.operationId ?? null, full.sourceTime ?? null, JSON.stringify(full));
         this.q('UPDATE observations SET clock_time=? WHERE id=?').run(clockTime(full.sourceTime), full.id);
@@ -1016,7 +1061,7 @@ export class Store {
         this.q(`UPDATE recordings SET observation_count = observation_count + ?, updated_at = ?, revision = revision + 1,
                 first_source_time = COALESCE(MIN(first_source_time, ?), first_source_time, ?),
                 last_source_time = CASE WHEN last_source_time IS NULL OR last_source_time < ? THEN ? ELSE last_source_time END
-                WHERE id = ?`).run(added.length, new Date().toISOString(), times[0] ?? null, times[0] ?? null, times.at(-1) ?? null, times.at(-1) ?? null, recordingId);
+                WHERE id = ?`).run(inserted - removed, new Date().toISOString(), times[0] ?? null, times[0] ?? null, times.at(-1) ?? null, times.at(-1) ?? null, recordingId);
       }
       return added;
     });
@@ -1064,6 +1109,35 @@ export class Store {
     const ids = typeof recordingId === 'string' ? [recordingId] : [...new Set(recordingId)];
     const marks = ids.map(() => '?').join(',');
     const rank = ids.map((_, i) => `WHEN ? THEN ${i}`).join(' ');
+    if (ids.length === 1 && this.getRecording(ids[0]!)?.harness === 'antigravity') {
+      // Whole-second source clocks can regress. The harness's step index is authoritative.
+      const rows = this.q(`SELECT rowid AS rid FROM observations WHERE recording_id=? ORDER BY
+        CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
+          CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END, seq`).all(ids[0]!) as { rid: number }[];
+      return rows.map((row) => row.rid);
+    }
+    if (ids.some((id) => this.getRecording(id)?.harness === 'antigravity')) {
+      // Mixed-harness views keep each Antigravity journal's native step order. Its
+      // derived sort clock is clamped, while captured sourceTime stays unchanged.
+      const rows = this.db.prepare(`WITH keyed AS (
+        SELECT rowid AS rid, seq, recording_id, clock_time,
+          json_extract(body, '$.source.sourceId') AS source_id,
+          json_extract(body, '$.source.adapterId') = 'antigravity' AS ag,
+          CASE WHEN json_extract(body, '$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
+            CAST(substr(json_extract(body, '$.source.recordId'), instr(json_extract(body, '$.source.recordId'), ':') + 1) AS INTEGER) END AS native_step,
+          CASE WHEN json_extract(body, '$.payload.derived') IS NULL THEN clock_time END AS native_clock
+        FROM observations WHERE recording_id IN (${marks})
+      ), timed AS (
+        SELECT *, MAX(native_clock) OVER (PARTITION BY recording_id ORDER BY native_step, seq
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS ag_clock,
+          MAX(CASE WHEN clock_time IS NOT NULL THEN seq END) OVER (PARTITION BY recording_id, source_id ORDER BY seq
+          ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS clock_seq FROM keyed
+      ) SELECT timed.rid AS rid FROM timed LEFT JOIN observations clock ON clock.recording_id=timed.recording_id AND clock.seq=timed.clock_seq
+      ORDER BY CASE WHEN timed.ag THEN COALESCE(timed.ag_clock, '') ELSE COALESCE(clock.clock_time, '') END,
+        CASE WHEN timed.ag THEN timed.native_step ELSE timed.seq END, timed.seq,
+        CASE timed.recording_id ${rank} END`).all(...ids, ...ids) as { rid: number }[];
+      return rows.map((row) => row.rid);
+    }
     // Sort only row ids, then fetch each body by id. Sorting rows that carry their whole JSON
     // body cost a third of a large history's ordered read (PERF-2: 666 -> 450 ms on 26k rows).
     const order = this.db.prepare(`
@@ -1159,7 +1233,9 @@ export class Store {
   workspaceRoots(recordingId: string): string[] {
     const rows = this.q(`SELECT DISTINCT json_extract(body, '$.workspaceRoot') AS r FROM observations WHERE recording_id = ?
                          UNION SELECT DISTINCT json_extract(body, '$.payload.cwd') FROM observations WHERE recording_id = ?
-                         UNION SELECT DISTINCT json_extract(body, '$.payload.intent.cwd') FROM observations WHERE recording_id = ?`).all(recordingId, recordingId, recordingId) as { r: unknown }[];
+                         UNION SELECT DISTINCT json_extract(body, '$.payload.intent.cwd') FROM observations WHERE recording_id = ?
+                         UNION SELECT DISTINCT extra.value FROM observations o, json_each(o.body, '$.payload.additionalRoots') extra
+                           WHERE o.recording_id=? AND o.kind='session.meta' AND json_extract(o.body, '$.source.adapterId')='antigravity'`).all(recordingId, recordingId, recordingId, recordingId) as { r: unknown }[];
     return rows.map((x) => x.r).filter((r): r is string => typeof r === 'string' && r.length > 0);
   }
 
