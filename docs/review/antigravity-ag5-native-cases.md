@@ -1,8 +1,8 @@
 # AG-5: genuine native interaction cases
 
-14 November 2026. Work in progress on `codex/ag-5-native-cases`, targeting `codex/harness-antigravity` only. Dependencies #469, #472, #474 and #479 are stacked for local checking; no PR was self-merged. Fable must merge those dependencies first. Own frozen install completed in this worktree.
+14 November 2026. AG-5 mapping and available acceptance are complete on `codex/ag-5-native-cases`, targeting `codex/harness-antigravity` only. Cumulative PR #482 contains #469/#472/#474/#479 plus final review fixes, so Fable may review the single cumulative diff. No PR was self-merged. Own frozen installs were used for the source, isolated gate and unchanged-main control worktrees. AG-3 still has one external native-app interruption acceptance line; this is not shipping approval.
 
-The whole acceptance contract remains TASKS AG-5. This record is evidence and handoff, not a separate active task queue. No AG-5 mapping or acceptance is claimed yet.
+The authoritative whole acceptance contract remains TASKS AG-5. This record is evidence and handoff, not another active queue. The final section supersedes the historical work-in-progress notes below; unsupported native states are explicitly not accepted as positive proof.
 
 Yash requested one prompt at a time for cases absent from the latest native captures. Rescan first, then use one genuine conversation per missing case. The runbook is `antigravity-ag5-runbook.md`; model selection and any native approvals stay in Antigravity. Use a low-cost supported model and a throwaway repository. Drishya stays passive and never installs/configures MCP, changes native policies or answers native requests.
 
@@ -90,3 +90,51 @@ Twenty real Antigravity frames pass at 600/1440, no page errors or page overflow
 Review correction: native swarm parallel add requests share result-step child metadata. That identifies the planner group, not a unique individual request. Those two child receipts now remain explicit gaps rather than assigning both children to the last positional call. The later single add has an exact child link; all three conversations remain separate importable sessions. Model requests remain visible only as requests, not proof of runtime identity. The regression uses unrelated names to prevent name-based joins. This supersedes the earlier implementation note describing the step-34 receipts as individual call links.
 
 The final AG-3 reopen additionally pins output/child file handles and versions late child evidence (review/antigravity-ag3-live.md). Main's latest claims are preserved; source integration remains isolated. No production code or PR has been merged into main.
+
+## Final acceptance and reviewer handoff
+
+### Native-case matrix
+
+| TASKS case | Genuine evidence | Presentation and limits |
+|---|---|---|
+| Browser | `12966ad5`, 13,782 bytes; 3 calls / 3 images | Full recorded script/result and screenshots at both widths. No video output was produced; the recorded run reports no available video capability. Not a video support claim. |
+| MCP | `7d67461b`, 10,349 bytes; 3 calls / 1 image | Explicit native server/tool identity, captured results/image; no shell substitution or fake MCP browser. |
+| Plan/review | `cbb29ec1`, 13,617 bytes; 1 metadata-bearing review artifact | Artifact, follow-up and implementation retained. The allow-listed metadata file contains requestFeedback=true but no typed approval/rejection receipt. Visible unresolved-review gap; no inferred decision. |
+| Answer/skip | `00c5ee91`, 2,072 bytes; `78dd1e85`, 2,013 bytes | One question each, literal native answer/skip receipts. Both widths; no native controls in Drishya. |
+| Approval/denial | `4b39dd4d`, 468,671 bytes; 1 native request | Unknown outcome plus visible gap. `79f24c42` (1,855 bytes) reported no dedicated permission tool; `b510d82d` (2,409 bytes) executed both test commands. Neither proves an approval/denial pair. Further forcing would require native setup/policy changes; no policy was weakened. |
+| Prompt image/PDF | `c452ce98`, 210,089 bytes; 1 image. `cc6901cc`, 104,590 bytes / 4 PDF refs; `9b23834b`, 291,123 bytes / 2 PDF refs | Image bytes displayed. Recorded PDF URI/MIME visible in Review findings → Capture gaps; bytes not opened, no PDF rendering/OCR claim. |
+| Input/kill | `6ec2c1a4`, 39,646 bytes / 61 steps | Exact native manage_task send_input/status/kill/list retained, including results. This kills a background task, not the native application. |
+| Delete/move | Same controlled lifecycle capture; 2 recorded command candidates | Commands and returned text shown as shell evidence. No invented applied diff or filesystem snapshot. New antigravity-file-commands check and synthetic rename/unlink requests cover this boundary. |
+| Different models | Same capture; 3 requested model values / 3 child receipts | Requests are not runtime identity. Visible model-identity gap. Shared-step parallel ownership remains unresolved; unique single-request child linking stays supported. All children remain separate sessions. |
+
+Twenty actual Antigravity frames and four fresh old-harness frames pass at 600/1440, zero page errors/overflow. The corpus includes synthetic native browser, screenshot branch, MCP, answer/skip, unknown permission/review, task control, model requests and file commands. Eight new check:real groups plus existing adapter/live/media checks run only in scratch homes. No native content or screenshots are committed.
+
+### Final validation (local only)
+
+- Final source `db6c9bb7`: both TypeScript projects pass; **261 unit files, 1,633 tests pass, one existing skip** with two unit workers (103.76 s). The subsequent test-only file-command fixture/check addition passes its nine focused units, typecheck and both native browsers; it changes no runtime code.
+- Final delta isolated worktree, UI rebuilt: **34 Edge browser checks pass**, two workers, zero retries: antigravity-native, antigravity-harness, antigravity-live, question-card, library-search, home-opening, home-current, home-groups and search-position. Final extended native fixture: another two-width pass.
+- Package verification passes, including isolated offline install, both existing-harness imports, authenticated API and persisted restart.
+- Combined check:affected gate at frozen `c04947e4` before the final read/replay-only delta: types/build/package pass; **937 parallel + 32 serial browsers pass, 28 skip, 10 fail** (three parallel workers, serial one). Initial default-pool units had one 5 s Git comparison timeout (1,629 pass / one skip / one fail). Its isolated 11-test rerun and the final whole-unit run with two workers pass. Baseline full-pool unit reproduction was not run; do not label that timeout a proven main flake.
+- The broad gate is **not green**. All ten browser failures reproduce on unchanged main `e9a0ccab` (own install/build, no Antigravity code). Eight parallel failures were rechecked with two workers and a 20 s per-test ceiling for missing controls; the same assertions/selectors fail. Paged replay was checked alone at the normal timeout. Material-motion fails all three isolated main repeats. This is baseline classification, not a fix or release waiver.
+
+| Broad browser failure | Unchanged-main result / cause observed |
+|---|---|
+| approval-clearance:30 @600 | Same missing Send prompt selector |
+| approval-clearance:65 @600 | Same missing Send prompt selector |
+| approval-clearance:82 @600 and @1440 | Same missing Expand prompt selector |
+| composer-typography:107 @390 | Same missing Attach selector; historical below-supported-width test left untouched |
+| fresh-workspace:153 | Same prompt/control intersection assertion |
+| fresh-workspace:1444 | Same stale label expectation: Answer requested vs Needs an answer |
+| toolbox-window:172 | Same missing Tools selector |
+| material-motion:71 | Same non-overflowing result-body predicate, 3/3 main repeats |
+| p1-pacing:722 | Same Loading history status expectation |
+
+Private logs: source `.local/ag-5/`; gate worktree `.local/ag-final/`; unchanged-main control `.local/ag-control/`. No hosted CI, telemetry, native settings or real-home imports.
+
+### Merge and remaining external acceptance
+
+Main's UI/performance code is preserved; all modifications to shared owners are the documented native-only sections. The final AG-3 review fixes are part of this cumulative branch, not missing from an older internal PR. The integration branch is refreshed with main. No PR was merged by Codex. After Fable's integration review, one integration-to-main PR and the builders' manual release decision remain.
+
+**The only AG-3 acceptance line still open is a safely isolated, signed-in native-application crash/interruption.** No isolated authenticated profile exists here, and the shared native application is in use by the builders. Do not force-crash it. Existing partial-line/restart tests, live output checks and background-task kills do not falsely substitute for that case. Source is complete; this external check/release decision is explicitly carried forward.
+
+Home discovery retains main's existing fallback polling for Antigravity; the new main SourceWatch fast-birth optimisation currently names the two existing harnesses only. No one-second new-session birth claim is made for Antigravity. Already-open native sessions use the measured tail and bounded side-file refresh. No layout or timing constants were changed to add this harness.

@@ -24,12 +24,18 @@ const toolsCase = (name: string, tools: string[]): RealCase => {
     },
   };
 };
+const fileCommandCandidate = (command: unknown) => typeof command === 'string' && /renameSync|unlinkSync|Move-Item|Remove-Item|\b(?:mv|rm)\b/i.test(command);
 export const antigravityNativeCases: RealCase[] = [
   toolsCase('antigravity-browser',['webview_browser']),
   toolsCase('antigravity-mcp',['call_mcp_tool']),
   toolsCase('antigravity-questions',['ask_question']),
   toolsCase('antigravity-permission',['ask_permission']),
   toolsCase('antigravity-lifecycle',['manage_task','invoke_subagent','swarm','read_board','post_message']),
+  {
+    name:'antigravity-file-commands',about:'Captured move/delete command requests remain shell evidence, never inferred applied file diffs',harnesses:['antigravity'],prefilter:'',
+    scan(row) {const calls=(Array.isArray(row.tool_calls)?row.tool_calls:[]).filter(c=>c?.name==='run_command'&&fileCommandCandidate(decodeArgs(c.args).CommandLine));return calls.length?{hits:calls.length}:undefined;},
+    verify(projection,expected) {const commands=projection.operations.filter(o=>(o.detail.kind==='shell'||o.detail.kind==='test')&&fileCommandCandidate(o.detail.command));return [commands.length>=expected.hits?`PASS ${commands.length} recorded file-command candidates; applied changes not inferred`:`FAIL file-command candidates ${commands.length}/${expected.hits}`];},
+  },
   {
     name:'antigravity-pdf',about:'Recorded PDF references remain visible; no PDF bytes are imported as images',harnesses:['antigravity'],prefilter:'',
     scan(row) { const refs=(Array.isArray(row.media)?row.media:[]).filter(m=>m&&m.mime_type==='application/pdf'&&typeof m.uri==='string');return refs.length?{hits:refs.length}:undefined; },

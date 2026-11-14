@@ -59,6 +59,7 @@ it('imports the native-case regression corpus without guessing permission outcom
  const permission=raws.find(r=>r.kind==='tool.call'&&r.payload.tool==='ask_permission')!;
  expect(raws.some(r=>r.kind==='capture.gap'&&r.operationId===permission.operationId&&String(r.payload.detail).includes('approval or denial cannot be identified'))).toBe(true);
  expect(raws.filter(r=>r.kind==='tool.call'&&r.payload.tool==='call_mcp_tool')).toHaveLength(3);
+ expect(raws.filter(r=>r.kind==='tool.call'&&r.payload.tool==='run_command').every(r=>(r.payload.intent as {kind:string}).kind==='shell')).toBe(true);
  expect(raws.filter(r=>r.kind==='tool.call'&&r.payload.tool==='ask_question')).toHaveLength(2);
  expect(raws.some(r=>r.kind==='capture.gap'&&String(r.payload.detail).includes('A native approval or rejection is not established'))).toBe(true);
  expect((raws.find(r=>r.kind==='tool.call'&&r.payload.tool==='write_file')?.payload.intent as {kind:string}).kind).toBe('plan');
