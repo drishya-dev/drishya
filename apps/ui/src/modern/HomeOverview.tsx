@@ -14,10 +14,10 @@ export function HomeOverview({ sessions, groups, now, onGroup }: { sessions: Ove
   // Whole local days, oldest first, ending today.
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(), first = today - (weeks * 7 - 1) * day;
   const counts = new Array<number>(weeks * 7).fill(0);
-  let week = 0, claude = 0, codex = 0;
+  let week = 0, claude = 0, codex = 0, antigravity = 0;
   for (const session of sessions) {
     const time = Date.parse(session.time ?? '');
-    if (session.harness === 'codex') codex++; else claude++;
+    if (session.harness === 'codex') codex++; else if (session.harness === 'claude-code') claude++; else if (session.harness === 'antigravity') antigravity++;
     if (!Number.isFinite(time)) continue;
     if (now.getTime() - time < 7 * day) week++;
     const date = new Date(time), index = Math.round((new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() - first) / day);
@@ -36,7 +36,7 @@ export function HomeOverview({ sessions, groups, now, onGroup }: { sessions: Ove
       <div><dt>Sessions</dt><dd>{sessions.length}</dd></div>
       <div><dt>This week</dt><dd>{week}</dd></div>
       <div><dt>Workspaces</dt><dd>{projects.length}</dd></div>
-      <div className="mh-ov-harness"><dt>Claude Code <b>{claude}</b> · Codex <b>{codex}</b></dt><dd aria-hidden="true"><span style={{ flexGrow: claude }} className="claude-code"/><span style={{ flexGrow: codex }} className="codex"/></dd></div>
+      <div className="mh-ov-harness"><dt>Claude Code <b>{claude}</b> · Codex <b>{codex}</b> · Antigravity <b>{antigravity}</b></dt><dd aria-hidden="true"><span style={{ flexGrow: claude }} className="claude-code"/><span style={{ flexGrow: codex }} className="codex"/><span style={{ flexGrow: antigravity, background: "var(--agent-violet-ink)" }}/></dd></div>
     </dl>
     {recent.length > 0 && <div className="mh-ov-recent" role="group" aria-label="Recent workspaces">
       {recent.map(group => <button key={group.key} type="button" onClick={() => onGroup(group.key)} title={`Show ${group.name}'s sessions`}>

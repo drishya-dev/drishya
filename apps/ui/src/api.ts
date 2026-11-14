@@ -217,17 +217,34 @@ export class HttpError extends Error {
   }
 }
 
+// PERF-4: a large recording opens from its latest work while its whole history folds. A reader that needs the whole of
+// it (the Files tree, the toolbox, search…) is answered 202 "loading" at once, so it does not hold one of the browser's few
+// connections open; it asks again when the whole history has arrived (the state tells us), or after a while regardless.
+let wholeHistoryWaiters: (() => void)[] = [];
+export function wholeHistoryArrived(): void {
+  const waiting = wholeHistoryWaiters;
+  wholeHistoryWaiters = [];
+  for (const resolve of waiting) resolve();
+}
+const whenWholeHistory = () => new Promise<void>((resolve) => {
+  const timer = setTimeout(resolve, 15_000);
+  wholeHistoryWaiters.push(() => { clearTimeout(timer); resolve(); });
+});
+
 async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
-  const res = await fetch(path, {
-    ...init,
-    credentials: 'same-origin',
-    headers: init?.json !== undefined ? { 'content-type': 'application/json', ...(init?.headers ?? {}) } : init?.headers,
-    body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,
-  });
-  const text = await res.text();
-  const body = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new HttpError(res.status, body.error ?? res.statusText, body);
-  return body as T;
+  for (;;) {
+    const res = await fetch(path, {
+      ...init,
+      credentials: 'same-origin',
+      headers: init?.json !== undefined ? { 'content-type': 'application/json', ...(init?.headers ?? {}) } : init?.headers,
+      body: init?.json !== undefined ? JSON.stringify(init.json) : init?.body,
+    });
+    const text = await res.text();
+    const body = text ? JSON.parse(text) : {};
+    if (res.status === 202 && body.loading) { await whenWholeHistory(); continue; }
+    if (!res.ok) throw new HttpError(res.status, body.error ?? res.statusText, body);
+    return body as T;
+  }
 }
 
 export const recordedUsageApi = {
@@ -279,7 +296,8 @@ export const daemon: DataSource = {
   importSource: (path, adapterId, live) => req('/v1/import', { method: 'POST', json: { path, adapterId, live } }),
   imports: async () => (await req<{ imports: { path: string; bytes: number; total: number }[] }>('/v1/imports')).imports,
   projection: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/projection`),
-  history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
+  // PERF-4: the open page can show a large recording's latest work first; the whole page replaces it when ready.
+  history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: { tailFirst: true, ...query } }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
   fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
   graph: async (id, refresh) => {

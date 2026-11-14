@@ -40,16 +40,19 @@ export function browserStep(op: Operation) {
   const d = op.detail;
   // Claude Code's own `computer` tool is recorded as an ordinary tool; it reads like the browser's (SCREEN-1).
   if (d.kind !== 'mcp' && d.kind !== 'other') return;
-  if (d.kind === 'mcp' ? !/(?:browser|chrome|playwright)/i.test(d.server) || !tools.has(d.tool) : op.tool !== 'computer') return;
-  const server = d.kind === 'mcp' ? d.server : 'computer', tool = d.kind === 'mcp' ? d.tool : 'computer';
+  if (d.kind === 'mcp' ? !/(?:browser|chrome|playwright)/i.test(d.server) || !tools.has(d.tool) : op.tool !== 'computer' && op.tool !== 'webview_browser') return;
+  const server = d.kind === 'mcp' ? d.server : op.tool, tool = d.kind === 'mcp' ? d.tool : op.tool;
+  const nativeBrowser = d.kind === 'other' && op.tool === 'webview_browser';
   let value = d.input;
   if (typeof value === 'string' && value.length <= 131072) { try { value = JSON.parse(value); } catch { /* Incomplete or literal input stays in the raw reader. */ } }
   const input = object(value);
   const actions = Array.isArray(input?.actions) ? input.actions : undefined;
   const batch = actions?.slice(0, 12).map(item => { const entry = object(item), fields = object(entry?.input); return { name: text(entry?.name), action: text(fields?.action), url: text(fields?.url) }; });
-  const action = text(input?.action) ?? tool.replace(/^browser_/, '').replace(/_/g, ' ');
+  const action = nativeBrowser ? typeof input?.script === 'string' ? 'Run browser script' : 'Browser action' : text(input?.action) ?? tool.replace(/^browser_/, '').replace(/_/g, ' ');
   const query = text(input?.query) ?? text(input?.text);
-  const inputUrl = text(input?.url);
+  // A script can touch several pages. Do not infer the active page or actions from its code.
+  const urls = nativeBrowser && Array.isArray(input?.urls) ? input.urls : undefined;
+  const inputUrl = nativeBrowser ? urls?.length === 1 ? text(urls[0]) : undefined : text(input?.url);
   const fallbackUrl = inputUrl ? undefined : resultPageUrl(tool, d.resultPreview);
   return { server, action, batch, batchCount: actions?.length, url: inputUrl ?? fallbackUrl, urlFromResult: !inputUrl && !!fallbackUrl, query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
 }

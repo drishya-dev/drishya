@@ -53,6 +53,6 @@ it('uses the real history identity for a paged checkout map',async()=>{
  const choice=await app.chooseCheckout(id,await prefix(worker)),projection=app.projection(id);
  const paged=vi.spyOn(app,'paged').mockReturnValue(true);
  const page=vi.spyOn(app.history,'page').mockResolvedValue({projection} as never);
- try{expect((await app.graph(choice.id)).approvalNeeded?.root).toBe(worker);expect(page).toHaveBeenCalledWith(id,{count:1});}
+ try{expect((await app.graph(choice.id)).approvalNeeded?.root).toBe(worker);expect(page).toHaveBeenCalledWith(id,{count:1,loadingOk:true});}
  finally{page.mockRestore();paged.mockRestore();}
 });

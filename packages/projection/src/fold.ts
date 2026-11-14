@@ -25,6 +25,7 @@
 // A persisted state is valid for a journal exactly when its head passes `canAppend` for the stored tail.
 
 import { createHash } from 'node:crypto';
+import { deserialize, serialize } from 'node:v8';
 import type { Observation, Projection } from '@drishya/contracts';
 import { createReducer, REDUCER_VERSION, type BlobIO, type ReduceOptions } from './reduce.ts';
 
@@ -32,6 +33,9 @@ import { createReducer, REDUCER_VERSION, type BlobIO, type ReduceOptions } from 
 export const FOLD_FORMAT = 1;
 
 /** What a fold has consumed. Plain data, JSON-safe. */
+/** A persistable fold: its head and the reducer's state as bytes (v8-serialized, keeping shared object identity). */
+export interface FoldCheckpoint { head: FoldHead; state: Buffer; /** Blobs the state refers to by hash (captured file bases); a checkpoint is only good while they are still stored. */ blobs: string[] }
+
 export interface FoldHead {
   format: number;
   reducerVersion: string;
@@ -81,13 +85,55 @@ export class ProjectionFold {
   static build(parts: string[], ordered: Iterable<Observation>, io: BlobIO, opts: ReduceOptions): ProjectionFold {
     const recordingId = parts.at(-1)!;
     const head: FoldHead = { format: FOLD_FORMAT, reducerVersion: REDUCER_VERSION, recordingId, parts: [...parts], counts: Object.fromEntries(parts.map((p) => [p, 0])), sequences: Object.fromEntries(parts.map((p) => [p, -1])), clock: '', sourceClocks: {}, generations: {}, roots: [] };
-    const roots = new Set<string>();
+    const roots = new Set<string>([...Object.values(opts.rootsHint?.byRecording ?? {}), ...(opts.rootsHint?.all ?? [])]);
     // The reducer reads its input three times (roots, then roots again, then the fold), so a lazy source such as a
     // database cursor would run its query three times; read it once.
     const list = Array.isArray(ordered) ? ordered : [...ordered];
     for (const o of list) track(head, roots, o);
     const reducer = createReducer(opts.lineage?.currentRecordingId ?? recordingId, list, io, { ...opts, ordered: true });
     return new ProjectionFold(head, reducer, roots);
+  }
+
+  /**
+   * PERF-4: an empty fold to be fed the whole ordered input in slices with `feed` (a long history is folded between
+   * yields to the event loop). `opts.rootsHint` must carry the whole input's root evidence: the reducer reads roots
+   * up front, before any slice. The result equals `build` over the same input (parity-tested).
+   */
+  static start(parts: string[], io: BlobIO, opts: ReduceOptions): ProjectionFold {
+    return ProjectionFold.build(parts, [], io, opts);
+  }
+
+  /**
+   * Folds the next slice of an ordered stream begun with `start`. The caller owns the order (a store ordered
+   * read); nothing is checked here, unlike `append`, which guards a fold that is resumed after the fact.
+   */
+  feed(ordered: readonly Observation[]): void {
+    for (const o of ordered) track(this.h, this.roots, o);
+    this.reducer.append(ordered);
+  }
+
+  /**
+   * PERF-4: the fold as bytes. Valid for a recording only while `restore` accepts it (the caller also keys it by the
+   * options the reducer ran with, the privacy policy and the blob store; see the history worker).
+   */
+  checkpoint(): FoldCheckpoint {
+    const state = this.reducer.exportState();
+    return { head: this.head, state: serialize(state), blobs: [...new Set(state.bases.values())] };
+  }
+
+  /**
+   * A fold resumed from a checkpoint, or undefined when it is not one this code can resume (another format or reducer
+   * version, or unreadable bytes). It is then equal to the fold that was checkpointed: `canAppend`/`append` continue from its head.
+   */
+  static restore(checkpoint: FoldCheckpoint, io: BlobIO, opts: ReduceOptions): ProjectionFold | undefined {
+    const head = checkpoint.head;
+    if (head.format !== FOLD_FORMAT || head.reducerVersion !== REDUCER_VERSION) return undefined;
+    let state: ReturnType<ReturnType<typeof createReducer>['exportState']>;
+    try { state = deserialize(checkpoint.state); } catch { return undefined; }
+    const reducer = createReducer(opts.lineage?.currentRecordingId ?? head.recordingId, [], io, { ...opts, ordered: true, rootsHint: { byRecording: state.rootsByRecording, all: head.roots } });
+    reducer.importState(state);
+    const roots = new Set(head.roots);
+    return new ProjectionFold(JSON.parse(JSON.stringify(head)) as FoldHead, reducer, roots);
   }
 
   get head(): FoldHead {
@@ -129,6 +175,9 @@ export class ProjectionFold {
     const h = this.h;
     if (h.format !== FOLD_FORMAT || h.reducerVersion !== REDUCER_VERSION) return undefined;
     const last = h.recordingId;
+    // Antigravity replaces a step's receipt in place (same id and sequence), orders by its own step index rather than a
+    // clock, and adds side-file observations without a journal line. None of that is an append, so it is always rebuilt.
+    if (added.some(o => o.source.adapterId === 'antigravity')) return undefined;
     const bySequence = [...added].sort((a, b) => a.receivedSequence - b.receivedSequence);
     const carry = new Map(Object.entries(h.sourceClocks).map(([k, v]) => [k, v.clock]));
     let sequence = h.sequences[last] ?? -1;

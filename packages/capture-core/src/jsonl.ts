@@ -12,6 +12,8 @@ export interface SourceCursor {
   fingerprint: string;
   /** The offset is inside an oversized line that is still being skipped. */
   inOversized?: boolean;
+  /** Sanitized, adapter-owned discovery/inspection state; never native journal content. */
+  adapterCheckpoint?: unknown;
 }
 
 export type JsonlRecord =

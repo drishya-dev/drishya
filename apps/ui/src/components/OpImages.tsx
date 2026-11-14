@@ -6,6 +6,7 @@ import './op-images.css';
 
 const size = (bytes?: number) => bytes === undefined ? '' : bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 const WHY: Record<string, string> = {
+  'referenced-file': 'a referenced conversation image whose bytes could not be captured',
   'too-large': 'larger than the 4 MB kept per image',
   'recording-budget': 'past the 256 MB of images kept per session',
   protected: 'from a protected file',

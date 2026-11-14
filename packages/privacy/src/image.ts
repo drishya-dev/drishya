@@ -1,4 +1,6 @@
-// CONTENT-1 under review125 D7 (revised 21 Oct): image bytes are kept only when the journal already
+// AG-4 (builders' 13 Nov agreement) additionally permits explicitly referenced, allow-listed
+// same-conversation Antigravity images. They use these same size/signature gates before seal().
+// CONTENT-1 under review125 D7 (revised 21 Oct): other image bytes are kept only when the journal already
 // holds them inline, at most 4 MiB each, and only when the decoded bytes carry a real image
 // signature. Pixels cannot be pattern-redacted, and the signature check stops a crafted record from
 // carrying unredacted text through this path: text never decodes to a PNG/JPEG/GIF/WebP header.
@@ -6,7 +8,7 @@
 /** Largest single image kept, decoded bytes. */
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
-export type ImageOmission = 'too-large' | 'unrecognised' | 'protected' | 'recording-budget';
+export type ImageOmission = 'too-large' | 'unrecognised' | 'protected' | 'recording-budget' | 'referenced-file';
 
 /** An image captured from a journal. `data` is base64 and present only when the bytes were kept. */
 export interface CapturedImage {
