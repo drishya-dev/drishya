@@ -6,12 +6,42 @@
 .question-options {list-style:none;margin:2px 0 0;padding:0;display:grid;gap:2px;}
 .question-options li {display:grid;grid-template-columns:12px minmax(0,1fr);column-gap:8px;row-gap:1px;padding:5px 2px;color:var(--t3);}
 .question-mark {width:8px;height:8px;margin-top:6px;border-radius:50%;border:1px solid var(--line-2);}
-.question-options li[data-chosen] {color:var(--t1);}.question-options li[data-chosen] .question-mark {background:var(--pass);border-color:var(--pass);}
+.question-options li[data-chosen] {color:var(--t1);}
+.question-options li[data-chosen] .question-mark {background:var(--pass);border-color:var(--pass);}
 .question-label {font:var(--text-sm)/1.5 var(--sans);overflow-wrap:anywhere;}
 .question-description {grid-column:2;font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);overflow-wrap:anywhere;}
-.question-typed {margin:0;font:var(--text-sm)/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}.question-typed small {color:var(--t3);margin-right:4px;}
+.question-typed {margin:0;font:var(--text-sm)/1.55 var(--sans);color:var(--t1);overflow-wrap:anywhere;}
+.question-typed small {color:var(--t3);margin-right:4px;}
 .question-state {font:var(--text-2xs)/1.5 var(--sans);color:var(--t3);}
 @media(forced-colors:active){.question-options li[data-chosen] .question-mark {background:Highlight;}}
+
+/* SHIP-5: Read-only CLI state: quiet list, no bullet circles, clear answer-elsewhere label */
+.question-card-readonly .question-options-readonly {list-style:none;margin:4px 0 0;padding:0;display:grid;gap:4px;}
+.question-card-readonly .question-option-readonly {display:grid;grid-template-columns:minmax(0,1fr);row-gap:2px;padding:4px 0;color:var(--t2);cursor:default;}
+.question-card-readonly .question-option-readonly .question-description {grid-column:1;}
+.question-answer-elsewhere {display:flex;align-items:center;gap:8px;margin:4px 0 2px;}
+.question-answer-elsewhere-badge {font:var(--text-2xs)/1.4 var(--sans);color:var(--t2);background:var(--s2);border:1px solid var(--line-2);padding:2px 8px;border-radius:var(--radius-sm, 4px);letter-spacing:.02em;user-select:none;}
+
+/* SHIP-5: Driven session interactive form */
+.question-interactive {background:var(--s1);border:1px solid var(--line);border-radius:var(--radius-sm, 6px);padding:10px 12px;gap:12px;}
+.question-interactive-header {display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px;border-bottom:1px solid var(--line);padding-bottom:6px;}
+.question-interactive-header strong {font:var(--text-xs)/1.4 var(--sans);color:var(--t1);font-weight:600;}
+.question-interactive-sub {font:var(--text-2xs)/1.4 var(--sans);color:var(--t3);}
+.question-fieldset {border:none;margin:0;padding:0;display:grid;gap:8px;min-width:0;}
+.question-options-interactive {display:grid;gap:4px;margin-top:2px;}
+.question-option-label {display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:var(--radius-sm, 4px);border:1px solid var(--line);background:var(--bg);color:var(--t2);font:var(--text-sm)/1.4 var(--sans);cursor:pointer;transition:border-color var(--dur-hover, 120ms) ease, color var(--dur-hover, 120ms) ease;}
+.question-option-label:hover {border-color:var(--line-3);color:var(--t1);}
+.question-option-label.is-checked {border-color:var(--focus);background:color-mix(in srgb, var(--focus) 6%, var(--bg));color:var(--t1);}
+.question-option-label input {margin-top:3px;accent-color:var(--focus);cursor:pointer;}
+.question-option-text {display:grid;gap:2px;min-width:0;}
+.question-text-answer {display:grid;gap:4px;margin-top:6px;font:var(--text-2xs)/1.4 var(--sans);color:var(--t3);}
+.question-textarea {width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid var(--line-2);border-radius:var(--radius-sm, 4px);background:var(--bg);color:var(--t1);font:var(--text-sm)/1.45 var(--sans);resize:vertical;min-height:48px;}
+.question-textarea:focus {outline:none;border-color:var(--focus);}
+.question-form-actions {display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:4px;padding-top:8px;border-top:1px solid var(--line);}
+
+/* SHIP-5: Receipt and card footer */
+.question-card-footer {display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:2px;}
+.question-receipt-badge {display:inline-flex;align-items:center;font:var(--text-2xs)/1.4 var(--sans);color:var(--pass);background:color-mix(in srgb, var(--pass) 12%, transparent);border:1px solid color-mix(in srgb, var(--pass) 24%, transparent);padding:1px 6px;border-radius:var(--radius-sm, 4px);font-weight:500;}
 
 .tool-approval .approval-path {display:block;overflow-wrap:anywhere;color:var(--t3);margin-top:6px;}
 .tool-approval .approval-removed {color:var(--fail);}

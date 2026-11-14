@@ -1,5 +1,14 @@
 import { expect, it } from 'vitest';
-import { askQuestions, isQuestionTool, questionAcceptance } from '../src/lib/ask-question.ts';
+import {
+  askQuestions,
+  isQuestionTool,
+  questionAcceptance,
+  recordQuestionReceipt,
+  getQuestionReceipt,
+  recordQuestionStop,
+  isQuestionStopped,
+  clearQuestionReceipts,
+} from '../src/lib/ask-question.ts';
 
 const input = { questions: [
   { question: 'Which area?', header: 'Area', multiSelect: false, options: [{ label: 'Cart', description: 'totals' }, { label: 'Checkout' }] },
@@ -115,4 +124,26 @@ it('reads native Codex keyed answer arrays without treating an acknowledgement a
   expect(askQuestions(input,'{"answers":{"check":{"answers":["Alpha"]}}}')[0]).toMatchObject({answer:'Alpha',chosen:['Alpha']});
   expect(askQuestions(input,'{"answers":{"other":{"answers":["Alpha"]}}}')[0]!.answer).toBeUndefined();
   expect(askQuestions(input,'{"accepted":true}')[0]!.answer).toBeUndefined();
+});
+
+it('stores and retrieves question receipts distinct from journal results', () => {
+  clearQuestionReceipts();
+  expect(getQuestionReceipt('rec-1', 'op-1')).toBeUndefined();
+  const questions = askQuestions({ questions: [{ id: 'q0', question: 'Which area?', options: [{ label: 'Cart' }, { label: 'Checkout' }] }] });
+  recordQuestionReceipt('rec-1', 'op-1', { q0: { options: ['Cart'], text: 'custom note' } }, questions);
+  const receipt = getQuestionReceipt('rec-1', 'op-1');
+  expect(receipt).toBeDefined();
+  expect(receipt?.chosen).toEqual(['Cart']);
+  expect(receipt?.typed).toBe('custom note');
+  expect(getQuestionReceipt('rec-1', 'op-2')).toBeUndefined();
+});
+
+it('records and checks deliberate stop status for a question operation', () => {
+  clearQuestionReceipts();
+  expect(isQuestionStopped('rec-1', 'op-1')).toBe(false);
+  recordQuestionStop('rec-1', 'op-1');
+  expect(isQuestionStopped('rec-1', 'op-1')).toBe(true);
+  expect(isQuestionStopped('rec-1', 'op-2')).toBe(false);
+  clearQuestionReceipts();
+  expect(isQuestionStopped('rec-1', 'op-1')).toBe(false);
 });
