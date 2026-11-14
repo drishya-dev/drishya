@@ -62,14 +62,18 @@ git diff --exit-code pnpm-lock.yaml       # the lockfile did not change during t
 Before the repository is made public, and again for each release candidate (it is quick):
 
 ```bash
-node scripts/scan-history.ts > scan.txt      # SEC-2's rules on every blob of every branch and tag; counts, rules, paths and commit prefixes only
-gitleaks git . --redact=100 --report-format json --report-path gitleaks.json --log-opts="--branches --remotes --tags"
-trufflehog git file://. --no-verification --json > trufflehog.json   # --no-verification: a found value is never sent to a service to test it
+git fetch origin '+refs/heads/*:refs/remotes/origin/*' '+refs/pull/*/head:refs/pull/*'   # squash-merged PRs keep their commits only here, and a public repository shows them
+node scripts/scan-history.ts > scan.txt      # SEC-2's rules on every blob of every branch, tag and PR head; counts, rules, paths and commit prefixes only
+gitleaks git . --redact=100 --report-format json --report-path gitleaks.json --log-opts="--branches --remotes --tags --glob=refs/pull/*"
+trufflehog git file://. --no-verification --no-update --json > trufflehog.json   # --no-verification: a found value is never sent to a service to test it
 ```
+
+The tools are single portable binaries (gitleaks from `gitleaks/gitleaks` releases, trufflehog from `trufflesecurity/trufflehog` releases): put them in a scratch folder outside the repository, never commit them, and write their versions in the table.
 
 - Every `REVIEW` line from `scan-history.ts`, and every gitleaks or trufflehog finding outside the invented-secret locations (`tests/`, `fixtures/synthetic/`, `scripts/fixtures/`, `packages/*/test/`), gets a verdict in the report: *false positive*, *invented value*, *fixed development constant* or **real**.
 - **Anything real**: stop. Rotate the credential first, then tell both builders. Removal from history is the builders' decision, coordinated with REPO-1 (fresh history). Never rewrite or force-push as part of the scan.
-- Delete `gitleaks.json`, `trufflehog.json` and `scan.txt` afterwards or keep them outside the repository: the JSON files hold locations of matches.
+- Read the JSON reports only as counts per rule and path (a short script, not a pager). **`trufflehog.json` contains the found values themselves** (`Raw`): never open it in a terminal, never paste it; delete it, and `gitleaks.json`, afterwards or keep them outside the repository.
+- GitHub-side text is not in Git and is not scanned by these tools: skim the titles and descriptions of open and recent PRs and issues for pasted paths, ids and prompts before the flip.
 - Real journal content: no `*.jsonl` / `*.ndjson` outside `fixtures/synthetic` and `fixtures/redacted`, no transcript-shaped blob, no image of a real session that the builders did not approve (binary files are listed by folder and extension; look at new ones).
 
 ## 5. Repository and publishing

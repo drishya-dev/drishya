@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SEC-5 | @yash + Claude Sonnet 5.5 | `claude/sec-5-supply-e1dd2f` | 2026-11-15 | Supply chain and release hygiene: new `tests/security/` package-allowlist and zero-dependency tests wired into `scripts/verify-package.ts`, `SECURITY.md`, README privacy section, `docs/release-checklist.md`, `docs/review/sec-5-history-scan.md`, npm provenance config, PUBLIC-1/SHIP-9 gate lines in TASKS; TASKS/STATUS. No product code. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
@@ -55,6 +54,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — 15 Nov: SEC-5, supply chain and release hygiene
+
+- `package:verify` now fails on any file outside the package allowlist, an absolute local path or this machine's user name in a packed file, a SEC-2 redaction-rule match, a script or dependency in the published manifest, a foreign import in the bundled daemon, or a non-loopback connect, lookup or UDP send by the packed server (`scripts/lib/package-contents.ts`, `scripts/lib/net-recorder.mjs`; `tests/security/11-package.test.ts`). Provenance: `publishConfig` plus a manual `release.yml` pinned to commit SHAs; never run.
+- History scan ([report](review/sec-5-history-scan.md)): gitleaks 8.30.1, trufflehog 3.99.9 (unverified mode) and SEC-2's rules over 3,280 commits including all 500 PR heads: **no real secret or journal**; personal paths, recording ids and older real-session footage in history are the builders' REPO-1 decision (fresh history recommended). `scripts/scan-history.ts` repeats it.
+- `SECURITY.md`, README privacy section (reads, stores, sends, listens, no proxies or port forwarding; the stale "remote explanations" line removed) and [`docs/release-checklist.md`](release-checklist.md); PUBLIC-1 and SHIP-9 name SEC-5 as a gate. Needs the builders: enable GitHub private vulnerability reporting and the npm trusted publisher. Not run: Linux and macOS.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: SEC-3, the threat model and `pnpm test:security`
 

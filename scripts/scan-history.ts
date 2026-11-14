@@ -7,11 +7,12 @@
 // Exit code 1 when anything outside the known synthetic locations matches.
 import { spawn, spawnSync } from 'node:child_process';
 import { redactText } from '../packages/privacy/src/index.ts';
+import { CANARIES } from '../tests/security/lib/secrets.ts';
 
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const refsArg = args[args.indexOf('--refs') + 1];
-const refKinds = (args.includes('--refs') && refsArg ? refsArg : 'heads,remotes,tags').split(',');
+const refKinds = (args.includes('--refs') && refsArg ? refsArg : 'heads,remotes,tags,pull').split(',');
 const root = process.cwd();
 const MAX_TEXT = 8 * 1024 * 1024;
 
@@ -51,6 +52,30 @@ const PRIVATE_TEXT: { kind: string; test: RegExp }[] = [
   { kind: 'recording or session id', test: /\brec_[0-9a-f]{12,}\b|\b[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/ },
 ];
 
+// A matched value that is plainly invented: the suite's own canaries, a word such as canary or example, a run of one
+// character, a counting sequence. Anything else found in a test file is listed for a person to look at.
+const INVENTED_WORD = /canary|fake|example|dummy|sample|invented|synthetic|placeholder|hunter2|redact|xxxx|test|demo|secret|token|password|0000|1234|abcd|q7zxw3rt9vb2/i;
+const INVENTED_RUN = /(.)\1{5,}|0123456789|abcdefghij/i;
+const CANARY_NEEDLES = CANARIES.map((c) => c.needle);
+function looksInvented(value: string): boolean {
+  return INVENTED_WORD.test(value) || INVENTED_RUN.test(value) || CANARY_NEEDLES.some((needle) => value.includes(needle) || needle.includes(value));
+}
+/** The matched values of a text, recovered by comparing it with its redacted form line by line (never printed). */
+function matchedValues(text: string): string[] {
+  const out = redactText(text).text.split('\n');
+  const src = text.split('\n');
+  const values: string[] = [];
+  for (let i = 0; i < src.length; i++) {
+    const a = src[i]!, b = out[i];
+    if (b === undefined || a === b) continue;
+    const marker = /\[REDACTED:[a-z0-9-]+\]/.exec(b);
+    if (!marker) continue;
+    const after = b.length - marker.index - marker[0].length;
+    values.push(a.slice(marker.index, Math.max(marker.index, a.length - after)));
+  }
+  return values;
+}
+
 // A blob that looks like an agent transcript: many JSON lines carrying journal keys.
 function looksLikeTranscript(text: string): boolean {
   if (text.length < 20_000) return false;
@@ -66,14 +91,14 @@ function looksLikeTranscript(text: string): boolean {
   return jsonLines >= 20 && journalKeys >= 10;
 }
 
-interface Hit { category: string; rule: string; path: string; commit: string; synthetic: boolean }
+interface Hit { category: string; rule: string; path: string; commit: string; rank: number; synthetic: boolean }
 const hits: Hit[] = [];
 // Binary files cannot be text-scanned; they are listed by folder and extension so an image of a real screen cannot hide among them.
 const binaryKinds = new Map<string, number>();
 const summary = { refs: 0, commits: 0, blobs: 0, blobsText: 0, blobsBinary: 0, blobsOversize: 0, paths: 0 };
 
 // 1. The refs: branches (local and remote), tags. Not stashes, not worktree-private refs.
-const prefixes: Record<string, string> = { heads: 'refs/heads', remotes: 'refs/remotes', tags: 'refs/tags' };
+const prefixes: Record<string, string> = { heads: 'refs/heads', remotes: 'refs/remotes', tags: 'refs/tags', pull: 'refs/pull' };
 const refs = git(['for-each-ref', '--format=%(refname)', ...refKinds.map((k) => prefixes[k]!).filter(Boolean)]).split('\n').filter(Boolean);
 summary.refs = refs.length;
 const REFS_INPUT = refs.join(String.fromCharCode(10)) + String.fromCharCode(10);
@@ -81,7 +106,7 @@ const commits = git(['rev-list', '--stdin'], REFS_INPUT).split('\n').filter(Bool
 summary.commits = commits.length;
 
 // 2. Blob -> (path, first commit that carried it). Oldest commit wins; a merge-only blob is attributed to "merge".
-const firstSeen = new Map<string, { path: string; commit: string }>();
+const firstSeen = new Map<string, { path: string; commit: string; rank: number }>();
 const log = git(['log', '--reverse', '--no-renames', '-m', '--raw', '-z', '--no-abbrev', '--format=%x00C%H', '--stdin'], REFS_INPUT);
 let commit = 'merge';
 let pending = '';
@@ -92,7 +117,7 @@ for (const part of log.split('\0')) {
   if (token.startsWith('C') && /^C[0-9a-f]{40}$/.test(token)) { commit = token.slice(1, 9); continue; }
   const m = /^:\d+ \d+ [0-9a-f]+ ([0-9a-f]{40}) ([AMCRT])$/.exec(token);
   if (m) { pending = m[1]!; continue; }
-  if (pending && token && !token.startsWith(':')) { if (!firstSeen.has(pending)) firstSeen.set(pending, { path: token, commit }); pending = ''; }
+  if (pending && token && !token.startsWith(':')) { if (!firstSeen.has(pending)) firstSeen.set(pending, { path: token, commit, rank: firstSeen.size }); pending = ''; }
 }
 
 // 3. Every object reachable from the refs, whatever its path.
@@ -107,10 +132,10 @@ const blobs = types.map((l) => l.split(' ')).filter((p) => p[1] === 'blob').map(
 summary.blobs = blobs.length;
 summary.paths = new Set(blobPaths.values()).size;
 
-function note(category: string, rule: string, id: string, synthetic: boolean) {
+function note(category: string, rule: string, id: string, synthetic: boolean | 'never') {
   const where = firstSeen.get(id);
   const path = where?.path ?? blobPaths.get(id) ?? '(unplaced)';
-  hits.push({ category, rule, path, commit: where?.commit ?? 'merge', synthetic: synthetic || isSyntheticHome(path) });
+  hits.push({ category, rule, path, commit: where?.commit ?? 'merge', rank: where?.rank ?? Number.MAX_SAFE_INTEGER, synthetic: synthetic === 'never' ? false : synthetic || isSyntheticHome(path) });
 }
 
 // Path rules need no content.
@@ -161,7 +186,12 @@ function scan(id: string, body: Buffer) {
   }
   summary.blobsText++;
   const text = body.toString('utf8');
-  for (const hit of redactText(text).hits) note('secret rule', hit.rule, id, false);
+  const redacted = redactText(text);
+  const home = isSyntheticHome(firstSeen.get(id)?.path ?? blobPaths.get(id) ?? '');
+  // In a test or fixture file the location only counts as invented when the value looks invented too.
+  const odd = home && redacted.hits.length > 0 && matchedValues(text).some((value) => !looksInvented(value));
+  for (const hit of redacted.hits) note('secret rule', hit.rule, id, false);
+  if (odd) note('secret rule', 'value in a test file that does not look invented', id, 'never');
   for (const { kind, test } of PRIVATE_TEXT) if (test.test(text)) note('private text', kind, id, false);
   if (looksLikeTranscript(text)) note('journal-like content', 'transcript shape', id, false);
 }
@@ -183,13 +213,13 @@ if (json) {
   for (const [key, g] of [...grouped].sort()) console.log(`${key.replace(/\|/g, ' · ')}: ${g.blobs} blob(s) at ${g.paths.size} path(s)`);
   for (const [kind, n] of [...binaryKinds].sort()) console.log(`binary · ${kind} · ${n} blob(s)`);
   // One line per rule and path (not per version), with how many blob versions and the oldest commit prefix.
-  const lines = new Map<string, { versions: number; commit: string }>();
+  const lines = new Map<string, { versions: number; commit: string; rank: number }>();
   for (const h of other) {
     const k = `${h.category} · ${h.rule} · ${h.path}`;
     const line = lines.get(k);
-    if (line) line.versions++; else lines.set(k, { versions: 1, commit: h.commit });
+    if (line) { line.versions++; if (h.rank < line.rank) { line.rank = h.rank; line.commit = h.commit; } } else lines.set(k, { versions: 1, commit: h.commit, rank: h.rank });
   }
-  for (const [k, v] of [...lines].sort()) console.log(`REVIEW ${k} · ${v.versions} version(s) · first ${v.commit}`);
+  for (const [k, v] of [...lines].sort()) console.log(`REVIEW ${k} · ${v.versions} version(s) · oldest ${v.commit}`);
   if (!other.length) console.log('Nothing outside the known synthetic locations.');
 }
 void index;
