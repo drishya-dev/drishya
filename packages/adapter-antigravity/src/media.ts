@@ -2,7 +2,7 @@ import { join, resolve } from 'node:path';
 import { captureImage, MAX_IMAGE_BYTES, type CapturedImage } from '@drishya/privacy';
 import { conversationId, localPath, readablePath, openObservation } from './paths.ts';
 
-export interface MediaReference { uri: string; availability: 'captured-file' | 'referenced-file'; reason?: string }
+export interface MediaReference { uri: string; availability: 'captured-file' | 'referenced-file'; reason?: string; mediaType?: string }
 export interface MediaResult { images: CapturedImage[]; references: MediaReference[] }
 const object = (value: unknown): Record<string, unknown> => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
@@ -17,12 +17,19 @@ export function mediaPath(root: string, id: string, uri: string): string | undef
 /** Returns unpersisted candidates. Ingest must seal these before any store, index or screen. */
 export async function captureMedia(root: string, id: string, value: unknown): Promise<MediaResult> {
   const result: MediaResult = { images: [], references: [] };
+  // The store enforces the session budget; bound pre-seal candidates as well.
+  let remainingBytes = 256 * 1024 * 1024;
   if (!Array.isArray(value)) return result;
   for (const item of value) {
     const row = object(item), uri = typeof row.uri === 'string' ? row.uri : typeof item === 'string' ? item : undefined;
     if (!uri) continue;
     const reference: MediaReference = { uri, availability: 'referenced-file' };
     result.references.push(reference);
+    if (row.mime_type === 'application/pdf') {
+      reference.mediaType = row.mime_type;
+      reference.reason = 'Non-image attachment reference; bytes were not read.';
+      continue;
+    }
     const candidate = mediaPath(root, id, uri);
     if (!candidate) { result.images.push({ kind: 'captured-image', omitted: 'protected' }); reference.reason = 'Not a permitted local conversation image.'; continue; }
     let path: string;
@@ -40,6 +47,8 @@ export async function captureMedia(root: string, id: string, value: unknown): Pr
       const before = await handle.stat();
       if (!before.isFile()) { result.images.push({ kind: 'captured-image', omitted: 'protected' }); reference.reason = 'The image reference is not a regular file.'; continue; }
       if (before.size > MAX_IMAGE_BYTES) { result.images.push({ kind: 'captured-image', bytes: before.size, omitted: 'too-large' }); reference.reason = 'The referenced image exceeds the four MiB image limit.'; continue; }
+      if (before.size > remainingBytes) { result.images.push({ kind: 'captured-image', bytes: before.size, omitted: 'recording-budget' }); reference.reason = 'The bounded image capture budget was reached.'; continue; }
+      remainingBytes -= before.size;
       const buffer = Buffer.alloc(before.size);
       let offset = 0;
       while (offset < buffer.length) {

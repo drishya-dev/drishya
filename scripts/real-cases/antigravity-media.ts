@@ -5,7 +5,7 @@ export const antigravityMedia: RealCase = {
   name: 'antigravity-media', about: 'Antigravity captured images, recorded thinking and native plan-artifact documents',
   harnesses: ['antigravity'], prefilter: '',
   scan(row) {
-    const images = Array.isArray(row.media) ? row.media.length : 0;
+    const images = Array.isArray(row.media) ? row.media.filter(media => media && typeof media === 'object' && (!media.mime_type || /^image\/(?:png|jpeg|gif|webp)$/i.test(media.mime_type))).length : 0;
     const artifacts = (Array.isArray(row.tool_calls) ? row.tool_calls : []).filter(call => call && typeof call === 'object' && isPlanArtifact(decodeArgs(call.args))).length;
     return images || artifacts ? { hits: images + artifacts, only: artifacts } : undefined;
   },

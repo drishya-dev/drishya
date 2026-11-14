@@ -193,6 +193,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
           if (task && state && state !== 'running') { task.terminal = { step, text: content, time: raw.sourceTime, error: state === 'error' }; task.nextPollAt = undefined; }
         }
       }
+      if (preparedMedia?.references.some(reference => reference.mediaType)) raws.push({ recordId: `${id}:${step}`, part: 30000, agentId, kind: 'capture.gap', availability: 'metadata-only', payload: { reason: 'unsupported-content', detail: 'Non-image attachment referenced by Antigravity; its bytes were not imported. The native reference is retained.', mediaReferences: preparedMedia.references.filter(reference => reference.mediaType) } });
       prepared = undefined; preparedMedia = undefined;
       return [...raws, ...childReceipts()];
     },

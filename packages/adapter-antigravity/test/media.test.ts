@@ -65,3 +65,17 @@ it('puts image bytes on user and result receipts and seals artifact text before 
   expect(JSON.stringify(sealed)).not.toContain(canary);
   expect(versions[0]?.payload.forOperationId).toBe(call.find(r => r.kind === 'tool.call')?.operationId);
 });
+
+it('retains non-image references without opening them or pretending a PDF is an image', async () => {
+  const { root, dir } = await setup();
+  const value = await captureMedia(root, 'one', [{ uri: join(dir, '.user_uploaded', 'document.pdf'), mime_type: 'application/pdf' }]);
+  expect(value.images).toEqual([]);
+  expect(value.references[0]).toMatchObject({ mediaType: 'application/pdf', availability: 'referenced-file', reason: 'Non-image attachment reference; bytes were not read.' });
+  const ctx = { recordingId: 'r', sourceId: 's', sourcePath: join(dir, '.system_generated', 'logs', 'transcript_full.jsonl') };
+  const parser = liveParser(createParser(ctx), ctx, root, 'one', () => undefined);
+  const row = { step_index: 0, type: 'USER_INPUT', source: 'USER_EXPLICIT', content: 'Synthetic PDF reference', media: [{ uri: join(dir, '.user_uploaded', 'document.pdf'), mime_type: 'application/pdf' }] };
+  await parser.prepare?.(row);
+  const raws = parser.parse(row);
+  expect(raws.find(raw => raw.kind === 'message.user')?.payload.images).toEqual([]);
+  expect(raws.some(raw => raw.kind === 'capture.gap' && raw.payload.reason === 'unsupported-content')).toBe(true);
+});
