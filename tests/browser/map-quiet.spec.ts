@@ -120,7 +120,7 @@ test('beneath the reading column dots and import lines stay visible but transluc
     const map = document.querySelector('.map')!.getBoundingClientRect();
     const scale = canvas.width / map.width, feather = 72;
     const data = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data;
-    // Pixels above an alpha, counted per horizontal span. A quiet dot is .85 x .38 = 82 of 255; a full one is 217.
+    // Pixels above an alpha, counted per horizontal span. A quiet dot is .95 x .38 = 92 of 255; a full one is 242.
     const above = (left: number, right: number, alpha: number) => {
       let count = 0;
       for (let y = 0; y < canvas.height; y++) for (let x = Math.max(0, Math.floor(left * scale)); x < Math.min(canvas.width, Math.ceil(right * scale)); x++) if (data[(y * canvas.width + x) * 4 + 3]! > alpha) count++;
