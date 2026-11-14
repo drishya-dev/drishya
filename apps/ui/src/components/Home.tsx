@@ -13,7 +13,7 @@ import { ModernSessions } from '../modern/ModernSessions.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { SessionHome } from '../modern/SessionHome.tsx';
 
-const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex' };
+const HARNESS_LABEL: Record<string, string> = { 'claude-code': 'Claude Code', codex: 'Codex', antigravity: 'Antigravity' };
 
 export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
@@ -174,7 +174,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
       {preview && <div className="local-preview-card"><strong>Your local preview</strong><span>{preview.title ?? 'Selected recording'}</span><button className="btn" onClick={() => { location.hash = `#/r/${preview.id}`; void openRecording(preview.id); }}>Open real recording</button><small>Redacted local sessions. Nothing is published or copied into the synthetic sample.</small></div>}
       <div className="home-filters">
         <label className="home-search"><InterfaceGlyph name="search" /><input className="filter" aria-label="Find a session" placeholder="Find by title or project" value={q} onChange={(e) => setQ(e.target.value)} /></label>
-        <select aria-label="Harness" value={harness} onChange={(e) => setHarness(e.target.value)}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option></select>
+        <select aria-label="Harness" value={harness} onChange={(e) => setHarness(e.target.value)}><option value="all">All harnesses</option><option value="claude-code">Claude Code</option><option value="codex">Codex</option><option value="antigravity">Antigravity</option></select>
         <select aria-label="Session age" value={days} onChange={(e) => setDays(Number(e.target.value))}><option value={0}>Any date</option><option value={1}>Past day</option><option value={7}>Past week</option><option value={30}>Past month</option></select>
       </div>
 

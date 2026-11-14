@@ -5,6 +5,7 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
+    "@drishya/adapter-antigravity": "workspace:*",
     "@drishya/adapter-claude": "workspace:*",
     "@drishya/adapter-codex": "workspace:*",
     "@drishya/capture-core": "workspace:*",

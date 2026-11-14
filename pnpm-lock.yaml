@@ -128,6 +128,18 @@ importers:
         specifier: ^8.3.6
         version: 8.3.6(@types/node@24.13.6)(esbuild@0.28.2)
 
+  packages/adapter-antigravity:
+    dependencies:
+      '@drishya/capture-core':
+        specifier: workspace:*
+        version: link:../capture-core
+      '@drishya/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@drishya/privacy':
+        specifier: workspace:*
+        version: link:../privacy
+
   packages/adapter-claude:
     dependencies:
       '@drishya/capture-core':
@@ -174,6 +186,9 @@ importers:
 
   packages/ingest:
     dependencies:
+      '@drishya/adapter-antigravity':
+        specifier: workspace:*
+        version: link:../adapter-antigravity
       '@drishya/adapter-claude':
         specifier: workspace:*
         version: link:../adapter-claude

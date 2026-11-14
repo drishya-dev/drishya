@@ -13,6 +13,12 @@ const uuid=/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}/i;
 const ordering=new WeakMap<Projection,Map<number,number>>();
 function captureOrder(store:Store,p:Projection):Map<number,number> {
   let ranks=ordering.get(p);if(ranks)return ranks;
+  if(store.getRecording(p.recordingId)?.harness==='antigravity'){
+    const rows=store.db.prepare(`SELECT seq FROM observations WHERE recording_id=? ORDER BY
+      CASE WHEN json_extract(body,'$.source.recordId') LIKE '%:metadata' THEN -1 ELSE
+        CAST(substr(json_extract(body,'$.source.recordId'),instr(json_extract(body,'$.source.recordId'),':')+1) AS INTEGER) END,seq`).all(p.recordingId) as {seq:number}[];
+    ranks=new Map(rows.map((row,n)=>[row.seq,n]));ordering.set(p,ranks);return ranks;
+  }
   // Same source-clock carry-forward order as Store.orderedObservations, but metadata only.
   // Companion files append after the parent journal; ingest sequence is not replay position.
   const rows=store.db.prepare(`WITH timed AS (
@@ -28,6 +34,14 @@ function captureOrder(store:Store,p:Projection):Map<number,number> {
 
 /** Imported sources only. File names are native identities, never a timing/name-similarity join. */
 function childRecording(store:Store,id:string,threadId:string|undefined,childNative:string,root:string|undefined,sourcePath:string|undefined):string|undefined {
+  if(store.getRecording(id)?.harness==='antigravity'&&sourcePath&&/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(childNative)){
+    const parent=basename(dirname(dirname(dirname(sourcePath))));
+    const rows=store.db.prepare(`SELECT DISTINCT recording_id id FROM observations WHERE kind='session.meta'
+      AND json_extract(body,'$.source.adapterId')='antigravity' AND json_extract(body,'$.source.recordId')=?
+      AND json_extract(body,'$.payload.parentThreadId')=? LIMIT 2`).all(`${childNative}:metadata`,parent) as {id:string}[];
+    if(rows.length===1&&rows[0]!.id!==id&&store.getRecording(rows[0]!.id)?.harness==='antigravity')return rows[0]!.id;
+    return;
+  }
   if(!root||!sourcePath)return;
   const parent=basename(sourcePath).match(uuid)?.[0];
   if(threadId&&uuid.test(threadId)){
@@ -54,7 +68,9 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   const call=op.observationIds.map(id=>store.observationById(p.recordingId,id)).find(o=>o?.kind==='tool.call');
   if(!call||rank(call.receivedSequence)>cutoff)return null;
   const receipts=call.operationId?store.operationObservations(p.recordingId,call.operationId).filter(o=>o.source.sourceId===call.source.sourceId&&o.source.generation===call.source.generation&&rank(o.receivedSequence)<=cutoff):[call];
-  const spawned=receipts.find(o=>o.kind==='agent.spawn'&&['source-id','captured-reference'].includes(object(o.payload).basis));
+  const spawnedReceipts=receipts.filter(o=>o.kind==='agent.spawn'&&['source-id','captured-reference'].includes(object(o.payload).basis));
+  const multiple=call.source.adapterId==='antigravity'&&new Set(spawnedReceipts.map(o=>object(o.payload).childAgentId)).size>1;
+  const spawned=multiple?undefined:spawnedReceipts[0];
   const exactLinks=p.links.filter(link=>link.from===op.id&&link.relation==='explicit-reference'&&link.basis==='source-id');
   const referenced=exactLinks.flatMap(link=>link.sourceObservationIds??[]).map(id=>store.observationById(p.recordingId,id)).filter((o):o is Observation=>!!o&&rank(o.receivedSequence)<=cutoff&&o.source.sourceId===call.source.sourceId&&o.source.generation===call.source.generation);
   const direct=referenced.find(o=>o.kind==='item.completed'&&object(o.payload).item==='subagent');
@@ -93,10 +109,15 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   // A parent spanning worktrees deliberately has no common projection root. The
   // captured spawn's own workspace still proves this child's exact boundary.
   const rec=store.getRecording(p.recordingId),recordingId=childId&&!ambiguous?childRecording(store,p.recordingId,threadId,native!.replace(/^agent:/,''),call.workspaceRoot??p.workspaceRoot,rec?.sourcePath):undefined;
+  const children=multiple?[...new Map(spawnedReceipts.map(o=>{
+    const data=object(o.payload),nativeId=String(data.childAgentId),childId=`${p.recordingId}.${nativeId}`;
+    const linked=childRecording(store,p.recordingId,undefined,nativeId.replace(/^agent:/,''),call.workspaceRoot??p.workspaceRoot,rec?.sourcePath);
+    return [nativeId,{id:childId,name:String(data.agentType??'Child agent').slice(0,300),...(linked?{recordingId:linked}:{})}] as const;
+  })).values()]:undefined;
   const child=childId&&!ambiguous?{id:childId,name:(typeof input.description==='string'?input.description:(step===undefined?agent?.nickname??agent?.label:undefined)??op.detail.agentType??'Child agent').slice(0,300),model:last('model')??(step===undefined?agent?.model:undefined),effort:last('effort')??(step===undefined?agent?.effort:undefined),address:last('path')??(step===undefined?address:undefined),...(recordingId?{recordingId}:{})}:undefined;
   let taskAt=task?Math.min(taskStart,Math.max(0,task.length-1)):0;
   if(taskAt&&task&&/[\uDC00-\uDFFF]/.test(task[taskAt]!)&&/[\uD800-\uDBFF]/.test(task[taskAt-1]!))taskAt--;
   let taskEnd=Math.min(task?.length??0,taskAt+16000);
   if(task&&taskEnd<task.length&&/[\uD800-\uDBFF]/.test(task[taskEnd-1]!))taskEnd--;
-  return {operationId:op.id,child,...(task||taskLimited||taskMissing?{task:{text:task?.slice(taskAt,taskEnd)??'',truncated:taskLimited||taskMissing||!!task&&taskEnd<task.length,start:taskAt,total:task?.length??0,...(taskLimited||taskMissing?{unavailable:true,reason:taskLimited?'content-limit' as const:'missing' as const}:{})}}:{}),steps:steps.slice(start,start+25),total:steps.length,start,limit:25,childActions:actions.length,identity:child?'captured':'unresolved',recording:recordingId?'separate-recording':actions.length?'same-recording':child?'not-imported':'unresolved'};
+  return {operationId:op.id,child,...(children?{children}:{}),...(task||taskLimited||taskMissing?{task:{text:task?.slice(taskAt,taskEnd)??'',truncated:taskLimited||taskMissing||!!task&&taskEnd<task.length,start:taskAt,total:task?.length??0,...(taskLimited||taskMissing?{unavailable:true,reason:taskLimited?'content-limit' as const:'missing' as const}:{})}}:{}),steps:steps.slice(start,start+25),total:steps.length,start,limit:25,childActions:actions.length,identity:child||children?.length?'captured':'unresolved',recording:recordingId||children?.some(c=>c.recordingId)?'separate-recording':actions.length?'same-recording':child||children?.length?'not-imported':'unresolved'};
 }

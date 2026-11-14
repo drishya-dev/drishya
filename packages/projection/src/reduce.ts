@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r40';
+export const REDUCER_VERSION = 'r45';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -86,6 +86,8 @@ const TITLE_RULE = 'title-v1';
 type Rec = Record<string, any>;
 
 interface OpState {
+  antigravityChildren?: Set<string>;
+  nativeArtifact?: { path: string; name: string };
   literalPlan?: { text: string; status: string }[];
   taskInput?: unknown;
   taskRedacted?: boolean;
@@ -157,6 +159,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const artifacts = new Map<string, Artifact>();
   const links: EvidenceLink[] = [];
   const timeline: TimelineItem[] = [];
+  let hasResultVersions = false;
   const gaps: Projection['gaps'] = [];
   // A recording's captured base cannot be used to reconstruct another recording's edit,
   // even when both report the same workspace-relative path.
@@ -682,6 +685,27 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const st = newOp(o, baseId, intent, String(p.tool));
           describeCall(st, p, rel);
+          if (o.source.adapterId === 'antigravity' && p.tool === 'webview_browser' && intent.kind === 'other' && p.input !== undefined) {
+            // The compact input is bounded. Preserve the sealed original for deliberate reading.
+            const original = resolveBlobs(p.input, text);
+            const content = JSON.stringify(original, null, 2);
+            if (content !== undefined) st.op.artifactIds.push(addArtifact({ id: `art_${o.id}_native_browser_input`, kind: 'excerpt', observedAtSequence: st.op.startSequence,
+              availability: o.availability, provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0, content }));
+          }
+          if (o.source.adapterId === 'antigravity' && intent.kind === 'plan' && p.nativeArtifact && typeof p.nativeArtifact.path === 'string' && typeof p.nativeArtifact.name === 'string') {
+            const native = p.nativeArtifact as Rec;
+            st.nativeArtifact = { path: native.path, name: native.name };
+            const content = text(native.text as TextValue);
+            if (content !== undefined && st.op.detail.kind === 'plan') {
+              const artifactId = addArtifact({ id: `art_${o.id}_native_plan`, kind: 'snapshot', observedAtSequence: st.op.startSequence,
+                availability: native.truncated ? 'partial' : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0,
+                ...(isBlobText(native.text) ? { blobRef: native.text } : { content }) });
+              st.op.detail.document = { text: clip(content, maxProse), truncated: native.truncated === true || content.length > maxProse, artifactId, source: 'native-call' };
+              st.op.artifactIds.push(artifactId);
+              st.op.title = native.name;
+              st.op.classification = derived('antigravity-native-plan-v1', [o.id]);
+            }
+          }
           if (o.source.adapterId === 'codex' && (p.tool === 'exec' || p.tool === 'functions.exec') && intent.kind === 'shell') {
             st.literalPlan = literalPlan(text(intent.command as TextValue) ?? '');
           }
@@ -693,6 +717,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             if (st.intent.kind === 'shell') st.intent = { ...st.intent, command: st.op.detail.command };
           }
           timeline.push({ type: 'op-start', id: `s_${baseId}`, operationId: baseId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+          if (st.nativeArtifact) {
+            hasResultVersions = true;
+            st.op.resultVersions = [structuredClone({ availableAfterStep: step(), status: st.op.status, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds })];
+          }
           break;
         }
         case 'tool.result': {
@@ -708,14 +736,22 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           for (const id of targets) {
             const st = ops.get(id)!;
-            if (st.completed) continue; // duplicate result record
+            const taskUpdate = o.source.adapterId === 'antigravity' && p.resultUpdate === true && typeof p.nativeTaskId === 'string'
+              && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.run?.backgroundTaskId === p.nativeTaskId;
+            if (st.completed && !taskUpdate) continue; // duplicate result record
             st.completed = true;
             dirtyOperations.add(id);
             st.op.observationIds.push(o.id);
             st.op.endSequence = st.scriptWrapper ? Math.max(0, step() - 1) : step();
-            st.op.endTime = o.sourceTime;
+            st.op.endTime = taskUpdate && typeof p.terminalTime === 'string' ? p.terminalTime : o.sourceTime;
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
+            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || p.callAvailability === 'not-recorded' || st.op.tool === 'ask_permission' || (st.intent.kind === 'shell' || st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
+            if (taskUpdate && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.outputArtifactId) {
+              const previousArtifact = st.op.detail.outputArtifactId;
+              st.op.artifactIds = st.op.artifactIds.filter(id => id !== previousArtifact);
+              st.op.detail.outputArtifactId = undefined;
+            }
             if (!st.typedOutcome) completeOp(st, o, p, { text, rel, addArtifact, knownFull, link, fileKey });
             if (!p.isError && st.literalPlan !== undefined && literalPlanConfirmed(text(p.text))) {
               // The wrapper contains exactly one awaited literal call. A failed or
@@ -753,10 +789,25 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
               }
             }
             if (st.nestedPatch) st.wrapperResult = { observation: o, payload: p };
-            link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: 'source-id', sourceObservationIds: [st.callObservationId ?? o.id, o.id], explanation: 'The harness recorded this result for this call id.' });
+            if (o.source.adapterId !== 'antigravity' || o.correlation?.basis === 'call-order' || taskUpdate) link({ from: st.callObservationId ?? o.id, to: o.id, relation: 'tool-result', basis: o.correlation?.basis === 'call-order' ? 'deterministic-rule' : 'source-id',
+              ...(taskUpdate ? { ruleVersion: 'antigravity-native-task-id-v1' } : o.correlation?.basis === 'call-order' ? { ruleVersion: 'antigravity-call-order-v1' } : {}), sourceObservationIds: [st.callObservationId ?? o.id, o.id],
+              explanation: taskUpdate ? 'The harness output references this command by its exact recorded background task id.' : o.correlation?.basis === 'call-order' ? 'The result follows this call in the recorded planner group order; the transcript has no native call id.' : 'The harness recorded this result for this call id.' });
             // Completed calls no longer need their potentially large edit/command input.
-            st.intent = { kind: 'other' };
-            if (!st.scriptWrapper) timeline.push({ type: 'op-end', id: `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            const pendingAntigravity = o.source.adapterId === 'antigravity' && p.status === 'running';
+            if (!pendingAntigravity) st.intent = { kind: 'other' };
+            if (!st.scriptWrapper && !pendingAntigravity) timeline.push({ type: 'op-end', id: taskUpdate ? `e_${id}_${o.id}` : `e_${id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+            if (o.source.adapterId === 'antigravity' && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && (taskUpdate || typeof st.op.run?.backgroundTaskId === 'string')) {
+              hasResultVersions = true;
+              (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (pendingAntigravity ? 1 : 0), status: st.op.status,
+                endSequence: pendingAntigravity ? undefined : st.op.endSequence, endTime: pendingAntigravity ? undefined : st.op.endTime,
+                detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, run: st.op.run, failure: st.op.failure }));
+            }
+            if (st.nativeArtifact) {
+              hasResultVersions = true;
+              (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (pendingAntigravity ? 1 : 0), status: st.op.status,
+                endSequence: pendingAntigravity ? undefined : st.op.endSequence, endTime: pendingAntigravity ? undefined : st.op.endTime,
+                detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, failure: st.op.failure }));
+            }
             if (st.op.kind === 'spawn' && st.op.detail.kind === 'spawn' && st.op.detail.childAgentId) {
               timeline.push({ type: 'agent-stop', id: `x_${id}`, sequence: o.receivedSequence, agentId: st.op.detail.childAgentId, time: o.sourceTime });
               const child = agents.get(st.op.detail.childAgentId);
@@ -769,8 +820,22 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           const child = `${o.recordingId}.${String(p.childAgentId)}`;
           const opId = `${o.recordingId}.${o.operationId}`;
           const st = ops.get(opId);
-          if (st && st.op.detail.kind === 'spawn') { st.op.detail.childAgentId = child; dirtyOperations.add(opId); }
-          const a = agents.get(child);
+          if (st && st.op.detail.kind === 'spawn') {
+            if (o.source.adapterId === 'antigravity') {
+              // Child metadata may arrive after the native call completed. Preserve the
+              // prior completed view instead of injecting a future child into replay.
+              hasResultVersions = true;
+              st.op.resultVersions ??= [structuredClone({ availableAfterStep: (st.op.endSequence ?? st.op.startSequence) + 1, status: st.op.status, endSequence: st.op.endSequence, endTime: st.op.endTime, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds })];
+              (st.antigravityChildren ??= new Set()).add(child);
+              st.op.detail.childAgentId = st.antigravityChildren.size === 1 ? child : undefined;
+              st.op.observationIds.push(o.id);
+              // A projection revision boundary, not an additional native tool completion.
+              if (st.completed) timeline.push({ type: 'op-end', id: `e_${opId}_${o.id}`, operationId: opId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+              st.op.resultVersions.push(structuredClone({ availableAfterStep: step() + (st.completed ? 0 : 1), status: st.op.status, endSequence: st.op.endSequence, endTime: st.op.endTime, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds }));
+            } else st.op.detail.childAgentId = child;
+            dirtyOperations.add(opId);
+          }
+          const a = agents.get(child) ?? (o.source.adapterId === 'antigravity' ? ensureAgent({ ...o, agentId: String(p.childAgentId) }) : undefined);
           if (a) {
             a.parentId = agentKey(o);
             a.agentType = p.agentType;
@@ -841,6 +906,37 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason, time: o.sourceTime });
             if (receipt.boundary) gaps.push({ sequence: step() - 1, reason, detail: 'The harness compacted earlier context here.' });
           }
+          break;
+        }
+        case 'artifact.plan': {
+          if (o.source.adapterId !== 'antigravity') break;
+          ensureAgent(o);
+          const id = typeof p.forOperationId === 'string' ? `${o.recordingId}.${p.forOperationId}` : '';
+          const st = ops.get(id);
+          const content = text(p.text as TextValue);
+          const unavailable = ['removed', 'protected', 'unreadable'].includes(p.unavailable) ? p.unavailable as 'removed' | 'protected' | 'unreadable' : undefined;
+          const artifactId = addArtifact({ id: `art_${o.id}_native_snapshot`, kind: 'snapshot', observedAtSequence: step(),
+            availability: unavailable || content === undefined ? 'unavailable' : p.truncated ? 'partial' : 'complete',
+            provenance: { kind: 'captured', observationIds: [o.id] }, redacted: o.redactions.length > 0,
+            ...(unavailable ? { note: `Native artifact ${unavailable}.` } : {}),
+            ...(content !== undefined ? (isBlobText(p.text) ? { blobRef: p.text } : { content }) : {}) });
+          if (!st?.nativeArtifact || st.op.detail.kind !== 'plan' || st.nativeArtifact.path !== p.path || st.nativeArtifact.name !== p.name || p.association !== 'captured-path-reference') {
+            timeline.push({ type: 'gap', id: `g_${o.id}`, sequence: o.receivedSequence, agentId: agentKey(o), reason: 'unresolved-artifact-reference', time: o.sourceTime });
+            gaps.push({ sequence: step() - 1, reason: 'unresolved-artifact-reference', detail: 'A captured artifact snapshot did not match its recorded plan call reference.' });
+            break;
+          }
+          const items = Array.isArray(p.items) ? p.items.filter((item: Rec) => item && typeof item.text === 'string' && (item.status === 'completed' || item.status === 'pending')).slice(0, 50).map((item: Rec) => ({ text: item.text, status: item.status })) : [];
+          (st.op.detail.artifactVersions ??= []).push({ artifactId, name: p.name, filePath: String(p.filePath ?? ''), current: p.current === true,
+            ...(typeof p.version === 'string' ? { version: p.version } : {}), ...(typeof p.updatedAt === 'string' ? { updatedAt: p.updatedAt } : {}),
+            ...(content !== undefined ? { text: clip(content, maxProse) } : {}), bytes: typeof p.bytes === 'number' ? p.bytes : 0,
+            truncated: p.truncated === true || (content !== undefined && content.length > maxProse), ...(unavailable ? { unavailable } : {}), items, observationId: o.id });
+          st.op.artifactIds.push(artifactId);
+          st.op.observationIds.push(o.id);
+          dirtyOperations.add(id);
+          if (st.completed && st.op.status !== 'running') timeline.push({ type: 'op-end', id: `e_${id}_${o.id}`, operationId: id, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+          hasResultVersions = true;
+          (st.op.resultVersions ??= []).push(structuredClone({ availableAfterStep: step() + (st.completed && st.op.status !== 'running' ? 0 : 1), status: st.op.status,
+            endSequence: st.op.endSequence, endTime: st.op.endTime, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds, failure: st.op.failure }));
           break;
         }
         case 'capture.gap':
@@ -914,6 +1010,21 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     }
 
     const placed = placeChildren(operations, pendingTurnImages.size ? [...timeline, ...[...pendingTurnImages.values()].map(imageOnlyTurn)] : timeline, [...artifacts.values()], prose, [...finalAgents.values()], itemReceipts);
+    // Child placement can insert timeline items; translate result boundaries by their preceding item.
+    if (hasResultVersions) {
+      const placedPositions = new Map(placed.timeline.map((item, index) => [item.id, index]));
+      placed.operations = placed.operations.map(op => op.resultVersions ? { ...op, resultVersions: op.resultVersions.map(version => ({ ...version })) } : op);
+      for (const op of placed.operations) for (const version of op.resultVersions ?? []) {
+        const previous = timeline[version.availableAfterStep - 1];
+        if (previous) version.availableAfterStep = (placedPositions.get(previous.id) ?? version.availableAfterStep - 1) + 1;
+        else if (version.availableAfterStep > timeline.length) version.availableAfterStep += placed.timeline.length - timeline.length;
+        if (version.endSequence !== undefined) {
+          const end = timeline[version.endSequence];
+          if (end) version.endSequence = placedPositions.get(end.id) ?? version.endSequence;
+        }
+      }
+    }
+
     crossLinks(placed.operations, placed.prose, finalLink);
     const placedSteps = new Map(placed.timeline.map((item, index) => [item.id, index]));
     const contextEvidence = context.snapshot(at => at >= timeline.length ? placed.timeline.length : placedSteps.get(timeline[at]!.id) ?? at);
@@ -977,16 +1088,41 @@ function copyValue<T>(value: T): T {
  * carrying each source's last time forward for records without one. Ties keep ingest order.
  */
 export function orderObservations(input: Observation[]): Observation[] {
+  if (input.length && input.every(o => o.source.adapterId === 'antigravity' && o.recordingId === input[0]!.recordingId)) {
+    return [...input].sort((a, b) => {
+      const index = (o: Observation) => Number.parseInt(o.source.recordId?.split(':')[1] ?? '-1', 10);
+      const ai = index(a), bi = index(b);
+      return (Number.isFinite(ai) ? ai : -1) - (Number.isFinite(bi) ? bi : -1) || a.receivedSequence - b.receivedSequence;
+    });
+  }
+  const orderedClocks = new Map<string, string>();
+  const agRecordings = new Set(input.filter(o => o.source.adapterId === 'antigravity').map(o => o.recordingId));
+  for (const recording of agRecordings) {
+    let clock = '';
+    for (const o of orderObservations(input.filter(o => o.recordingId === recording && o.source.adapterId === 'antigravity'))) {
+      const time = o.sourceTime && Number.isFinite(Date.parse(o.sourceTime)) && !(o.payload as { derived?: unknown }).derived ? new Date(o.sourceTime).toISOString() : '';
+      if (time > clock) clock = time;
+      orderedClocks.set(o.id, clock);
+    }
+  }
   const last = new Map<string, string>();
   const keyed = [...input]
     .sort((a, b) => a.receivedSequence - b.receivedSequence)
     .map((o, i) => {
       const src = `${o.recordingId}/${o.source?.sourceId}`;
-      const t = o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime)) ? new Date(o.sourceTime).toISOString() : last.get(src) ?? '';
+      const t = orderedClocks.get(o.id) ?? (o.sourceTime && !Number.isNaN(Date.parse(o.sourceTime)) ? new Date(o.sourceTime).toISOString() : last.get(src) ?? '');
       if (t) last.set(src, t);
       return { o, t, i };
     });
-  keyed.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : a.i - b.i));
+  keyed.sort((a, b) => {
+    if (a.t !== b.t) return a.t < b.t ? -1 : 1;
+    if (agRecordings.size) {
+      const index = (o: Observation) => Number.parseInt(o.source.recordId?.split(':')[1] ?? '-1', 10);
+      const key = (o: Observation) => o.source.adapterId === 'antigravity' ? Number.isFinite(index(o)) ? index(o) : -1 : o.receivedSequence;
+      return key(a.o) - key(b.o) || a.o.receivedSequence - b.o.receivedSequence || a.i - b.i;
+    }
+    return a.i - b.i;
+  });
   return keyed.map((k) => k.o);
 }
 
@@ -1190,6 +1326,16 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       if (st.intent.kind !== 'edit' && st.intent.kind !== 'write') break; // patch ops were described at call time
       if (outcome.kind !== 'edit') break;
       const original = outcome.originalFile === null ? null : c.text(outcome.originalFile as TextValue);
+      if (o.source.adapterId === 'antigravity') {
+        // The transcript records requested strings, not the applied disk state. Show the
+        // intent diff, but never promote it to a confirmed snapshot or future read base.
+        d.hunks = st.intent.kind === 'write' ? addHunk(st.intent.content ?? '') : hunksFromStrings(st.intent.edits, undefined);
+        d.created = outcome.created === true && !p.isError;
+        d.reconstruction = 'unavailable';
+        d.reconstructionNote = p.isError ? 'The tool reported an error; no after-state was recorded.' : 'Requested change; Antigravity reported the tool result but did not record an applied file snapshot.';
+        c.knownFull.delete(c.fileKey(o.recordingId, d.path));
+        break;
+      }
       const base = typeof original === 'string' ? original : c.knownFull.get(c.fileKey(o.recordingId, d.path));
       const hunks = Array.isArray(outcome.hunks) && outcome.hunks.length
         ? resolveHunkLines(outcome.hunks as Hunk[], line => c.text(line, false))
@@ -1261,7 +1407,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       d.summary = parseTestOutput(out);
       d.outputPreview = tail(out, PREVIEW);
       if (out.length > PREVIEW) {
-        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out`, kind: 'output', observedAtSequence: seq, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
+        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out${o.source.adapterId === 'antigravity' && (p.resultUpdate === true || typeof op.run?.backgroundTaskId === 'string') ? `_${o.id}` : ''}`, kind: 'output', observedAtSequence: seq, availability: o.source.adapterId === 'antigravity' ? o.availability : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
         op.artifactIds.push(d.outputArtifactId);
       }
       if ((d.summary && d.summary.failed > 0) || (typeof d.exitCode === 'number' && d.exitCode !== 0)) op.status = 'error';
@@ -1281,7 +1427,7 @@ function completeOp(st: OpState, o: Observation, p: Rec, c: Ctx) {
       d.exitCode = p.exitCode ?? null;
       d.outputPreview = tail(out, PREVIEW);
       if (out.length > PREVIEW) {
-        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out`, kind: 'output', observedAtSequence: seq, availability: 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
+        d.outputArtifactId = c.addArtifact({ id: `art_${op.id}_out${o.source.adapterId === 'antigravity' && (p.resultUpdate === true || typeof op.run?.backgroundTaskId === 'string') ? `_${o.id}` : ''}`, kind: 'output', observedAtSequence: seq, availability: o.source.adapterId === 'antigravity' ? o.availability : 'complete', provenance: { kind: 'captured', observationIds: [o.id] }, redacted, content: out });
         op.artifactIds.push(d.outputArtifactId);
       }
       break;
@@ -1540,6 +1686,6 @@ export const encryptedToken = (value: unknown): boolean => typeof value === 'str
 
 /** How deep a tool's input is kept. A question's offered options sit four levels down
  *  (questions → question → options → option); summarising them left the card unable to list them. */
-const inputDepth = (tool: unknown) => (['AskUserQuestion', 'request_user_input', 'request_user_input_async'].includes(String(tool)) ? 5 : 3);
+const inputDepth = (tool: unknown) => (['AskUserQuestion', 'request_user_input', 'request_user_input_async', 'ask_question'].includes(String(tool)) ? 5 : 3);
 
 export type { OperationDetail };
