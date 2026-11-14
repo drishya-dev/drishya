@@ -1,4 +1,4 @@
-import {surfaceMotion} from '../lib/surface-motion.ts';
+import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
 import { useEffect,useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { screenRun, type ScreenRun, type ScreenStep } from '@drishya/scene';
 import type { OperationImage } from '@drishya/contracts';
@@ -127,7 +127,7 @@ export function ScreenView({ opId, onClose,intent }: { opId?: string; onClose: (
   const shown = steps[shownIndex];
   const go = (next: number) => { setPinned(true); setChoice(Math.max(0, Math.min(last, next))); };
 
-  useEffect(() => {const node=dialog.current!;node.showModal();transition.current=surfaceMotion(node,'dialog');transition.current.open(true);return()=>transition.current?.dispose();}, []);
+  useEffect(() => {const node=dialog.current!;node.showModal();transition.current=surfaceMotion(node,'dialog',undefined,true);transition.current.open(true);const unwatch=watchSurfaceMotion(()=>transition.current?.finishImmediately());return()=>{unwatch();transition.current?.dispose();};}, []);
   // Playback follows captured timestamps with long gaps capped; it never reveals a step the run does not yet hold.
   useEffect(() => {
     if (!playing) return;

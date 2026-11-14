@@ -63,13 +63,21 @@ export function CompareWindow() {
   const open=useApp(s=>s.compareOpen),id=useApp(s=>s.recordingId),source=useApp(s=>s.source),mode=useApp(s=>s.mode),workspaceOpen=useApp(s=>s.developerWorkspace);
   const surface=useRef<HTMLElement>(null),present=useSurfacePresence(open&&!workspaceOpen?true:undefined,surface,'panel',`${id}:${checkoutId??''}`);
   useEffect(()=>{if(open&&workspaceOpen)useApp.setState({compareOpen:false});},[open,workspaceOpen]);
+  const close=()=>{
+    useApp.setState({compareOpen:false});
+    document.querySelector<HTMLElement>('[data-compare-open]')?.focus({preventScroll:true});
+  };
+  useEffect(()=>{
+    window.addEventListener('drishya-compare-close',close);
+    return()=>window.removeEventListener('drishya-compare-close',close);
+  },[]);
   if(!present||mode!=='history'||!id||id.includes('+'))return null;
   // An offline copy or the bundled demo has no repository on this machine; say so instead of a dead button.
-  if(source?.kind!=='daemon')return <section ref={surface} className="developer-workspace compare-window" aria-label="Changes"><header className="compare-header"><strong>Changes</strong><span className="compare-header-end"><button className="btn ghost" onClick={()=>useApp.setState({compareOpen:false})}>Back to agent</button></span></header><p className="compare-note">Changes reads a repository on this machine. This copy of the session has none, so there is nothing to show.</p></section>;
-  return <CompareContent key={`${id}:${checkoutId??"main"}`} id={id} surface={surface}/>;
+  if(source?.kind!=='daemon')return <section ref={surface} className="developer-workspace compare-window" aria-label="Changes"><header className="compare-header"><strong>Changes</strong><span className="compare-header-end"><button className="btn ghost" onClick={close}>Back to agent</button></span></header><p className="compare-note">Changes reads a repository on this machine. This copy of the session has none, so there is nothing to show.</p></section>;
+  return <CompareContent key={`${id}:${checkoutId??"main"}`} id={id} surface={surface} close={close}/>;
 }
 
-function CompareContent({id,surface}:{id:string;surface:React.RefObject<HTMLElement|null>}) {
+function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HTMLElement|null>;close:()=>void}) {
   const checkoutId=useApp(s=>s.checkoutId);
   // FILES-16: every Git read, the access grant and the review marks belong to the checkout chosen in Files, else the session's own.
   const cid=checkoutId??id;
@@ -266,19 +274,6 @@ function CompareContent({id,surface}:{id:string;surface:React.RefObject<HTMLElem
   };
 
   const jump=(operationId:string)=>{useApp.getState().select(operationId);useApp.setState({compareOpen:false});};
-  const requestClose=()=>{
-    const element=section.current,state=useApp.getState();
-    const animate=element&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const done=()=>{useApp.setState({compareOpen:false});requestAnimationFrame(()=>document.querySelector<HTMLElement>('[data-compare-open]')?.focus({preventScroll:true}));};
-    if(!animate){done();return;}
-    // MOTION-1: a window beside the work leaves faster (120 ms) than it arrives (200 ms).
-    const easing=getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim()||'cubic-bezier(.16,1,.3,1)';
-    const exit=element.animate([{opacity:1,transform:'translateY(0)'},{opacity:0,transform:'translateY(4px)'}],{duration:120,easing,fill:'forwards'});
-    void exit.finished.then(done,()=>{});
-  };
-  // The header's Compare toggles the window through the same leaving motion as Back to agent.
-  const closer=useRef(requestClose);closer.current=requestClose;
-  useEffect(()=>{const close=()=>closer.current();window.addEventListener('drishya-compare-close',close);return()=>window.removeEventListener('drishya-compare-close',close);},[]);
   const identity=workspace?.root?.replace(/\\/g,'/').split('/').at(-1)??'Repository';
   const ahead=result?.ahead,behind=result?.behind;
 
@@ -290,7 +285,7 @@ function CompareContent({id,surface}:{id:string;surface:React.RefObject<HTMLElem
     {key:'base',title:`Only on ${baseName}`},
   ];
 
-  return <section ref={section} className="developer-workspace compare-window" aria-label="Changes" onKeyDown={e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();e.stopPropagation();useApp.setState({compareOpen:false});requestAnimationFrame(()=>document.querySelector<HTMLElement>('[data-compare-open]')?.focus({preventScroll:true}));}}}>
+  return <section ref={section} className="developer-workspace compare-window" aria-label="Changes" onKeyDown={e=>{if(e.key==='Escape'&&!e.defaultPrevented){e.preventDefault();e.stopPropagation();document.documentElement.removeAttribute('data-ui-press');close();}}}>
     <header className="compare-header">
       <strong>Changes</strong>
       <nav className="compare-presets" aria-label="What to compare">{PRESETS.map(([key,label,hint])=><button key={key} title={hint} aria-pressed={preset===key} onClick={()=>{setPreset(key);setSelected('');}}>{label}</button>)}</nav>
@@ -300,7 +295,7 @@ function CompareContent({id,surface}:{id:string;surface:React.RefObject<HTMLElem
           <p className="compare-menu-note">Reviewed marks apply to this exact patch and stay on this machine. Preview and save read the repository again.</p>
         </WorkspaceOptions>}
         {ready&&<button className="btn ghost compare-refresh" aria-label="Refresh changes" title="Read the repository again" disabled={loading||checking} aria-busy={loading} onClick={()=>setRefresh(n=>n+1)}><InterfaceGlyph name="refresh"/></button>}
-        <button className="btn ghost" title="Return to the agent’s work, exactly where you left it" onClick={requestClose}>Back to agent</button>
+        <button className="btn ghost" title="Return to the agent’s work, exactly where you left it" onClick={close}>Back to agent</button>
       </span>
     </header>
     {consent===undefined&&!error?<p className="compare-note" role="status">Checking Git access…</p>

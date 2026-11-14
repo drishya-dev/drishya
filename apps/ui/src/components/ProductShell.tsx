@@ -1,4 +1,4 @@
-import {surfaceMotion} from '../lib/surface-motion.ts';
+import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
 import { READING_SHORTCUTS } from './ReadingKeys.tsx';
 import { DOCUMENT_SIZES, type DocumentSize } from '../lib/document-limit.ts';
 import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
@@ -34,6 +34,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     // A dialog takes focus on its first control; one built around an input says so.
     dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
     if(!className.includes('workspace-navigation')){transition.current=surfaceMotion(dialog,modeless?'panel':'dialog');transition.current.open(true);}
+    const unwatch=watchSurfaceMotion(()=>transition.current?.finishImmediately());
     // Menus preventDefault their own Escape first, so the order is menu, then newest reader.
     const escape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || modelessReaders.at(-1) !== dialog) return;
@@ -43,7 +44,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     if (modeless) { modelessReaders.push(dialog); document.addEventListener('keydown', escape); }
     return () => {
       if (modeless) { document.removeEventListener('keydown', escape); const at = modelessReaders.indexOf(dialog); if (at >= 0) modelessReaders.splice(at, 1); }
-      transition.current?.dispose();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true });
+      unwatch();transition.current?.dispose();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true });
     };
   }, [modeless]);
   return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless&&!floating ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-label={heading?title:undefined} aria-labelledby={heading?undefined:titleId} onCancel={(e) => { e.preventDefault(); e.stopPropagation(); if(e.target===e.currentTarget)requestClose(); }} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented && (e.target as Element).closest("dialog")===e.currentTarget) { document.documentElement.removeAttribute('data-ui-press'); e.stopPropagation(); if(modeless){e.preventDefault();requestClose();} } }}>

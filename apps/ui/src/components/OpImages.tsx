@@ -1,4 +1,4 @@
-import {surfaceMotion} from '../lib/surface-motion.ts';
+import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
 import { useEffect,useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
@@ -57,7 +57,7 @@ export function ImageReader({ src, image, onClose, currentCaption }: { src: stri
   const [retry, setRetry] = useState(0);
   // Explicit retry bypasses a cached failed response without changing the image's hash/owner.
   const imageSrc = retry ? `${src}${src.includes('?') ? '&' : '?'}retry=${retry}` : src;
-  useEffect(() => {const node=dialog.current!;node.showModal();transition.current=surfaceMotion(node,'dialog');transition.current.open(true);return()=>transition.current?.dispose();}, []);
+  useEffect(() => {const node=dialog.current!;node.showModal();transition.current=surfaceMotion(node,'dialog',undefined,false);transition.current.open(true);const unwatch=watchSurfaceMotion(()=>transition.current?.finishImmediately());return()=>{unwatch();transition.current?.dispose();};}, []);
   const caption = currentCaption ?? `Image${image.width && image.height ? ` · ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${size(image.bytes)}` : ''}`;
   return <dialog ref={dialog} className="image-reader" aria-label={currentCaption ? 'Current image reader' : 'Image reader'} onClose={()=>{if(!dialog.current?.open)onClose();}} onCancel={event=>{event.preventDefault();event.stopPropagation();requestClose();}} onClick={(e) => { if (e.target === dialog.current) requestClose(); }}>
     <div className="image-reader-bar">

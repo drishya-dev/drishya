@@ -92,9 +92,10 @@ export function DeveloperWorkspace() {
     return () => window.removeEventListener('drishya-open-workspace-file', choose);
   }, [pane, split, narrow, setFiles, setPrimary, setSecondary]);
   useLayoutEffect(() => {
-    const viewer = desk.current?.closest<HTMLElement>('.viewer'), header = desk.current?.querySelector('header');
-    if (!open || !narrow || !viewer || !header) return;
-    const measure = () => viewer.style.setProperty('--desk-tools-bottom', `${header.getBoundingClientRect().bottom - viewer.getBoundingClientRect().top + 8}px`);
+    const section = desk.current, viewer = section?.closest<HTMLElement>('.viewer'), header = section?.querySelector('header');
+    if (!open || !narrow || !section || !viewer || !header) return;
+    // The reader moves during entry, so reserve from its layout box.
+    const measure = () => viewer.style.setProperty('--desk-tools-bottom', `${section.offsetTop + header.offsetTop + header.offsetHeight + 8}px`);
     const observer = new ResizeObserver(measure); observer.observe(header);
     const crown = viewer.querySelector('.workspace-header'); if (crown) observer.observe(crown);
     measure();

@@ -5,12 +5,12 @@ function fixture(){
  const animations:{frames:Keyframe[];duration:number;finish:()=>void;cancel:ReturnType<typeof vi.fn>}[]=[];let current={opacity:'1',transform:'none'},enabled=true;
  const node={dataset:{} as Record<string,string>,style:{pointerEvents:''},inert:false,isConnected:true,animate:(frames:Keyframe[],options:{duration:number})=>{let finish!:()=>void,reject!:(reason:unknown)=>void;const finished=new Promise<void>((yes,no)=>{finish=yes;reject=no;}),cancel=vi.fn(()=>reject(Error('Cancelled')));animations.push({frames,duration:options.duration,finish,cancel});return{finished,cancel};}};
  const control=surfaceMotion(node as unknown as HTMLElement,'panel',{allowed:()=>enabled,duration:(_kind,exit)=>exit?160:220,style:()=>({...current}),easing:()=> 'cubic-bezier(.23,1,.32,1)'});
- return{node,animations,control,style:(value:typeof current)=>{current=value;},enabled:(value:boolean)=>{enabled=value;}};
+ return{node,animations,control,style:(value:typeof current & {translate?:string;scale?:string})=>{current=value;},enabled:(value:boolean)=>{enabled=value;}};
 }
 it('reverses from the actual in-flight frame instead of a fixed start size',()=>{
- const f=fixture();f.control.open(true);f.style({opacity:'.43',transform:'matrix(.995,0,0,.995,0,2)'});f.control.close(vi.fn());
- expect(f.animations[1]!.frames[0]).toEqual({opacity:'.43',transform:'matrix(.995,0,0,.995,0,2)'});expect(f.animations[0]!.cancel).toHaveBeenCalledOnce();expect(f.node.inert).toBe(true);expect(f.node.style.pointerEvents).toBe('none');
- f.style({opacity:'.21',transform:'matrix(.99,0,0,.99,0,3)'});f.control.open();expect(f.animations[2]!.frames[0]).toEqual({opacity:'.21',transform:'matrix(.99,0,0,.99,0,3)'});expect(f.node.inert).toBe(false);expect(f.node.style.pointerEvents).toBe('');f.control.dispose();
+ const f=fixture();f.control.open(true);f.style({opacity:'.43',transform:'none',translate:'0px 2px',scale:'.995'});f.control.close(vi.fn());
+ expect(f.animations[1]!.frames[0]).toEqual({opacity:'.43',translate:'0px 2px',scale:'.995'});expect(f.animations[0]!.cancel).toHaveBeenCalledOnce();expect(f.node.inert).toBe(true);expect(f.node.style.pointerEvents).toBe('none');
+ f.style({opacity:'.21',transform:'none',translate:'0px 3px',scale:'.99'});f.control.open();expect(f.animations[2]!.frames[0]).toEqual({opacity:'.21',translate:'0px 3px',scale:'.99'});expect(f.node.inert).toBe(false);expect(f.node.style.pointerEvents).toBe('');f.control.dispose();
 });
 it('an already-resolved old exit cannot close a newer intent',async()=>{
  const f=fixture(),close=vi.fn();f.control.close(close);f.animations[0]!.finish();f.control.open();await Promise.resolve();expect(close).not.toHaveBeenCalled();f.control.dispose();

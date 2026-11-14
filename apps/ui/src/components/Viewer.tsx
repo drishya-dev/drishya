@@ -303,7 +303,7 @@ function WorkspaceViewer() {
       <HistoryNoteHint />
       <DeveloperWorkspace />
       <Suspense fallback={null}>
-        {compareOpen && <CompareWindow />}
+        <CompareWindow />
       </Suspense>
       <Briefing projection={projection} />
       <Search projection={projection} />
