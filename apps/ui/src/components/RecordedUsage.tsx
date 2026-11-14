@@ -8,6 +8,7 @@ import { mainContextReading } from '../lib/context-ring.ts';
 import './recorded-usage.css';
 import { recordedUsageApi } from '../api.ts';
 import { useApp } from '../state.ts';
+import { useWaitNotice } from '../lib/use-wait-notice.ts';
 
 type Row = [string, string | number | undefined];
 // UI-15: reported values, written the way a person reads them. Nothing is added or inferred; units follow the recorded field.
@@ -72,7 +73,12 @@ function ReportBar({ report, time }: { report: ContextReport; time?: string }) {
 }
 function Context({ reading, report, main, harness, pending }: { reading?: ContextReading; report?: { report: ContextReport; time?: string }; main?: boolean; harness?: string; pending?: boolean }) {
   const claude = harness === 'claude-code';
-  if (!reading && !report) return <section aria-label="Context"><h4>Context</h4><p className="usage-absent">{pending ? 'Reading the context report…' : claude ? 'No context report is recorded. Run /context in Claude Code to record one.' : 'No context reading recorded.'}</p></section>;
+  const contextWait = useWaitNotice({
+    waiting: !!pending,
+    quietMessage: 'Reading the context report…',
+    longMessage: 'Reading the context report from Claude Code…',
+  });
+  if (!reading && !report) return <section aria-label="Context"><h4>Context</h4><p className="usage-absent">{pending ? (contextWait.isImmediate ? '' : contextWait.message) : claude ? 'No context report is recorded. Run /context in Claude Code to record one.' : 'No context reading recorded.'}</p></section>;
   const percent = reading?.window ? reading.input.tokens / reading.window * 100 : undefined;
   const basis = reading?.input.basis === 'derived-request-input' ? 'Computed: Claude message.usage input + cache read + cache write' : 'Recorded: Codex token_count request input';
   return <section aria-label="Context"><h4>Context</h4>
@@ -135,6 +141,11 @@ export function UsagePeek() {
 export function RescanEntry({ menuOpen }: { menuOpen: boolean }) {
   const { recordingId, source } = useApp();
   const [available, setAvailable] = useState(false), [busy, setBusy] = useState(false), [status, setStatus] = useState('');
+  const rescanWait = useWaitNotice({
+    waiting: busy,
+    quietMessage: 'Reading the original journal…',
+    longMessage: 'Reading original journal records. This can take a moment for large files.',
+  });
   // A finished rescan's message belongs to the recording; it must survive the projection reload the rescan itself causes.
   useEffect(() => { setStatus(''); }, [recordingId]);
   useEffect(() => {
@@ -154,5 +165,5 @@ export function RescanEntry({ menuOpen }: { menuOpen: boolean }) {
     finally { setBusy(false); }
   }
   if (!available && !status) return null;
-  return <>{available && <button className="btn ghost" disabled={busy} onClick={() => void rescan()}>Rescan original journal</button>}{status && <p role="status">{status}</p>}</>;
+  return <>{available && <button className="btn ghost" disabled={busy} onClick={() => void rescan()}>Rescan original journal</button>}{busy ? (rescanWait.isImmediate ? null : <p role="status">{rescanWait.message}</p>) : status && <p role="status">{status}</p>}</>;
 }

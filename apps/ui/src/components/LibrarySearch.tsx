@@ -8,6 +8,7 @@ import {workspaceApi} from '../api.ts';
 import type {LibrarySearchPage} from '../../../../packages/store/src/search-types.ts';
 import {ReadingDialog} from './ProductShell.tsx';
 import {CapturedTime} from './common.tsx';
+import {useWaitNotice} from '../lib/use-wait-notice.ts';
 import './library-search.css';
 
 /** An occasional investigation, not another resident Home or canvas panel. */
@@ -16,6 +17,11 @@ export function LibrarySearch() {
   const [open,setOpen]=useState(false),[q,setQ]=useState(''),[root,setRoot]=useState(''),[harness,setHarness]=useState('');
   const [from,setFrom]=useState(''),[to,setTo]=useState(''),[before,setBefore]=useState<number>();
   const [page,setPage]=useState<LibrarySearchPage>(),[error,setError]=useState<string>(),[loading,setLoading]=useState(false),[opening,setOpening]=useState(false),[retry,setRetry]=useState(0);
+  const searchWait = useWaitNotice({
+    waiting: loading,
+    quietMessage: 'Searching sessions…',
+    longMessage: 'Searching session records across journals… This can take a moment for large search queries.',
+  });
   const rootsId=useId();
   const input=useRef<HTMLInputElement>(null);
   useEffect(()=>{if(open)input.current?.focus({preventScroll:true});},[open]);
@@ -56,7 +62,7 @@ export function LibrarySearch() {
     </div></details>
     <p className="library-search-scope">Imported sessions · redacted text · 50 results per page, recently indexed first. Excerpts up to 1,600 characters; full artifacts and unimported journals are not searched.</p>
     <div className="library-search-results" aria-label="Session results" aria-busy={loading||opening}>
-      {loading&&<p role="status">Searching sessions…</p>}{error&&<p role="alert">{error} <button className="btn ghost" onClick={()=>setRetry(n=>n+1)}>Retry</button></p>}
+      {loading && (searchWait.isImmediate ? null : <p role="status">{searchWait.message}</p>)}{error&&<p role="alert">{error} <button className="btn ghost" onClick={()=>setRetry(n=>n+1)}>Retry</button></p>}
       {!loading&&!error&&page&&!page.items.length&&<p>Nothing matched these filters.</p>}
       {!page&&!loading&&!error&&<p>Search across imported conversations without opening each session.</p>}
       {page?.items.map(hit=><Fragment key={`${hit.recordingId}/${hit.observationId}`}><button disabled={opening} onClick={()=>void choose(hit)}><strong>{hit.title||'Untitled session'}</strong><span>{hit.harness==='codex'?'Codex':'Claude Code'}{hit.sourceTime&&<> · <CapturedTime iso={hit.sourceTime}/></>}</span><small title={hit.workspaceRoot}>{hit.workspaceRoot||'Workspace not recorded'}</small><p>{hit.snippet}</p></button>{outputPaths(hit.snippet,hit.workspaceRoot,4).map(ref=><button key={ref.start} className="md-path" disabled={opening} aria-label={`Open work on ${ref.path}${ref.line?` at line ${ref.line}`:''}`} onClick={()=>void choose(hit,ref)}>{hit.snippet.slice(ref.start,ref.end)} ↗</button>)}</Fragment>)}
