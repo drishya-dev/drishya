@@ -107,7 +107,10 @@ main, .footer { position: relative; z-index: 1; }
 .tour-steps h3 { font-size: clamp(26px, 2.6vw, 38px); line-height: 1.08; letter-spacing: -.03em; font-weight: 600; }
 .tour-steps p { margin-top: 16px; color: var(--t2); font-size: 17px; }
 .laptop-slot { aspect-ratio: 16 / 10.9; }
-.tour-pin { position: relative; perspective: 1400px; }
+/* The tour stays put by CSS, not by ScrollTrigger's pin (SITE-3): a pin moves the element in the page on every refresh, and
+   moving the laptop reloads the real app inside it. The section is as tall as the pin plus the seven screens of scroll. */
+.tour { height: calc(var(--tour-pin, 100svh) + 700svh); }
+.tour-pin { position: sticky; top: 0; perspective: 1400px; }
 .laptop { position: absolute; left: 50%; top: 50%; width: min(94vw, 88svh * 1.47); margin-left: calc(min(94vw, 88svh * 1.47) / -2); isolation: isolate; transform-style: preserve-3d; filter: drop-shadow(0 34px 42px rgba(0, 0, 0, .34)); }
 .laptop-lid { position: relative; padding: 1.6% 1.6% 2.2%; border-radius: 22px 22px 8px 8px; background: linear-gradient(145deg, #34373c 0%, #24272b 44%, #17191c 100%); border: 1px solid #41464d; box-shadow: 0 50px 120px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1), inset 0 -9px 16px rgba(0,0,0,.25); transform-origin: 50% 100%; transform-style: preserve-3d; backface-visibility: hidden; will-change: transform; }
 .laptop-lid::before { content: ''; position: absolute; z-index: 0; inset: 0; border: 1px solid rgba(255, 255, 255, .08); border-radius: 20px 20px 7px 7px; background: radial-gradient(circle at 50% 52%, transparent 0 15px, rgba(241, 238, 228, .18) 15.5px 16.5px, transparent 17px), linear-gradient(145deg, #30343a, #17191c 72%); transform: translateZ(-4px) rotateY(180deg); backface-visibility: visible; pointer-events: none; }

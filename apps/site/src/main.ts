@@ -6,6 +6,7 @@ import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
 import sample from './generated/sample.json';
 import { mountLogos } from './logo.ts';
+import { createDots, type Dots } from './dots.ts';
 import { createMap, type Tone } from './map.ts';
 import { appScreen, terminalScreen } from './product.ts';
 
@@ -16,7 +17,6 @@ const SITE = {
   links: { docs: '#', discussions: '#', changelog: '#', issues: '#' } as Record<string, string>,
 };
 
-gsap.registerPlugin(ScrollTrigger, SplitText);
 const reduced = document.documentElement.dataset.motion === 'reduced';
 const revealSite = () => { document.documentElement.dataset.appReady = 'true'; };
 const $ = <T extends Element = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
@@ -43,134 +43,84 @@ for (const b of $$<HTMLButtonElement>('[data-copy]')) {
 // ---------- the laptop: three screens of one session, on a fixed 1440x900 stage scaled into the screen ----------
 // Screen 3 is the real Drishya app (demo.html) on the synthetic sample; the page moves its replay step as you scroll.
 const viewport = $('[data-viewport]');
-viewport.innerHTML = `<div class="dr-stage" data-stage><iframe class="dr-frame" data-frame title="Drishya replaying the sample session" tabindex="-1"></iframe>${appScreen()}${terminalScreen()}</div>`;
+viewport.innerHTML = `<div class="dr-stage" data-stage><iframe class="dr-frame" data-frame title="Drishya replaying the sample session" tabindex="-1"></iframe></div>`;
 const stage = $('[data-stage]'), frameEl = $<HTMLIFrameElement>('[data-frame]');
 const fit = () => stage.style.setProperty('--s', String(viewport.clientWidth / 1440));
 new ResizeObserver(fit).observe(viewport); fit();
-let wantedStep = 0, frameReady = false;
-addEventListener('message', e => { if (e.origin === location.origin && e.data?.type === 'drishya-ready') { frameReady = true; seek(wantedStep); } });
+let wantedStep = 0, frameReady = false, refreshing = false, tourActive = () => false;
+addEventListener('message', e => {
+  if (e.origin !== location.origin) return;
+  if (e.data?.type === 'drishya-ready') { frameReady = true; seek(wantedStep); }
+  else if (e.data?.type === 'drishya-seeked') seekReadyAt = performance.now() + Math.min(400, Number(e.data.ms) || 0);
+});
 // One seek per frame at most: a fast scroll asks for many steps, and only the last one needs rendering.
-let seekQueued = false;
-function seek(step: number) { wantedStep = step; if (!frameReady || seekQueued) return; seekQueued = true; requestAnimationFrame(() => { seekQueued = false; frameEl.contentWindow?.postMessage({ type: 'drishya-seek', step: wantedStep }, location.origin); }); }
-// The real app is about 340 KB compressed, so it loads only as the laptop comes near.
-new IntersectionObserver(([e], o) => { if (e!.isIntersecting) { frameEl.src = new URL('demo.html', location.href).pathname; o.disconnect(); } }, { rootMargin: '150% 0px' }).observe(viewport);
+let seekQueued = false, seekReadyAt = 0;
+// The app reports what a step cost; the next one waits as long again, so the replay never holds more than half the page's
+// time. On a fast machine that is under a frame and changes nothing; on a slow one the scroll keeps its own frames (SITE-3).
+const pump = () => {
+  if (performance.now() < seekReadyAt) { requestAnimationFrame(pump); return; }
+  seekQueued = false;
+  frameEl.contentWindow?.postMessage({ type: 'drishya-seek', step: wantedStep }, location.origin);
+};
+// While ScrollTrigger refreshes (a resize), its timelines are rewound and replayed; the laptop only needs the final step.
+function seek(step: number) { wantedStep = step; if (!frameReady || seekQueued || refreshing) return; seekQueued = true; requestAnimationFrame(pump); }
+// The real app is about 340 KB compressed and takes a long task to start, so it loads as the laptop comes near, or
+// earlier while the page is calm (SITE-3: never in the middle of the scroll that is about to reach it).
+let frameRequested = false;
+const loadFrame = () => { if (frameRequested) return; frameRequested = true; frameEl.src = new URL('demo.html', location.href).pathname; };
+new IntersectionObserver(([e], o) => { if (e!.isIntersecting) { loadFrame(); o.disconnect(); } }, { rootMargin: '150% 0px' }).observe(viewport);
 
 // ---------- hero ----------
 const toneOf = (o: Op): Tone => o.kind === 'edit' ? 'edit' : o.kind === 'read' ? 'read' : o.outcome === 'failed' ? 'fail' : o.outcome === 'passed' ? 'pass' : 'search';
 const heroMap = createMap($<HTMLCanvasElement>('[data-map="hero"]'), null, sample.graph, { scale: 0.5, still: reduced, offsetY: -0.06 });
 const dottedGlow = $<HTMLCanvasElement>('[data-dotted-glow]');
-const dottedContext = dottedGlow.getContext('2d');
-if (dottedContext) {
-  const gap = 12;
-  const radius = 2;
-  const glowRadius = 150;
-  let dots: { x: number; y: number; phase: number; speed: number }[] = [];
-  let width = 0;
-  let height = 0;
-  let pointerX = -1;
-  let pointerY = -1;
-  let dotsFrame = 0;
-  const resizeDots = () => {
-    // Soft 4 px dots at 30 % ink do not need device resolution: a 2x canvas is four times the pixels to clear and
-    // composite on every frame, and it alone held a Retina-size window near 27 frames a second.
-    const dpr = 1;
-    width = innerWidth;
-    height = innerHeight;
-    dottedGlow.width = Math.floor(width * dpr);
-    dottedGlow.height = Math.floor(height * dpr);
-    dottedGlow.style.width = `${width}px`;
-    dottedGlow.style.height = `${height}px`;
-    dottedContext.setTransform(dpr, 0, 0, dpr, 0, 0);
-    dots = [];
-    const cols = Math.ceil(width / gap) + 2;
-    const rows = Math.ceil(height / gap) + 2;
-    for (let i = -1; i < cols; i++) {
-      for (let j = -1; j < rows; j++) {
-        const x = i * gap + (j % 2 === 0 ? 0 : gap * 0.5);
-        const y = j * gap;
-        dots.push({ x, y, phase: Math.random() * Math.PI * 2, speed: .4 + Math.random() * .9 });
-      }
-    }
-  };
-  const updatePointer = (event: PointerEvent) => { pointerX = event.clientX; pointerY = event.clientY; lastPointer = performance.now(); };
-  const clearPointer = () => { pointerX = -1; pointerY = -1; lastPointer = performance.now(); };
-  // One blurred dot, drawn once. Per-dot canvas shadows cost a blur for each of about 15,000 dots on every frame
-  // and made the whole page lag; stamping this sprite gives the same glow for a fraction of the work.
-  const glowSize = 28;
-  const glow = document.createElement('canvas');
-  const drawGlow = () => {
-    const dpr = 1;
-    glow.width = glow.height = Math.ceil(glowSize * dpr);
-    const g = glow.getContext('2d');
-    if (!g) return;
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    g.shadowColor = 'rgba(0, 170, 255, .85)';
-    g.shadowBlur = 12;
-    g.fillStyle = 'rgba(241, 238, 228, .3)';
-    g.beginPath();
-    g.arc(glowSize / 2, glowSize / 2, radius, 0, Math.PI * 2);
-    g.fill();
-  };
-  drawGlow();
-  addEventListener('resize', drawGlow);
-  const levels = 10;
-  const buckets: number[][] = Array.from({ length: levels + 1 }, () => []);
-  let lastDraw = 0, lastScroll = 0, lastPointer = 0;
-  addEventListener('scroll', () => { lastScroll = performance.now(); }, { passive: true });
-  const drawDots = (now: number) => {
-    dotsFrame = 0;
-    if (!reduced && !document.hidden) dotsFrame = requestAnimationFrame(drawDots);
-    // Scrolling gets the whole frame: the grid holds its last frame while the page moves.
-    if (now - lastScroll < 160) return;
-    // The twinkle takes 5 to 15 seconds a cycle, so 12 frames a second is enough at rest;
-    // the glow under the pointer follows it at 30.
-    if (now - lastDraw < (now - lastPointer < 240 ? 30 : 80)) return;
-    lastDraw = now;
-    dottedContext.clearRect(0, 0, width, height);
-    dottedContext.fillStyle = 'rgba(241, 238, 228, .3)';
-    const time = now / 1000;
-    for (const bucket of buckets) bucket.length = 0;
-    const glows: number[] = [];
-    for (let i = 0; i < dots.length; i++) {
-      const dot = dots[i]!;
-      const pulse = .25 + .55 * ((Math.sin(time * dot.speed + dot.phase) + 1) / 2);
-      let hover = 0;
-      if (pointerX >= 0) {
-        const dx = dot.x - pointerX, dy = dot.y - pointerY;
-        if (dx > -glowRadius && dx < glowRadius && dy > -glowRadius && dy < glowRadius) hover = Math.max(0, 1 - Math.hypot(dx, dy) / glowRadius);
-      }
-      const brightness = Math.min(1, pulse + hover * .7);
-      buckets[Math.round(brightness * levels)]!.push(i);
-      const blur = hover > 0 ? hover : brightness > .62 ? .5 * (brightness - .62) / .38 : 0;
-      if (blur > .04) glows.push(i, blur * brightness * .7);
-    }
-    // One fill per brightness level instead of one per dot.
-    for (let level = 1; level <= levels; level++) {
-      const bucket = buckets[level]!;
-      if (!bucket.length) continue;
-      dottedContext.globalAlpha = level / levels * .7;
-      dottedContext.beginPath();
-      for (const i of bucket) { const dot = dots[i]!; dottedContext.moveTo(dot.x + radius, dot.y); dottedContext.arc(dot.x, dot.y, radius, 0, Math.PI * 2); }
-      dottedContext.fill();
-    }
-    for (let k = 0; k < glows.length; k += 2) {
-      const dot = dots[glows[k]!]!;
-      dottedContext.globalAlpha = Math.min(1, glows[k + 1]! * 2.4);
-      dottedContext.drawImage(glow, dot.x - glowSize / 2, dot.y - glowSize / 2, glowSize, glowSize);
-    }
-    dottedContext.globalAlpha = 1;
-  };
-  resizeDots();
-  addEventListener('resize', resizeDots);
-  addEventListener('pointermove', updatePointer, { passive: true });
-  addEventListener('pointerleave', clearPointer, { passive: true });
-  addEventListener('visibilitychange', () => {
-    if (!document.hidden && !dotsFrame) dotsFrame = requestAnimationFrame(drawDots);
-  });
-  dotsFrame = requestAnimationFrame(drawDots);
+mountDots();
+// The dotted backdrop is drawn in a worker on an OffscreenCanvas where the browser allows it (SITE-3): its 10,000+ dots
+// and the canvas commit were the largest recurring cost on the page's main thread. Without that, it draws on the page.
+function mountDots() {
+  const setSize = () => { dottedGlow.style.width = `${innerWidth}px`; dottedGlow.style.height = `${innerHeight}px`; };
+  setSize();
+  let worker: Worker | undefined;
+  if (typeof dottedGlow.transferControlToOffscreen === 'function' && typeof Worker === 'function') {
+    try { worker = new Worker(new URL('./dots.worker.ts', import.meta.url), { type: 'module' }); } catch { worker = undefined; }
+  }
+  let target: Dots;
+  if (worker) {
+    const w = worker, offscreen = dottedGlow.transferControlToOffscreen();
+    w.postMessage({ type: 'init', canvas: offscreen, width: innerWidth, height: innerHeight, reduced }, [offscreen]);
+    target = {
+      resize: (width, height) => w.postMessage({ type: 'resize', width, height }),
+      pointer: (x, y) => w.postMessage({ type: 'pointer', x, y }),
+      scrolled: () => w.postMessage({ type: 'scroll' }),
+      hidden: value => w.postMessage({ type: 'hidden', value }),
+      start: () => {},
+    };
+  } else {
+    const context = dottedGlow.getContext('2d');
+    if (!context) return;
+    target = createDots(dottedGlow, context, size => { const c = document.createElement('canvas'); c.width = c.height = size; return c; }, cb => requestAnimationFrame(cb), reduced);
+    target.resize(innerWidth, innerHeight);
+    target.start();
+  }
+  addEventListener('resize', () => { setSize(); target.resize(innerWidth, innerHeight); });
+  // The glow follows the pointer at 30 frames a second, so more than one position every 16 ms is wasted.
+  let scrollAt = -1, pointerX = -1, pointerY = -1, pointerTimer = 0;
+  const sendPointer = () => { pointerTimer = 0; target.pointer(pointerX, pointerY); };
+  const queuePointer = (x: number, y: number) => { pointerX = x; pointerY = y; if (!pointerTimer) pointerTimer = window.setTimeout(sendPointer, 16); };
+  addEventListener('pointermove', e => queuePointer(e.clientX, e.clientY), { passive: true });
+  addEventListener('pointerleave', () => queuePointer(-1, -1), { passive: true });
+  addEventListener('scroll', () => { const now = performance.now(); if (now - scrollAt > 40) { scrollAt = now; target.scrolled(); } }, { passive: true });
+  addEventListener('visibilitychange', () => target.hidden(document.hidden));
 }
-// The why section's stream: the same CLI lines the laptop shows, scrolling past as they do in a terminal.
-$('[data-why-lines]').innerHTML = Array.from({ length: 3 }, () => $$('.tl', $('[data-screen="cli"]')).map(l => `<div class="${l.classList.contains('r') ? 'r' : ''}">${l.innerHTML}</div>`).join('')).join('');
+// The two agent screens (about 500 elements) and the why section's stream, which repeats the CLI's lines as they scroll past
+// in a terminal. They are not needed by the first layout, so they are added after it, in their own task (SITE-3).
+let screensMounted = false;
+function mountScreens() {
+  if (screensMounted) return;
+  screensMounted = true;
+  stage.insertAdjacentHTML('beforeend', appScreen() + terminalScreen());
+  $('[data-why-lines]').innerHTML = Array.from({ length: 3 }, () => $$('.tl', $('[data-screen="cli"]')).map(l => `<div class="${l.classList.contains('r') ? 'r' : ''}">${l.innerHTML}</div>`).join('')).join('');
+}
 
 // The page is one replay: keep a quiet chapter marker and backdrop context in sync with the section in view.
 const chapterSections = $$<HTMLElement>('[data-chapter]');
@@ -361,9 +311,15 @@ compareProof.addEventListener('wheel', event => {
   const maxScroll = Math.max(0, proofBody.scrollHeight - proofBody.clientHeight);
   proofBody.scrollTop = Math.max(0, Math.min(maxScroll, proofBody.scrollTop + event.deltaY));
 }, { passive: false });
-addEventListener('scroll', () => { if (openCompareRow) positionProof(openCompareRow); }, { passive: true });
+let proofScrollQueued = false;
+addEventListener('scroll', () => {
+  if (!openCompareRow || proofScrollQueued) return;
+  proofScrollQueued = true;
+  requestAnimationFrame(() => { proofScrollQueued = false; if (openCompareRow) positionProof(openCompareRow); });
+}, { passive: true });
 addEventListener('resize', () => { if (openCompareRow) positionProof(openCompareRow); });
 if (reduced) {
+  mountScreens();
   for (const o of sample.operations) heroMap.light(o.path, toneOf(o), false);
   $$('.screen').forEach(el => (el.style.display = 'none'));
   frameEl.src = new URL('demo.html', location.href).pathname;
@@ -374,18 +330,39 @@ if (reduced) {
 }
 
 function animate() {
+  gsap.registerPlugin(ScrollTrigger, SplitText);
+  ScrollTrigger.addEventListener('refreshInit', () => { refreshing = true; });
+  // Only a refresh in the middle of the tour needs the laptop to catch up; elsewhere the laptop is out of sight.
+  ScrollTrigger.addEventListener('refresh', () => { refreshing = false; if (tourActive()) seek(wantedStep); });
   const lenis = new Lenis({ lerp: 0.1 });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add(t => lenis.raf(t * 1000));
   gsap.ticker.lagSmoothing(0);
   for (const a of $$<HTMLAnchorElement>('a[href^="#"]')) a.addEventListener('click', e => { const id = a.getAttribute('href')!; if (id.length > 1) { e.preventDefault(); lenis.scrollTo(id === '#top' ? 0 : id, { offset: 0, duration: 1.4 }); } });
 
-  document.fonts.ready.then(() => { intro(); scrollScenes(); ScrollTrigger.refresh(); revealSite(); });
+  // One task each for the intro, every scroll scene and the final refresh: a long one holds the first frames of the
+  // page. The page stays hidden until all of it is built, and the intro starts only when the page is shown, so none
+  // of its opening is spent inside a stall (SITE-3).
+  const yieldTask = () => new Promise<void>(resolve => { const c = new MessageChannel(); c.port1.onmessage = () => resolve(); c.port2.postMessage(0); });
+  document.fonts.ready.then(async () => {
+    const opening = intro();
+    await yieldTask();
+    mountScreens();
+    await yieldTask();
+    await scrollScenes();
+    ScrollTrigger.refresh();
+    revealSite();
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      opening.play(0);
+      // The laptop's app starts once the intro has played, in an idle moment, not in the middle of a later scroll.
+      window.setTimeout(() => { const idle = (window as { requestIdleCallback?: (cb: () => void, options?: { timeout: number }) => number }).requestIdleCallback; if (idle) idle.call(window, loadFrame, { timeout: 4000 }); else window.setTimeout(loadFrame, 600); }, 3000);
+    }));
+  });
 
   function intro() {
     const ribbons = $$('.hero-mark .ribbon');
     const word = new SplitText('.wordmark', { type: 'chars' });
-    gsap.timeline({ defaults: { ease: 'expo.out' } })
+    return gsap.timeline({ paused: true, defaults: { ease: 'expo.out' } })
       .from(ribbons, { rotate: (i: number) => Number(ribbons[i]!.dataset.angle) - 70, scale: 0.35, opacity: 0, transformOrigin: '0 0', duration: 1.5, stagger: 0.07 }, 0)
       .from('.hero-mark .aperture', { attr: { r: 0 }, duration: 1.2, ease: 'power3.out' }, 0.35)
       .from(word.chars, { yPercent: 70, opacity: 0, filter: 'blur(8px)', duration: 1.1, stagger: 0.035 }, 0.5)
@@ -393,7 +370,7 @@ function animate() {
       .to({ p: 0 }, { p: 1, duration: 2, ease: 'power2.out', onUpdate() { heroMap.setReveal(this.targets()[0].p); } }, 0.7);
   }
 
-  function scrollScenes() {
+  async function scrollScenes() {
     gsap.timeline({ scrollTrigger: { trigger: '.hero', start: 'top top', end: 'bottom top', scrub: true } })
       .to('.hero-inner', { y: -80, opacity: 0.15, ease: 'none' }, 0)
       .to('.hero-mark', { scale: 0.7, ease: 'none' }, 0)
@@ -406,14 +383,18 @@ function animate() {
       .to('[data-why-lines]', { yPercent: -55, ease: 'none', duration: words.words.length * 0.05 }, 0);
     gsap.to('.backdrop .hero-map', { opacity: 0.38, ease: 'none', scrollTrigger: { trigger: '.why', start: 'top bottom', end: 'top top', scrub: true } });
     ScrollTrigger.create({ trigger: '.why', start: 'bottom top', onEnter: () => { heroMap.pause(); }, onLeaveBack: () => { heroMap.resume(); } });
+    await yieldTask();
 
     for (const h of $$('[data-split]')) {
       const s = new SplitText(h, { type: 'lines', mask: 'lines' });
       gsap.from(s.lines, { yPercent: 100, duration: 0.9, stagger: 0.08, ease: 'expo.out', scrollTrigger: { trigger: h, start: 'top 85%', once: true } });
+      await yieldTask();
     }
     gsap.from('.close-mark .ribbon', { rotate: (_: number, el: HTMLElement) => Number(el.dataset.angle) - 70, scale: 0.4, opacity: 0, transformOrigin: '0 0', duration: 1.4, stagger: 0.06, ease: 'expo.out', scrollTrigger: { trigger: '.close', start: 'top 70%', once: true } });
 
+    await yieldTask();
     tourScene();
+    await yieldTask();
     featureScenes();
   }
 
@@ -475,7 +456,12 @@ function animate() {
     gsap.set(lines, { opacity: 0 });
     gsap.set(rows, { opacity: 0, y: 8 });
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
-    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: () => `+=${innerHeight * 7}`, pin: '.tour-pin', scrub: true, invalidateOnRefresh: true } });
+    const tourEl = $('.tour');
+    const sizeTour = () => tourEl.style.setProperty('--tour-pin', `${$('.tour-pin').offsetHeight}px`);
+    sizeTour();
+    ScrollTrigger.addEventListener('refreshInit', sizeTour);
+    const tl = gsap.timeline({ defaults: { ease: 'power2.inOut' }, scrollTrigger: { trigger: '.tour', start: 'top top', end: 'bottom bottom', scrub: true, invalidateOnRefresh: true } });
+    tourActive = () => { const p = tl.scrollTrigger?.progress ?? 0; return p > 0 && p < 1; };
     tl.eventCallback('onUpdate', () => {
       const current = Math.min(progressDots.length - 1, Math.floor(tl.progress() * progressDots.length));
       progressDots.forEach((dot, index) => dot.classList.toggle('is-current', index === current));

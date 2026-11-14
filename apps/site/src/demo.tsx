@@ -24,7 +24,10 @@ async function start() {
   addEventListener('message', event => {
     if (event.origin !== location.origin || typeof event.data !== 'object' || event.data?.type !== 'drishya-seek') return;
     const step = Math.max(0, Math.min(total, Math.round(Number(event.data.step) || 0)));
+    const began = performance.now();
     if (useApp.getState().step !== step || useApp.getState().mode !== 'replay') useApp.getState().seek(step, { hold: true });
+    // What the step cost, so the page can pace the next one (SITE-3).
+    parent.postMessage({ type: 'drishya-seeked', ms: performance.now() - began }, location.origin);
   });
   parent.postMessage({ type: 'drishya-ready', total }, location.origin);
 }
