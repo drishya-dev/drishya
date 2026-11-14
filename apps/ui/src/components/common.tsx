@@ -56,7 +56,8 @@ export function useArtifact(artifactId: string | undefined, opts: { scope?: Mate
   // Stored blobs are immutable. Unrelated journal appends must not replace a reader
   // with a skeleton and destroy selection/focus. Metadata changes still invalidate;
   // unavailable or unlisted artifacts stay revision-keyed so late content can arrive.
-  const materialVersion = descriptor?.blob ? JSON.stringify(descriptor) : revision;
+  // observedAtSequence counts steps from the start of the history shown (PERF-4: the recent-first page counts from its own start), so it says nothing about the material.
+  const materialVersion = descriptor?.blob ? JSON.stringify({ ...descriptor, observedAtSequence: undefined }) : revision;
   const key = artifactId && recordingId && source ? `${sourceId(source)}/${recordingId}/${materialVersion}/${artifactId}/${scope}/${start}/${count}` : undefined;
   const [state, setState] = useState<{ key: string; view: ArtifactView }>();
   useEffect(() => {

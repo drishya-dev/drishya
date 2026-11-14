@@ -78,6 +78,13 @@ export interface ReduceOptions {
   maxInputChars?: number;
   /** Internal store readers supply a repeatable, source-time-ordered iterable. */
   ordered?: boolean;
+  /**
+   * PERF-4: workspace-root evidence of the WHOLE input, for a reducer that is handed only part of it (a tail-first
+   * projection, or a fold fed in slices). `byRecording` is each recording's first captured root; `all` every root,
+   * working directory and operation directory seen. Roots decide path namespacing, so they cannot be learned from
+   * a part. Given the whole input, the reducer computes exactly these itself and the hint changes nothing.
+   */
+  rootsHint?: { byRecording?: Record<string, string>; all?: string[] };
 }
 
 const PREVIEW = 4000;
@@ -176,7 +183,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   let title: string | undefined;
   let titleRank = 0;
   let firstPrompt: string | undefined;
-  const rootsByRecording = new Map<string, string>();
+  const rootsByRecording = new Map<string, string>(Object.entries(opts.rootsHint?.byRecording ?? {}));
   for (const o of obs) {
     const root = o.workspaceRoot ?? (o.kind === 'session.meta' && typeof (o.payload as Rec).cwd === 'string' ? (o.payload as Rec).cwd : undefined);
     if (root && !rootsByRecording.has(o.recordingId)) rootsByRecording.set(o.recordingId, root);
@@ -192,7 +199,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     const r = normalizedRoot(root);
     return p === r || p.startsWith(r + '/');
   };
-  const roots = new Set([...rootsByRecording.values()].map(normalizedRoot));
+  const roots = new Set([...rootsByRecording.values(), ...(opts.rootsHint?.all ?? [])].map(normalizedRoot));
   for (const o of obs) {
     const cwd = (o.payload as Rec).cwd;
     const operationCwd = (o.payload as Rec).intent?.cwd;
@@ -960,7 +967,50 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
       ...contextEvidence,
     };
   }
-  return { append, snapshot };
+  /**
+   * PERF-4: everything this reducer has folded, as one object graph for a codec that keeps shared identity (v8's
+   * serializer does: `lastNotice` and `turnByRecord` hold the very objects `notices` and `timeline` hold). Includes
+   * nothing derived from options or from the whole input's roots; those come from `opts` when a reducer is restored.
+   * The state is only meaningful with the head that says what it consumed (see fold.ts).
+   */
+  function exportState() {
+    return {
+      observationCount, lastSequence, workspaceRoot, recordedBranch, title, titleRank, firstPrompt, branchPrimaryRoot, currentRecording,
+      taskPlans, desktopPlans, usage, context, turnRecords,
+      itemReceipts, agents, ops, dirtyOperations, opOrder, opGroups, prose, turnByRecording, turnByRecord, promptRecordLine,
+      pendingTurnImages, unrecorded, turnMessageByRecording, checkpoints, awaitingCheckpoint, notices, availableTools, lastNotice,
+      artifacts, links, timeline, gaps, bases, harnesses, capabilities, lineageStarts,
+      // The first captured root of each recording: a restored reducer takes it as its root hint (it is not recomputed from input it has not got).
+      rootsByRecording: Object.fromEntries(rootsByRecording),
+    };
+  }
+  type ReducerState = ReturnType<typeof exportState>;
+
+  /** Puts a state exported by `exportState` (and carried through a serializer) into this empty reducer. */
+  function importState(state: ReducerState) {
+    const fill = <K, V>(target: Map<K, V>, from: Map<K, V>) => { target.clear(); for (const [key, value] of from) target.set(key, value); };
+    const fillSet = <V>(target: Set<V>, from: Set<V>) => { target.clear(); for (const value of from) target.add(value); };
+    const fillList = <V>(target: V[], from: V[]) => { target.length = 0; for (const value of from) target.push(value); };
+    observationCount = state.observationCount; lastSequence = state.lastSequence; workspaceRoot = state.workspaceRoot; recordedBranch = state.recordedBranch;
+    title = state.title; titleRank = state.titleRank; firstPrompt = state.firstPrompt; branchPrimaryRoot = state.branchPrimaryRoot; currentRecording = state.currentRecording;
+    // Accumulators are class instances; a serializer keeps their fields, not their prototype.
+    Object.assign(taskPlans, state.taskPlans); Object.assign(desktopPlans, state.desktopPlans); Object.assign(usage, state.usage);
+    Object.assign(context, state.context); Object.assign(turnRecords, state.turnRecords);
+    fill(itemReceipts, state.itemReceipts); fill(agents, state.agents); fill(ops, state.ops); fillSet(dirtyOperations, state.dirtyOperations); fillList(opOrder, state.opOrder);
+    fill(opGroups, state.opGroups); fillList(prose, state.prose); fill(turnByRecording, state.turnByRecording); fill(turnByRecord, state.turnByRecord);
+    fill(promptRecordLine, state.promptRecordLine); fill(pendingTurnImages, state.pendingTurnImages); fill(unrecorded, state.unrecorded);
+    fill(turnMessageByRecording, state.turnMessageByRecording); fill(checkpoints, state.checkpoints); fillSet(awaitingCheckpoint, state.awaitingCheckpoint);
+    fillList(notices, state.notices); fill(availableTools, state.availableTools); fill(lastNotice, state.lastNotice); fill(artifacts, state.artifacts);
+    fillList(links, state.links); fillList(timeline, state.timeline); fillList(gaps, state.gaps); fill(bases, state.bases); fillSet(harnesses, state.harnesses);
+    for (const key of Object.keys(capabilities)) delete capabilities[key];
+    Object.assign(capabilities, state.capabilities);
+    fill(lineageStarts, state.lineageStarts);
+    // Snapshots handed out before are rebuilt from the operations on the next snapshot.
+    snapshots.clear();
+    for (const id of ops.keys()) dirtyOperations.add(id);
+  }
+
+  return { append, snapshot, exportState, importState };
 }
 
 // ─── ordering ────────────────────────────────────────────────────────────────────────────

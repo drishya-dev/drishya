@@ -96,16 +96,16 @@ function readingClearance(history: HTMLElement): { top: number; bottom: number }
 // Reading-window remounts do not repeat an outcome already shown in this live view.
 const OutcomeMotion = createContext<Set<string> | undefined>(undefined);
 
-type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void>; followSlot?: HTMLElement | null };
+type HistoryProps = { scene: Scene; projection: Projection; onWindow?: (query: HistoryQuery) => Promise<void>; followSlot?: HTMLElement | null; partial?: boolean };
 
-export function History({ scene, projection, onWindow, followSlot }: HistoryProps) {
+export function History({ scene, projection, onWindow, followSlot, partial }: HistoryProps) {
   const mode = useApp(s => s.mode);
   const selectedOp = useApp(s => s.selectedOp);
   const focusObservationId = useApp(s => s.focusObservationId);
   const promptStep = useApp(s => s.promptStep);
   const filter = useApp(s => s.filter);
-  const pair = useMemo(() => ({ scene, projection, mode, selectedOp, focusObservationId, promptStep, filter }),
-    [scene, projection, mode, selectedOp, focusObservationId, promptStep, filter]);
+  const pair = useMemo(() => ({ scene, projection, mode, selectedOp, focusObservationId, promptStep, filter, partial: !!partial }),
+    [scene, projection, mode, selectedOp, focusObservationId, promptStep, filter, partial]);
   const deferred = useDeferredValue(pair);
   // Live arrivals may render interruptibly. Scene and evidence must move together;
   // deliberate navigation, replay, page replacement and recording changes stay immediate.
@@ -118,10 +118,10 @@ export function History({ scene, projection, onWindow, followSlot }: HistoryProp
   const shown = liveArrival ? deferred : pair;
   const artifacts = useMemo(() => new Map(shown.projection.artifacts.map(a => [a.id, a])), [shown.projection.artifacts]);
   const outcomes = useMemo(() => new Set<string>(), [projection.recordingId, mode, mode === 'replay' ? shown.scene.step : undefined]);
-  return <OutcomeMotion.Provider value={outcomes}><StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} followSlot={followSlot} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider></OutcomeMotion.Provider>;
+  return <OutcomeMotion.Provider value={outcomes}><StepProjection.Provider value={shown.projection}><ContextEvidenceScope projection={shown.projection} step={shown.scene.step} total={shown.scene.total}><HistoryArtifacts.Provider value={artifacts}><HistoryBody scene={shown.scene} projection={shown.projection} onWindow={onWindow} followSlot={followSlot} partial={shown.partial} /></HistoryArtifacts.Provider></ContextEvidenceScope></StepProjection.Provider></OutcomeMotion.Provider>;
 }
 
-const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, followSlot }: HistoryProps) {
+const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, followSlot, partial }: HistoryProps) {
   const mode = useApp((s) => s.mode);
   const compareAgents = useApp((s) => s.compareAgents);
   const explore = useApp((s) => s.explore);
@@ -173,6 +173,15 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const chapterNavigation = useRef<{ id: string; step: number } | undefined>(undefined);
   const seenThrough = useRef(scene.total);
   const followFrame = useRef<number | undefined>(undefined);
+  /** PERF-4: until this time the follow camera holds still; the swap to the whole history is not new work and must not move the view. */
+  const swapHold = useRef(0);
+  // PERF-4 (see the swap effect below): whether the page shown was the recent-first one, the total it had, the passage at the
+  // top of the view and its offset (read while the old layout is still on screen: rendering does not touch the DOM, the
+  // commit that follows does), and the anchor still to be refined once that passage is mounted.
+  const wasPartial = useRef(!!partial);
+  const previousTotal = useRef(scene.total);
+  const swapAnchor = useRef<{ id: string; offset: number } | undefined>(undefined);
+  const swapObserver = useRef<ResizeObserver | undefined>(undefined);
   const followingStarted = useRef(false);
   const requestedWindow = useRef<{ key: string; projection: Projection; start: number; count: number; pending: boolean } | undefined>(undefined);
   const lastViewportTop = useRef(0);
@@ -307,9 +316,19 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const foldFor = (ps: ScenePassage): Fold => foldOf(ps, folded) ?? (runState.hidden.has(ps.id) ? 'hidden' : undefined);
   const keyFor = (ps: ScenePassage, fold: Fold) => fold ? measureKey(ps.id, fold) : runMeasureKey(ps.id, runState.folded.has(ps.id));
   const heights = useMemo(() => runHeights(foldedHeights(scene.passages, measurements.current, folded), measurements.current, runState, conversation ? scene.passages : undefined), [scene.passages, folded, measurementVersion, runState, conversation]);
-  const layout = useMemo(() => passageWindow(ids, heights, viewport.top, viewport.height, pinned, lowResource ? 300 : 900),
+  // PERF-4: the render that swaps in the whole history already mounts the window around the passage the reader is on (see the
+  // swap effect): the first commit is then the right one, with no frame at a wrong place. The passage and its offset are read
+  // here, while the old layout is still on screen (rendering does not touch the DOM; the commit that follows does).
+  if (wasPartial.current && !partial && ref.current) {
+    const top = ref.current.getBoundingClientRect().top;
+    const slot = [...ref.current.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]:not([data-unloaded])')].find((item) => item.getBoundingClientRect().bottom > top + 1);
+    swapAnchor.current = slot?.dataset.passageId ? { id: slot.dataset.passageId, offset: slot.getBoundingClientRect().top - top } : undefined;
+  }
+  const swapIndex = wasPartial.current && !partial && swapAnchor.current ? ids.indexOf(swapAnchor.current.id) : -1;
+  const windowTop = swapIndex >= 0 ? Math.max(0, passageWindow(ids, heights, 0, 0, new Set(), 0).prefix[swapIndex]! - swapAnchor.current!.offset) : viewport.top;
+  const layout = useMemo(() => passageWindow(ids, heights, windowTop, viewport.height, pinned, lowResource ? 300 : 900),
     // IDs and pinning are recreated as scene and reader state change. Measurements need their own revision.
-    [scene.passages, viewport, heights, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
+    [scene.passages, viewport, windowTop, heights, targetId, expandedId, focusedPassageId, hoverPassageId, readingAnchor.current?.id, lowResource]);
 
   // Opening a turn to show a selection is the reader's choice from then on, so it stays open after the selection clears.
   useEffect(() => {
@@ -395,6 +414,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
 
   useLayoutEffect(() => {
     if (!onWindow) return;
+    // PERF-4: the commit that swaps in the whole history still holds the old scroll offset; the swap effect below puts
+    // the view back and this runs again with the right one. Asking for a page now would ask for the wrong place.
+    if (wasPartial.current && !partial) return;
     const indexes = (window: ReturnType<typeof passageWindow>) => window.runs.flatMap((run) => Array.from({ length: run.end - run.start }, (_, i) => run.start + i));
     const isMissing = (i: number) => scene.passages[i]?.unloaded && foldFor(scene.passages[i]!) !== 'hidden';
     const near = passageWindow(ids, heights, viewport.top, viewport.height, new Set(), lowResource ? 300 : 900);
@@ -434,7 +456,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       requestedWindow.current = undefined;
       set({ error: error.message });
     }).finally(() => { mine.pending = false; });
-  }, [scene.passages, scene.step, viewport, heights, onWindow, conversation]);
+  }, [scene.passages, scene.step, viewport, heights, onWindow, conversation, partial]);
 
   remember.current = () => rememberReading();
   const rememberReading = () => {
@@ -481,6 +503,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const followLatest = () => {
     const boundary = navigationBoundary.current;
     if (boundary?.step === scene.step && boundary.projection === projection) return;
+    if (performance.now() < swapHold.current) return;
     const el = ref.current;
     if (!el || !useApp.getState().follow || pointerFocus.current) return;
     if (!followingStarted.current || !motion || lowResource || matchMedia('(prefers-reduced-motion: reduce)').matches) {
@@ -826,6 +849,53 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     }
   }, [scene.step, follow, layout.total, mode, projection]);
 
+  // PERF-4: the swap from the recent-first page to the whole history. Earlier history joins above the view as
+  // placeholders (the document gets far taller), so the reader's place is put back before paint: the first passage
+  // on screen keeps the exact pixels from the top of the view that it had, whether the reader follows or not. It is
+  // not new work: nothing counts as unseen, nothing arrives, and no camera travels the new height.
+  useLayoutEffect(() => {
+    const swapped = wasPartial.current && !partial;
+    wasPartial.current = !!partial;
+    const before = previousTotal.current;
+    previousTotal.current = scene.total;
+    if (!swapped) return;
+    const el = ref.current;
+    if (!el) return;
+    seenThrough.current = useApp.getState().follow ? scene.total : Math.max(0, scene.total - Math.max(0, before - seenThrough.current));
+    swapHold.current = performance.now() + 600;
+    const anchor = swapAnchor.current;
+    swapAnchor.current = undefined;
+    // Virtualization mounts what the old scroll offset points at in the new, taller layout, so the anchor is placed by
+    // the layout's own positions first (every passage above it is a placeholder of known height) and refined once the
+    // passage is mounted.
+    const index = anchor ? scene.passages.findIndex((ps) => ps.id === anchor.id) : -1;
+    if (anchor && index >= 0) {
+      readingAnchor.current = anchor;
+      setScrollTop(layout.prefix[index]! - anchor.offset);
+      // The window was mounted around the anchor in this very commit, so its real position is at hand: settle the last pixels
+      // now, and again whenever the passages around it are measured (some are taller than the recent-first page's), from a
+      // resize observer so the correction lands in the same frame as the growth, until the reader moves the view themselves.
+      const settle = () => {
+        const mounted = [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === anchor.id);
+        if (!mounted) return;
+        const delta = mounted.getBoundingClientRect().top - el.getBoundingClientRect().top - anchor.offset;
+        if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+      };
+      settle();
+      swapObserver.current?.disconnect();
+      const until = performance.now() + 900;
+      const watch = new ResizeObserver(() => {
+        if (performance.now() > until || (!programmatic.current && Math.abs(el.scrollTop - lastScrollTop.current) > 1)) { watch.disconnect(); return; }
+        settle();
+      });
+      const inner = el.querySelector('.history-inner');
+      if (inner) watch.observe(inner);
+      for (const slot of el.querySelectorAll('.passage-slot')) watch.observe(slot);
+      swapObserver.current = watch;
+      window.setTimeout(() => watch.disconnect(), 950);
+    } else if (useApp.getState().follow) setScrollTop(el.scrollHeight);
+    else restoreReading(true);
+  }, [partial, scene.total]);
   useLayoutEffect(() => () => {
     if (scrollFrame.current !== undefined) cancelAnimationFrame(scrollFrame.current);
     if (navigationFrame.current !== undefined) cancelAnimationFrame(navigationFrame.current);

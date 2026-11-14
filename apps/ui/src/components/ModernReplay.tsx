@@ -6,7 +6,9 @@ import './modern-replay.css';
 /** Replay is an explicit view of captured order; it never starts a native harness turn. */
 export function ReplayEntry(){
  const available=useApp(s=>(s.historyPage?.scene.total??s.projection?.timeline.length??0)>0);
- return <button className="btn ghost" disabled={!available} onClick={event=>{
+ // PERF-4: replay counts steps from the start of the whole history, which the recent-first page does not have yet.
+ const loading=useApp(s=>!!s.historyPage?.partial);
+ return <button className="btn ghost" disabled={!available||loading} title={loading?'Loading the whole history…':undefined} onClick={event=>{
   event.currentTarget.closest('details.workspace-menu')?.removeAttribute('open');
   const app=useApp.getState();app.set({replayDiagnostics:true});if(app.mode==='history')app.togglePlay();
  }}>Replay this session</button>;

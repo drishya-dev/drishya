@@ -1,5 +1,6 @@
 import {queuedInputChunk} from './queued-inputs.ts';
 import {recordedFileRoots,withFileRootDiskState} from './file-roots.ts';
+import { HistoryLoading } from './history.ts';
 import {commandCursor} from '../../../packages/scene/src/commands.ts';
 // Local HTTP API. Loopback only; per-launch token exchanged for an HttpOnly session cookie;
 // strict Host and Origin checks; no generic filesystem access; passive capture plus explicitly opted-in native harness clients.
@@ -418,7 +419,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         for (const key of id.split('+')) app.recording(key);
         const body = await readJson(req);
         for (const field of ['start', 'count', 'step', 'promptStep', 'since', 'previousSince']) if (body[field] !== undefined && (!Number.isSafeInteger(body[field]) || Number(body[field]) < 0)) throw new HttpError(400, `invalid ${field}`);
-        for (const field of ['selectedOperationId', 'observationId']) if (body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 512)) throw new HttpError(400, `invalid ${field}`);
+        for (const field of ['selectedOperationId', 'observationId', 'anchorPassageId']) if (body[field] !== undefined && (typeof body[field] !== 'string' || String(body[field]).length > 512)) throw new HttpError(400, `invalid ${field}`);
+        if (body.tailFirst !== undefined && typeof body.tailFirst !== 'boolean') throw new HttpError(400, 'invalid tailFirst');
         if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
@@ -535,7 +537,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
           if (state !== undefined && state !== 'pending' && state !== 'history') throw new HttpError(400,'Invalid queue state.');
           return json(res, await app.history.queue(app.readingId(id), id, {through, ...(url.searchParams.has('step') ? {step:intParam(url,'step',0,0,Number.MAX_SAFE_INTEGER)} : {}), ...(state ? {state} : {}), before: intParam(url, 'before', Number.MAX_SAFE_INTEGER, 0, Number.MAX_SAFE_INTEGER), count: intParam(url, 'count', 20, 1, 50)}));
         } catch (error) {
-          if (error instanceof HttpError) throw error;
+          if (error instanceof HttpError || error instanceof HistoryLoading) throw error;
           throw new HttpError(400, 'Invalid queue reading boundary or range.');
         }
       }
@@ -552,7 +554,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
           const field = url.searchParams.get('field') ?? undefined;
           if (field !== undefined && field !== 'text' && field !== 'structured') throw new HttpError(400, 'Invalid captured result field.');
           try { return json(res, await app.history.artifactChunk(app.readingId(id), subId, start, field)); }
-          catch (error) { if (error instanceof Error && error.message.includes('UTF-8')) throw new HttpError(400, 'Invalid UTF-8 portion boundary.'); throw new HttpError(404, 'Stored result not found.'); }
+          catch (error) { if (error instanceof HistoryLoading) throw error; if (error instanceof Error && error.message.includes('UTF-8')) throw new HttpError(400, 'Invalid UTF-8 portion boundary.'); throw new HttpError(404, 'Stored result not found.'); }
         }
         if (url.searchParams.has('find')) {
           for (const key of id.split('+')) app.recording(key);
@@ -767,7 +769,8 @@ function serveStatic(uiDir: string, pathname: string, res: ServerResponse) {
  * The response for a failed request. Messages are redacted: an upstream error (a model endpoint,
  * a parser) can quote content, and an error body is a sink like any other (audit A02).
  */
-export function errorBody(e: unknown): { status: number; body: { error: string } } {
+export function errorBody(e: unknown): { status: number; body: { error: string; loading?: true } } {
+  if (e instanceof HistoryLoading) return { status: 202, body: { error: 'loading', loading: true } };
   const status = e instanceof HttpError ? e.status : 500;
   const message = e instanceof Error ? e.message : 'error';
   return { status, body: { error: redactText(message).text.slice(0, 2000) } };

@@ -4,6 +4,8 @@
 
 How long passes between a harness writing a journal record and Drishya painting it, measured per step with a probe that only exists behind a developer switch, then shortened without changing a pixel or a motion. Everything here is local; Drishya has no telemetry and the probe sends nothing anywhere.
 
+**Follow-up, 14 Nov:** opening a large session (the cold open, the swap to the whole history, the restart) is PERF-4: [perf-4-cold-open.md](perf-4-cold-open.md) has its before/after rows beside these. The "stale-open burst" noted here is fixed there.
+
 ## The bug, and what caused it
 
 Yash, 14 Nov: "sometimes its that the session doesnt load and than next second there is thinking block and 2-3 commands already done."
