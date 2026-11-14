@@ -31,6 +31,17 @@
 .command-material > .line-clamp { align-self: stretch; }
 .cmd-line { display: block; padding-left: 2ch; text-indent: -2ch; }
 
+/* ── UI-50: table-shaped or wide literal output keeps its lines and scrolls horizontally ── */
+.output.output-scroll, .terminal-preview .output.output-scroll {
+  white-space: pre !important;
+  overflow-x: auto !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  max-width: 100%;
+  scrollbar-width: thin;
+  tab-size: 4;
+}
+
 /* ── one rhythm: header, command, output and arguments sit the same distance apart ─────── */
 .history .op:not(.expanded) .op-body :is(.shell, .test, .mcp) { display: grid; gap: var(--card-gap); min-width: 0; }
 .history .op:not(.expanded) .op-body :is(.shell, .test, .mcp) > * { margin: 0; }

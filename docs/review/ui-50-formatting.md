@@ -54,14 +54,14 @@ Journals and real session contents are never printed or committed. Sessions chec
 
 ## 3. What changed
 
-1. **Literal output line structure & horizontal scroll (`apps/ui/src/components/common.tsx`, `apps/ui/src/modern/card-content.css`, `apps/ui/src/lib/tool-output.ts`):**
+1. **Literal output line structure & horizontal scroll (`apps/ui/src/components/common.tsx`, `apps/ui/src/components/card-content.css`, `apps/ui/src/lib/tool-output.ts`):**
    - Captured command stdout/stderr stays literal: shell stdout is never re-rendered as Markdown (captured ≠ derived).
    - `isTableShaped(text)` detects Markdown tables (`| ... |`), ASCII/box-drawing tables (`+---+`, `┌───┐`), tab-delimited columns (`\t`), and fixed-width columnar output.
    - When table-shaped or wide, literal output receives `.output-scroll`: `white-space: pre; overflow-x: auto; tab-size: 4;`.
    - The rows do not wrap mid-row; columns stay aligned; wide rows scroll sideways inside the card.
    - `LineClamp` measures real line boxes: collapsed previews end on a whole line, preserving UI-46.
 
-2. **Unified Markdown renderer & styling (`apps/ui/src/lib/markdown.tsx`, `apps/ui/src/modern/markdown.css`):**
+2. **Unified Markdown renderer & styling (`apps/ui/src/lib/markdown.tsx`, `apps/ui/src/lib/markdown.css`):**
    - Quotes (`> quote`) and horizontal rules (`---`) enabled across all Markdown (both agent prose and card documents).
    - Task lists (`- [ ]`, `- [x]`) rendered with styled checkboxes and `md-task-list` / `md-task-item`.
    - HTML markup safely rendered as `<pre className="md-html">` everywhere.
