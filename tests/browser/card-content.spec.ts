@@ -89,6 +89,9 @@ for(const width of [1440,600]){
    const el=card(page,'shell',0);await settle(page,el);await frame(el,`shell-command-${width}`);
    expect(await overflowing(el)).toEqual([]);
    expect(await scrollBoxes(el),'a fixed-height box hides part of the preview').toEqual([]);
+   // An option such as -q or --detach is never broken at its hyphen.
+   expect(await el.locator('.cmd-option').count()).toBeGreaterThan(2);
+   expect(await el.locator('.cmd-option').evaluateAll(es=>es.filter(e=>e.getClientRects().length>1).length)).toBe(0);
    // The command text is exactly the command, and no clamp cuts a line.
    const text=await el.locator('.cmd code').first().evaluate(c=>c.textContent);
    expect(text!.replace(/\n$/,'')).toBe(LONG_COMMAND);

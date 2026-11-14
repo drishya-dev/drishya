@@ -245,8 +245,13 @@ export function tokenize(line: string, lang?: string): Tok[] {
   return out;
 }
 
-/** A place to break a long path: after each separator, even where the browser's own rules refuse one (before a dot). The text is unchanged, so copy yields the original. */
+/** A place to break a long path: after each separator, even where the browser's own rules refuse one (before a dot). An option
+ * such as `-n` or `--detach` never breaks at its hyphen. The text is unchanged, so copy yields the original. */
 function softBreaks(text: string): ReactNode {
+  const pieces = text.split(/((?<![\w-])-{1,2}[A-Za-z][\w-]{0,22}(?![\w-]))/);
+  return pieces.length < 2 ? pathBreaks(text) : pieces.map((piece, i) => i % 2 ? <span key={i} className="cmd-option">{piece}</span> : <Fragment key={i}>{pathBreaks(piece)}</Fragment>);
+}
+function pathBreaks(text: string): ReactNode {
   const parts = text.split(/(?<=[/\\])(?=[^\s/\\])/);
   return parts.length < 2 ? text : parts.flatMap((part, i) => i ? [<wbr key={i}/>, part] : [part]);
 }
