@@ -60,3 +60,15 @@ Reconciled main through `fb642882` (including SHIP-5 #487, UI-50 #483, UI-49 #48
 - `TASKS.md`: retain main's new items/status and regenerate counts from the stacked item checkboxes. No new AG-5 completion mark.
 
 Validation after reconciliation: both TypeScript projects and UI build pass; 121 focused units pass, plus the new passive-card regression (34 tests in its final focused rerun). Eleven Edge browser checks pass with two workers and no retries, covering main's Claude/Codex question display, connected question answer/stop at 600/1440, Antigravity read-only identity and exact child links at 600/1440. These are regression checks, not a claim that all AG-5 real-session acceptance is finished. No full gate or hosted CI was run.
+
+## Paused at Yash's request, 14 November
+
+Saved in-progress native-case units, synthetic corpus, check-real cases and browser spec. AG-5 is not finished and stays draft/unticked. No integration/item PR merged.
+
+New checks: genuine browser (3 calls), MCP (3 calls), questions (3 sessions), PDFs (6 references across `cc6901cc` / 104,590 bytes and `9b23834b` / 291,123 bytes), and permission (`4b39dd4d` / 468,671 bytes) scratch checks pass their counts/provenance checks. PDF bytes are never opened. Native permission outcome remains unknown with a recorded-data gap; command output is never a refusal. Projection version r44 invalidates previous derived caches without an event schema change.
+
+New lifecycle capture `6ec2c1a4` / 39,646 bytes / 61 steps records synthetic file writes, move/delete shell requests, exact task send_input/status/kill/list calls, and a previously unseen native swarm tool. It has three explicit requested model values and three child metadata records. This proves requested identities, not that every requested model actually ran. `swarm`, `read_board`, `post_message` remain unknown pending exact mapping. No child ownership is guessed by time or name.
+
+Six native-case unit tests pass. The new 600/1440 browser spec currently fails: the PDF/permission details are present in projection gaps but are not inline History text. Do not claim those are visible acceptance yet. The artifact assertion now explicitly chooses captured call input when today's referenced file is absent. Next: use existing gap disclosure or add only an agreed narrow native notice path, map evidence-backed swarm ownership (including parallel calls), finish real frames and remaining regression/full gate. Preserve main SHIP-5/UI-50/UI-49/UI-47/LIVE-7.
+
+User paused before further implementation. No background browser suite is running. All real capture diagnostics and screenshots remain under .local; only synthetic data is committed.

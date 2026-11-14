@@ -1,3 +1,4 @@
+import { antigravityNativeCases } from './real-cases/antigravity-native.ts';
 import { liveBatches } from './real-cases/live-batches.ts';
 import { personPrompts } from './real-cases/person-prompts.ts';
 import { midTurnPrompts } from './real-cases/mid-turn-prompts.ts';
@@ -57,6 +58,7 @@ const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((a
 cases.push(antigravity);
 cases.push(antigravityLive);
 cases.push(antigravityMedia);
+cases.push(...antigravityNativeCases);
 if (values.list || !positionals.length) {
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
   process.exit(values.list ? 0 : 2);

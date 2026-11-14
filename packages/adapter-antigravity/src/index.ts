@@ -75,6 +75,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
           pair.add(pending);
           out.push(unmatched(pending, base, 0));
           emit({ part: 10 + index, kind: 'tool.call', operationId, denyContent: touchesProtectedFile(intent), contentKeys: ['input', 'intent', 'nativeArtifact'], payload: { tool, input: args, intent, nativeArtifact, protected: touchesProtectedFile(intent), antigravityStep: step, correlationBasis: 'call-order' } });
+          if (tool === 'ask_permission') emit({ part: 40000 + index, kind: 'capture.gap', operationId, availability: 'metadata-only', payload: { reason: 'unsupported-content', detail: 'Antigravity recorded a permission request. Its approval or denial cannot be identified from this capture; answer in Antigravity.' } });
           if (!knownTools.has(tool) || tool === 'call_mcp_tool' && intent.kind !== 'mcp') emit({ part: 10000 + index, kind: 'unknown', availability: 'metadata-only', payload: { recordType: `tool:${tool}` } });
         });
       } else if (results.has(type)) {

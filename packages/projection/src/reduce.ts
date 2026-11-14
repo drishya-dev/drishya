@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r43';
+export const REDUCER_VERSION = 'r44';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
