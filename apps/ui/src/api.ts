@@ -1,3 +1,4 @@
+import { probeNotice } from './lib/live-probe.ts';
 import { resolveHunkLines } from '../../../packages/projection/src/patch.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
 import type {QueueQuery, QueuePage, QueueInputChunk, QueueTimelineItem} from '@drishya/contracts';
@@ -132,6 +133,8 @@ export interface DataSource {
       /** Sent on every (re)connect: the daemon's current revision of each recording. */
       onSync?: (revisions: Record<string, number>) => void;
       onStatus?: (status: 'connected' | 'reconnecting' | 'signed-out') => void;
+      /** A harness started (or is still starting) a session journal: list local sessions now (LIVE-7). */
+      onSources?: () => void;
     },
   ): () => void;
 }
@@ -361,7 +364,13 @@ export const daemon: DataSource = {
         hooks?.onStatus?.('signed-out');
       }).catch(() => undefined).finally(() => { checking = false; });
     });
-    es.addEventListener('change', (e) => onChange(JSON.parse((e as MessageEvent).data)));
+    es.addEventListener('change', (e) => {
+      const notice = JSON.parse((e as MessageEvent).data);
+      probeNotice(notice.recordingId, notice.observationCount);
+      onChange(notice);
+    });
+    es.addEventListener('sources', () => hooks?.onSources?.());
+    es.addEventListener('sources', () => hooks?.onSources?.());
     es.addEventListener('health', (e) => {
       const ev = JSON.parse((e as MessageEvent).data) as { recordingId: string; health: RecordingHealth };
       onChange({ recordingId: ev.recordingId, added: 0, live: ev.health.live, health: ev.health });

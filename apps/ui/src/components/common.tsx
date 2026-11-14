@@ -1,6 +1,6 @@
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import {outputPathNodes} from './CapturedPath.tsx';
-import { useContext, useEffect, useState, type ReactNode, type Ref } from 'react';
+import { memo, useContext, useEffect, useState, type ReactNode, type Ref } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 import { materialCache, type MaterialScope } from '../lib/artifact-cache.ts';
@@ -137,7 +137,10 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining =
   );
 }
 
-export function Output({ text, maxLines }: { text: string; maxLines?: number }) {
+// Memoised (LIVE-7): a live update re-renders the whole history, and without this every mounted
+// output card rescanned each of its lines for file locations on every update (about 90 ms per update on a
+// 1,700-observation Codex session). Props are the text and a line cap, so equal props are the same pixels.
+export const Output = memo(function Output({ text, maxLines }: { text: string; maxLines?: number }) {
   const root=useApp(s=>s.recording?.workspaceRoot);
   const all = text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\n$/, '').split('\n');
   const lines = maxLines ? all.slice(-maxLines) : all;
@@ -153,7 +156,7 @@ export function Output({ text, maxLines }: { text: string; maxLines?: number }) 
       ))}
     </pre>
   );
-}
+});
 
 // ─── provenance ──────────────────────────────────────────────────────────────────────────
 
