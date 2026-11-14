@@ -37,7 +37,10 @@ try {
     if (run === 2 && arg('--append')) {
       // The session grew while the daemon was away: append real tail lines (copied from the journal's end).
       const n = Number(arg('--append'));
-      const lines = readFileSync(journal, 'utf8').split('\n').filter(Boolean).slice(-n).map(l => l.replace(/"timestamp":"[^"]+"/, `"timestamp":"${new Date().toISOString()}"`));
+      // Only the end of the journal is read (a journal can be over 512 MB, too long for one string).
+      const size = statSync(journal).size, span = Math.min(size, 4 << 20), buf = Buffer.alloc(span), fd = openSync(journal, 'r');
+      try { readSync(fd, buf, 0, span, size - span); } finally { closeSync(fd); }
+      const lines = buf.toString('utf8').split('\n').filter(Boolean).slice(-n).map(l => l.replace(/"timestamp":"[^"]+"/, `"timestamp":"${new Date().toISOString()}"`));
       appendFileSync(journal, lines.join('\n') + '\n');
     }
     app = new App(data); // a restart
