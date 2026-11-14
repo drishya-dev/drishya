@@ -1,3 +1,4 @@
+import type { SquashJoinBasis } from './git-squash.ts';
 import type { gitThreadLayout } from './git-thread-layout.ts';
 
 /**
@@ -30,8 +31,10 @@ export interface LightOptions {
 /** One run of non-primary commits: from the commit it left (fork) to the primary commit it was merged into, if any. */
 export interface LightBranch {
   key: string; members: string[]; fork?: string; merge?: string; head: string; side: number; tier: number;
-  /** The merge is a squash: no parent link in Git, but that primary commit wrote exactly this branch's file contents. */
+  /** The merge is a squash: no parent link in Git, but that primary commit wrote this branch's content/patch/PR. */
   squash?: boolean;
+  squashBasis?: SquashJoinBasis;
+  squashPr?: number;
 }
 export interface LightLayout {
   nodes: LayoutNode[];

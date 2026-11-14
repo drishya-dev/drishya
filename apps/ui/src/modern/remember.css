@@ -5,7 +5,7 @@
 .remember-box svg { width:10px; height:10px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
 .remember-check>input:checked+.remember-box { background:var(--focus); border-color:var(--focus); }
 .remember-check>input:checked+.remember-box svg { opacity:1; }
-.remember-check>input:focus-visible+.remember-box { outline:2px solid var(--focus); outline-offset:2px; }
+:root:not([data-input-modality="pointer"]) .remember-check>input:focus-visible+.remember-box { outline:1px solid var(--focus-ring); outline-offset:2px; }
 .remember-check>input:disabled+.remember-box, .remember-check>input:disabled~span { opacity:.55; }
 .remember-check:hover>input:not(:disabled)+.remember-box { border-color:var(--t3); }
 @media (prefers-reduced-motion: no-preference) {

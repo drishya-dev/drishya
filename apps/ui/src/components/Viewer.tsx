@@ -1,4 +1,4 @@
-import { NotesEntry } from './StepNotes.tsx';
+import { HistoryNoteHint, NotesEntry } from './StepNotes.tsx';
 import { ProductMenu } from './ProductMenu.tsx';
 import {Disclosure,useDisclosureChoice} from './Disclosure.tsx';
 import {developerToolsEnabled} from '../lib/local-preview.ts';
@@ -19,16 +19,14 @@ import { focusAgent, focusKind, focusMcp } from '../lib/compound-focus.ts';
 import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
-import { changedPreview, type Explanation, type ModelPreview } from '../api.ts';
 import { agentColor, agentName, KIND_LABEL } from '../lib/identity.ts';
 import { setLowResource, setMapVisible, setMotion, useApp } from '../state.ts';
 import { Kbd, timeOf } from './common.tsx';
 import { History } from './History.tsx';
-import { ExplanationView } from './ExplanationView.tsx';
 import { HealthTag } from './Home.tsx';
 import { MapCanvas } from './MapCanvas.tsx';
 import { MaterialGlyph } from './MaterialGlyph.tsx';
@@ -46,8 +44,9 @@ import { NotifyWatcher } from './NotifyWatcher.tsx';
 import { TurnsWatcher } from './TurnsWatcher.tsx';
 import { ContextReportWatcher } from './ContextReportWatcher.tsx';
 import { EvidenceReview } from './EvidenceReview.tsx';
-import { CompareButton, CompareWindow } from './CompareWindow.tsx';
-import { GitReviewEntry } from './GitReview.tsx';
+import { CompareButton } from './CompareButton.tsx';
+import { HistoryModeSwitch } from './HistoryModeSwitch.tsx';
+import { GitEntry } from './GitEntry.tsx';
 import { useExperience } from '../lib/experience.ts';
 import { WorkbenchHeader, WorkbenchSources, WorkbenchStation, LocalPreviewEntry } from './Workbench.tsx';
 import { ago } from '../lib/git-commit-rows.ts';
@@ -55,6 +54,9 @@ import './search-context.css';
 import type { SessionSearchHit } from '../../../../packages/store/src/search-types.ts';
 import {searchDestination} from '../lib/search-destination.ts';
 import { DeveloperWorkspace } from './DeveloperWorkspace.tsx';
+import { FILE_READER_SELECTOR, SIDE_PANELS, measureNarrowSides, measureReadingEdges, measureReadingSides, READING_EDGE_OBSERVED_SELECTORS } from '../lib/reading-edges.ts';
+
+const CompareWindow = lazy(() => import('./CompareWindow.tsx').then(m => ({ default: m.CompareWindow })));
 
 export function Viewer() {
   const id = useApp(s => s.recordingId);
@@ -84,11 +86,13 @@ function WorkspaceViewer() {
   const compareAgents = useApp((s) => s.compareAgents);
   const motion = useApp((s) => s.motion);
   const foldersHidden = useApp(s => s.foldersHidden);
+  const viewer = useRef<HTMLDivElement>(null);
   const main = useRef<HTMLDivElement>(null);
   const currentFile=useApp(s=>s.currentFile);
   const filePeek=!!currentFile&&!explore&&!developerWorkspace&&document.documentElement.dataset.uiVersion==='modern';
   useFilePeekLayout(main,filePeek&&!!projection);
   const [reading, setReading] = useState<{ left: number; width: number }>();
+  const [followSlot, setFollowSlot] = useState<HTMLElement | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [mapError, setMapError] = useState<string>();
   const [mapRetry, setMapRetry] = useState(0);
@@ -192,6 +196,82 @@ function WorkspaceViewer() {
     return () => ro.disconnect();
   }, [!!projection, foldersHidden, explore, experience]);
 
+  useLayoutEffect(() => {
+    const el = viewer.current;
+    if (!el) return;
+    const update = () => {
+      const edges = measureReadingEdges(el);
+      const topValue = `${edges.top}px`;
+      const bottomValue = `${edges.bottom}px`;
+      if (el.style.getPropertyValue('--reading-edge-top') !== topValue) el.style.setProperty('--reading-edge-top', topValue);
+      if (el.style.getPropertyValue('--reading-edge-bottom') !== bottomValue) el.style.setProperty('--reading-edge-bottom', bottomValue);
+      const narrow = measureNarrowSides(el);
+      if (narrow.fit === 'none') { if (el.hasAttribute('data-side-fit')) el.removeAttribute('data-side-fit'); }
+      else if (el.getAttribute('data-side-fit') !== narrow.fit) el.setAttribute('data-side-fit', narrow.fit);
+      const sides = narrow.fit === 'docked' ? narrow : measureReadingSides(el);
+      for (const [name, value] of [['--reading-pad-left', sides?.left], ['--reading-pad-right', sides?.right]] as const) {
+        const next = value === undefined ? '' : `${value}px`;
+        if (el.style.getPropertyValue(name) !== next) { if (next) el.style.setProperty(name, next); else el.style.removeProperty(name); }
+      }
+    };
+    const resize = new ResizeObserver(update);
+    const observed = new Set<Element>();
+    const mutation = new MutationObserver(update);
+    const bind = () => {
+      resize.disconnect();
+      mutation.disconnect();
+      observed.clear();
+      const watchResize = (target: Element | null) => {
+        if (target && !observed.has(target)) { observed.add(target); resize.observe(target); }
+      };
+      watchResize(el);
+      for (const node of el.querySelectorAll(READING_EDGE_OBSERVED_SELECTORS)) watchResize(node);
+      // The file reader is a portal on the document (UI-45): its size, and the width History gives up for it, move the column's sides.
+      for (const node of document.querySelectorAll(FILE_READER_SELECTOR)) watchResize(node);
+      for (const subtree of el.querySelectorAll('.workspace-header, .workspace-bar, .modern-native-composer, .history-transport, .queued-input-receipts')) {
+        mutation.observe(subtree, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'hidden', 'open', 'data-waiting', 'aria-expanded'] });
+      }
+    };
+    const rootMutation = new MutationObserver(() => { bind(); update(); });
+    rootMutation.observe(el, { childList: true });
+    // A side panel mounts or unmounts anywhere under the viewer (Files, Toolbox, the prompt marks): place the column in the
+    // same frame (a microtask, before paint) and watch the new one's size. Nothing waits for a scroll (UI-45).
+    const panelMutation = new MutationObserver(records => {
+      const panel = (node: Node) => node instanceof Element && (node.matches(SIDE_PANELS) || node.querySelector(SIDE_PANELS) !== null);
+      if (records.some(r => [...r.addedNodes, ...r.removedNodes].some(panel))) { bind(); update(); }
+    });
+    panelMutation.observe(el, { childList: true, subtree: true });
+    // A panel that slides or fades in has its final size only when the motion ends.
+    const settled = (event: Event) => { if (event.target instanceof Element && event.target.matches(SIDE_PANELS)) update(); };
+    for (const type of ['transitionend', 'transitioncancel', 'animationend', 'animationcancel']) el.addEventListener(type, settled);
+    // The reader opens and closes as a portal and moves when dragged: measure again, then watch whichever one is open.
+    const portalMutation = new MutationObserver(() => { bind(); update(); });
+    portalMutation.observe(document.body, { childList: true });
+    const openMutation = new MutationObserver(records => { if (records.some(r => (r.target as Element).matches?.('dialog'))) { bind(); update(); } });
+    openMutation.observe(document.body, { subtree: true, attributes: true, attributeFilter: ['open'] });
+    const relayout = () => update();
+    window.addEventListener('drishya-reading-layout', relayout);
+    window.addEventListener('resize', relayout);
+    bind();
+    update();
+    return () => {
+      resize.disconnect();
+      mutation.disconnect();
+      rootMutation.disconnect();
+      panelMutation.disconnect();
+      for (const type of ['transitionend', 'transitioncancel', 'animationend', 'animationcancel']) el.removeEventListener(type, settled);
+      portalMutation.disconnect();
+      openMutation.disconnect();
+      window.removeEventListener('drishya-reading-layout', relayout);
+      window.removeEventListener('resize', relayout);
+      el.style.removeProperty('--reading-edge-top');
+      el.style.removeProperty('--reading-edge-bottom');
+      el.style.removeProperty('--reading-pad-left');
+      el.style.removeProperty('--reading-pad-right');
+      el.removeAttribute('data-side-fit');
+    };
+  }, [!!projection && !!scene && !!historical, foldersHidden, explore, experience, workingWindow, catalogOpen, historyMode]);
+
   if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading history…'}</div>;
   // Keep the viewport and finite arrivals alive across paged forward steps.
   // A backward seek must conceal later evidence until its as-of page arrives.
@@ -200,7 +280,7 @@ function WorkspaceViewer() {
 
   return (
     <><CapturedCommands/><ReviewInsights/><GitHistory/>
-    <div inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${workingWindow ? ' developer-workspace-open' : ''}${filePeek?' file-peek-open':''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
+    <div ref={viewer} inert={awaitingEarlierPage} aria-busy={!!historyPage && scene.step !== step} style={{ visibility: awaitingEarlierPage ? 'hidden' : undefined, '--session-color': agentColor(projection.agents.find(a => !a.parentId), projection.agents) } as React.CSSProperties} className={`viewer connected-workspace${workingWindow ? ' developer-workspace-open' : ''}${filePeek?' file-peek-open':''}${scene.agents.length > 1 ? " multi-agent" : ""}${foldersHidden ? ' folders-hidden' : ''}${foldersHidden === false ? ' folders-shown' : ''}${motion ? '' : ' still'}${explore ? ' exploring' : ''}${explore && mapReading ? ' map-reading' : ''}${compareAgents ? ' comparing-agents' : ''}${catalogOpen ? ' catalog-open' : ''}`}>
       <WorkspaceHeader scene={scene} projection={projection} />{experience === 'studio' ? <WorkbenchSources projection={historical} /> : <WorkspaceBar />}
       {error && <div className="notice bad" role="alert">History update failed: {error} <button className="btn" onClick={() => void useApp.getState().reloadProjection().catch((failure) => useApp.setState({ error: failure.message }))}>Retry</button></div>}
       {catchupError&&<div className="notice bad" role="alert">Local journal refresh failed: {catchupError} <button className="btn" onClick={()=>setCatchupRetry(n=>n+1)}>Retry journal refresh</button></div>}
@@ -209,18 +289,22 @@ function WorkspaceViewer() {
         {mapVisible && mapError && <div className="map-recovery" role="alert">Repository map unavailable: {mapError}<button className="btn" onClick={() => setMapRetry(n => n + 1)}>Retry repository map</button></div>}
         {(experience !== 'studio' || foldersHidden === false) && <FolderExplorer key={`folders/${recordingId}`} scene={scene} projection={historical} />}
         {experience === 'legacy' && <AgentOverview scene={scene} projection={historical} />}
-        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} />
+        <History key={recordingId} scene={scene} projection={historical} onWindow={historyPage ? loadHistoryWindow : undefined} followSlot={followSlot} />
         {!workingWindow && <FileHistory projection={historical} />}
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
       <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
-      <Transport scene={scene} projection={projection} />
+      <Transport scene={scene} projection={projection} followSlot={setFollowSlot} />
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
       <ContextReportWatcher key={`context-report/${recordingId}`} />
       <PromptComposer key={`composer/${recordingId}`} />
-      <DeveloperWorkspace /><CompareWindow />
+      <HistoryNoteHint />
+      <DeveloperWorkspace />
+      <Suspense fallback={null}>
+        {compareOpen && <CompareWindow />}
+      </Suspense>
       <Briefing projection={projection} />
       <Search projection={projection} />
       <ScreenHost />
@@ -306,7 +390,7 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
       : <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}
     {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline session' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
     {modern&&connection==='reconnecting'&&<span role="status" className="session-connection">Reconnecting…</span>}
-    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <CompareButton key={`compare-${id}`} />}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} trigger={false} />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu" onToggle={event => { if (event.target === event.currentTarget) setMenuOpen(event.currentTarget.open); }}><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">This session</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><NotesEntry key={`questions/${id}`}  /><SessionIdentity/></div>}<UsagePeek />{modern ? <><span className="utility-heading">Move around</span>{developerToolsEnabled()&&<ReplayEntry/>}<ScreenEntry menuOpen={menuOpen} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><span className="utility-heading">Share</span><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}</> : <><ScreenEntry menuOpen={menuOpen} /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></>}</div></details></div>
+    <div className="crown-actions studio-actions">{!modern && <span className="workbench-mobile-review"><EvidenceReview key={id} projection={projection} /></span>}{modern && <CompareButton key={`compare-${id}`} />}{modern && <EvidenceReview key={`changes-${id}`} projection={projection} trigger={false} />}{modern && <span className="workspace-view-slot" ref={registerHeaderSlot} />}{modern && <HistoryModeSwitch />}<button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)"><InterfaceGlyph name="search" /><span>Search</span><kbd aria-hidden="true">/</kbd></button><button className="btn ghost settings-open" aria-label="Workspace settings" title="Settings" onClick={() => useApp.setState({ settingsOpen: true })}><SettingsGlyph /></button><details className="workspace-menu" onToggle={event => { if (event.target === event.currentTarget) setMenuOpen(event.currentTarget.open); }}><summary aria-label="More workspace options">{modern ? <svg className="modern-utility-glyph" viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="3" /><path d="M9 5v14m4-9h3m-3 4h3" /></svg> : '•••'}</summary><div className={modern?"workspace-utilities":undefined}>{modern&&<span className="utility-heading">This session</span>}<NativeReturnEntry deferMoments={modern}/><SessionSegments/>{modern && <div className="modern-evidence-actions"><NotesEntry key={`questions/${id}`}  /><SessionIdentity/></div>}<UsagePeek />{modern ? <><span className="utility-heading">Move around</span>{developerToolsEnabled()&&<ReplayEntry/>}<ScreenEntry menuOpen={menuOpen} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details><span className="utility-heading">Share</span><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}</> : <><ScreenEntry menuOpen={menuOpen} /><LocalPreviewEntry />{exportUrl && <a className="btn ghost" href={exportUrl} download>Export recording</a>}<SinceMarkPill projection={projection} /><details className="prompt-menu"><summary>Navigate history</summary><div className="prompt-popup"><PromptNavigation scene={scene} projection={projection} /><div className="prompt-activity"><ActivityTimeline scene={scene} projection={projection} /></div></div></details></>}</div></details></div>
     {scene.agents.length > 1 && <div className="workspace-agent-bar" role="group" aria-label="Agent shortcuts">{scene.agents.map(state => {
       const agent = projection.agents.find(a => a.id === state.id);
       const parent = projection.agents.find(a => a.id === state.parentId);
@@ -368,7 +452,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
               className={`agent st-${a.state}${on ? ' on' : ''}${a.parentId ? ' child' : ''}`}
               style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties}
               onClick={() => setFilter(focusAgent(filter, a.id))}
-              title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${a.activeOperationIds.length} call in flight` : ''}. Click to follow only this agent.`}
+              title={`${agentName(agent)} — ${a.state}${a.activeOperationIds.length ? `, ${plural(a.activeOperationIds.length, 'call')} in flight` : ''}. Click to follow only this agent.`}
             >
               <span className="agent-dot" />
               {agentName(agent)}<small className="agent-harness">{[liveMetadata&&agent?.model||agent?.harness,liveMetadata&&agent?.effort&&`${agent.effort} effort`].filter(Boolean).join(' · ')}</small>
@@ -377,7 +461,7 @@ function Crown({ scene, projection }: { scene: Scene; projection: Projection }) 
           );
         })}
       </div>}
-      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><GitReviewEntry /><UsagePeek />
+      <div className="crown-actions"><EvidenceReview key={recordingId} projection={projection} /><GitEntry /><UsagePeek />
         <button className="btn ghost settings-open" aria-label="Workspace settings" onClick={() => set({ settingsOpen: true })}>Settings</button>
         <button className="btn ghost search-open" aria-label="Search" popoverTarget="recording-search" aria-controls="recording-search" aria-expanded={searchOpen} title="Search (/)">Search <kbd aria-hidden="true">/</kbd></button>
         <details className="workspace-menu"><summary aria-label="More workspace options">•••</summary><div>
@@ -404,11 +488,11 @@ function NativeReturnEntry({deferMoments=false}:{deferMoments?:boolean}={}) {
 }
 
 function SessionIdentity() {
-  const recording=useApp(s=>s.recording),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
+  const recording=useApp(s=>s.recording),projection=useApp(s=>s.projection),id=useApp(s=>s.recordingId),source=useApp(s=>s.source);
   const [status,setStatus]=useState('');
   const [open]=useDisclosureChoice('session/details',false);
   if(!recording||!id)return null;
-  return <Disclosure surface="session/details" initiallyOpen={false} className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{recording.title??'Untitled session'}</dd><dt>Harness</dt><dd>{recording.harness}</dd><dt>Recording</dt><dd>{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot??'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span><RescanEntry menuOpen={open}/></Disclosure>;
+  return <Disclosure surface="session/details" initiallyOpen={false} className="session-identity"><summary className="btn ghost">Session details</summary><dl><dt>Title</dt><dd>{projection?.title || recording.title || 'Untitled session'}</dd><dt>Harness</dt><dd>{HARNESS_NAME[recording.harness] ?? recording.harness}</dd><dt>Recording</dt><dd className="session-id-value">{id}</dd><dt>Workspace</dt><dd>{recording.workspaceRoot ? recording.workspaceRoot.split(/([\\/])/).map((part, i) => (part === '/' || part === '\\' ? <Fragment key={i}>{part}<wbr /></Fragment> : part)) : 'Not captured'}</dd><dt>Observation</dt><dd>{source?.kind==='bundle'?'Offline session bundle':recording.live?'Watching the journal':'Journal watch off'} · independent of agent status</dd></dl><button className="btn ghost" onClick={()=>void navigator.clipboard.writeText(id).then(()=>setStatus('Recording reference copied'),()=>setStatus('Copy unavailable'))}>Copy recording reference</button><span role="status">{status}</span><RescanEntry menuOpen={open}/></Disclosure>;
 }
 
 // ─── dock: native instruments, then MCP servers by name ──────────────────────────────────
@@ -460,7 +544,7 @@ function Dock({ scene }: { scene: Scene }) {
 
 // ─── transport: play, step, scrub ────────────────────────────────────────────────────────
 
-function Transport({ scene, projection }: { scene: Scene; projection: Projection }) {
+function Transport({ scene, projection, followSlot }: { scene: Scene; projection: Projection; followSlot?: (node: HTMLElement | null) => void }) {
   const lowResource = useApp((s) => s.lowResource);
   const mode = useApp((s) => s.mode);
   const playing = useApp((s) => s.playing);
@@ -490,8 +574,9 @@ function Transport({ scene, projection }: { scene: Scene; projection: Projection
   if (diagnostic && document.documentElement.dataset.uiVersion === 'modern') return <ModernReplayTransport scene={scene} markers={ms}/>;
   if (!diagnostic) return (
     <footer className="transport history-transport">
-      <span className="reading-status sr-only">{scene.total} recorded steps</span>
+      <span className="reading-status sr-only">{plural(scene.total, 'recorded step')}</span>
       {mode === 'replay' && <button className="btn ghost" onClick={showHistory}>Full history</button>}
+      <span className="history-follow-slot" ref={followSlot} />
       {!explore && <LiveWatch />}
     </footer>
   );
@@ -634,7 +719,7 @@ function ActivityTimeline({ scene, projection }: { scene: Scene; projection: Pro
             : <span key={i} className={`activity-mark k-${m.type}`} style={style} title={label} />;
         })}
       </div>
-      {!historyPage && <span className="activity-count">{edits} edits · {failures} failed · {count('pass')} passed</span>}
+      {!historyPage && <span className="activity-count">{plural(edits, 'edit')} · {failures} failed · {count('pass')} passed</span>}
     </div>
   );
 }
@@ -645,16 +730,10 @@ function Briefing({ projection }: { projection: Projection }) {
   const paged = useApp((s) => !!s.historyPage);
   const open = useApp((s) => s.briefingOpen);
   const source = useApp((s) => s.source);
-  const config = useApp((s) => s.config);
   const recordingId = useApp((s) => s.recordingId);
   const step = useApp((s) => s.step);
   const set = useApp((s) => s.set);
   const [range, setRange] = useState<'all' | 'since'>('all');
-  const [preview, setPreview] = useState<ModelPreview>();
-  // The range the preview was built for; a send uses it, not wherever playback has moved since.
-  const [previewFrom, setPreviewFrom] = useState<number>();
-  const [result, setResult] = useState<Explanation>();
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
   const [facts, setFacts] = useState<HistorySummary>();
   const from = range === 'since' ? step : undefined;
@@ -664,16 +743,6 @@ function Briefing({ projection }: { projection: Projection }) {
     if (open && paged && source?.summary && recordingId) void source.summary(recordingId, from).then((data) => { if (active) setFacts(data); }).catch((e) => { if (active) setErr(e.message); });
     return () => { active = false; };
   }, [open, paged, source, recordingId, from, projection]);
-
-  useEffect(() => {
-    if (!open || source?.kind !== 'daemon' || !recordingId) return;
-    setErr(undefined);
-    source.briefing(recordingId, { from }).then((r) => {
-      setPreview(r.preview);
-      setPreviewFrom(from);
-      setResult(r.cached);
-    }).catch((e) => setErr(e.message));
-  }, [open, range, recordingId, source]);
 
   if (!open) return null;
   const counts = paged ? facts : summarize(projection, from ?? 0);
@@ -697,44 +766,7 @@ function Briefing({ projection }: { projection: Projection }) {
           <li>{counts.agents} agent{counts.agents === 1 ? '' : 's'} active</li></> : <li>Loading…</li>}
         </ul>
       </div>
-      {source?.kind === 'daemon' ? (
-        <>
-          {result && <ExplanationView r={result} />}
-          {preview && (
-            <div className="consent">
-              <div>
-                A generated briefing sends <strong>{preview.items}</strong> redacted items ({Math.round(preview.chars / 1000)}k characters) to <code>{preview.model}</code>.
-              </div>
-              {config?.llm.configured ? (
-                <button
-                  className="btn primary"
-                  disabled={busy}
-                  onClick={async () => {
-                    setBusy(true);
-                    setErr(undefined);
-                    try {
-                      setResult((await source.briefing(recordingId!, { from: previewFrom }, preview.digest)).result);
-                    } catch (e) {
-                      const fresh = changedPreview(e);
-                      if (fresh) setPreview(fresh);
-                      setErr((e as Error).message);
-                    } finally {
-                      setBusy(false);
-                    }
-                  }}
-                >
-                  {busy ? 'Waiting for Nemotron…' : result ? 'Regenerate' : 'Write briefing with Nemotron'}
-                </button>
-              ) : (
-                <span className="muted">Set <code>NEBIUS_API_KEY</code> to enable generated briefings.</span>
-              )}
-            </div>
-          )}
-          {err && <p className="bad">{err}</p>}
-        </>
-      ) : (
-        <p className="muted small">Generated briefings run only in the local app.</p>
-      )}
+      {err && <p className="bad">{err}</p>}
     </div>
   );
 }

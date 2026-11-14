@@ -1,4 +1,5 @@
-import {StoredToolResult} from './StoredToolResult.tsx';
+import {LineClamp} from '../lib/line-clamp.tsx';
+import {StoredToolResult} from './StoredToolResult.tsx'; import {plural} from '../lib/plural.ts';
 import {OriginalToggle} from './OriginalToggle.tsx';
 import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Operation } from '@drishya/contracts';
@@ -25,11 +26,11 @@ export function BrowserEvidence({ op, full = false }: { op: Operation; full?: bo
   const step = browserStep(op);
   if (!step) return null;
   return <div className="browser-evidence">
-    <div className="browser-address">{step.url ? <RecordedUrl url={step.url}/> : <span className="muted">No page URL captured</span>}</div>
+    <div className="browser-address">{step.url ? <><RecordedUrl url={step.url}/>{step.urlFromResult && <span className="browser-url-source" title="Taken from the returned page text; the call input did not record a URL">from result</span>}</> : <span className="muted">No page URL captured</span>}</div>
     <div className="browser-action"><span>{step.action}</span>{step.tab !== undefined && <small>tab {step.tab}</small>}<small>{op.status === 'running' ? 'Running' : op.status === 'error' ? 'Failed' : op.status === 'ok' ? 'Returned' : 'Outcome not recorded'}</small></div>
     {step.batch?.length ? <ol className="browser-batch">{step.batch.map((item, i) => <li key={i}><span>{item.name ?? 'Recorded action'}{item.action ? ` · ${item.action}` : ''}</span>{item.url && <RecordedUrl url={item.url}/>}</li>)}{step.batchCount! > step.batch.length && <li className="muted">{step.batchCount! - step.batch.length} more actions · expand for input</li>}</ol> : null}
     {step.query && <div className="browser-query">{step.query}</div>}
-    {full&&op.detail.kind==='mcp'?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Browser result excerpt"><ToolOutput text={step.excerpt}/></div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text recorded'}</p>}
+    {full&&op.detail.kind==='mcp'?<StoredToolResult op={op} full/>:step.excerpt ? <div className={`browser-excerpt${full ? ' full' : ''}`} tabIndex={0} aria-label="Browser result excerpt">{full?<ToolOutput text={step.excerpt}/>:<LineClamp lines={6}><ToolOutput text={step.excerpt}/></LineClamp>}</div> : <p className="muted">{op.status === 'running' ? 'Waiting for browser result' : 'No page text recorded'}</p>}
     {full && op.detail.kind === 'mcp' && <details><summary>Browser input</summary><ToolInput value={op.detail.input}/></details>}
   </div>;
 }
@@ -63,7 +64,7 @@ function WebReading({op,detail:d,full}:{op:Operation;detail:Extract<Operation['d
   return <div className="web-evidence" aria-busy={canRead&&!page&&!error}>
     {d.url && <RecordedUrl url={d.url}/>}
     {d.query && <div className="query">{d.query}</div>}
-    {full&&<div className="web-reading-meta"><OriginalToggle original={original} onToggle={()=>setOriginal(value=>!value)}/><span>{displayed?`${displayed.total} result${displayed.total===1?'':'s'}`:`${preview.results.length} results in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
+    {full&&<div className="web-reading-meta"><OriginalToggle original={original} onToggle={()=>setOriginal(value=>!value)}/><span>{displayed?plural(displayed.total,'result'):`${plural(preview.results.length,'result')} in preview`}</span>{(displayed?.time??op.endTime)&&<time dateTime={displayed?.time??op.endTime}>{new Date((displayed?.time??op.endTime)!).toLocaleString()}</time>}</div>}
     {d.fetch && fetchFacts(d.fetch) && <div className="browser-action">{fetchFacts(d.fetch)}</div>}
     {full&&original?<div className="web-original"><div className="browser-excerpt full" tabIndex={0}><pre className="output web-original-text">{material.original||'No result text recorded'}</pre></div>{displayed&&!displayed.originalComplete&&<small className="muted">Original preview · text excerpt limited to 64 KiB. Result counts cover the stored list.</small>}</div>:<>
     {full&&canRead&&(knownTotal??preview.results.length)>50&&<label className="web-result-filter">Find result<input type="search" value={query} placeholder="Title, address or snippet" onChange={event=>{setQuery(event.target.value);setStart(0);}}/></label>}

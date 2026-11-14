@@ -10,25 +10,24 @@
 :root[data-ui-version=modern] .viewer:not(.still) .search:popover-open {animation:none!important;}
 :root[data-ui-version=modern] details[data-reading-disclosure]>:not(summary) {animation:none!important;}
 :root[data-ui-version=modern] [data-surface-motion]:is([data-surface-phase=opening],[data-surface-phase=closing]) {transition:none!important;}
-:root[data-ui-version=modern]:not([data-ui-press]) .link-card {animation:none!important;}
 
 
 @media (prefers-reduced-motion:no-preference) {
- :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn,.workspace-toggles>button,.workspace-menu>summary,.original-toggle,.git-entry-choices>button) {
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.btn,.workspace-toggles>button,.workspace-menu>summary,.original-toggle) {
   transition-property:background-color,border-color,color,opacity,transform;transition-duration:var(--motion-press);transition-timing-function:var(--ease-out);
  }
- :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.workspace-toggles>button,.workspace-menu>summary,.original-toggle,.git-entry-choices>button):active:not(:disabled) {transform:translateY(1px);}
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.workspace-toggles>button,.workspace-menu>summary,.original-toggle):active:not(:disabled) {transform:translateY(1px);}
  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource])[data-ui-press] .mini-switch {transition:background-color var(--motion-menu-enter) var(--ease-out),border-color var(--motion-menu-enter) var(--ease-out);}
  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource])[data-ui-press] .mini-switch::before {transition:transform var(--motion-menu-enter) var(--ease-out),background-color var(--motion-menu-enter) var(--ease-out);}
 
  /* Native popovers keep native focus/light dismissal and remain in the top layer through their exit. */
- :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.git-entry-choices,.composer-menu,.search) {
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.composer-menu,.search) {
   transition:opacity var(--motion-menu-enter) var(--ease-out),transform var(--motion-menu-enter) var(--ease-out),overlay var(--motion-menu-exit) allow-discrete,display var(--motion-menu-exit) allow-discrete;
  }
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .search {transform-origin:top right;}
- :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.git-entry-choices,.composer-menu,.search):not(:popover-open) {opacity:0;transform:scale(.97);pointer-events:none;transition-duration:var(--motion-menu-exit);}
+ :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.composer-menu,.search):not(:popover-open) {opacity:0;transform:scale(.97);pointer-events:none;transition-duration:var(--motion-menu-exit);}
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) .connected-workspace .search:popover-open {animation:none!important;}
- @starting-style {:root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.git-entry-choices,.composer-menu,.search):popover-open {opacity:0;transform:scale(.97);}}
+ @starting-style {:root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.composer-menu,.search):popover-open {opacity:0;transform:scale(.97);}}
 
  @supports selector(details::details-content) and (transition-behavior:allow-discrete) {
   :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) :is(.workspace-menu,.permission-policy,.desk-options,.prompt-menu,.session-segments,.review-tools,details[data-reading-disclosure])[data-pointer-menu]::details-content {transition:content-visibility var(--motion-menu-exit) allow-discrete;}
@@ -41,6 +40,4 @@
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.product-dialog,.screen-view,.image-reader)::backdrop {opacity:1;transition:opacity var(--motion-dialog-enter) var(--ease-out);}
  :root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.product-dialog,.screen-view,.image-reader)[data-surface-phase=closing]::backdrop {opacity:0;transition-duration:var(--motion-dialog-exit);}
  @starting-style {:root[data-ui-version=modern][data-ui-motion][data-ui-press]:not([data-low-resource]) :is(.product-dialog,.screen-view,.image-reader)::backdrop {opacity:0;}}
- /* Hover cards already retain their exit; use the shared responsive curve rather than ease-in. */
- :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .link-card[data-phase=closing] {animation-timing-function:var(--ease-out);}
 }

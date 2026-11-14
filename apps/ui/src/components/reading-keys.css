@@ -1,5 +1,5 @@
 .history:focus-visible { outline: none; }
-.history article[data-reading-focus] { outline: 1px solid var(--focus); outline-offset: 3px; }
+.history article[data-reading-focus] { outline: 1px solid var(--focus-ring); outline-offset: 2px; }
 .reading-key-notice { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .reading-shortcuts { width: min(540px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); }
 .reading-shortcuts > p, .reading-shortcuts > dl { margin: 16px 22px; }

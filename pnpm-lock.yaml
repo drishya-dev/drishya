@@ -35,9 +35,6 @@ importers:
       '@drishya/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@drishya/explain':
-        specifier: workspace:*
-        version: link:../../packages/explain
       '@drishya/indexer':
         specifier: workspace:*
         version: link:../../packages/indexer
@@ -56,6 +53,19 @@ importers:
       '@drishya/store':
         specifier: workspace:*
         version: link:../../packages/store
+
+  apps/site:
+    dependencies:
+      gsap:
+        specifier: ^3.15.1
+        version: 3.15.1
+      lenis:
+        specifier: ^1.3.27
+        version: 1.3.27(react@19.3.0)
+    devDependencies:
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@24.13.6)(esbuild@0.28.2)
 
   apps/ui:
     dependencies:
@@ -152,22 +162,6 @@ importers:
         version: link:../privacy
 
   packages/contracts: {}
-
-  packages/explain:
-    dependencies:
-      '@drishya/contracts':
-        specifier: workspace:*
-        version: link:../contracts
-      '@drishya/privacy':
-        specifier: workspace:*
-        version: link:../privacy
-    devDependencies:
-      '@drishya/ingest':
-        specifier: workspace:*
-        version: link:../ingest
-      '@drishya/store':
-        specifier: workspace:*
-        version: link:../store
 
   packages/indexer:
     dependencies:
@@ -690,6 +684,23 @@ packages:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
+
+  gsap@3.15.1:
+    resolution: {integrity: sha512-63yjWRFWj3QRP1UOuD8kcidCcy3nxb1mMRpwHr/xJRvPfm9GtWOXFAYUiL0ro1fgPq2nY53LR+98pAgy9BumBg==}
+
+  lenis@1.3.27:
+    resolution: {integrity: sha512-QIHNH4LIfWyLfgH/5K0aTGZgyFJJ7GfHNcaH/AIgyKjb8gstLh5siNGvrVqz1w5ClLXzOvllBVk7vby8JzUVPQ==}
+    peerDependencies:
+      '@nuxt/kit': '>=3.0.0'
+      react: '>=17.0.0'
+      vue: '>=3.0.0'
+    peerDependenciesMeta:
+      '@nuxt/kit':
+        optional: true
+      react:
+        optional: true
+      vue:
+        optional: true
 
   lightningcss-android-arm64@1.33.0:
     resolution: {integrity: sha512-gEpRTalKdosp4Bb8qWtc2iOgE5SeIHlpS1up9bFq2wAyYhl1UdTObYiHe98zEM9SQvSoqQZ1IQD0JNpg3Ml5pg==}
@@ -1369,6 +1380,12 @@ snapshots:
 
   fsevents@2.3.3:
     optional: true
+
+  gsap@3.15.1: {}
+
+  lenis@1.3.27(react@19.3.0):
+    optionalDependencies:
+      react: 19.3.0
 
   lightningcss-android-arm64@1.33.0:
     optional: true

@@ -47,7 +47,8 @@ test('Running now stays above the library across repositories and opens its sess
   await expect(strip).toContainText('Synthetic Claude run');
   await expect(strip).toContainText('Synthetic Codex run');
   await expect(strip).toHaveAttribute('title', /cannot tell whether the agent process is alive/);
-  expect(await strip.evaluate(el => el.parentElement?.classList.contains('mh-home'))).toBe(true);
+  // SHIP-3: the strip is one of the opening's actions, still above the library.
+  expect(await strip.evaluate(el => !!el.closest('.mh-opening'))).toBe(true);
   const stripBounds = await strip.boundingBox(), libraryBounds = await page.locator('.mh-library').boundingBox();
   expect(stripBounds!.y + stripBounds!.height).toBeLessThanOrEqual(libraryBounds!.y);
   await page.locator('.mh-workspace-list button').filter({ hasText: 'alpha' }).click();

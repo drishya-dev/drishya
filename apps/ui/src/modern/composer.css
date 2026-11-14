@@ -38,7 +38,7 @@
 .composer-menu-trigger svg.composer-chevron { width:11px; height:11px; }
 .composer-menu-trigger.composer-attach { width:28px; padding:0; justify-content:center; }
 .composer-menu-trigger:is(:hover,[aria-expanded=true]):not(:disabled) { background:var(--s3); color:var(--t1); }
-.composer-menu-trigger:focus-visible { outline:1px solid var(--focus); outline-offset:1px; }
+:root:not([data-input-modality="pointer"]) .composer-menu-trigger:focus-visible { outline:1px solid var(--focus-ring); outline-offset:1px; }
 .composer-menu-trigger:disabled { opacity:.5; cursor:default; }
 .composer-menu-trigger[aria-expanded=true] svg.composer-chevron { transform:rotate(180deg); }
 
@@ -56,6 +56,11 @@
 .composer-menu>button small { display:block; color:var(--t3); font-size:var(--text-2xs); line-height:1.4; }
 .composer-menu-check { width:14px; height:14px; margin-top:2px; fill:none; stroke:var(--focus); stroke-width:1.75; stroke-linecap:round; stroke-linejoin:round; opacity:0; }
 .composer-menu>button[aria-checked=true] .composer-menu-check { opacity:1; }
+/* UI-43: bypass permissions and full access remove the harness's own safeguards; they read in the error colour in the menu and on the
+   trigger while chosen, so the choice is never quiet. */
+.composer-menu>button[data-tone=danger]:not(:disabled) { color:var(--fail); }
+.composer-menu-trigger.is-bypass, .composer-menu-trigger.is-bypass:is(:hover,[aria-expanded=true]):not(:disabled) { color:var(--fail); }
+.composer-menu-trigger.composer-permission svg:not(.composer-chevron) { width:14px; height:14px; }
 
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .composer-actions button.send-prompt {
   width:32px; min-width:32px; height:32px; min-height:32px; padding:0; border-radius:var(--round-full); display:grid; place-items:center;

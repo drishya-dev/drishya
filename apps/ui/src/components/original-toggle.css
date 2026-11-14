@@ -4,7 +4,6 @@
 .original-toggle { flex:none; min-height:var(--control-sm); padding:0 8px; border:1px solid transparent; border-radius:var(--round-sm); background:transparent; color:var(--t3); font:var(--weight-medium) var(--text-xs)/1 var(--sans); cursor:pointer; }
 .original-toggle:hover { color:var(--t1); border-color:var(--line); }
 .original-toggle[aria-pressed=true] { color:var(--t1); border-color:var(--line-2,var(--line)); background:var(--s2); }
-.original-toggle:focus-visible { outline:1px solid var(--t2); outline-offset:2px; }
 /* A caption at the top of a result keeps clear of the result's floating reading choices in the same corner. */
 :is(.result-readings,.terminal-preview):has(>.captured-result-views:not(:empty)) .reading-caption { padding-right:30px; }
 /* The switch sits under the reading it swaps, where the old "Original preview" disclosure was. */

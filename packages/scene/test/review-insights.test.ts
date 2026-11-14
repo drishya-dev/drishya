@@ -46,3 +46,12 @@ it('qualifies timeline-only references and resolves real observation positions f
   expect(findingMembers(p,'unknown').items[0]).toMatchObject({sequence:80,sequenceBasis:'captured-observation'});expect(reviewInsights(p).findings[0]).toMatchObject({sequence:80,sequenceBasis:'captured-observation'});
   p.timeline=[];expect(findingMembers(p,'unknown').items[0]).toMatchObject({sequence:0,sequenceBasis:'timeline-position'});
 });
+it('uses singular finding labels when count is 1',()=>{
+  const p=projection();
+  p.operations=[{...op(0),status:'unknown'},{...op(1),kind:'edit',detail:{kind:'edit',path:'a.ts',hunks:[],created:false,reconstruction:'unavailable'}}];
+  p.gaps=[{sequence:2,reason:'missing-content'}];
+  const titles=reviewInsights(p).findings.map(f=>f.title);
+  expect(titles).toContain('1 operation has no recorded outcome');
+  expect(titles).toContain('Change material unavailable · 1 operation');
+  expect(titles).toContain('1 gap in the record');
+});

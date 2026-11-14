@@ -1,4 +1,5 @@
 import type { Operation } from '@drishya/contracts';
+import { toolOutputText } from './tool-output.ts';
 
 const object = (value: unknown): Record<string, unknown> | undefined => value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
 const text = (value: unknown) => typeof value === 'string' ? value : undefined;
@@ -9,7 +10,32 @@ export function safeWebUrl(value: string): boolean {
   try { const url = new URL(value); return (url.protocol === 'http:' || url.protocol === 'https:') && !url.username && !url.password; } catch { return false; }
 }
 
-/** Display only literal captured input fields. Never execute script input or infer a current page. */
+/** Extract a safe leading URL metadata line reported in returned page text when the input omitted `url`. */
+function resultPageUrl(tool: string, excerpt: string | undefined): string | undefined {
+  if (!excerpt) return;
+  const decoded = toolOutputText(excerpt).text;
+  const lines = decoded.split(/\r?\n/);
+  let checked = 0;
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line === '---' || /^Tab Context:/i.test(line)) break;
+    const header = /^(?:[-*]\s*)?(?:Page\s+)?URL\s*:\s*(https?:\/\/\S+)/i.exec(line);
+    if (header) {
+      const candidate = header[1]!.replace(/[>,;]+$/, '');
+      if (safeWebUrl(candidate)) return candidate;
+    }
+    if (tool === 'get_page_text' && /^(https?:\/\/\S+)$/i.test(line)) {
+      const candidate = line.replace(/[>,;]+$/, '');
+      if (safeWebUrl(candidate)) return candidate;
+    }
+    checked++;
+    if (checked >= 10) break;
+  }
+  return;
+}
+
+/** Display only literal captured input fields (and leading returned page URL metadata when absent). Never execute script input or infer a current page. */
 export function browserStep(op: Operation) {
   const d = op.detail;
   // Claude Code's own `computer` tool is recorded as an ordinary tool; it reads like the browser's (SCREEN-1).
@@ -23,7 +49,9 @@ export function browserStep(op: Operation) {
   const batch = actions?.slice(0, 12).map(item => { const entry = object(item), fields = object(entry?.input); return { name: text(entry?.name), action: text(fields?.action), url: text(fields?.url) }; });
   const action = text(input?.action) ?? tool.replace(/^browser_/, '').replace(/_/g, ' ');
   const query = text(input?.query) ?? text(input?.text);
-  return { server, action, batch, batchCount: actions?.length, url: text(input?.url), query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
+  const inputUrl = text(input?.url);
+  const fallbackUrl = inputUrl ? undefined : resultPageUrl(tool, d.resultPreview);
+  return { server, action, batch, batchCount: actions?.length, url: inputUrl ?? fallbackUrl, urlFromResult: !inputUrl && !!fallbackUrl, query, tab: text(input?.tabId) ?? (typeof input?.tabId === 'number' ? String(input.tabId) : undefined), excerpt: d.resultPreview };
 }
 
 /** A passage already defines captured order and prose boundaries; do not group across it. */

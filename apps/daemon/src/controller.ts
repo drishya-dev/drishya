@@ -9,7 +9,7 @@ import { WorkspaceAccess } from './workspace.ts';
 import { executable } from './native-executable.ts';
 import {nativeReadiness,type NativeReadiness} from './native-readiness.ts';
 import { attachmentText, prepareAttachments, type PromptAttachment } from './prompt-attachments.ts';
-import { inspectNative, turnOptions, type NativeSettings, type TurnOptions, type NativeUsage } from './native-settings.ts';
+import { inspectNative, turnOptions, permissionFor, CODEX_PERMISSION_SANDBOX, type NativeSettings, type TurnOptions, type NativeUsage } from './native-settings.ts';
 export { executable } from './native-executable.ts';
 
 type RecordValue = Record<string, any>;
@@ -190,6 +190,8 @@ export class HarnessController {
     const name = rec.harness === 'claude-code' ? 'claude' : rec.harness === 'codex' ? 'codex' : undefined;
     const bin = name && (this.options.resolveExecutable ?? executable)(name);
     if (!bin || !rec.sourcePath) throw new HttpError(409, 'supported native harness CLI is not installed or this is an offline recording');
+    // UI-43: only a mode this harness offers and allows; the harness itself still enforces its own policy.
+    const permission = permissionFor(name!, selected.permission, this.settings.get(id));
     // Session identity comes from the original, read-only journal, not a guessed recording ID.
     const handle = await open(rec.sourcePath, 'r');
     let sessionId: string | undefined;
@@ -208,7 +210,7 @@ export class HarnessController {
     if (name === 'codex' && nativeCommand && nativeCommand[1] !== 'compact') throw new HttpError(400, 'this Codex command is not supported here; use native settings or the native CLI');
     if (name === 'codex' && nativeCommand && (safe.text.trim() !== '/compact' || prepared.attachments.length || Object.keys(selected).length)) throw new HttpError(400, '/compact takes no prompt attachments or turn overrides');
     const inputPrompt = attachmentText(safe.text, prepared.attachments);
-    const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-mode', 'manual', '--permission-prompts', 'host', '--permission-prompt-tool', 'stdio'] : ['app-server', '--listen', 'stdio://'];
+    const args = name === 'claude' ? ['-p', '--resume', sessionId, '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--include-partial-messages', '--permission-mode', permission && permission !== 'default' ? permission : 'manual', '--permission-prompts', 'host', '--permission-prompt-tool', 'stdio'] : ['app-server', '--listen', 'stdio://'];
     if (name === 'claude') { if (selected.model) args.push('--model', selected.model); if (selected.effort) args.push('--effort', selected.effort); }
     const child = (this.options.launch ?? spawn)(bin, args, { cwd: root, shell: false, windowsHide: true, stdio: 'pipe', env: { ...process.env, CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1', CLAUDE_CODE_SDK_READS_SESSION_STATE: '1' } }) as ChildProcessWithoutNullStreams;
     const state: ControllerState = { runId: randomUUID(), state: 'connecting', submittedPrompt: safe.text, afterSequence: rec.observationCount - 1, harness: rec.harness, available: true, output: '', tools: [], inventory: 'unknown', approvals: [], promptRedacted: safe.hits.length > 0 };
@@ -254,13 +256,15 @@ export class HarnessController {
   private async connectCodex(run: Run, root: string, prompt: string, attachments: PromptAttachment[], selected: TurnOptions) {
     await this.rpc(run, 'initialize', { clientInfo: { name: 'drishya', version: '0.1.0', title: 'Drishya' }, capabilities: { experimentalApi: false } });
     this.write(run, { method: 'initialized' });
-    // Resume under the native client's effective policy; a connection must never widen saved read-only access.
-    const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root });
+    // Resume under the native client's effective policy unless the person explicitly chose one of Codex's own permission
+    // profiles (UI-43); Drishya never widens access by itself.
+    const { permission, ...turn } = selected;
+    const resumed = await this.rpc(run, 'thread/resume', { threadId: run.threadId, cwd: root, ...(permission ? { sandbox: CODEX_PERMISSION_SANDBOX[permission] } : {}) });
     if (resumed.thread?.status?.type === 'active') throw new Error('native thread is already active; finish its other turn first');
-    run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: ['compact'], scope: 'connected-session', model: String(resumed.model ?? selected.model ?? '') || undefined, effort: resumed.reasoningEffort ?? selected.effort, permission: typeof resumed.approvalPolicy === 'string' ? resumed.approvalPolicy : undefined, sandbox: resumed.sandbox?.type }).value as NativeSettings;
+    run.state.settings = sanitize({ models: run.state.settings?.models ?? [], permissions: run.state.settings?.permissions, commands: ['compact'], scope: 'connected-session', model: String(resumed.model ?? selected.model ?? '') || undefined, effort: resumed.reasoningEffort ?? selected.effort, permission: typeof resumed.approvalPolicy === 'string' ? resumed.approvalPolicy : undefined, sandbox: resumed.sandbox?.type }).value as NativeSettings;
     const result = prompt.trim() === '/compact'
       ? await this.rpc(run, 'thread/compact/start', { threadId: run.threadId })
-      : await this.rpc(run, 'turn/start', { threadId: run.threadId, ...selected, input: [{ type: 'text', text: prompt, text_elements: [] }, ...attachments.filter(a => a.type === 'image').map(a => ({ type: 'image', url: `data:${a.mime};base64,${a.data}` }))] });
+      : await this.rpc(run, 'turn/start', { threadId: run.threadId, ...turn, input: [{ type: 'text', text: prompt, text_elements: [] }, ...attachments.filter(a => a.type === 'image').map(a => ({ type: 'image', url: `data:${a.mime};base64,${a.data}` }))] });
     if (selected.model) run.state.settings.model = selected.model;
     if (selected.effort) run.state.settings.effort = selected.effort;
     attachments = []; // Release image bytes before the optional inventory queries.
@@ -297,7 +301,7 @@ export class HarnessController {
         else if (v.request?.subtype === 'can_use_tool') this.approval(run, v.request_id, 'claude-permission', String(v.request.tool_name), v.request.input);
         else this.write(run, { type: 'control_response', response: { subtype: 'error', request_id: v.request_id, error: 'unsupported controller request' } });
       } else if (v.type === 'system' && v.subtype === 'init') {
-        run.state.settings = sanitize({ models: run.state.settings?.models ?? [], commands: Array.isArray(v.slash_commands) ? v.slash_commands.filter((c: unknown) => typeof c === 'string').slice(0, 100) : [], scope: 'connected-session', model: v.model, permission: v.permissionMode }).value as NativeSettings;
+        run.state.settings = sanitize({ models: run.state.settings?.models ?? [], permissions: run.state.settings?.permissions, commands: Array.isArray(v.slash_commands) ? v.slash_commands.filter((c: unknown) => typeof c === 'string').slice(0, 100) : [], scope: 'connected-session', model: v.model, permission: v.permissionMode }).value as NativeSettings;
         run.state.tools = sanitize((v.tools ?? []).filter((t: unknown) => typeof t === 'string').slice(0, 500)).value;
         run.state.inventory = 'runtime';
       } else if (v.type === 'system' && v.subtype === 'session_state_changed') {

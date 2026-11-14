@@ -26,6 +26,13 @@ import type { Marker } from '@drishya/scene';
 import type { Operation } from '@drishya/contracts';
 import type { BlobSearchResult, SessionSearchHit } from '../../../packages/store/src/search-types.ts';
 
+/** A browsing choice routes maps only; native controls and captured identity never use it. */
+const checkoutContexts=new Map<string,string>();
+export function setCheckoutContext(owner:string,context?:string) {
+  if(context&&context!==owner)checkoutContexts.set(owner,context);else checkoutContexts.delete(owner);
+}
+function graphCheckoutId(owner:string) {return checkoutContexts.get(owner)??owner;}
+
 /** The reader's mark: the last observation sequence they marked as seen, and the one before it. */
 export interface ReadingBoundary {
   sequence: number;
@@ -41,34 +48,8 @@ export interface DiscoveryError {
   message: string;
 }
 
-export interface ExplainClaim {
-  text: string;
-  evidence: { key: string; step: number; ref: { type: string; id?: string; step?: number }; observationIds: string[] }[];
-}
-
-export interface Explanation {
-  provenance: { kind: 'generated'; generator: string; version: string; observationIds: string[] };
-  task: 'explain-operation' | 'briefing';
-  summary: string;
-  claims: ExplainClaim[];
-  unknowns: string[];
-  droppedClaims: number;
-  evidenceCount: number;
-}
-
-export interface ModelPreview {
-  endpoint: string;
-  model: string;
-  chars: number;
-  items: number;
-  messages: { role: string; content: string }[];
-  /** Fingerprint of exactly this request. Sending requires it back, so consent covers only what was shown. */
-  digest: string;
-}
-
 export interface Config {
   version: string;
-  llm: { configured: boolean; baseUrl: string; models: { nano: string; super: string; ultra: string } };
   adapters: { id: string; label: string; capabilities: Record<string, string> }[];
 }
 
@@ -124,9 +105,6 @@ export interface DataSource {
   /** One bounded passive read of an already imported local journal. No persistent watch. */
   refreshRecording?(id:string):Promise<{added:number;more:boolean}>;
   sessionSegments?(id:string):Promise<{items:{source:DiscoveredSource;boundary:{ordinal:number;bytes:number}}[];partial:boolean}>;
-  /** Without `consent`, returns the preview. With the preview's digest as `consent`, sends exactly that request. */
-  explain(id: string, operationId: string, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
-  briefing(id: string, range: { from?: number; to?: number }, consent?: string): Promise<{ preview?: ModelPreview; cached?: Explanation; result?: Explanation }>;
   exportUrl(id: string): string | undefined;
   forget(id: string): Promise<void>;
   /** The reader's "seen through here" mark for one recording; null when never marked. */
@@ -186,6 +164,7 @@ export interface ControllerStatus {
 }
 /** Explicit local workspace/controller capabilities; offline bundles never call them. */
 export const workspaceApi = {
+  chooseCheckout:(id:string,prefix?:string)=>req<{id:string;recordingId:string;root?:string;prefix?:string}>(`/v1/recordings/${encodeURIComponent(id)}/checkout`,{method:'POST',json:{prefix}}),
   fileRoots: (id:string) => req<{roots:import('./lib/worktree-files.ts').RecordedFileRoot[];truncated:boolean}>(`/v1/recordings/${encodeURIComponent(id)}/file-roots`),
   searchLibrary: (query:import('../../../packages/store/src/search-types.ts').LibrarySearchQuery) => req<import('../../../packages/store/src/search-types.ts').LibrarySearchPage>(`/v1/search-library?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
   workingLocations: () => req<import('../../../packages/contracts/src/working-locations.ts').WorkingLocations>('/v1/working-locations'),
@@ -193,11 +172,12 @@ export const workspaceApi = {
   gitStatus: (id: string) => req<{ approved: boolean; scope: 'current-git' }>(`/v1/recordings/${encodeURIComponent(id)}/git`),
   approveGit: (id: string) => req<{ approved: boolean; scope: 'current-git' }>(`/v1/recordings/${encodeURIComponent(id)}/git/approve`, { method: 'POST', json: {} }),
   gitSnapshot: (id: string, start = 0) => req<import('../../daemon/src/git-types.ts').GitSnapshot>(`/v1/recordings/${encodeURIComponent(id)}/git/snapshot?start=${encodeURIComponent(start)}`),
+  gitGeneration:(id:string)=>req<{generation:string}>(`/v1/recordings/${encodeURIComponent(id)}/git/generation`),
   gitHistory:(id:string,query:{start?:number;referenceStart?:number;reference?:string;q?:string;generation?:string}={})=>req<import('../../daemon/src/git-types.ts').GitHistoryPage>(`/v1/recordings/${encodeURIComponent(id)}/git/history?${new URLSearchParams(Object.entries(query).filter(([,value])=>value!==undefined).map(([key,value])=>[key,String(value)]))}`),
   gitCommit:(id:string,hash:string,parent=0,start=0,generation?:string)=>req<import('../../daemon/src/git-types.ts').GitCommitDetail>(`/v1/recordings/${encodeURIComponent(id)}/git/commit?${new URLSearchParams({hash,parent:String(parent),start:String(start),...(generation?{generation}:{})})}`),
   /** LINK-1 hover cards: a commit or local branch from read-only Git (needs the session's Git approval). */
   gitRef: (id: string, rev: string) => req<import('../../daemon/src/link-types.ts').GitRefSummary>(`/v1/recordings/${encodeURIComponent(id)}/git/ref?rev=${encodeURIComponent(rev)}`),
-  /** GIT-8 Compare: read-only, behind the same Git approval as Git review. */
+  /** GIT-8 Changes (comparison): read-only, behind the one Git approval the working-tree snapshot also uses. */
   compareRefs: (id: string) => req<import('../../daemon/src/git-compare-types.ts').CompareRefs>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-refs`),
   compare: (id: string, base: string, head: string) => req<import('../../daemon/src/git-compare-types.ts').GitCompareResult>(`/v1/recordings/${encodeURIComponent(id)}/git/compare?${new URLSearchParams({ base, head })}`),
   compareFile: (id: string, base: string, head: string, path: string, side: 'head' | 'base') => req<import('../../daemon/src/git-compare-types.ts').CompareFilePatch>(`/v1/recordings/${encodeURIComponent(id)}/git/compare-file?${new URLSearchParams({ base, head, path, side })}`),
@@ -232,11 +212,6 @@ export class HttpError extends Error {
     this.status = status;
     this.body = body;
   }
-}
-
-/** The updated preview when a send was refused because the evidence changed after review. */
-export function changedPreview(e: unknown): ModelPreview | undefined {
-  return e instanceof HttpError && e.status === 409 ? (e.body.preview as ModelPreview | undefined) : undefined;
 }
 
 async function req<T>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
@@ -304,8 +279,20 @@ export const daemon: DataSource = {
   history: (id, query = {}) => req(`/v1/recordings/${encodeURIComponent(id)}/history`, { method: 'POST', json: query }),
   historyMarker: async (id, step, types, direction) => (await req<{ step?: number }>(`/v1/recordings/${encodeURIComponent(id)}/history-marker`, { method: 'POST', json: { step, types, direction } })).step,
   fileOperations: (id, path, start, count, step, query = '', selectedOperationId) => req(`/v1/recordings/${encodeURIComponent(id)}/file-operations?${new URLSearchParams({ path, start: String(start), count: String(count), ...(step === undefined ? {} : { step: String(step) }), q: query, ...(selectedOperationId ? { selected: selectedOperationId } : {}) })}`),
-  graph: (id, refresh) => req(`/v1/recordings/${encodeURIComponent(id)}/graph${refresh ? '?refresh=1' : ''}`),
-  approveGraph: (id) => req(`/v1/recordings/${encodeURIComponent(id)}/graph/approve`, { method: 'POST', json: {} }),
+  graph: async (id, refresh) => {
+    for(let attempt=0;attempt<4;attempt++){
+      const target=graphCheckoutId(id);
+      const graph=await req<RepoGraph>(`/v1/recordings/${encodeURIComponent(target)}/graph${refresh?'?refresh=1':''}`);
+      if(graphCheckoutId(id)===target)return graph;
+    }
+    throw new Error('Checkout changed while the map was loading. Try again.');
+  },
+  approveGraph: async (id) => {
+    const target=graphCheckoutId(id);
+    const graph=await req<RepoGraph>(`/v1/recordings/${encodeURIComponent(target)}/graph/approve`,{method:'POST',json:{}});
+    if(graphCheckoutId(id)===target)return graph;
+    const current=await daemon.graph(id);if(!current)throw new Error('The selected checkout map is unavailable.');return current;
+  },
   artifactChunk: (id, art, start, field) => req<StoredResultChunk>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?byteStart=${start}${field?`&field=${field}`:''}`),
   artifact: (id, art, range) => req<ArtifactSlice>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}${range ? `?start=${range.start}&count=${range.count}` : ''}`),
   artifactFind: (id, art, query, start, continuation) => req<BlobSearchResult>(`/v1/recordings/${encodeURIComponent(id)}/artifacts/${encodeURIComponent(art)}?${new URLSearchParams({ find: query, start: String(start), ...(continuation ? { cursor: continuation } : {}) })}`),
@@ -313,8 +300,6 @@ export const daemon: DataSource = {
   setLive: async (id, on) => (await req<{ live: boolean }>(`/v1/recordings/${encodeURIComponent(id)}/live`, { method: 'POST', json: { on } })).live,
   refreshRecording: id => req(`/v1/recordings/${encodeURIComponent(id)}/refresh`,{method:'POST',json:{}}),
   sessionSegments: id=>req(`/v1/recordings/${encodeURIComponent(id)}/segments`),
-  explain: (id, operationId, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/explain`, { method: 'POST', json: { operationId, consent } }),
-  briefing: (id, range, consent) => req(`/v1/recordings/${encodeURIComponent(id)}/briefing`, { method: 'POST', json: { ...range, consent } }),
   exportUrl: (id) => `/v1/recordings/${encodeURIComponent(id)}/export`,
   forget: async (id) => {
     await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });
@@ -472,8 +457,6 @@ export function bundleSource(bundle: ReplayBundle): DataSource {
       return hits.slice(0, 50);
     },
     setLive: unsupported,
-    explain: unsupported,
-    briefing: unsupported,
     exportUrl: () => undefined,
     forget: unsupported,
     boundary: async () => null,

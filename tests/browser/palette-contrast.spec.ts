@@ -1,4 +1,4 @@
-import { openGitDestination } from './git-navigation.ts';
+import { openChanges } from './git-navigation.ts';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -96,7 +96,7 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   expect(found).toEqual([]);
 });
 
-// UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Git review dialog and the header over the map.
+// UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Changes window and the header over the map.
 const ALL_PALETTES = ['jet', 'paper', 'midnight'];
 // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
 const settled = (page: Page) => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
@@ -113,7 +113,7 @@ async function everyPalette(page: Page, state: string, found: string[], scope = 
 // Keyboard, not a resting pointer: hover reading can move the cards under it.
 async function press(page: Page, target: Locator) { await target.focus(); await page.keyboard.press('Enter'); }
 
-// A workspace the native harness stub and the Git review can read: a repository with one committed file that has an unstaged change.
+// A workspace the native harness stub and Changes can read: a repository with one committed file that has an unstaged change.
 let fresh: { dir: string; root: string; id: string; app: App; server: RunningServer } | undefined;
 test.afterEach(async () => {
   if (!fresh) return; const { dir, app, server } = fresh; fresh = undefined;
@@ -204,7 +204,7 @@ test('the toolbox and its menus keep 4.5:1 on every palette', async ({ page }) =
   expect(found).toEqual([]);
 });
 
-test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette', async ({ page }) => {
+test('the Workspace editor and the Changes window keep 4.5:1 on every palette', async ({ page }) => {
   await openSession(page, await freshWorkspace());
   await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [] } }) : route.continue());
   const found: string[] = [];
@@ -231,23 +231,22 @@ test('the Workspace editor and the Git review dialog keep 4.5:1 on every palette
   await page.keyboard.press('Escape');
   // The review dialog belongs to the session view; the desk covers its button.
   await page.reload(); await expect(page.getByRole('region', { name: 'Harness prompt' })).toBeVisible();
-  // Git review: grants, then the working-tree patch, side by side, the raw patch and the file list.
-  await openGitDestination(page, 'Git review');
-  const reader = page.getByRole('dialog', { name: 'Git review', exact: true }), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
+  // Changes: grants, then the working-tree patch, side by side, the raw patch and the file list.
+  const reader = await openChanges(page, 'Uncommitted'), git = (state: string) => everyPalette(page, state, found, '[data-contrast-scope=git]');
   await reader.evaluate(el => el.setAttribute('data-contrast-scope', 'git'));
   const gitConsent = reader.getByRole('button', { name: 'Approve read-only Git', exact: true }), refresh = reader.getByRole('button', { name: 'Refresh changes', exact: true });
   await expect(gitConsent.or(refresh)).toBeVisible();
-  await git('Git review before consent');
+  await git('Changes before consent');
   if (await gitConsent.isVisible()) await gitConsent.click();
-  await expect(reader.getByRole('complementary', { name: 'Git changed files', exact: true })).toBeVisible();
+  await expect(reader.getByRole('complementary', { name: 'Changed files', exact: true })).toBeVisible();
   await expect(reader.locator('.unified-change').first()).toBeVisible();
-  await git('Git review patch (unified)');
+  await git('Changes patch (unified)');
   await reader.getByRole('button', { name: 'Side by side', exact: true }).click();
   await expect(reader.getByRole('region', { name: 'Current Git patch side by side' })).toBeVisible();
-  await git('Git review patch (side by side)');
+  await git('Changes patch (side by side)');
   await reader.getByRole('button', { name: 'Original', exact: true }).click();
   await expect(reader.locator('.code .ln').first()).toBeVisible();
-  await git('Git review raw patch');
+  await git('Changes raw patch');
   expect(found).toEqual([]);
 });
 
@@ -314,4 +313,53 @@ test('the header keeps 4.5:1 over the map and over passing cards on every palett
   await page.locator('.history').evaluate(el => { el.scrollTop = 500; }); await settled(page);
   await sweep('over passing cards');
   expect(found).toEqual([]);
+});
+
+
+test('UI-34: Jet Black resolves azure accent, hover, pressed and focus contrast >= 4.5:1 / 3:1 in live DOM', async ({ page }) => {
+  await openSession(page, await freshWorkspace());
+  await page.evaluate(() => { document.documentElement.dataset.palette = 'jet'; });
+  await settled(page);
+
+  const report = await page.evaluate(() => {
+    const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+    const rgb = (value: string) => {
+      canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = value; canvas.fillRect(0, 0, 1, 1);
+      return [...canvas.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    };
+    const luma = (c: number[]) => c.map(v => { const s = v / 255; return s <= .04045 ? s / 12.92 : ((s + .055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [.2126, .7152, .0722][i]!, 0);
+    const ratio = (a: number[], b: number[]) => { const x = luma(a), y = luma(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+    const probe = (expr: string) => { const el = document.createElement('i'); el.style.color = expr; document.documentElement.append(el); const c = getComputedStyle(el).color; el.remove(); return c; };
+    const cs = getComputedStyle(document.documentElement);
+    const focus = rgb(probe('var(--focus)')), source = rgb(probe('var(--source)')), bg = rgb(probe('var(--bg)')), s3 = rgb(probe('var(--s3)'));
+    const hover = rgb(probe('var(--accent-hover)')), pressed = rgb(probe('var(--accent-pressed)')), partner = rgb(probe('var(--accent-partner)')), focusRing = rgb(probe('var(--focus-ring)'));
+    return {
+      focusColor: probe('var(--focus)'),
+      activeColor: probe('var(--palette-active)'),
+      partnerColor: probe('var(--accent-partner)'),
+      sourceDiffers: focus.join(',') !== source.join(','),
+      accentTextOnBg: ratio(focus, bg),
+      accentTextOnS3: ratio(focus, s3),
+      partnerTextOnS3: ratio(partner, s3),
+      primaryTextContrast: ratio(bg, focus),
+      primaryHoverContrast: ratio(bg, hover),
+      primaryPressedContrast: ratio(bg, pressed),
+      focusOnS3: ratio(focus, s3),
+      focusRingOnS3: ratio(focusRing, s3),
+      swatchHex: cs.getPropertyValue('--swatch-accent').trim(),
+    };
+  });
+
+  expect(report.focusColor).toBe('rgb(79, 156, 255)');
+  expect(report.activeColor).toBe('rgb(79, 156, 255)');
+  expect(report.partnerColor).toBe('rgb(52, 214, 230)');
+  expect(report.sourceDiffers).toBe(true);
+  expect(report.accentTextOnBg).toBeGreaterThanOrEqual(4.5);
+  expect(report.accentTextOnS3).toBeGreaterThanOrEqual(4.5);
+  expect(report.partnerTextOnS3).toBeGreaterThanOrEqual(4.5);
+  expect(report.primaryTextContrast).toBeGreaterThanOrEqual(4.5);
+  expect(report.primaryHoverContrast).toBeGreaterThanOrEqual(4.5);
+  expect(report.primaryPressedContrast).toBeGreaterThanOrEqual(4.5);
+  expect(report.focusOnS3).toBeGreaterThanOrEqual(3);
+  expect(report.focusRingOnS3).toBeGreaterThanOrEqual(3);
 });

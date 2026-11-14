@@ -1,6 +1,5 @@
 /* GIT-8 Compare: a focused working window that docks exactly where the Workspace does (it shares .developer-workspace for geometry and
    entrance). Hierarchy is ink and weight; no labelled boxes, hairlines only between the three regions. */
-.compare-window button:focus-visible,.compare-window input:focus-visible,.compare-window summary:focus-visible { outline:2px solid var(--focus); outline-offset:1px; }
 .compare-header { display:flex; align-items:center; gap:18px; padding:9px 14px; border-bottom:1px solid var(--line); flex:none; min-width:0; }
 .compare-header>strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); }
 .compare-presets { display:flex; gap:2px; min-width:0; overflow-x:auto; scrollbar-width:none; }
@@ -48,6 +47,11 @@
 .compare-group h3 span { color:var(--t3); font-weight:var(--weight-regular); font-variant-numeric:tabular-nums; }
 .compare-scope { margin:6px 14px 2px; color:var(--t3); font-size:var(--text-2xs); }
 .compare-note { margin:0; padding:12px 14px; color:var(--t3); font-size:var(--text-xs); }
+.compare-body.compare-body-empty { grid-template-columns:minmax(0,1fr); }
+.compare-body.compare-body-empty .compare-files { border-right:0; display:flex; align-items:flex-start; justify-content:center; padding-top:42px; }
+.compare-no-changes { max-width:46ch; }
+.compare-no-changes p { margin:0; line-height:1.6; color:var(--t2); }
+.compare-uncommitted-jump { margin-top:12px; background:var(--s2); border:1px solid var(--line-2); color:var(--t1); }
 .compare-empty { padding:24px; }
 .compare-link { padding:0; border:0; background:none; color:var(--t2); font:inherit; text-decoration:underline; text-decoration-color:var(--line-2); text-underline-offset:2px; cursor:pointer; }
 .compare-link:disabled { cursor:default; text-decoration:none; color:var(--t3); }
@@ -71,8 +75,9 @@
 .compare-reader>.compare-evidence.none { padding:0 14px 8px; }
 
 .compare-reader { display:flex; flex-direction:column; min-width:0; min-height:0; }
-.compare-file-header { display:flex; align-items:center; gap:12px; padding:9px 14px 4px; flex:none; min-width:0; }
-.compare-file-title { flex:1; min-width:0; display:flex; align-items:baseline; gap:10px; }
+/* SHIP-2d: the file's name keeps room for about 26 characters; the side switch and actions wrap under it instead of squeezing it to one letter. */
+.compare-file-header { display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px; padding:9px 14px 4px; flex:none; min-width:0; }
+.compare-file-title { flex:1 1 26ch; min-width:0; display:flex; align-items:baseline; gap:10px; }
 .compare-file-title strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--mono); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .compare-file-title small { color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .compare-side-switch { display:inline-flex; gap:2px; flex:none; }
@@ -98,4 +103,36 @@
 }
 
 /* The header button is a word, not an icon (the Changes entry it replaces kept its label the same way). */
-:root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.btn.compare-open {width:auto;min-width:34px;padding:0 9px;}
+
+/* GIT-9: reviewed marks, notes and the handoff preview (what Git review had), in the same hairline-only language. */
+.compare-header-end .desk-options>summary { display:grid; place-items:center; width:32px; min-height:32px; padding:6px; }
+.compare-header-end .desk-options>summary>span { display:none; }
+.compare-header-end .desk-options-body { width:min(260px,var(--menu-inline-space,calc(100vw - 40px))); }
+.compare-header-end .desk-options-body>.btn { min-height:var(--control-lg); font:var(--text-xs)/18px var(--sans); padding:8px 10px; }
+.compare-header-end .desk-options-body>.btn small { color:var(--t3); }
+.compare-menu-note { margin:4px 8px 6px; padding-top:8px; border-top:1px solid var(--line); font:var(--text-2xs)/17px var(--sans); color:var(--t3); }
+.compare-mark { color:var(--t3); }
+.compare-mark[data-state=reviewed] { color:var(--pass); }
+.compare-reviewed { display:inline-flex; align-items:center; gap:6px; flex:none; color:var(--t2); font:var(--text-xs)/1.5 var(--sans); cursor:pointer; }
+.compare-reviewed input { margin:0; accent-color:var(--pass); }
+.compare-reviewed:has(input:disabled) { color:var(--t3); cursor:default; }
+.compare-note-box { padding:0 14px 8px; border-bottom:1px solid var(--line); }
+.compare-note-box textarea,.compare-handoff textarea { display:block; width:100%; box-sizing:border-box; resize:vertical; border:1px solid var(--line-2); border-radius:var(--round-sm); background:var(--s1); color:var(--t1); font:var(--text-xs)/1.6 var(--sans); padding:8px 10px; }
+.compare-note-box textarea { min-height:64px; max-height:30vh; }
+.compare-previous { margin-top:8px; color:var(--t3); font:var(--text-2xs)/1.6 var(--sans); }
+.compare-previous summary { cursor:pointer; }
+.compare-previous p { margin:6px 0; }
+.compare-previous textarea { min-height:44px; margin-bottom:6px; color:var(--t2); }
+.compare-handoff { display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; padding:12px 14px; }
+.compare-handoff>header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.compare-handoff>header strong { font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); }
+.compare-handoff>p { margin:0; color:var(--t3); font:var(--text-xs)/1.6 var(--sans); }
+.compare-handoff textarea { flex:1; min-height:0; resize:none; font-family:var(--mono); }
+.compare-handoff>footer { display:flex; justify-content:flex-end; flex:none; }
+.compare-pages { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:4px 8px; margin:6px 10px 0; color:var(--t3); font:var(--text-2xs)/1.5 var(--sans); }
+.compare-pages .btn { min-height:26px; padding:2px 8px; font-size:var(--text-2xs); }
+.compare-pages span { font-variant-numeric:tabular-nums; }
+.compare-omission { display:grid; gap:4px; margin:6px 14px; padding-top:8px; border-top:1px solid var(--line); font:var(--text-2xs)/1.5 var(--sans); overflow-wrap:anywhere; }
+.compare-omission strong { font:var(--text-2xs) var(--mono); color:var(--t2); }
+.compare-omission span { color:var(--t3); }
+.compare-omission .btn { justify-self:start; }

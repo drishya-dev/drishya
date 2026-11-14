@@ -1,6 +1,5 @@
 .captured-data-choice{display:flex;align-items:center;gap:6px;min-width:0;max-width:100%;flex-basis:100%}
 .captured-data-choice select{min-width:0;max-width:100%;flex:1;border:1px solid var(--line);border-radius:var(--round-xs);background:var(--bg);color:var(--t2);font:var(--text-2xs)/1.5 var(--mono);padding:3px 5px;text-overflow:ellipsis}
-.captured-data-choice select:focus-visible{outline:1px solid var(--t2);outline-offset:2px}
 .captured-data-sources{min-width:0;max-width:100%;color:var(--t3);font:var(--text-2xs)/1.5 var(--sans)}
 .captured-data-sources>summary{cursor:pointer;padding:4px 0}
 .captured-data-sources[open]{flex-basis:100%}
@@ -15,20 +14,37 @@
    resident row above every result. They float over the result's top-right corner and show on hover or keyboard focus; the buttons,
    their names and behaviour are unchanged. The expanded reader keeps its own row because it has room. */
 .result-readings,.terminal-preview{position:relative}
+.tool-input,.tool-input{position:relative}
 .result-readings>.captured-result-views,.terminal-preview>.captured-result-views{position:absolute;top:2px;right:2px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:2px;width:max-content;max-width:min(440px,calc(100% - 4px));margin:0;padding:2px;border:1px solid var(--line);border-radius:var(--round-md);background:color-mix(in srgb,var(--s2) 94%,transparent);opacity:0;transition:opacity 120ms ease}
+.tool-input>.captured-result-views,.tool-input>.captured-result-views{position:absolute;top:2px;right:2px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:2px;width:max-content;max-width:min(440px,calc(100% - 4px));margin:0;padding:2px;border:1px solid var(--line);border-radius:var(--round-md);background:color-mix(in srgb,var(--s2) 94%,transparent);opacity:0;transition:opacity 120ms ease}
 .result-readings:is(:hover,:focus-within)>.captured-result-views,.terminal-preview:is(:hover,:focus-within)>.captured-result-views{opacity:1}
+.tool-input:is(:hover,:focus-within)>.captured-result-views,.tool-input:is(:hover,:focus-within)>.captured-result-views{opacity:1}
 .result-readings>.captured-result-views>.material-context,.terminal-preview>.captured-result-views>.material-context{max-width:min(420px,100%);white-space:normal}
+.tool-input>.captured-result-views>.material-context,.tool-input>.captured-result-views>.material-context{max-width:min(420px,100%);white-space:normal}
 .result-readings>.captured-result-views>.result-original[open],.terminal-preview>.captured-result-views>.result-original[open]{display:flex;flex-wrap:wrap;align-items:center;gap:2px}
+.tool-input>.captured-result-views>.result-original[open],.tool-input>.captured-result-views>.result-original[open]{display:flex;flex-wrap:wrap;align-items:center;gap:2px}
 .result-readings>.captured-result-views>.result-original,.terminal-preview>.captured-result-views>.result-original{margin:0}
+.tool-input>.captured-result-views>.result-original,.tool-input>.captured-result-views>.result-original{margin:0}
 .result-readings>.captured-result-views .data-inspection,.terminal-preview>.captured-result-views .data-inspection{margin:0}
+.tool-input>.captured-result-views .data-inspection,.tool-input>.captured-result-views .data-inspection{margin:0}
 @media(prefers-reduced-motion:reduce){.result-readings>.captured-result-views,.terminal-preview>.captured-result-views{transition:none}}
+@media(prefers-reduced-motion:reduce){.tool-input>.captured-result-views,.tool-input>.captured-result-views{transition:none}}
 /* Floating chips rest as one small handle in the result's corner (31 Oct, builder: the labelled bar covered the first lines of output and
    box sizes must not change). Hovering or focusing the handle opens the full set, anchored to the same corner; the buttons keep their
    names and stay reachable by keyboard, because focus inside the group opens it. */
 .result-readings>.captured-result-views:not(:hover):not(:focus-within),.terminal-preview>.captured-result-views:not(:hover):not(:focus-within){width:26px;height:24px;padding:0;flex-wrap:nowrap;overflow:hidden;justify-content:flex-start}
+.tool-input>.captured-result-views:not(:hover):not(:focus-within),.tool-input>.captured-result-views:not(:hover):not(:focus-within){width:26px;height:24px;padding:0;flex-wrap:nowrap;overflow:hidden;justify-content:flex-start}
 .result-readings>.captured-result-views:not(:hover):not(:focus-within)::before,.terminal-preview>.captured-result-views:not(:hover):not(:focus-within)::before{content:"\B7\B7\B7";flex:none;width:24px;text-align:center;color:var(--t2);font:var(--text-md)/22px var(--sans);letter-spacing:1px}
+.tool-input>.captured-result-views:not(:hover):not(:focus-within)::before,.tool-input>.captured-result-views:not(:hover):not(:focus-within)::before{content:"\B7\B7\B7";flex:none;width:24px;text-align:center;color:var(--t2);font:var(--text-md)/22px var(--sans);letter-spacing:1px}
 .result-readings>.captured-result-views:not(:hover):not(:focus-within)>*,.terminal-preview>.captured-result-views:not(:hover):not(:focus-within)>*{flex:none}
+.tool-input>.captured-result-views:not(:hover):not(:focus-within)>*,.tool-input>.captured-result-views:not(:hover):not(:focus-within)>*{flex:none}
 
 .captured-result-views:empty{display:none}
 /* Beside an inline reading the chip sits at the bottom corner so it never covers the reading's own toolbar. */
 .result-readings>.captured-result-views-inline{top:auto;bottom:2px}
+.tool-markdown{font:var(--text-sm)/1.6 var(--sans);color:var(--t1);overflow-wrap:anywhere;min-width:0}
+.tool-markdown :is(h1,h2,h3,h4,h5,h6){margin:6px 0 3px;font:var(--weight-strong) var(--text-md)/1.4 var(--sans);color:var(--t1)}
+.tool-markdown p{margin:3px 0}
+.tool-markdown :is(ol,ul){margin:4px 0;padding-inline-start:1.5em}
+.tool-markdown code{font-family:var(--mono);font-size:var(--text-xs)}
+.tool-markdown .fenced-code{margin:6px 0}

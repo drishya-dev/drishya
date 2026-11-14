@@ -2,13 +2,15 @@ import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { Projection } from '@drishya/contracts';
 import { readingTarget, type ReadingQuery, type ReadingTarget } from '../../../../packages/scene/src/reading-target.ts';
 import { useApp } from '../state.ts';
+import { openStepNoteEditor } from './StepNotes.tsx';
 import './reading-keys.css';
 
 export const READING_SHORTCUTS = [
   ['j / k', 'Next / previous operation'], ['n / p', 'Next / previous edit'], ['f', 'Next failure'],
   ['t / T', 'Next / previous turn'], ['g / G', 'First / last operation'], ['e', 'Expand / collapse focused operation'],
+  ['a', 'Add or edit a note on the focused step'],
   ['o', 'Open its file in peek'], ['y', 'Copy selected text or the focused material'],
-  ['c / C', 'Fold other finished turns / unfold all'], ['?', 'Show this guide'],
+  ['c / C', 'Fold other finished turns / unfold all'], ['v', 'Read as Work or as Conversation'], ['?', 'Show this guide'],
 ] as const;
 const typing = (target: EventTarget | null) => target instanceof Element && !!target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false]),.cm-editor,[role=textbox]');
 
@@ -62,18 +64,20 @@ export function ReadingKeys(props: {
       const k = event.key;
       if (k === '?') { document.documentElement.removeAttribute('data-ui-press'); event.preventDefault(); event.stopImmediatePropagation(); openHelp(); return; }
       // Replay retains its explicit transport shortcuts; reading keys never seek its clock.
-      if (state.mode !== 'history' || !['j','k','n','p','f','t','T','g','G','e','o','y','c','C','Escape'].includes(k)) return;
+      if (state.mode !== 'history' || !['j','k','n','p','f','t','T','g','G','e','a','o','y','c','C','v','Escape'].includes(k)) return;
       if (k === 'Escape' && !latest.current.focused && !queued) return;
       event.preventDefault(); event.stopImmediatePropagation();
       document.documentElement.removeAttribute('data-ui-press');
       if (k === 'Escape') { epoch++; cursor = undefined; latest.current.focus(undefined); focusMaterial(); latest.current.root.current?.focus({ preventScroll: true }); return; }
+      if (k === 'v') { epoch++; const next = state.historyMode === 'work' ? 'conversation' : 'work'; state.setHistoryMode(next); setNotice(next === 'conversation' ? 'Conversation: runs of tool cards folded' : 'Work: every tool card'); return; }
       if (k === 'c' || k === 'C') { epoch++; state.set({ follow: false }); latest.current.fold(k === 'c'); setNotice(k === 'c' ? 'Other finished turns folded' : 'Turns unfolded'); return; }
-      if (['e','o','y'].includes(k)) {
+      if (['e','a','o','y'].includes(k)) {
         epoch++;
-        const focused = latest.current.focused ?? (event.target instanceof Element ? event.target.closest<HTMLElement>('article[data-op-id]')?.dataset.opId : undefined);
+        const focused = latest.current.focused ?? (event.target instanceof Element ? event.target.closest<HTMLElement>('article[data-op-id]')?.dataset.opId : undefined) ?? (k === 'a' ? (state.expandedOp ?? state.selectedOp) : undefined);
         if (!focused) { setNotice('Focus an operation with j or k first'); return; }
         const node = card(focused), op = state.projection?.operations.find(item => item.id === focused);
         if (k === 'e') { state.set({ expandedOp: state.expandedOp === focused ? undefined : focused, follow: false }); return; }
+        if (k === 'a') { state.set({ expandedOp: focused, selectedOp: undefined, follow: false }); openStepNoteEditor(focused); setNotice('Add a note'); return; }
         if (k === 'o') {
           const path = op?.paths.find(ref => ref.role !== 'search-hit')?.path ?? op?.paths[0]?.path;
           if (!path) { setNotice('No file path for this operation'); return; }

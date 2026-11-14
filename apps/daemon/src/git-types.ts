@@ -1,4 +1,4 @@
-/** Current Git review DTOs, independent of captured event contracts and Node implementation. */
+/** Current Git (working tree) DTOs, independent of captured event contracts and Node implementation. */
 export interface GitFile { path: string; previousPath?: string; status: string; fingerprint: string; patch: string }
 export interface GitSnapshot {
   scope: 'current-git'; head: string; branch: string; sampledAt: string; fingerprint: string; files: GitFile[]; omitted: number; limit: number;
@@ -16,6 +16,15 @@ export interface GitCommit { hash:string; parents:string[]; author:string; time:
 export interface GitSessionLink { turn?: number; time?: string; observationId: string; operationId?: string; basis?: 'hash-output'|'commit-time-paths'|'working-patch' }
 export const gitSessionLinkDescription=(link:GitSessionLink)=>link.basis==='commit-time-paths'?'Commit time and exact paths match a captured commit command; derived association, not proof of authorship.':link.basis==='working-patch'?'The current changed-line text matches a captured edit; positions are not verified and this does not establish who last changed the file.':'Hash seen in this session’s captured output; not proof this session made the commit.';
 
+export interface GitGithubSquashMatch {
+  pr:number;
+  headRef:string;
+  headOid:string;
+  mergeCommit:string;
+  eligibleTips?:string[];
+  basis:'github-pr'|'github-subject-pr';
+}
+
 export interface GitHistoryPage {sessionLinks?: Record<string, GitSessionLink>;mainline?:{name:string;tip:string};
   workingTree?: {files:{path:string;links:GitSessionLink[]}[]; omitted:number};
   generation:string; head:string; branch:string; shallow:boolean; sampledAt:string;
@@ -28,6 +37,12 @@ export interface GitHistoryPage {sessionLinks?: Record<string, GitSessionLink>;m
   /** Squash-merge evidence (see git-history.ts): content signatures of each non-merge commit's own change, and of each
    * branch head's whole change since it left the primary line. Equal values mean identical written file contents. */
   changeSignatures?:Record<string,string>; branchSignatures?:Record<string,string>;
+  /** GIT-11: stable `git patch-id` of each non-merge commit's diff, and of each branch head's net diff against the primary line. */
+  changePatchIds?:Record<string,string>; branchPatchIds?:Record<string,string>;
+  /** GIT-11: file -> blob OID (or '-' for deletion) for superset-path checks (bounded per commit/branch). */
+  changeFiles?:Record<string,Record<string,string>>; branchOwnFiles?:Record<string,Record<string,string>>;
+  /** GIT-11: opt-in GitHub closed-merged PR and `(#N)` squash-subject PR evidence. */
+  githubPulls?:GitGithubSquashMatch[];
 }
 export interface GitCommitDetail {
   hash:string; parents:string[]; parent?:string; message:string;

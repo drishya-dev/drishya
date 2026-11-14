@@ -1,39 +1,124 @@
-/* UI-27 (Yash, 5 and 8 Nov): the conversation reads like a chat. The agent's prose fills the reading column on the
-   world, unboxed; only the person's own prompt sits on the right, in a capsule tinted from the active palette's accent.
-   Action passages, the map and the Toolbox are untouched. No motion here: the existing arrival and disclosure motion is reused. */
+/* UI-27 & UI-31: the agent's prose fills the reading column; only the person's own prompt sits on the right in a calm,
+   typographic capsule matching the product's surface and hairline system. Action passages, the map and the Toolbox are untouched. */
 
 /* Prose: the block spans the whole reading column; the paragraph measure (about 100 characters) keeps lines readable
    while code, tables and quotes may use the full column. */
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .prose { max-width: none; width: auto; }
 :root[data-ui-version=modern] .history .prose :is(p, li) { max-width: 100ch; }
 
-/* The person's prompt: right-aligned capsule. The label stays for assistive technology and the turn's tests; a capsule on
-   the right says "you" without a word. Notices Claude Code wrote in the user role (turn-source) are not the person's. */
+/* The person's prompt: right-aligned capsule on a quiet surface with a hairline edge, set in the regular reading weight (Yash, 13 Nov: bold "doesnt look good").
+   The label stays for assistive technology and turn tests. Notices Claude Code wrote in the user role (turn-source) are not the person's. */
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .turn {
   width: auto; max-width: none; margin-block: 0 26px; padding: 0; border: 0; background: none;
-  justify-content: flex-end; align-items: flex-start; row-gap: 4px; position: relative;
+  flex-direction: column; align-items: flex-end; justify-content: flex-start; row-gap: 6px; position: relative;
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .folded-turn .turn {
+  margin-block: 0 6px;
 }
 :root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-who {
   position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
 }
 :root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-capsule {
-  flex: 0 1 auto; width: fit-content; max-width: min(100%, 78ch); box-sizing: border-box; padding: 10px 16px;
-  border: 1px solid color-mix(in srgb, var(--palette-active, var(--focus)) 34%, var(--line-2)); border-radius: 20px 20px 6px 20px;
-  background: color-mix(in srgb, var(--palette-active, var(--focus)) 15%, var(--s1)); color: var(--t1); text-align: left;
+  flex: 0 0 auto; width: fit-content; max-width: min(94%, 72ch); box-sizing: border-box;
+  padding: 11px 16px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--s2);
+  color: var(--t1);
+  text-align: left;
 }
 /* The clamp lives on the text inside the capsule so a fourth line never shows through the capsule's padding. */
-:root[data-ui-version=modern] .history .turn-capsule .turn-text { max-width: none; }
+:root[data-ui-version=modern] .history .turn-capsule .turn-text {
+  max-width: none;
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: 1.58;
+  letter-spacing: -0.005em;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-more {
+  flex: 0 0 auto; align-self: flex-end; width: auto;
+  margin: -2px 0 0; padding: 1px 6px;
+  font: var(--text-xs)/1.5 var(--sans);
+  color: var(--t2);
+  border-radius: var(--round-xs);
+  transition: color 140ms cubic-bezier(.23,1,.32,1), transform 120ms cubic-bezier(.23,1,.32,1);
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-more:hover,
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-more:focus-visible {
+  color: var(--t1);
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-more:active {
+  transform: scale(0.98);
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-more { transition: none; transform: none; }
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-images {
+  flex: 0 0 auto; width: 100%; padding-left: 0;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-images .op-images {
+  margin-top: 2px; gap: 8px;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-images .op-image {
+  border-radius: var(--round-md); border-color: var(--line);
+}
 :root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) :is(.op-images, .prompt-attachments) { justify-content: flex-end; }
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .prompt-attachments {
+  padding: 0; max-height: none; overflow: visible; gap: 6px;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .attachment-chip {
+  background: var(--s2); border-color: var(--line); border-radius: var(--round-md); color: var(--t1); padding: 5px 9px;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-mode {
+  flex: 0 0 auto; align-self: flex-end; max-width: 100%; margin: 0; padding-inline: 6px; text-align: right; overflow-wrap: anywhere;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-ledger {
+  flex: 0 0 auto; align-self: flex-end; max-width: 100%; margin-top: 2px; padding: 2px 6px; text-align: right; overflow-wrap: anywhere;
+}
+:root[data-ui-version=modern] .history .turn:not(:has(.turn-source)) .turn-fold {
+  padding: 2px 6px 2px 8px;
+}
 
-/* Notices written into the journal in the user role read as quiet lines on the agent's side. */
-:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) { justify-content: flex-start; padding-inline: 6px; }
+/* Notices written into the journal in the user role read as one quiet line with an icon. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice {
+  flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start;
+  gap: 4px 10px; margin-block: 0 18px; padding: 4px 0 4px 10px;
+  border-left: 1px solid var(--line-2);
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-notice-main {
+  display: inline-flex; align-items: center; gap: 7px; flex: 1 1 220px; min-width: 0; max-width: 100%;
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-notice-icon {
+  width: 14px; height: 14px; flex: none; color: var(--t3);
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-who {
+  flex: none; font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--t2); white-space: nowrap;
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-text {
+  flex: 1 1 0; min-width: 0; max-width: none;
+  font-family: var(--sans); font-size: var(--text-xs); font-weight: var(--weight-regular); line-height: 1.5;
+  color: var(--t3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: normal;
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-captured {
+  margin: 0; flex: none; font-size: var(--text-xs); color: var(--t2);
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-captured[open] {
+  flex: 1 0 100%;
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-captured summary {
+  font-size: var(--text-xs); color: var(--t2); padding: 1px 4px; border-radius: var(--round-xs);
+}
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn.turn-notice .turn-captured summary:hover {
+  color: var(--t1);
+}
 :root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-more,
-:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-ledger { text-align: left; }
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-mode,
+:root[data-ui-version=modern][data-experience] .connected-workspace .history .turn:has(.turn-source) .turn-ledger { align-self: flex-start; text-align: left; }
 
 /* The prompt rail sits just inside the history's right padding (a few pixels over the content edge on wide windows, 20 px on narrow ones);
-   prose and prompts keep clear of it. Passages keep their own edge. */
-:root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn) { margin-right: 16px; }
+   prose, prompts and compaction seams keep clear of it. Passages keep their own edge. */
+:root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn, .context-evidence) { margin-right: 16px; }
 /* Narrow windows (600 px and up): the history's own padding is 16 px, less than the rail needs. */
 @media (max-width: 880px) {
-  :root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn) { margin-right: 26px; width: auto; }
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history :is(.prose, .turn, .context-evidence) { margin-right: 26px; width: auto; }
 }

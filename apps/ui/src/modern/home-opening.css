@@ -1,0 +1,55 @@
+/* SHIP-3 (Yash, 12 Nov): Home opens like the website's first screen: the mark, the wordmark, one line and the person's
+   running or latest session as the first action, on the same dotted ground. The session library is a sheet whose top
+   shows in the first screen and which comes up over the opening as the page scrolls.
+   The ground is plain CSS: no canvas and no loop, so Home costs nothing at rest. */
+/* --brand-ink is the website's cream, defined for Jet Black in tokens.css; the other palettes use their own ink. */
+.mh-home-v2 { --mh-pad:clamp(18px,4vw,64px); --mh-peek:148px; --mh-ink:var(--brand-ink,var(--t1)); }
+.mh-home-v2 .mh-header { position:relative; z-index:3; }
+.mh-home-v2 .mh-scroll { flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; scrollbar-width:none; margin-inline:calc(-1 * var(--mh-pad)); padding-inline:var(--mh-pad); }
+.mh-home-v2 .mh-scroll::-webkit-scrollbar { display:none; }
+
+.mh-opening { position:relative; height:calc(100% - var(--mh-peek)); min-height:400px; margin-inline:calc(-1 * var(--mh-pad)); display:grid; place-items:center; overflow:hidden; isolation:isolate;
+  background:radial-gradient(46% 52% at 50% 44%,color-mix(in srgb,var(--modern-accent) 9%,transparent),transparent 74%); }
+/* The website's dotted ground, still: denser toward the words, gone at the edges. */
+.mh-opening::before { content:''; position:absolute; inset:0; z-index:-1; pointer-events:none;
+  background:radial-gradient(circle,color-mix(in srgb,var(--mh-ink) 30%,transparent) 1.1px,transparent 1.7px) 0 0 / 12px 12px;
+  -webkit-mask-image:radial-gradient(80% 90% at 50% 44%,#000 0,rgba(0,0,0,.55) 50%,transparent 100%); mask-image:radial-gradient(80% 90% at 50% 44%,#000 0,rgba(0,0,0,.55) 50%,transparent 100%); }
+.mh-opening-words { position:relative; display:flex; flex-direction:column; align-items:center; max-width:min(720px,calc(100vw - 2 * var(--mh-pad))); padding-bottom:6px; text-align:center; }
+/* The shared mark is pinned to 25 px for headers (atelier.css, !important); the opening shows it large. */
+.mh-home-v2 .mh-opening-mark .brand-mark.brand-image { width:clamp(64px,6.4vw,128px)!important; height:clamp(64px,6.4vw,128px)!important; display:block; background:none!important; border:0; border-radius:0; overflow:visible; color:var(--mh-ink); }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-wordmark { margin:10px 0 0; font:600 clamp(60px,9vw,184px)/.9 var(--sans); letter-spacing:-.055em; color:var(--mh-ink); }
+/* No letter-spacing on Devanagari: spacing splits its conjuncts. */
+.mh-wordmark span { display:block; margin-top:14px; font:var(--weight-regular) var(--text-xl)/1.3 var(--sans); letter-spacing:0; color:var(--t4); }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening-line { margin:16px 0 26px; font:var(--weight-medium) clamp(20px,2.3vw,42px)/1.25 var(--sans); letter-spacing:-.03em; color:var(--mh-ink); }
+.mh-opening-actions { display:flex; flex-wrap:wrap; justify-content:center; align-items:center; gap:10px 12px; min-width:0; max-width:100%; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening-facts { margin:18px 0 0; font:var(--text-2xs)/1.5 var(--mono); letter-spacing:.04em; color:var(--t4); }
+
+/* The first action: the website's light pill. Resume and latest share it.
+   Each rule carries the shell's full prefix: older Home rules for .mh-resume and for text inside .home are that specific,
+   and without it the Resume pill kept their light text on this light pill (Yash, 12 Nov). */
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest) { display:flex; align-items:center; gap:10px; max-width:min(440px,100%); min-width:0; margin:0; padding:6px 22px 6px 6px; border:0; border-radius:var(--round-full); background:var(--mh-ink); color:var(--bg); text-align:left; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest)>span:nth-child(2) { display:grid; min-width:0; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest) small { font:var(--text-2xs)/1.4 var(--sans); color:color-mix(in srgb,var(--bg) 62%,var(--mh-ink)); }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest) strong { font:var(--weight-medium) var(--text-sm)/1.4 var(--sans); color:var(--bg); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mh-opening .mh-resume>span:nth-child(2)>span, .mh-opening .mh-resume>span:last-child { display:none; }
+:root[data-ui-version=modern][data-experience=classic] .home .mh-opening .mh-resume-icon { display:grid; place-items:center; width:34px; height:34px; flex:none; border-radius:50%; background:var(--bg); color:var(--mh-ink); border:0; }
+.mh-opening .mh-active { flex-basis:100%; justify-content:center; margin:0 0 2px; max-width:100%; }
+.mh-browse { display:inline-flex; align-items:center; gap:8px; min-height:46px; padding:0 20px; border:1px solid var(--line-2); border-radius:var(--round-full); background:color-mix(in srgb,var(--s1) 86%,transparent); color:var(--t1); font:var(--weight-medium) var(--text-sm)/1.4 var(--sans); }
+.mh-browse svg { width:12px; height:12px; fill:none; stroke:currentColor; stroke-width:1.5; }
+
+/* The sheet. */
+.mh-sheet { position:relative; z-index:2; height:100%; display:flex; flex-direction:column; min-height:0; margin-inline:calc(-1 * var(--mh-pad)); padding-inline:var(--mh-pad); border-top:1px solid var(--mh-edge); border-radius:22px 22px 0 0; background:var(--bg); box-shadow:0 -28px 60px -34px #000; }
+.mh-home-v2.mh-docked .mh-sheet { border-radius:0; box-shadow:none; }
+.mh-home-v2 .mh-library { border:0; border-radius:0; background:none; overflow:visible; }
+.mh-home-v2 .mh-filters { padding:0 0 14px; border-bottom:1px solid var(--mh-edge); }
+.mh-home-v2 .mh-search { height:42px; padding:0 16px; border:1px solid var(--line); border-radius:var(--round-full); background:var(--s1); }
+.mh-home-v2 .mh-workspaces { background:none; padding-left:0; }
+.mh-home-v2 .mh-time-group h3 { background:var(--bg); }
+/* Until the sheet is docked the page scrolls, not the lists inside it. */
+.mh-home-v2:not(.mh-docked) :is(.mh-session-list,.mh-workspace-list) { overflow:hidden; }
+
+@media(hover:hover) and (pointer:fine) { .mh-opening :is(.mh-resume,.mh-latest,.mh-browse) { transition:background-color 150ms ease,border-color 150ms ease,transform 150ms ease; } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening :is(.mh-resume,.mh-latest):hover { background:color-mix(in srgb,var(--mh-ink) 88%,var(--modern-accent)); } .mh-browse:hover { border-color:var(--t4); } }
+.mh-opening :is(.mh-resume,.mh-latest,.mh-browse):active { transform:translateY(1px); }
+@media(prefers-reduced-motion:reduce) { .mh-opening :is(.mh-resume,.mh-latest,.mh-browse) { transition:none; } .mh-opening :is(.mh-resume,.mh-latest,.mh-browse):active { transform:none; } }
+@media(max-height:820px) { .mh-home-v2 .mh-opening-mark .brand-mark.brand-image { width:52px!important; height:52px!important; } :root[data-ui-version=modern][data-experience=classic] .home .mh-wordmark { font-size:clamp(48px,6.4vw,84px); } .mh-wordmark span { margin-top:8px; font-size:var(--text-md); } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening-line { margin:10px 0 18px; font-size:clamp(18px,1.9vw,24px); } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening-facts { margin-top:12px; } .mh-home-v2 { --mh-peek:124px; } }
+@media(max-width:650px) { .mh-home-v2 { --mh-peek:118px; } :root[data-ui-version=modern][data-experience=classic] .home .mh-opening-line { margin:14px 0 22px; } }

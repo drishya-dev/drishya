@@ -74,7 +74,7 @@ export function worktreeFileRows(paths: string[], roots: RecordedFileRoot[], wor
     return { path, root, unplaced, other: !!root && !!workspaceRoot && normalize(root.root) !== normalize(workspaceRoot) };
   });
   const mainNamespaced = new Set(located.filter(item => item.root && !item.other && !item.unplaced).map(item => item.path.slice(item.root!.prefix.length + 1)));
-  if (query.trim()) return located.filter(item=>!(placement&&!item.root&&mainNamespaced.has(item.path))).filter(({path, root}) => `${path} ${root?.root ?? ''}`.toLowerCase().includes(query.toLowerCase())).map(({path, root, unplaced}) => ({path, folder:false, depth:0, name:root ? path.slice(root.prefix.length + 1) : path, parent:'', unplaced, location:root && !unplaced ? `${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length + 1)}` : undefined}));
+  if (query.trim()) return located.filter(item=>!(placement&&!item.root&&mainNamespaced.has(item.path))).filter(({path, root}) => `${path} ${root?.root ?? ''}`.toLowerCase().includes(query.toLowerCase())).map(({path, root, unplaced}) => ({path, folder:false, depth:0, name:root ? path.slice(root.prefix.length + 1) : path, parent:'', unplaced, metadata:root&&workspaceRoot&&normalize(root.root)!==normalize(workspaceRoot)?`Captured · ${root.branch??root.root.replace(/\\/g,'/').split('/').at(-1)}`:undefined, location:root && !unplaced ? `${root.root.replace(/[\\/]$/, '')}/${path.slice(root.prefix.length + 1)}` : undefined}));
   const rows: FileTreeRow[] = [], seen = new Set<string>();
   const append = (path: string, root: RecordedFileRoot | undefined, base: string, depth: number) => {
     const relative = root ? path.slice(root.prefix.length + 1) : path;

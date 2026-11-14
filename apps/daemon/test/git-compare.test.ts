@@ -148,3 +148,18 @@ it('summarises which agents wrote a path from captured edits only',()=>{
     {agentId:'sub',edits:2,firstOperationId:'o3',lastOperationId:'o8'},
   ]);
 });
+
+it('gives every file the same content fingerprint in the list and in its patch, per side, so reviewed marks can key on it',async()=>{
+  const list=await gitCompare(read,{base:'refs/heads/main',head:'refs/heads/topic'}),query={base:'refs/heads/main',head:'refs/heads/topic'};
+  const shared=list.files.find(file=>file.path==='b.ts')!;
+  expect(shared.fingerprint).toMatch(/^[a-f0-9]{64}$/);expect(shared.baseFingerprint).toMatch(/^[a-f0-9]{64}$/);expect(shared.fingerprint).not.toBe(shared.baseFingerprint);
+  expect((await gitCompareFile(read,{...query,path:'b.ts',side:'head'})).fingerprint).toBe(shared.fingerprint);
+  expect((await gitCompareFile(read,{...query,path:'b.ts',side:'base'})).fingerprint).toBe(shared.baseFingerprint);
+  for(const file of list.files.filter(item=>item.group==='head'))expect((await gitCompareFile(read,{...query,path:file.path,side:'head'})).fingerprint).toBe(file.fingerprint);
+  const onlyMain=list.files.find(file=>file.group==='base')!;
+  expect((await gitCompareFile(read,{...query,path:onlyMain.path,side:'base'})).fingerprint).toBe(onlyMain.fingerprint);
+  // The same change is the same fingerprint wherever it is read (a tag at main's tip has the same merge-base), and the two sides of one path differ.
+  const other=await gitCompare(read,{base:'refs/tags/v1',head:'refs/heads/topic'});
+  expect(other.files.find(file=>file.path==='b.ts')?.fingerprint).toBe(shared.fingerprint);
+  expect((await gitCompare(read,query)).files.find(file=>file.path==='b.ts')?.fingerprint).toBe(shared.fingerprint);
+});

@@ -1,6 +1,6 @@
-import {useInterfaceScale} from '../lib/interface-scale.ts';
+import {useInterfaceScale} from '../lib/interface-scale.ts'; import {plural} from '../lib/plural.ts';
 import {openGitHistory} from './GitHistory.tsx';
-import { GitReviewEntry } from './GitReview.tsx';
+import { GitEntry } from './GitEntry.tsx';
 import { focusAgent } from '../lib/compound-focus.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
@@ -67,7 +67,7 @@ export function WorkspaceViewActions() {
   // The owner stays here; only the buttons move into the header cluster, so an open Git dialog survives a resize.
   const target = modern && !phone ? slot : null;
   const put = (node: ReactNode) => target ? createPortal(node, target) : node;
-  return <>{experience === 'classic' && put(<button className={target ? 'btn ghost workspace-open' : undefined} aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title={source?.kind!=='daemon'?'Workspace needs a local session; this bundle holds the session only.':mode!=='history'?'Leave replay to open current files and local drafts in Workspace.':recording?.id.includes('+')?'Open a single session to use Workspace.':'Workspace: current files, split views and local drafts; return to the agent when ready.'} onClick={() => { const state=useApp.getState(),path=modern?state.currentFile:undefined; state.set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: path, follow: false, held: true, foldersHidden: false }); if(!developerWorkspace&&path)window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path})); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>)}{modern && <div className={target ? 'modern-review-control in-header' : 'modern-review-control'}><GitReviewEntry icon slot={target} /></div>}</>;
+  return <>{experience === 'classic' && put(<button className={target ? 'btn ghost workspace-open' : undefined} aria-label="Open developer workspace" aria-pressed={developerWorkspace} disabled={source?.kind !== 'daemon' || mode !== 'history' || !!recording?.id.includes('+')} title={source?.kind!=='daemon'?'Workspace needs a local session; this bundle holds the session only.':mode!=='history'?'Leave replay to open current files and local drafts in Workspace.':recording?.id.includes('+')?'Open a single session to use Workspace.':'Workspace: current files, split views and local drafts; return to the agent when ready.'} onClick={() => { const state=useApp.getState(),path=modern?state.currentFile:undefined; state.set({ developerWorkspace: !developerWorkspace, explore: false, currentFile: path, follow: false, held: true, foldersHidden: false }); if(!developerWorkspace&&path)window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:path})); }}><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M9 9v11" /></svg>Workspace</button>)}{modern && <div className={target ? 'modern-review-control in-header' : 'modern-review-control'}><GitEntry icon slot={target} /></div>}</>;
 }
 
 /** Uses only the current evidence boundary. Counts describe shown work, never a paged session total. */
@@ -85,8 +85,8 @@ export function AgentOverview({ scene, projection }: { scene: Scene; projection:
       const parent = projection.agents.find((item) => item.id === state.parentId);
       return <button key={state.id} className="agent-work" aria-pressed={filter?.agentId === state.id} style={{ '--agent': agentColor(agent, projection.agents) } as React.CSSProperties} onClick={() => useApp.getState().setFilter(focusAgent(filter, state.id))}>
         <strong><i />{agentName(agent)}<small>{state.state}</small></strong><span className="agent-family">{parent ? `Child of ${agentName(parent)}` : `${agent?.harness ?? 'Harness'} session`}</span>
-        <div className="agent-work-counts"><span>{ops.length} shown actions</span><span>{ops.filter((op) => op.kind === 'edit' || op.kind === 'write').length} changes</span><span>{ops.filter((op) => op.status === 'error').length} failures</span></div>
-        <div className="agent-work-files">{files.slice(0, 3).map((path) => <code key={path}>{path}</code>)}{files.length > 3 && <span>+{files.length - 3} more files</span>}{files.length === 0 && <span>No file locations in shown work</span>}</div>
+        <div className="agent-work-counts"><span>{plural(ops.length, 'shown action')}</span><span>{plural(ops.filter((op) => op.kind === 'edit' || op.kind === 'write').length, 'change')}</span><span>{plural(ops.filter((op) => op.status === 'error').length, 'failure')}</span></div>
+        <div className="agent-work-files">{files.slice(0, 3).map((path) => <code key={path}>{path}</code>)}{files.length > 3 && <span>+{plural(files.length - 3, 'more file', 'more files')}</span>}{files.length === 0 && <span>No file locations in shown work</span>}</div>
       </button>;
     })}</div>
   </section>;

@@ -45,7 +45,7 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
       const inner = document.querySelector('.history-inner')!;
       const cs = getComputedStyle(inner);
       const content = { left: inner.getBoundingClientRect().left + parseFloat(cs.paddingLeft), right: inner.getBoundingClientRect().right - parseFloat(cs.paddingRight) };
-      const sample = document.createElement('span'); sample.textContent = '0'.repeat(100); sample.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${getComputedStyle(p).font}`;
+      const sample = document.createElement('span'); sample.textContent = '0'.repeat(75); // UI-39 part 7: lines of 75ch (was 100ch) sample.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${getComputedStyle(p).font}`;
       document.body.append(sample); const hundred = sample.getBoundingClientRect().width; sample.remove();
       const marks = document.querySelector('.history-prompt-marks')?.getBoundingClientRect();
       return { prose: box(proseEl), p: box(p), content, hundred, marksLeft: marks?.left ?? Infinity, doc: document.documentElement.scrollWidth };
@@ -86,8 +86,8 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     await page.locator('.history').evaluate((el) => { el.scrollTop = el.scrollHeight; }); // prose is shown whole (SHIP-15), so the notice is far below
     await expect(notice).toBeVisible();
     await expect(notice.locator('.turn-who')).toContainText('Claude Code');
-    expect(await notice.locator('.turn-capsule').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
-    const nBox = (await notice.locator('.turn-capsule').boundingBox())!;
+    expect(await notice.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)');
+    const nBox = (await notice.locator('.turn-notice-main').boundingBox())!;
     expect(nBox.x).toBeLessThan(width / 2);
   }
 });

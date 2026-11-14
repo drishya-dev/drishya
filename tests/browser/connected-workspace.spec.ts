@@ -156,8 +156,8 @@ test('source reading links qualified current imports to a bounded map neighborho
   if (await enable.count()) await enable.click();
   await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
   const approve = page.getByRole('button', { name: 'Map the whole repository', exact: true });
-  if (await approve.count()) await approve.click();
-  await expect(page.locator('.map-legend')).toContainText('2 files · 1 imports');
+  if (await approve.isVisible()) await approve.click();
+  await expect(page.locator('.map-legend')).toContainText('2 files · 1 import');
   await page.getByRole('button', { name: 'Back to work' }).click();
   await folders.getByRole('treeitem', { name: 'src', exact: true }).click();await folders.getByRole('treeitem', { name: 'actual.ts', exact: true }).click();
   const peek=page.getByRole('dialog',{name:'src/actual.ts',exact:true});
@@ -179,7 +179,7 @@ test('source reading links qualified current imports to a bounded map neighborho
   await reader.getByRole('button', { name: 'Focus on map' }).click();
   await expect(page.locator('.map')).toHaveAttribute('data-map-scope', 'direct-neighborhood');
   await expect(page.locator('.map-connections')).toContainText('src/actual.ts');
-  await expect(page.locator('.map-legend')).toContainText('2 neighborhood files · 1 shown imports');
+  await expect(page.locator('.map-legend')).toContainText('2 neighborhood files · 1 shown import');
   await expect.poll(async () => (await page.locator('.map-file-label').filter({ hasText: 'src/actual.ts' }).first().boundingBox())?.y ?? 0).toBeGreaterThan(250);
   await page.screenshot({ path: resolve('.local/feedback-neighborhood.png') });
   await page.getByRole('button', { name: 'Show full map', exact: true }).click();
@@ -253,7 +253,7 @@ test('selected workspace folders read current files separately from the exact hi
   await page.getByRole('button',{name:'Show files',exact:true}).click();
   await expect(folder).toHaveCount(1);
   await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
-  await expect(page.locator('.map-legend')).toContainText('2 files · 1 imports');
+  await expect(page.locator('.map-legend')).toContainText('2 files · 1 import');
   await page.getByRole('button',{name:'Zoom into repository'}).click();
   await page.getByRole('button',{name:'Back to work'}).click();
   await expect(page.locator('.history')).toBeVisible();

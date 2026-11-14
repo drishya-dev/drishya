@@ -53,37 +53,42 @@ async function openWork(page: Page) {
   return work;
 }
 
-test('Next and Previous change retain a session ordinal across search-only and edit pages', async ({ page }) => {
+test('Previous and Next change keep chronological ordinals across newest-first and search-only pages', async ({ page }) => {
   const work = await openWork(page);
   const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true }), next = steps.getByRole('button', { name: 'Next change', exact: true });
   const label = steps.getByRole('status');
-  await expect(label).toHaveText(/ of 31/);
-  // Walk back to the very first recorded step, the read.
+  await expect(label).toHaveText('31 of 31');
+  await expect(next).toBeDisabled();
+  await expect(work).toContainText(line(30));
+  await previous.focus();
+  // Step back from the newest edit down through page 1 (edits 30..7).
+  for (let n = 30; n >= 8; n--) await previous.click();
+  await expect(label).toHaveText('8 of 31');
+  await expect(work).toContainText(line(7));
+  // Keep the selected row scrolled into view as Previous steps down the list.
+  const inView = await work.locator('.file-op[aria-pressed="true"]').evaluate(el => {
+    const r = el.getBoundingClientRect(), p = el.closest('.file-trail')!.getBoundingClientRect();
+    return r.top >= p.top - 1 && r.bottom <= p.bottom + 1;
+  });
+  expect(inView).toBe(true);
+  // Crossing from page 1 to page 2 (edits 6..1 and searches) lands cleanly on step 7.
+  await previous.click();
+  await expect(label).toHaveText('7 of 31');
+  await expect(work).toContainText(line(6));
+  await expect(work.locator('.file-op[aria-pressed="true"]')).toHaveCount(1);
+  // Stepping forward crosses back up onto page 1.
+  await next.click();
+  await expect(label).toHaveText('8 of 31');
+  await expect(work).toContainText(line(7));
+  // Stepping all the way down crosses the 52 search-only entries to the opening read.
+  await previous.click();
   while (await previous.isEnabled()) await previous.click();
   await expect(label).toHaveText('1 of 31');
+  await expect(work).toContainText(line(0));
   await expect(previous).toBeDisabled();
-  for (let n = 2; n <= 24; n++) await next.click();
-  await expect(label).toHaveText('24 of 31');
-  await expect(work).toContainText(line(23));
-  // The last step on page 1 still has a next change: the first edit on page 2.
   await expect(next).toBeEnabled();
-  await next.click();
-  await expect(label).toHaveText('25 of 31');
-  await expect(work).toContainText(line(24));
-  await expect(work.locator('.file-op[aria-pressed="true"]')).toHaveCount(1);
-  // And the first step on page 2 goes back to the last step on page 1.
-  await expect(previous).toBeEnabled();
-  await previous.click();
-  await expect(label).toHaveText('24 of 31');
-  await expect(work).toContainText(line(23));
-  await next.click();
-  for (let n = 2; n <= 7; n++) await next.click();
-  await expect(label).toHaveText('31 of 31');
-  await expect(work).toContainText(line(30));
-  await expect(next).toBeDisabled();
-  await expect(previous).toBeEnabled();
-  await expect(previous).toBeFocused();
+  await expect(next).toBeFocused();
 });
 
 test('the page label keeps the type floor and explains the page crossing', async ({ page }) => {
@@ -99,16 +104,16 @@ test('retained off-page selection keeps its ordinal and steps relative to itself
   const work = await openWork(page);
   const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true });
-  while (await previous.isEnabled()) await previous.click();
-  await expect(steps.getByRole('status')).toHaveText('1 of 31');
+  const next = steps.getByRole('button', { name: 'Next change', exact: true });
+  await expect(steps.getByRole('status')).toHaveText('31 of 31');
   await work.locator('.file-pagination').getByRole('button', { name: 'Next', exact: true }).click();
-  await expect(steps.getByRole('status')).toHaveText('1 of 31');
-  await steps.getByRole('button', { name: 'Next change', exact: true }).click();
-  await expect(steps.getByRole('status')).toHaveText('2 of 31');
-  await expect(work).toContainText(line(1));
+  await expect(steps.getByRole('status')).toHaveText('31 of 31');
+  await previous.click();
+  await expect(steps.getByRole('status')).toHaveText('30 of 31');
+  await expect(work).toContainText(line(29));
   await work.getByRole('textbox', { name: 'Filter actions on this file' }).fill('Edit');
-  await expect(steps.getByRole('status')).toHaveText('1 of 30 · filtered');
-  await expect(previous).toBeDisabled();
+  await expect(steps.getByRole('status')).toHaveText('30 of 30 · filtered');
+  await expect(next).toBeDisabled();
 });
 
 test('daemon timeline metadata stays bounded and respects replay visibility, filter and exact path', async ({ page }) => {
@@ -119,6 +124,7 @@ test('daemon timeline metadata stays bounded and respects replay visibility, fil
   const request = async (extra: Record<string, string>) => (await page.request.get(`${base}?${new URLSearchParams({ path: 'src/total.ts', count: '2', selected: first.id, ...extra })}`)).json();
   const full = await request({});
   expect(full.operations).toHaveLength(2);
+  expect(full.operations[0].id).not.toBe(first.id);
   expect(full.timeline.total).toBe(31);
   expect(full.timeline.selected.position).toBe(1);
   expect(full.timeline.selected.next.start).toBeGreaterThan(24);
@@ -132,27 +138,26 @@ test('daemon timeline metadata stays bounded and respects replay visibility, fil
 });
 
 
-test('off-page evidence waits for its own ordinal before a rapid next click', async ({ page }) => {
+test('off-page evidence waits for its own ordinal before a rapid previous click', async ({ page }) => {
   const work = await openWork(page);
   const steps = work.getByRole('group', { name: /Step through reads and edits/ });
   const previous = steps.getByRole('button', { name: 'Previous change', exact: true });
-  while (await previous.isEnabled()) await previous.click();
-  const readKey = await work.getByRole('combobox', { name: 'First step', exact: true }).inputValue();
+  await expect(steps.getByRole('status')).toHaveText('31 of 31');
+  const latestKey = await work.getByRole('combobox', { name: 'First step', exact: true }).inputValue();
   const pageNext = work.locator('.file-pagination').getByRole('button', { name: 'Next', exact: true });
   for (let n = 0; n < 3; n++) { await pageNext.click(); await expect(work.locator('.file-pagination span')).toContainText(`${25 + 24*n}`); }
   await work.getByRole('button', { name: 'Compare evidence', exact: true }).click();
   const select = work.getByRole('combobox', { name: 'First step', exact: true });
-  const other = await select.locator('option').evaluateAll((options, current) => options.map(op => (op as HTMLOptionElement).value).find(value => value !== current), readKey);
-  const editedSelection = page.waitForResponse(response => response.url().includes('/file-operations?') && new URL(response.url()).searchParams.get('selected') === other!.replace(/\/patch$/, ''));
+  const other = await select.locator('option').evaluateAll((options, current) => options.map(op => (op as HTMLOptionElement).value).find(value => value !== current && value.endsWith('/read')), latestKey);
+  const readSelection = page.waitForResponse(response => response.url().includes('/file-operations?') && new URL(response.url()).searchParams.get('selected') === other!.replace(/\/read$/, ''));
   await select.selectOption(other!);
-  await editedSelection;
-  await page.route('**/file-operations?**', async route => { if (new URL(route.request().url()).searchParams.get('selected') === readKey.replace(/\/read$/, '')) await new Promise(resolve => setTimeout(resolve, 350)); await route.continue(); });
-  await select.selectOption(readKey);
+  await readSelection;
+  await page.route('**/file-operations?**', async route => { if (new URL(route.request().url()).searchParams.get('selected') === latestKey.replace(/\/(patch|before|after)$/, '')) await new Promise(resolve => setTimeout(resolve, 350)); await route.continue(); });
+  await select.selectOption(latestKey);
   await work.getByRole('button', { name: 'Single evidence', exact: true }).click();
-  const next = steps.getByRole('button', { name: 'Next change', exact: true });
-  await expect(next).toBeDisabled();
-  await expect(steps.getByRole('status')).toHaveText('1 of 31');
-  await expect(next).toBeEnabled();
-  await next.click();
-  await expect(steps.getByRole('status')).toHaveText('2 of 31');
+  await expect(previous).toBeDisabled();
+  await expect(steps.getByRole('status')).toHaveText('31 of 31');
+  await expect(previous).toBeEnabled();
+  await previous.click();
+  await expect(steps.getByRole('status')).toHaveText('30 of 31');
 });

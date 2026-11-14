@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * UI-1: the header's navigation cluster has a slot that the Workspace, Git review and Git graph controls render into
+ * UI-1: the header's navigation cluster has a slot that the Workspace and Git graph controls render into
  * (a portal) on desktop widths. The controls' owner stays mounted in the workspace bar, so a dialog they opened keeps
  * its state when the window crosses the phone breakpoint.
  */

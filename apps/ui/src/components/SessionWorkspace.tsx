@@ -1,4 +1,5 @@
 import {useSurfacePresence} from '../lib/surface-motion.ts';
+import {setCheckoutContext} from '../api.ts'; import {plural} from '../lib/plural.ts';
 import './worktree-evidence.css';
 import {useInterfaceScale} from '../lib/interface-scale.ts';
 import {ProseFilesProvider} from './ProseFiles.tsx';
@@ -10,6 +11,7 @@ import {useFileRoots} from '../lib/use-file-roots.ts';
 import { documentFits, documentLimitMessage } from '../lib/document-limit.ts';
 import {FileRowName} from './FileRowName.tsx';
 import {worktreeFileRows, workspaceFileReveal, currentWorkspacePath, UNPLACED_GROUP, canonicalFileFolders} from '../lib/worktree-files.ts';
+import {buildCheckoutPickerModel, filterCheckoutOptions, type CheckoutPickerOption} from '../lib/checkout-picker.ts';
 import {workspaceDrafts} from '../lib/workspace-drafts.ts';
 import {rememberCurrentFileOrigin,currentFileOrigin} from '../lib/current-file-origin.ts';
 import { FileEvidenceMarks, fileEvidenceDescription, useFileEvidence } from './FileEvidenceMarks.tsx';
@@ -28,9 +30,30 @@ import { EvidenceNavigation, useEvidenceState, useEvidenceScroll } from './Evide
 import { workspaceApi, type WorkspaceStatus, type ControllerStatus, type PromptAttachment, type TurnOptions } from '../api.ts';
 import { pastedFiles, promptFiles, promptSizeNote, PROMPT_BYTES, utf8Bytes, attachmentBytes } from '../lib/prompt-files.ts';
 import { promptDrafts } from '../lib/prompt-drafts.ts';
+import {workspaceMemory} from '../lib/workspace-memory.ts';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
 import { useNowText } from './NowWatcher.tsx';
 import { ComposerMenu } from './ComposerMenu.tsx';
+
+/**
+ * UI-43: plain words for the permission modes each harness offers (the ids are the harness's own). Bypass and full access are
+ * marked as dangerous wherever they show; Drishya passes the chosen id through the harness's own protocol and nothing else.
+ */
+const PERMISSION_LABELS: Record<string, { label: string; hint: string; danger?: boolean }> = {
+  default: { label: 'Default', hint: 'Asks before edits and commands' },
+  acceptEdits: { label: 'Accept edits', hint: 'Edits files without asking; asks before commands' },
+  plan: { label: 'Plan', hint: 'Reads and plans; changes nothing' },
+  bypassPermissions: { label: 'Bypass permissions', hint: 'Never asks · every edit and command runs', danger: true },
+  ':read-only': { label: 'Read only', hint: 'Reads files; asks before any change' },
+  ':workspace': { label: 'Workspace', hint: 'Edits in this workspace; asks beyond it' },
+  ':danger-full-access': { label: 'Full access', hint: 'No sandbox · edits and runs anything', danger: true },
+};
+const permissionLabel = (id: string) => PERMISSION_LABELS[id] ?? { label: id, hint: '' };
+/** The mode the next prompt runs with when nothing is chosen: Claude Code is always launched in its default mode; Codex reports its sandbox. */
+function nativeCurrentPermission(harness: string | undefined, sandbox: string | undefined) {
+  if (harness === 'claude-code') return 'default';
+  return ({ 'read-only': ':read-only', readOnly: ':read-only', 'workspace-write': ':workspace', workspaceWrite: ':workspace', 'danger-full-access': ':danger-full-access', dangerFullAccess: ':danger-full-access' } as Record<string, string>)[sandbox ?? ''];
+}
 import { RememberCheckbox } from './RememberCheckbox.tsx';
 import { useApp } from '../state.ts';
 import { CodeView } from './common.tsx';
@@ -44,6 +67,7 @@ import { ReadingResize } from './ReadingResize.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
 import { sendWaitReason } from '../lib/send-wait.ts';
+import { openChanges } from '../lib/open-changes.ts';
 
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
@@ -53,10 +77,29 @@ interface Connection {
 }
 const SessionContext = createContext<Connection>({ refresh: async () => {}, approve: async () => {}, submit: async () => {} });
 export const useSessionWorkspace = () => useContext(SessionContext);
+const ReadingContext=createContext<Pick<Connection,'workspace'|'approve'>>({approve:async()=>{}});
+export const useReadingWorkspace=()=>useContext(ReadingContext);
+
 
 export function SessionWorkspaceProvider({ children }: { children: ReactNode }) {
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
+  const checkoutId=useApp(s=>s.checkoutId);
+  const developerWorkspace=useApp(s=>s.developerWorkspace);
+  const [readingWorkspace,setReadingWorkspace]=useState<WorkspaceStatus&{checkoutId:string}>();
+  const [readingRevision,setReadingRevision]=useState(0);
+  useEffect(()=>{const refresh=()=>setReadingRevision(value=>value+1);window.addEventListener('drishya-checkout-changed',refresh);return()=>window.removeEventListener('drishya-checkout-changed',refresh);},[]);
+  useEffect(()=>{
+    setReadingWorkspace(undefined);
+    if(!checkoutId)return;
+    let active=true;
+    void workspaceApi.status(checkoutId).then(value=>{if(active)setReadingWorkspace({...value,checkoutId});}).catch(()=>{});
+    return()=>{active=false;};
+  },[checkoutId,source,readingRevision]);
+  useEffect(()=>{
+    // Workspace editing remains attached to the native session's real working root.
+    if(developerWorkspace&&checkoutId){if(id)setCheckoutContext(id);useApp.setState({checkoutId:undefined,checkoutRoot:undefined,checkoutPrefix:undefined,graph:undefined,currentFile:undefined});}
+  },[developerWorkspace,checkoutId]);
   const connection=useApp(s=>s.connection),screen=useApp(s=>s.screen);
   const [acknowledged,acknowledge]=useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceStatus>();
@@ -100,11 +143,11 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
   // Consent belongs to this selected-session connection, never to a saved checkout or turn.
   useEffect(()=>{if(connection!=='connected'||screen!=='viewer'||controller?.state==='failed'||controller?.available===false||workspace?.approved===false)acknowledge(false);},[connection,screen,controller?.state,controller?.available,workspace?.approved]);
   useEffect(()=>{
-    if(!eligible||!workspace?.approved)return;
+    if(!eligible||!workspace?.approved||checkoutId)return;
     let active=true;
     void source!.graph(id!).then(graph=>{if(active&&useApp.getState().source===source&&useApp.getState().recordingId===id)useApp.setState({graph});}).catch(()=>{});
     return()=>{active=false;};
-  },[id,source,workspace?.approved]);
+  },[id,source,workspace?.approved,checkoutId]);
   useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
   const approve = async (remember=false) => {
     if (!eligible) return;
@@ -113,7 +156,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     const graph = await source!.graph(id!);
     if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
     ++revision.current;
-    setWorkspace(w); useApp.setState({ graph });
+    setWorkspace(w); if(!useApp.getState().checkoutId)useApp.setState({ graph });
   };
   const inspect = async () => {
     if (!eligible) return;
@@ -128,7 +171,14 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     catch(error){acknowledge(false);throw error;}
     finally { if (useApp.getState().source === source && useApp.getState().recordingId === id) setSubmitting(false); }
   };
-  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ProseFilesProvider approved={!!workspace?.approved}>{children}</ProseFilesProvider></SessionContext.Provider>;
+  const approveReading=async(remember=false)=>{
+    if(!checkoutId)return approve(remember);
+    const target=checkoutId;
+    const value=await workspaceApi.approve(target,remember);
+    const graph=await source!.graph(target);
+    if(useApp.getState().checkoutId===target){setReadingWorkspace({...value,checkoutId:target});useApp.setState({graph});}
+  };
+  return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ReadingContext.Provider value={{workspace:checkoutId?readingWorkspace?.checkoutId===checkoutId?readingWorkspace:undefined:workspace,approve:approveReading}}><ProseFilesProvider approved={!!(checkoutId?readingWorkspace?.checkoutId===checkoutId?readingWorkspace:undefined:workspace)?.approved}>{children}</ProseFilesProvider></ReadingContext.Provider></SessionContext.Provider>;
 }
 
 /** Native live receipt is separate from persisted evidence and disappears on capture. */
@@ -150,7 +200,9 @@ export function NativeTurn({ projection }: { projection: Projection }) {
   if (!submitting && !running && !visible && (!prompt || promptCaptured)) return null;
   const phase = submitting ? 'Sending prompt…' : controller?.state === 'connecting' ? 'Connecting to native session…' : controller?.state === 'approval' ? 'Waiting for your approval' : controller?.phase === 'thinking' ? 'Thinking…' : controller?.phase === 'responding' ? 'Receiving response…' : controller?.phase === 'tool' ? 'Working with tools…' : 'Waiting for the agent…';
   return <section className="native-live-work" aria-label="Native turn progress">
-    {prompt && !promptCaptured && <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p>{!!controller?.attachments?.length && <small>{controller.attachments.map(a => a.name).join(' · ')}</small>}</div></div>}
+    {prompt && !promptCaptured && (typeof document !== 'undefined' && document.documentElement.dataset.uiVersion === 'modern'
+      ? <div className="turn"><span className="turn-who">You</span><div className="turn-capsule"><div className="turn-text">{prompt}</div></div><div className="turn-mode">Submitted here{controller?.attachments?.length ? ` · ${controller.attachments.map(a => a.name).join(' · ')}` : ''}</div></div>
+      : <div className="turn"><div className="turn-text"><small className="muted">Submitted here</small><p>{prompt}</p>{!!controller?.attachments?.length && <small>{controller.attachments.map(a => a.name).join(' · ')}</small>}</div></div>)}
     {(submitting || running) && <p className="native-phase" role="status">{connected ? phase : 'Connection unavailable · native turn state may have changed'}</p>}
     {visible && <div className="prose" data-native-preview={preview.id}><small className="muted">{connected ? 'Live from harness' : 'Last received from harness'} · {preview.role === 'reasoning' ? preview.exposure === 'summary' ? 'reasoning summary' : 'exposed thinking' : 'response'}</small>{preview.role === 'reasoning' && detail === 'collapsed' ? <details><summary>Read exposed reasoning</summary><pre>{preview.text}</pre></details> : <pre>{preview.text}</pre>}</div>}
   </section>;
@@ -168,15 +220,24 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const id = useApp(s => s.recordingId);
   const graph = useApp(s => s.graph);
   const files = useApp(s => s.projection?.files);
-  const capturedRoot=useApp(s=>s.recording?.workspaceRoot);
+  const capturedRoot=useApp(s=>s.checkoutRoot??s.recording?.workspaceRoot);
+  const sessionRoot=useApp(s=>s.recording?.workspaceRoot);
+  const checkoutPrefix=useApp(s=>s.checkoutPrefix);
+  const checkoutId=useApp(s=>s.checkoutId),readingId=checkoutId??id;
+  const [switching,setSwitching]=useState(false);
+  const [pickerOpen,setPickerOpen]=useState(false);
+  const [pickerQuery,setPickerQuery]=useState('');
+  const pickerRef=useRef<HTMLDetailsElement>(null);
+  const pickerSearchRef=useRef<HTMLInputElement>(null);
+  const pickerListRef=useRef<HTMLDivElement>(null);
   const [touchedOnly, setTouchedOnly] = useState(false);
   const [rootRefresh,setRootRefresh]=useState(0);
   const fileRoots=useFileRoots(projection.observationCount+rootRefresh);
-  useEffect(() => setTouchedOnly(false), [id]);
+  useEffect(() => { setTouchedOnly(false); setPickerOpen(false); setPickerQuery(''); if (pickerRef.current) pickerRef.current.open = false; }, [id]);
   const touched = useMemo(() => touchedFiles(files ?? []), [files]);
   const hidden = useApp(s => s.foldersHidden);
   const narrow = useNarrowWorkspace(), developerWorkspace = useApp(s => s.developerWorkspace);
-  const memory=useWorkspaceMemory();
+  const memory=useWorkspaceMemory(readingId);
   // Primitive snapshots stay stable during unrelated document/scroll writes. The
   // state hook is owner-local; a second copy would miss Workspace tab changes.
   const workspaceSnapshot=useSyncExternalStore(subscribeWorkspaceFiles,()=>{
@@ -196,25 +257,27 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   useEffect(() => { const resize = () => setViewport(innerWidth); window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize); }, []);
   const maximumWidth = Math.max(220*interfaceScale, Math.min(420*interfaceScale, Math.floor(viewport * .32)));
   const readingWidth = Math.max(220*interfaceScale, Math.min(maximumWidth, width*interfaceScale));
+
   const shown = !hidden && (!narrow || hidden === false);
+  const overlay = modern && shown && !developerWorkspace && narrow;
   const explorer = useRef<HTMLElement>(null);
   const present=useSurfacePresence(shown?true:undefined,explorer,'panel',id);
   const closeExplorer = (returnFocus = false) => {
     useApp.setState({ foldersHidden: true });
     if (returnFocus && narrow) document.querySelector<HTMLElement>(developerWorkspace ? '.developer-workspace [data-workspace-files-trigger]' : '.workspace-bar [data-workspace-files-trigger]')?.focus({ preventScroll: true });
   };
-  const { workspace, approve } = useSessionWorkspace();
-  const [query, setQuery] = useWorkspaceState('folders/query', '');
+  const { workspace, approve } = useReadingWorkspace();
+  const [query, setQuery] = useWorkspaceState('folders/query', '',readingId);
   const [approving,setApproving] = useState(false);
   const [remember,setRemember]=useState(true);
-  const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']));
+  const [opened, setOpened] = useWorkspaceState('folders/open', () => new Set<string>(['']),readingId);
   useLayoutEffect(()=>{
     const next=canonicalFileFolders(opened,fileRoots,capturedRoot ?? projection.workspaceRoot);
     if(next!==opened)setOpened(next);
   },[opened,fileRoots,capturedRoot,projection.workspaceRoot,setOpened]);
   useEffect(()=>{const reveal=(event:Event)=>{const path=(event as CustomEvent).detail;if(typeof path==='string'){setQuery(path);setTouchedOnly(false);}};window.addEventListener('drishya-reveal-captured-file',reveal);return()=>window.removeEventListener('drishya-reveal-captured-file',reveal);},[setQuery,setTouchedOnly]);
   const treeElement = useRef<HTMLDivElement>(null);
-  const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0);
+  const [treeScroll, setTreeScroll] = useWorkspaceState('folders/top', 0,readingId);
   const [treeHeight, setTreeHeight] = useState(600);
   const folderAnchor = useRef<{ path: string; offset: number } | undefined>(undefined);
   const [error, setError] = useState<string>();
@@ -229,9 +292,9 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   useEffect(() => {
     if (graph || !source || !id) return;
     let active = true; setError(undefined);
-    void source.graph(id).then(g => { if (active && useApp.getState().recordingId === id) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
+    void source.graph(readingId!).then(g => { if (active && useApp.getState().recordingId === id && (useApp.getState().checkoutId??id)===readingId) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, graph, graphRetry]);
+  }, [source, id, readingId, graph, graphRetry]);
   const candidatePaths = useMemo(() => {
     const paths=[...(graph?.nodes.map(n=>n.path)??[]),...(files?.map(f=>f.path)??[])].filter(p=>!(graph?.temporal==='current'&&p.startsWith('.local/'))&&!p.startsWith('/')&&!/^[A-Za-z]:/.test(p));
     if(developerWorkspace)paths.push(...draftFiles);
@@ -325,7 +388,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       closeExplorer();
     };
     const escape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.tree-evidence-filter[open]')) return;
+      if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open]') || event.target instanceof Element && event.target.closest('.tree-evidence-filter[open], .checkout-picker[open]') || element.querySelector('.checkout-picker[open]')) return;
       if (!element.contains(event.target as Node) && !(event.target instanceof Element && event.target.closest('[data-workspace-files-trigger]'))) return;
       event.preventDefault(); event.stopPropagation(); closeExplorer(true);
     };
@@ -371,11 +434,63 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     else if((index+1)*rowHeight>element.scrollTop+element.clientHeight)element.scrollTop=(index+1)*rowHeight-element.clientHeight;
     setTreeScroll(element.scrollTop);
   },[tree,shown,treeHeight,query,touchedOnly,opened,activeReveal,setTreeScroll]);
-  const rootName = workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
+  const choose=async(prefix?:string)=>{
+    if(!source||!id||switching)return;
+    setSwitching(true);setError(undefined);
+    try {
+      const choice=await workspaceApi.chooseCheckout(id,prefix);
+      if(useApp.getState().source!==source||useApp.getState().recordingId!==id)return;
+      memory.set('peek/last',useApp.getState().currentFile);
+      const target=workspaceMemory(source).session(choice.id);
+      setCheckoutContext(id,choice.id);
+      useApp.setState({checkoutId:choice.id===id?undefined:choice.id,checkoutRoot:choice.id===id?undefined:choice.root,checkoutPrefix:choice.prefix,graph:undefined,currentFile:target.get('peek/last') as string|undefined,filePanel:undefined});
+      window.dispatchEvent(new Event('drishya-checkout-changed'));
+    } catch(error){setError((error as Error).message);}
+    finally{setSwitching(false);}
+  };
+  const pickerModel = useMemo(() => source?.kind === 'daemon' ? buildCheckoutPickerModel({ fileRoots, sessionRoot, checkoutPrefix }) : undefined, [source?.kind, fileRoots, sessionRoot, checkoutPrefix]);
+  const filteredPicker = useMemo(() => pickerModel ? filterCheckoutOptions(pickerModel.options, pickerQuery) : undefined, [pickerModel, pickerQuery]);
+  useEffect(() => { if (!shown) { setPickerOpen(false); setPickerQuery(''); } }, [shown]);
+  useLayoutEffect(() => {
+    const details = pickerRef.current;
+    if (!pickerOpen || !details || !shown) return;
+    const fit = () => {
+      const summary = details.querySelector<HTMLElement>(':scope > summary')?.getBoundingClientRect();
+      if (!summary) return;
+      const deskBottom = details.closest<HTMLElement>('.developer-workspace')?.getBoundingClientRect().bottom;
+      const composer = document.querySelector<HTMLElement>('.prompt-composer');
+      const composerRect = composer && getComputedStyle(composer).visibility !== 'hidden' ? composer.getBoundingClientRect() : undefined;
+      const composerLimit = composerRect && composerRect.height > 0 && composerRect.top > summary.bottom + 84 ? composerRect.top - 12 : undefined;
+      const bottomLimit = Math.min(window.innerHeight - 16, ...(deskBottom !== undefined ? [deskBottom - 12] : []), ...(composerLimit !== undefined ? [composerLimit] : []));
+      const available = Math.max(120, Math.floor(bottomLimit - summary.bottom - 8));
+      details.style.setProperty('--checkout-menu-max', `${Math.min(360, available)}px`);
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    const composerNode = document.querySelector<HTMLElement>('.prompt-composer');
+    const observer = composerNode ? new ResizeObserver(fit) : undefined;
+    if (composerNode) observer?.observe(composerNode);
+    return () => { window.removeEventListener('resize', fit); observer?.disconnect(); };
+  }, [pickerOpen, shown, narrow, developerWorkspace, pickerModel?.showFilter, filteredPicker?.present.length, filteredPicker?.unavailable.length]);
+  const rootName = (workspace?.root??capturedRoot)?.replace(/\\/g, '/').split('/').at(-1) ?? 'Session files';
+  const renderCheckoutOption = (option: CheckoutPickerOption) => <button type="button" className="btn ghost checkout-option" key={option.key} title={option.root} data-checkout={option.prefix} aria-label={option.accessibleName} aria-description={option.metadata} aria-pressed={pickerModel?.activeKey === option.key} disabled={switching || developerWorkspace || (option.kind === 'worktree' && option.onDisk !== 'present')} onClick={event => { const details = event.currentTarget.closest('details'); if (details) details.open = false; setPickerOpen(false); setPickerQuery(''); void choose(option.prefix); details?.querySelector<HTMLElement>(':scope > summary')?.focus({ preventScroll: true }); }}><span className="checkout-option-head"><span className="checkout-option-name">{option.title}</span>{option.kind === 'session' && <span className="checkout-option-role">Session checkout</span>}</span><small className="checkout-option-meta">{option.metadata}</small></button>;
+  const checkoutPicker = pickerModel && filteredPicker && (<details ref={pickerRef} className="desk-options checkout-picker" onToggle={event => { const open = event.currentTarget.open; setPickerOpen(open); if (!open) setPickerQuery(''); else if (pickerModel.showFilter) requestAnimationFrame(() => pickerSearchRef.current?.focus({ preventScroll: true })); }} onKeyDown={event => { const list = pickerListRef.current; const input = pickerSearchRef.current; if (!list) return; const enabled = [...list.querySelectorAll<HTMLButtonElement>('button:not(:disabled)')]; if (event.target === input) { if (event.key === 'ArrowDown' && enabled.length) { event.preventDefault(); event.stopPropagation(); enabled[0]!.focus({ preventScroll: true }); } else if (event.key === 'ArrowUp' && enabled.length) { event.preventDefault(); event.stopPropagation(); enabled.at(-1)!.focus({ preventScroll: true }); } } else if (input && event.key === 'ArrowUp' && event.target === enabled[0]) { event.preventDefault(); event.stopPropagation(); input.focus({ preventScroll: true }); } }}>
+    <summary aria-label="Choose browsing checkout"><span className="checkout-picker-label">{switching ? 'Switching…' : pickerModel.summaryTitle}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5z"/></svg></summary>
+    <div className="desk-options-body" role="group" aria-label="Recorded checkouts">
+      {pickerModel.showFilter && <div className="checkout-picker-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input ref={pickerSearchRef} type="text" aria-label="Filter recorded checkouts" placeholder="Filter checkouts…" maxLength={200} value={pickerQuery} onChange={e => setPickerQuery(e.target.value)} />{pickerQuery && <button type="button" aria-label="Clear checkout filter" onClick={() => { setPickerQuery(''); pickerSearchRef.current?.focus({ preventScroll: true }); }}>×</button>}</div>}
+      <div ref={pickerListRef} className="checkout-picker-list" onFocusCapture={event => { const list = event.currentTarget; const row = (event.target as HTMLElement).closest<HTMLElement>('button'); if (!row || !list.contains(row)) return; if (row.offsetTop < list.scrollTop) list.scrollTop = Math.max(0, row.offsetTop - 4); else if (row.offsetTop + row.offsetHeight > list.scrollTop + list.clientHeight) list.scrollTop = row.offsetTop + row.offsetHeight - list.clientHeight + 4; }}>
+        {filteredPicker.present.map(renderCheckoutOption)}
+        {filteredPicker.present.length > 0 && filteredPicker.unavailable.length > 0 && <div className="checkout-picker-divider" role="separator" aria-label="Removed and unavailable checkouts"><span>Unavailable on disk</span></div>}
+        {filteredPicker.unavailable.map(renderCheckoutOption)}
+        {!filteredPicker.present.length && !filteredPicker.unavailable.length && <p className="checkout-picker-empty" role="status">No matching checkouts</p>}
+      </div>
+    </div>
+  </details>);
   if (!present) return null;
-  return <aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
+  return <>{shown && overlay && <div className="files-scrim" aria-hidden="true" onPointerDown={event => { event.preventDefault(); closeExplorer(true); }} />}<aside ref={explorer} style={{width: modern && !narrow ? `${readingWidth}px` : undefined,top: narrow && developerWorkspace ? 'var(--desk-tools-bottom, calc(var(--workspace-header-h, 62px) + 80px))' : undefined}} className="folder-explorer spine" data-reading-access={workspace?.approved?'current':workspace||source?.kind!=='daemon'?'captured':'checking'} aria-label={modern ? 'Repository files' : 'Session folders'}>
     {modern && !narrow && <ReadingResize value={readingWidth} minimum={220*interfaceScale} maximum={maximumWidth} change={pixels=>setWidth(pixels/interfaceScale)} reset={()=>setWidth(260)} label="Resize Files reading space" />}
-    <header><div className="folder-root" title={workspace?.root}>{rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
+    <header><div className="folder-root" title={workspace?.root}>{checkoutPicker||rootName}</div><button className="icon-btn" aria-label={document.documentElement.dataset.uiVersion === 'modern' ? 'Minimize files' : 'Minimize folders'} onClick={() => closeExplorer(true)}>{narrow ? <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg> : '‹'}</button></header>
+
     <div className="ux-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6" /><path d="m15 15 5 5" /></svg><input aria-label={modern ? 'Find repository files' : 'Find session files'} placeholder={touchedOnly?'Find touched files…':'Find files…'} maxLength={200} value={query} onChange={e => setQuery(e.target.value)} />{query && <button aria-label="Clear file search" onClick={() => setQuery('')}>×</button>}
       <details className="desk-options tree-evidence-filter" data-touched={touchedOnly} onKeyDown={event=>{if(event.key==='Escape'&&event.currentTarget.open){event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector('summary')?.focus();}}}>
         <summary aria-label="File filters" title={touchedOnly?'File filters · Touched':'File filters'}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14M5 10h10M8 16h4" strokeWidth="1.5"/></svg></summary>
@@ -411,42 +526,44 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         else if (row.unplaced || row.location && currentPath===undefined) useApp.getState().set({filePanel:row.path,currentFile:undefined,...(narrow?{foldersHidden:true}:{})});
         else if (useApp.getState().developerWorkspace) window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: currentPath ?? row.path }));
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
-        else useApp.getState().set({...(workspace?.approved ? { currentFile: currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
+        else useApp.getState().set({...(workspace?.approved ? { currentFile: checkoutId?row.path:currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
       }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} />{row.metadata?<span className="worktree-root-text" title={row.description}><FileRowName name={row.name} folder={row.folder}/><small className="muted">{row.metadata}</small></span>:<FileRowName name={row.name} folder={row.folder}/>}{row.count!==undefined&&<small className="muted" aria-hidden="true">{row.count}</small>}<FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
       {!tree.length && <p className="muted small">{query ? 'No matching files' : touchedOnly ? 'No file activity' : 'No relative paths recorded yet'}</p>}
       <div aria-hidden="true" style={{ height: (tree.length - lastRow) * rowHeight }} />
     </div>
-  </aside>;
+  </aside></>;
 }
 
 export function CurrentFileReader() {
   const path=useApp(s=>s.currentFile),id=useApp(s=>s.recordingId),explore=useApp(s=>s.explore),inWorkspace=useApp(s=>s.developerWorkspace);
+  const checkoutId=useApp(s=>s.checkoutId),prefix=useApp(s=>s.checkoutPrefix),readingId=checkoutId??id;
   const modern=document.documentElement.dataset.uiVersion==='modern';
-  const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]}),[error,setError]=useState('');
+  const [saved,setSaved]=useWorkspaceState<FilePeekState>('peek/tabs',{files:[]},readingId),[error,setError]=useState('');
   const tabs=useMemo(()=>filePeekState(saved),[saved]);
   const [closingTab,setClosingTab]=useState<FilePeekState|undefined>();
-  const select=(next:string)=>{setClosingTab(undefined);useApp.getState().set({currentFile:next,filePanel:undefined,selectedOp:undefined});};
-  const open=(next:string,pin=false)=>{const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
+  const qualify=(next:string)=>prefix&&!/^worktree-[a-f0-9]{10}\//.test(next)?`${prefix}/${next}`:next;
+  const select=(next:string)=>{setClosingTab(undefined);useApp.getState().set({currentFile:qualify(next),filePanel:undefined,selectedOp:undefined});};
+  const open=(next:string,pin=false)=>{next=qualify(next);const result=openFilePeek(tabs,next,pin);setError(result.error??'');if(result.error)return;setSaved(result.state);select(next);};
   useEffect(()=>{if(modern&&path&&!explore&&!tabs.files.includes(path)&&tabs.preview!==path)setSaved(openFilePeek(tabs,path).state);},[modern,path,explore,tabs]);
   useEffect(()=>{
     const receive=(event:Event)=>{const request=(event as CustomEvent<{path:string;pin?:boolean}>).detail;if(!modern||!id||!request||typeof request.path!=='string')return;open(request.path,request.pin);};
     window.addEventListener('drishya-preview-file',receive);return()=>window.removeEventListener('drishya-preview-file',receive);
-  },[modern,id,tabs]);
+  },[modern,id,tabs,prefix]);
   // Keep the selected peek location while the full Workspace owns the screen.
   if(!path||!id||inWorkspace)return null;
   const closeTab=(file:string)=>{const next=closeFilePeek(tabs,file);setError('');if(path===file&&!next.preview&&!next.files.length){setClosingTab(next);return;}setSaved(next);if(path===file)useApp.setState({currentFile:next.preview??next.files.at(-1)});};
   const dismiss=()=>{if(closingTab)setSaved(closingTab);setClosingTab(undefined);useApp.setState({currentFile:undefined});};
-  return <CurrentDocument key={id} id={id} path={path} closing={!!closingTab} dismiss={dismiss} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
+  return <CurrentDocument key={readingId} id={readingId!} path={path} closing={!!closingTab} dismiss={dismiss} tabs={modern&&!explore?<FilePeekTabs state={tabs} path={path} select={select} pin={file=>open(file,true)} close={closeTab} error={error}/>:undefined}/>;
 }
 function CurrentDocument({ id, path, tabs,closing,dismiss }: { id: string; path: string;tabs?:ReactNode;closing?:boolean;dismiss?:()=>void }) {
-  const memory=useWorkspaceMemory();
+  const memory=useWorkspaceMemory(id);
   const source=useApp(s=>s.source),revision=useApp(s=>s.projection?.observationCount??0);
   const fileRoots=useFileRoots(revision);
   const modern=document.documentElement.dataset.uiVersion==='modern';
   const explore = useApp(s => s.explore);
   const narrow=useNarrowWorkspace();
-  const {workspace,approve}=useSessionWorkspace();
-  const recordedPath=currentFileOrigin(source,id,path,fileRoots,workspace?.root);
+  const {workspace,approve}=useReadingWorkspace();
+  const recordedPath=currentFileOrigin(source,id.split('~')[0]!,path,fileRoots,workspace?.root);
   const projection=useApp(s=>s.projection),target=currentReadingTarget(path,fileRoots,workspace?.root??projection?.workspaceRoot);
   const [granting,setGranting]=useState(false),[grantError,setGrantError]=useState('');
   const [start, setStart] = useEvidenceState('disk/start', 0);
@@ -489,18 +606,18 @@ function CurrentDocument({ id, path, tabs,closing,dismiss }: { id: string; path:
     catch { setCopied('Copy unavailable · select the text to copy.'); }
   };
   const peek=modern&&!explore;
-  const returnToGit = peek && memory.get('git/open') === true ? <button className="btn ghost" aria-label="Return to Git review" title="Return to Git review" onClick={() => window.dispatchEvent(new Event('drishya-git-review'))}>← Git</button> : undefined;
+  const returnToChanges = peek && memory.get('compare/return') === true ? <button className="btn ghost" aria-label="Return to Changes" title="Return to Changes" onClick={() => openChanges()}>← Changes</button> : undefined;
   const refusal=target.reason??currentReadingFailure(error)??currentReadingFailure(grantError);
-  if(projection&&!file&&refusal)return <ReadingDialog title={path} closing={closing} close={dismiss??(()=>useApp.setState({currentFile:undefined}))} className="current-file-reader file-peek-reader" modeless floating headerExtra={tabs} headerActions={returnToGit}><CapturedFileFallback path={recordedPath??path} projection={projection} reason={refusal}/></ReadingDialog>;
-  const fileActions=<><button disabled={!target.path} className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title="Open this current file in Workspace for split views and local drafts">{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Agent work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Agent work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button>{!narrow&&<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace compact/>}</>;
+  if(projection&&!file&&refusal)return <ReadingDialog title={path} closing={closing} close={dismiss??(()=>useApp.setState({currentFile:undefined}))} className="current-file-reader file-peek-reader" modeless floating headerExtra={tabs} headerActions={returnToChanges}><CapturedFileFallback path={recordedPath??path} projection={projection} reason={refusal}/></ReadingDialog>;
+  const fileActions=<><button disabled={!target.path||id.includes('~')} className={peek?'btn ghost current-reader-icon':'btn ghost'} aria-label="Open in Workspace" onClick={() => { useApp.getState().set({ developerWorkspace: true, explore: false, ...(peek?{}:{currentFile:undefined}), filePanel: undefined, foldersHidden: false, follow: false }); window.dispatchEvent(new CustomEvent('drishya-open-workspace-file', { detail: path })); }} title={id.includes('~')?'Workspace edits belong to the session checkout; return there to edit.':'Open this current file in Workspace for split views and local drafts'}>{peek?<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/></svg>:'Workspace'}</button><button className="btn ghost current-reader-icon" aria-label="Refresh" title="Refresh current file" disabled={!workspace?.approved||current.busy} onClick={() => void current.refresh()}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M20 12a8 8 0 1 0-2 5"/></svg></button><button className="btn ghost current-reader-icon" aria-label="Agent work on this file" disabled={recordedPath===undefined} title={recordedPath===undefined?"Recorded location unavailable":"Agent work on this file"} onClick={() => {if(recordedPath!==undefined)useApp.getState().set({ currentFile: undefined, filePanel: recordedPath });}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4v5h5M3 9a9 9 0 1 1 0 7M12 7v5l3 2"/></svg></button>{!narrow&&<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace compact/>}</>;
   const lineControls=<form className="source-go" onSubmit={e=>{e.preventDefault();go();}}><input aria-label="Go to current source line" placeholder="Line" inputMode="numeric" maxLength={16} value={lineInput} onChange={e=>{setLineInput(e.target.value);setLineError(undefined);}}/><button className="btn ghost small" aria-label="Go to line" disabled={!file}>Go</button><button type="button" className="btn ghost small" aria-label="Wrap lines" aria-pressed={wrap} onClick={()=>setWrap(!wrap)}>Wrap</button><span role="status">{lineError}</span></form>;
   const phoneOptions=<details className="desk-options current-reader-options" onKeyDown={event=>{if(event.key!=='Escape'||!event.currentTarget.open)return;event.preventDefault();event.stopPropagation();event.currentTarget.open=false;event.currentTarget.querySelector<HTMLElement>(':scope>summary')?.focus({preventScroll:true});}}><summary aria-label="Reading options" title="Reading options"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16M9 3v6M15 9v6M9 15v6"/></svg></summary><div>
-   <span className="reader-source-context">{file?`${current.candidate?'Retained snapshot':'On disk'} · ${file.totalLines} lines${file.redacted?' · secrets redacted':''}`:'Current file not loaded'}</span>
+   <span className="reader-source-context">{file?`${current.candidate?'Retained snapshot':'On disk'} · ${plural(file.totalLines,'line')}${file.redacted?' · secrets redacted':''}`:'Current file not loaded'}</span>
    {!formatted&&workspace?.approved&&lineControls}
    <button className="btn ghost" disabled={!file} onClick={()=>void copy()}>Copy file</button>{fileActions}<FileReadingActions path={recordedPath??path} hideCaptured hideWorkspace/>
    {copied&&<span role="status">{copied}</span>}
   </div></details>;
-  return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} closing={closing} close={dismiss??(() => useApp.setState({ currentFile: undefined }))} className={`current-file-reader${modern&&!explore?' file-peek-reader':''}`} modeless={explore||modern} floating={modern&&!explore} headerExtra={tabs} headerActions={peek?<>{returnToGit}{narrow?phoneOptions:fileActions}</>:undefined} style={explore ? undefined : { width: modern?undefined:`min(${width}px, calc(100vw - 28px))` }}>
+  return <ReadingDialog title={path} windowId={explore?undefined:'File reader'} resetWindow={()=>setWidth(1040)} closing={closing} close={dismiss??(() => useApp.setState({ currentFile: undefined }))} className={`current-file-reader${modern&&!explore?' file-peek-reader':''}`} modeless={explore||modern} floating={modern&&!explore} headerExtra={tabs} headerActions={peek?<>{returnToChanges}{narrow?phoneOptions:fileActions}</>:undefined} style={explore ? undefined : { width: modern?undefined:`min(${width}px, calc(100vw - 28px))` }}>
     {file && readingVersion && file.modifiedAt !== readingVersion && <p className="small" role="status">This reading location was saved for another file version.</p>}
     {!explore && !modern && <ReadingResize value={width} minimum={640} maximum={1600} change={setWidth} reset={()=>setWidth(1040)} label="Resize current source reading space" fromRight />}
     {!peek&&<div className="current-file-meta"><EvidenceNavigation compact hideEmpty/><span className="tag" title="Checked disk snapshot · not a historical artifact">{current.candidate?'Retained':file?'On disk':'Current file'}</span>{fileActions}</div>}
@@ -513,7 +630,7 @@ function CurrentDocument({ id, path, tabs,closing,dismiss }: { id: string; path:
     {workspace?.approved&&!peek&&<ImportContext path={path} current hideEmpty />}
     {!workspace?<p className="current-reader-access" role="status">Checking workspace access…</p>:!workspace.approved&&<section className="current-reader-access" aria-label="Current file access"><h3>Read current files</h3><p>{workspace.root?`Approve reading in ${workspace.root}.`:'This session recorded no workspace on this machine.'}</p><button className="btn" disabled={granting||!workspace.root} onClick={()=>{setGranting(true);setGrantError('');void approve().catch(error=>setGrantError(error.message)).finally(()=>setGranting(false));}}>{granting?'Approving…':'Approve current-file reading'}</button>{grantError&&<p role="alert">{grantError}</p>}</section>}
     {error && <p className="bad" role="alert">{error} <button className="btn" onClick={() => void current.refresh()}>Retry current source</button></p>}
-    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{file.totalLines} lines{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
+    {!file ? workspace?.approved&&!error&&<p className="muted" role="status">Reading current file…</p> : <>{oversized&&<p role="status" className="document-limit-note">{documentLimitMessage(documentSize)} Showing the source.</p>}<div key={formatted?'document':'source'} ref={code} id={peek?'current-file-peek-source':undefined} role={peek?'tabpanel':undefined} className={`current-file-code ${formatted?'desk-markdown':`source-reading${wrap?' wrap-source':''}`}`} tabIndex={0} aria-label={formatted?`Rendered document ${path}`:`Source ${path}`}>{formatted?<Markdown text={file.text} document/>:<WholeSource text={file.text} path={path} viewport={code} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={activeLine} revealRequest={revealRequest}/>}</div><footer><span title={`Current file version: ${file.modifiedAt}`}>{peek?(current.candidate?'Retained snapshot · ':'On disk · '):''}{plural(file.totalLines,'line')}{file.redacted ? ' · secrets redacted' : ''}</span><button className="btn ghost" onClick={() => void copy()}>Copy file</button><span role="status">{copied}</span></footer></>}
   </ReadingDialog>;
 }
 
@@ -691,7 +808,7 @@ export function PromptComposer() {
       for (const surface of node.querySelectorAll<HTMLElement>('.native-turn-details, .queued-input-receipts')) {
         if (!observed.has(surface)) { observer.observe(surface); observed.add(surface); }
         if (!surface.getClientRects().length) continue;
-        if (surface.matches('.queued-input-receipts') && surface.querySelector('button')?.checkVisibility({ visibilityProperty: true }) === false) continue;
+        // UI-32b: keep receipt clearance constant across Follow toggles so history padding and Toolbox never shift.
         raised = Math.max(raised, top - layoutTop(surface));
       }
       viewer.style.setProperty('--composer-raised-gap', `${Math.ceil(raised)}px`);
@@ -727,9 +844,20 @@ export function PromptComposer() {
   };
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const settingsModels = controller?.settings?.models ?? [];
-  const modelId = options.model ?? controller?.settings?.model;
+  // UI-43: Claude Code lists its own "default" model; choosing it is the same as no override, so Drishya adds no second Default.
+  const nativeDefault = settingsModels.find(model => model.id === 'default');
+  const reported = controller?.settings?.model;
+  // A connected Claude turn reports the resolved id ("claude-opus-5-5"), which is not one of its menu entries; keep the menu's own name then.
+  const modelId = options.model ?? (reported && (settingsModels.some(model => model.id === reported) || !nativeDefault) ? reported : nativeDefault?.id);
   const modelEfforts = settingsModels.find(model => model.id === modelId)?.efforts ?? [];
   const modelLabel = settingsModels.find(model => model.id === modelId)?.name ?? modelId ?? 'Default model';
+  const harnessName = recording?.harness === 'codex' ? 'Codex' : 'Claude Code';
+  const permissions = controller?.settings?.permissions ?? [];
+  const currentPermission = nativeCurrentPermission(recording?.harness, controller?.settings?.sandbox);
+  const permissionId = options.permission ?? currentPermission;
+  const permissionChoice = permissionId ? permissionLabel(permissionId) : undefined;
+  // An explicit choice is always passed, even when it matches the last report: a connected Codex turn reports its own sandbox, which a later resume may not keep.
+  const choosePermission = (id: string | undefined) => { setOptions({ ...options, permission: id }); setConfirmSend(false); };
   const connectionSetup = <>      {!workspace?.approved && <><button className="btn" disabled={busy || !workspace?.root} onClick={() => void act(()=>approve(modern&&remember))}>Enable this workspace</button>{modern&&<RememberCheckbox checked={remember} disabled={busy} onChange={setRemember} />}</>}
       {controller && !controller.available && <details className="cli-setup" open><summary>Connect your {recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} CLI</summary>{recording?.harness === 'codex' ? <><p>In a terminal, install and sign in:</p><code>npm install -g @openai/codex</code><code>codex login</code><p>If the command is not found, reopen the terminal or use <code>npx @openai/codex login</code>. Drishya also checks standard Windows installations automatically.</p></> : <p>Install the native Claude Code CLI and sign in using its terminal client.</p>}<button type="button" onClick={() => void refresh()}>Check again</button></details>}
 </>;
@@ -762,13 +890,17 @@ export function PromptComposer() {
             { key: 'folder', label: 'Folder contents', hint: 'Up to 32 files in total', select: () => folderInput.current?.click() },
           ]} />
           {controller && <ComposerMenu label="Model" className="composer-model" disabled={!!running || busy} title="Model for the next prompt" trigger={<><span>{modelLabel}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
-            { key: 'default', label: 'Default', hint: settingsModels.find(model => model.id === controller.settings?.model)?.name, checked: !options.model, select: () => { setOptions({}); setConfirmSend(false); } },
-            ...settingsModels.map(model => ({ key: model.id, label: model.name, checked: options.model === model.id, select: () => { setOptions({ model: model.id }); setConfirmSend(false); } })),
+            ...(nativeDefault ? [] : [{ key: 'default', label: 'Default', hint: settingsModels.find(model => model.id === controller.settings?.model)?.name, checked: !options.model, select: () => { setOptions({ permission: options.permission }); setConfirmSend(false); } }]),
+            ...settingsModels.map(model => ({ key: model.id, label: model.name, hint: model.description, checked: model === nativeDefault ? !options.model : options.model === model.id, select: () => { setOptions({ ...(model === nativeDefault ? {} : { model: model.id }), permission: options.permission }); setConfirmSend(false); } })),
             ...(settingsModels.length ? [] : [{ key: 'load', label: 'Load model list', hint: workspace?.approved ? `Asks ${recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} which models it offers` : 'Enable this workspace first', disabled: !workspace?.approved || !inspect, select: () => inspect && void act(inspect) }]),
           ]} />}
           {!!modelEfforts.length && <ComposerMenu label="Reasoning effort" className="composer-effort" disabled={!!running || busy} title="Reasoning effort for the next prompt" trigger={<><span>{options.effort ?? 'Default effort'}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
             { key: 'default', label: 'Default', checked: !options.effort, select: () => { setOptions({ ...options, effort: undefined }); setConfirmSend(false); } },
             ...modelEfforts.map(effort => ({ key: effort, label: effort, checked: options.effort === effort, select: () => { setOptions({ ...options, effort }); setConfirmSend(false); } })),
+          ]} />}
+          {!!permissions.length && <ComposerMenu label="Permissions" className={`composer-permission${permissionChoice?.danger ? ' is-bypass' : ''}`} disabled={!!running || busy} title={permissionChoice?.danger ? `${permissionChoice.label}: ${harnessName} will not ask before edits or commands in the next prompt` : `${harnessName} permission mode for the next prompt`} trigger={<>{permissionChoice?.danger && <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.75 2.75 3.9v3.6c0 3 2.2 5.6 5.25 6.75 3.05-1.15 5.25-3.75 5.25-6.75V3.9Z" /><path d="M8 5.25v3.25m0 2.25v.01" /></svg>}<span>{permissionChoice?.label ?? 'Permissions'}</span><svg className="composer-chevron" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></>} items={[
+            ...(currentPermission ? [] : [{ key: 'native', label: 'As configured', hint: `${harnessName} uses its own settings`, checked: !options.permission, select: () => choosePermission(undefined) }]),
+            ...permissions.map(mode => { const shown = permissionLabel(mode.id); return { key: mode.id, label: shown.label, hint: mode.allowed ? mode.description ?? shown.hint : `Not allowed by your ${harnessName} settings`, checked: permissionId === mode.id, disabled: !mode.allowed, tone: shown.danger ? 'danger' as const : undefined, select: () => choosePermission(mode.id) }; }),
           ]} />}
         </div> : <button type="button" className="composer-add" aria-label="Add files or folders" aria-expanded={addOpen} disabled={!!running || busy || loadingFiles} onClick={e => { setAddPointer(e.detail > 0); setAddOpen(!addOpen); }}>+</button>}{loadingFiles && <small role="status">Preparing files…</small>}{running ? <button type="button" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))} aria-label="Stop turn" className="stop-turn" title="Stop this turn"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg>{modern && <span>Stop</span>}</button> : <button type="submit" className="send-prompt" aria-label="Send prompt" title={cannotSend ? sendWaits : 'Send prompt'} disabled={cannotSend}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 15V5m-4 4 4-4 4 4" /></svg></button>}</div>
         {!modern && <div className="composer-add-menu" hidden={!addOpen} data-pointer-menu={addPointer ? '' : undefined}><button type="button" onClick={() => fileInput.current?.click()}>Files or images</button><button type="button" onClick={() => folderInput.current?.click()}>Folder contents</button><small>Text/code and PNG, JPEG, WebP, GIF · 32 files maximum. Paste screenshots or drop files here. Text secrets are scrubbed; check images before sending.</small></div>}

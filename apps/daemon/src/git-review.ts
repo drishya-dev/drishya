@@ -4,7 +4,7 @@ import { lstat, realpath } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { redactText } from '@drishya/privacy';
 import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
-import {gitHistory,gitCommit,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
+import {GitHistoryCache,gitHistory,gitCommit,gitRefGeneration,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
 import type { WorkspaceAccess } from './workspace.ts';
 
@@ -12,6 +12,9 @@ import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
 import type {HistoryService} from './history.ts';
 import {gitSessionContext} from './git-session-context.ts';
 import {gitRefSummary} from './git-ref.ts';
+import {githubRepo} from './git-compare.ts';
+import type {GithubLinks} from './github-links.ts';
+import type {GitGithubSquashMatch} from './git-types.ts';
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
 
 /** Fixed argv without a shell; snapshot also overrides configured content filters. */
@@ -69,10 +72,12 @@ const GIT_TURN_LIMIT = 8;
 export class GitReview {
   private grants = new Set<string>();
   private turns = new Map<string, { tail: Promise<unknown>; waiting: number }>();
+  private historyCache = new GitHistoryCache(64);
   private workspace: WorkspaceAccess;
   private read: GitReader;
   private historyService?:HistoryService;
-  constructor(workspace: WorkspaceAccess, read: GitReader = readGit, historyService?:HistoryService) { this.workspace = workspace; this.read = read; this.historyService=historyService; }
+  private github?:GithubLinks;
+  constructor(workspace: WorkspaceAccess, read: GitReader = readGit, historyService?:HistoryService, github?:GithubLinks) { this.workspace = workspace; this.read = read; this.historyService=historyService; this.github=github; }
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
@@ -86,28 +91,89 @@ export class GitReview {
     try{return await run;}
     finally{if(--turn.waiting===0)this.turns.delete(id);}
   }
-  private async readHistory<T>(id:string,inspect:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {
+  private async readHistory<T>(id:string,inspect:(git:(args:string[])=>Promise<string>,root:string)=>Promise<T>):Promise<T> {
     if(!this.grants.has(id))throw new HttpError(403,'Approve read-only Git inspection separately.');
     return this.inTurn(id,async()=>{
       const signal=AbortSignal.timeout(30_000);
       const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
       if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
-      const result=await inspect(git);
+      const result=await inspect(git,root);
       if(!this.grants.has(id)||await this.workspace.root(id)!==root)throw new HttpError(403,'Git reading access changed. Approve this workspace again.');
       return result;
     });
   }
   /** GIT-8: Compare reads through the same consent, turn and repository-root checks as History. */
-  inspect<T>(id:string,read:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {return this.readHistory(id,read);}
-  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async git=>{
-    const page=await gitHistory(git,query);
-    if(!this.historyService||id.includes('+'))return page;
-    const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001));
-    const evidence=await this.historyService.gitSessionEvidence(id,context.query);
+  inspect<T>(id:string,read:(git:(args:string[])=>Promise<string>)=>Promise<T>):Promise<T> {return this.readHistory(id,git=>read(git));}
+  generation(id:string) {return this.readHistory(id,async (git,root)=>{const generation=await gitRefGeneration(git);this.historyCache.syncGeneration(root,generation);return {generation};});}
+  history(id:string,query:GitHistoryQuery={}) {return this.readHistory(id,async (git,root)=>{
+    const page=await gitHistory(git,query,{root,cache:this.historyCache});
+    const [sessionData,githubPulls]=await Promise.all([
+      (async()=>{
+        if(!this.historyService||id.includes('+'))return undefined;
+        const context=await gitSessionContext(git,page.commits.map(commit=>commit.hash),page.start===0,path=>this.workspace.read(id,path,0,5001),root);
+        const evidenceQuery={commits:context.query.commits.map(commit=>({...commit,paths:commit.paths.map(path=>this.workspace.evidencePath(id,path))})),working:context.query.working.map(file=>({...file,path:this.workspace.evidencePath(id,file.path)}))};
+        const evidence=await this.historyService.gitSessionEvidence(this.workspace.evidenceId(id),evidenceQuery);
+        return {evidence,omitted:context.omitted};
+      })(),
+      this.resolveGithubPulls(git,page),
+    ]);
     // Check refs again after reading patches and captured evidence.
     await verifyGitHistoryGeneration(git,page.generation);
-    return {...page,sessionLinks:evidence.links,...(page.start===0?{workingTree:{files:evidence.working,omitted:context.omitted}}:{})};
+    return {
+      ...page,
+      ...(githubPulls.length?{githubPulls}:{}),
+      ...(sessionData?{sessionLinks:sessionData.evidence.links,...(page.start===0?{workingTree:{files:sessionData.evidence.working.map(file=>({...file,path:this.workspace.currentPath(id,file.path)})),omitted:sessionData.omitted}}:{})}:{}),
+    };
   });}
+  private async resolveGithubPulls(git:(args:string[])=>Promise<string>,page:Awaited<ReturnType<typeof gitHistory>>):Promise<GitGithubSquashMatch[]> {
+    if(!this.github?.enabled)return [];
+    const repo=await githubRepo(git);
+    if(!repo)return [];
+    const mergedReply=await this.github.mergedPulls(repo);
+    const rawMatches:GitGithubSquashMatch[]=mergedReply.status==='ready'?mergedReply.pulls.map(p=>({pr:p.number,headRef:p.headRef,headOid:p.headOid,mergeCommit:p.mergeCommit,basis:'github-pr' as const})):[];
+    const seenPr=new Set(rawMatches.map(m=>m.pr));
+    const subjectNums:number[]=[];
+    for(const commit of page.commits){
+      const m=/\(#([1-9]\d{0,8})\)\s*$/.exec(commit.subject);
+      const n=m?Number(m[1]):0;
+      if(n&&!seenPr.has(n)){seenPr.add(n);subjectNums.push(n);}
+    }
+    for(const n of subjectNums.slice(0,15)){
+      const reply=await this.github.pull(repo,n);
+      if(reply.status==='ready'&&reply.pull?.merged&&reply.pull.mergeCommit){
+        rawMatches.push({pr:reply.pull.number,headRef:reply.pull.headRef,headOid:reply.pull.headOid,mergeCommit:reply.pull.mergeCommit,basis:'github-subject-pr'});
+      }
+    }
+    if(!rawMatches.length)return [];
+    const rawRefs=await git(['for-each-ref','--format=%(objectname)%00%(refname)','refs/heads','refs/remotes']).catch(()=>'');
+    const tipsByBranch=new Map<string,Set<string>>();
+    for(const line of rawRefs.split(/\r?\n/)){
+      const [hash,refname]=line.split('\0');
+      if(!hash||!refname||/^refs\/remotes\/[^/]+\/HEAD$/.test(refname))continue;
+      const short=refname.startsWith('refs/heads/')?refname.slice('refs/heads/'.length):refname.replace(/^refs\/remotes\/[^/]+\//,'');
+      let set=tipsByBranch.get(short);if(!set){set=new Set();tipsByBranch.set(short,set);}
+      set.add(hash);
+    }
+    const ancCache=new Map<string,boolean>();
+    const isAnc=async(a:string,b:string)=>{const k=`${a}:${b}`;const hit=ancCache.get(k);if(hit!==undefined)return hit;const v=await git(['merge-base','--is-ancestor',a,b]).then(()=>true,()=>false);ancCache.set(k,v);return v;};
+    const existsCache=new Map<string,boolean>();
+    const hasCommit=async(h:string)=>{const hit=existsCache.get(h);if(hit!==undefined)return hit;const v=(await git(['cat-file','-t',h]).catch(()=>'')).trim()==='commit';existsCache.set(h,v);return v;};
+    const out:GitGithubSquashMatch[]=[];
+    for(const match of rawMatches){
+      const eligible=new Set<string>([match.headOid]);
+      const tips=tipsByBranch.get(match.headRef);
+      if(tips){
+        for(const t of tips){
+          if(t===match.headOid)continue;
+          if(await isAnc(match.mergeCommit,t))continue;
+          if(await hasCommit(match.headOid)&&!(await isAnc(t,match.headOid)))continue;
+          eligible.add(t);
+        }
+      }
+      out.push({...match,eligibleTips:[...eligible]});
+    }
+    return out;
+  }
   ref(id:string,rev:string) {return this.readHistory(id,git=>gitRefSummary(git,rev));}
   commit(id:string,hash:string,parent=0,start=0,generation?:string) {return this.readHistory(id,git=>gitCommit(git,hash,parent,start,generation));}
   async snapshot(id: string, start = 0): Promise<GitSnapshot> {

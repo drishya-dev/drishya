@@ -199,10 +199,6 @@
 .map-recovery .btn { display: block; margin-top: 8px; }
 .verification-tile.deselected, .verification-tile.xfailed, .verification-tile.xpassed { background: var(--t3); }
 .connected-workspace :is(.search input, .prompt-composer textarea):focus-visible { outline: none; }
-.git-previous-note { width: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
-.git-previous-note summary { cursor: pointer; color: var(--t2); font-size: var(--text-xs); padding: 6px 0; }
-.git-previous-note p { color: var(--t3); font-size: var(--text-xs); line-height: 1.5; }
-.git-previous-note textarea { margin-bottom: 8px; }
 .git-patch-reader { min-width: 0; }
 .git-patch-reader .code { font-size: var(--text-sm); line-height: 1.7; }
 .patch-hunk-jump { display: inline-flex; align-items: center; gap: 6px; font: var(--text-2xs) var(--mono); color: var(--t2); }
@@ -210,10 +206,6 @@
 .diff-reader.reader-wrap .ln-tx, .diff-reader.reader-wrap .change-text { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
 .diff-reader .patch-match { outline: 1px solid var(--line-2); outline-offset: -1px; background: var(--s2); }
 .git-patch-reader .reader-tools { flex-wrap: wrap; }
-.git-file-pages { padding: 8px 18px; flex-wrap: wrap; }
-.git-omission { display: grid; gap: 6px; padding: 10px 4px; font-size: var(--text-2xs); overflow-wrap: anywhere; border-top: 1px solid var(--line); }
-.git-omission strong { font: var(--text-2xs) var(--mono); }
-.git-omission span { color: var(--t3); line-height: 1.5; }
 .stored-source-find { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 4px 0 10px; }
 .review-question-editor { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; }
 .review-question-editor summary, .resolved-questions summary { cursor: pointer; font-size: var(--text-xs); padding: 8px 0; }
@@ -236,16 +228,11 @@
 .workspace-navigation-results strong { font-size: var(--text-sm); font-weight: var(--weight-medium); }
 .workspace-navigation-results small, .workspace-navigation-help { color: var(--t3); font-size: var(--text-2xs); line-height: 1.5; }
 .workspace-navigation-help { padding: 10px 20px; margin: 0; border-top: 1px solid var(--line); }
-.navigation-command-icon { color: var(--t2); width: 20px; flex-shrink: 0; }
+.navigation-command-icon { display: grid; place-items: center; color: var(--t2); width: 20px; height: 20px; flex-shrink: 0; } .navigation-command-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; } .workspace-navigation-heading { padding: 10px 12px 4px; color: var(--t3); font: var(--text-2xs)/1.4 var(--sans); letter-spacing: .05em; text-transform: uppercase; } .navigation-command-shortcut { margin-left: auto; flex: none; padding: 1px 6px; border: 1px solid var(--line); border-radius: var(--round-xs); background: var(--s2); color: var(--t2); font: var(--text-2xs)/1.4 var(--mono); }
 .workspace-navigation-open { display: flex; justify-content: space-between; gap: 8px; width: 100%; font-size: var(--text-2xs); }
 .workspace-navigation-open kbd { color: var(--t3); font: var(--text-2xs) var(--mono); }
-.product-dialog :is(input, textarea, select):focus-visible, .home :is(input, select):focus-visible { outline: 2px solid var(--t2); outline-offset: 2px; }
 
 /* Integrated reading: one viewport owns both axes, not a scrollbar under 120 lines. */
-.git-review-dialog .git-patch { max-height: none; overflow: visible; padding: 8px 20px 16px; }
-.git-patch :is(.diff-scroll,.git-raw-scroll) { max-height: clamp(180px, 38dvh, 440px); overflow: auto; scrollbar-gutter: stable; scrollbar-width: thin; border-radius: var(--round-sm); }
-.git-patch .git-raw-scroll > .code { overflow: visible; }
-.git-patch .diff-scroll .code { overflow: visible; }
 .source-find { gap: 6px; align-items: center; }
 .source-find input { min-height: 32px; padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--round-md); color: var(--t1); background: var(--bg); font: var(--text-xs) var(--sans); }
 .artifact-reader .reader-tools .btn { border-color: transparent; background: transparent; border-radius: var(--round-sm); font: var(--text-2xs) var(--sans); padding-inline: 9px; }
@@ -256,19 +243,6 @@
 :is(.product-dialog,.history .op.expanded) .source-reading > .code,
 .current-file-code.source-reading { max-height: min(48dvh, 520px); overflow: auto; scrollbar-width: thin; scrollbar-gutter: stable; }
 .current-file-code.source-reading > .code { max-height: none; overflow: visible; }
-.source-reading > .code:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }
-.git-patch .diff-scroll .ln { min-width: max-content; }
-.git-patch .reader-wrap .diff-scroll .ln { min-width: 0; }
-.git-patch .diff-scroll .change-row { min-width: 660px; }
-.git-patch .reader-wrap .diff-scroll .change-row { min-width: 0; }
-.git-patch .diff-scroll:focus-visible, .git-raw-scroll:focus-visible { outline: 1px solid var(--line-3); outline-offset: 2px; }
-.git-patch .reader-tools { gap: 6px; }
-.git-review-layout footer textarea { background: var(--bg); border: 1px solid var(--line); border-radius: var(--round-md); color: var(--t1); resize: vertical; }
-.git-review-layout aside { scrollbar-width: thin; }
-.git-review-layout aside button > span { overflow-wrap: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.git-review-layout aside button { min-height: 38px; padding: 8px; }
-.git-review-layout section > header { gap: 8px; }
-.git-review-layout section > header strong { min-width: 140px; }
 /* Input focus belongs to the whole material; avoid a second frame inside it. */
 .connected-workspace .prompt-composer:focus-within { border-color: var(--line-3); }
 .connected-workspace .prompt-composer textarea { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
@@ -279,7 +253,10 @@
 .settings-glyph { display: block; flex: none; }
 .brand-image.brand-mark {display: block;position: relative;flex: none;overflow: hidden;border: 0;border-radius: var(--round-sm);background: var(--s1)} :where(:root:not([data-ui-skin=clarity])) .brand-image.brand-mark { width: 30px !important; height: 30px !important; }
 .brand-image.brand-mark::after { content: none; }
-.brand-image img { display: block; width: 100%; height: 100%; object-fit: cover; transform: scale(1.55); }
+.brand-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
+/* UI-38: the mark is inline SVG in the current ink: the website's cream on Jet Black, each other palette's own ink. */
+.brand-image.brand-mark { color: var(--brand-ink, var(--t1)); }
+.brand-image svg { display: block; width: 100%; height: 100%; }
 
 /* Shared craft layer: space establishes hierarchy; outlines are reserved for state. */
 :root { --control-radius: var(--round-sm); --reading-radius: var(--round-lg); }
@@ -293,20 +270,14 @@
 .product-dialog .btn[aria-pressed=true] { background: var(--s3); color: var(--t1); border-color: transparent; }
 .product-dialog :is(input:not([type=checkbox]),textarea,select) { font-family: var(--sans); color: var(--t1); background-color: var(--bg); border: 1px solid var(--line); border-radius: var(--control-radius); }
 .product-dialog textarea { line-height: 1.6; }
-.product-dialog :is(input,textarea,select):focus-visible { outline: 1px solid var(--line-3); outline-offset: 1px; }
-:root[data-ui-press] .product-dialog :is(button,input,textarea,select):focus-visible { outline: none; }
 .product-dialog .source-find { align-items: center; gap: 4px; }
 .product-dialog .source-find input { height: 32px; padding: 6px 10px; font-size: var(--text-xs); }
 .product-dialog .source-find [role=status] { padding-inline: 6px; }
 .product-dialog .reader-tools .btn { min-height: var(--control-md); font-size: var(--text-2xs); padding: 4px 9px; }
 .product-dialog .reader-pages { border-top: 1px solid var(--line); padding-block: 10px; gap: 8px; }
-.product-dialog :is(.material-context,.reading-scope,.git-scope-note) { color: var(--t3); line-height: 1.6; font-size: var(--text-2xs); }
+.product-dialog :is(.material-context,.reading-scope) { color: var(--t3); line-height: 1.6; font-size: var(--text-2xs); }
 .product-dialog .patch-hunk-jump input { border-color: transparent; background: var(--s2); }
 .product-dialog .code { font-size: var(--text-sm); line-height: 1.75; }
-.git-review-toolbar { gap: 8px; padding: 14px 20px; }
-.git-review-layout aside { border-right-color: var(--line); }
-.git-review-layout footer label { font-size: var(--text-xs); color: var(--t2); display: flex; align-items: center; gap: 8px; }
-.git-review-layout footer input[type=checkbox] { accent-color: var(--focus); }
 .connected-workspace .prompt-composer.open { border: 1px solid var(--line-2); border-radius: var(--round-lg); padding: 12px 16px; background: var(--s1); box-shadow: 0 12px 36px -18px #000b; }
 .connected-workspace .prompt-composer .composer-target { padding: 0 2px 4px; gap: 10px; }
 .connected-workspace .prompt-composer textarea { padding: 8px 2px; min-height: 38px; line-height: 1.6; }
@@ -426,8 +397,4 @@
   .settings-dialog .setting-row { gap: 12px; }
   .settings-dialog .setting-row:has(select) { flex-wrap: wrap; }
   .settings-select { max-width: 100%; }
-}
-@media (max-width: 700px) {
-  .git-review-dialog .git-patch { padding-inline: 12px; }
-  .git-patch :is(.diff-scroll,.git-raw-scroll) { max-height: 34dvh; }
 }

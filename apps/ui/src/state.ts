@@ -1,3 +1,4 @@
+import {setCheckoutContext} from './api.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
 // always compose(projection, cursor) — the store never holds a hand-built scene.
 
@@ -22,6 +23,10 @@ function revisionsOf(recordings: RecordingSummary[]): Record<string, number> {
   return Object.fromEntries(recordings.map((r) => [r.id, r.revision ?? 0]));
 }
 
+/** The reading mode lives in the window's own memory (not any one session's), so every session in this window opens the way it was left. */
+export type HistoryMode = 'work' | 'conversation';
+export const HISTORY_MODE_SCOPE = '@home', HISTORY_MODE_KEY = 'history/mode';
+
 export type Screen = 'loading' | 'home' | 'viewer' | 'no-daemon' | 'signed-out' | 'error';
 
 interface State {
@@ -31,6 +36,7 @@ interface State {
   error?: string;
   recordings: ReaderRecording[];
   recordingId?: string;
+  checkoutId?:string; checkoutRoot?:string; checkoutPrefix?:string;
   resumeRecordingId?: string;
   recoveryState?: 'saved' | 'unavailable';
   recoveryError?: string;
@@ -54,6 +60,8 @@ interface State {
   held: boolean;
   /** History follows the newest work; scrolling away turns it off. */
   follow: boolean;
+  /** UI-41: how History reads. Work shows every tool card; Conversation folds each run of cards to its one line. Remembered per window. */
+  historyMode: HistoryMode;
   motion: boolean;
   hoverReading: boolean;
   /** Largest Markdown file the Document view renders; Source always stays available. */
@@ -70,6 +78,8 @@ interface State {
   developerWorkspace: boolean;
   /** GIT-8: the Compare window, a working window like the Workspace. */
   compareOpen: boolean;
+  /** Which view Changes opens on when something asks for a particular one (the palette); read once, then cleared. */
+  comparePreset?: 'uncommitted' | 'session' | 'branch' | 'pr';
   theme: ThemePreference;
   settingsOpen: boolean;
   selectedOp?: string;
@@ -108,6 +118,7 @@ interface State {
   togglePlay(): void;
   jump(type: Marker['type'] | Marker['type'][], dir?: 1 | -1): void;
   select(opId: string | undefined): void;
+  setHistoryMode(mode: HistoryMode): void;
   resume(): void;
   showHistory(): void;
   setFilter(f: ComposeInput['filter'] | undefined): void;
@@ -147,6 +158,7 @@ export const useApp = create<State>((set, get) => ({
   speed: 1,
   held: false,
   follow: true,
+  historyMode: 'work',
   hoverReading: (() => { try { return localStorage.getItem("drishya.hoverReading") !== "0"; } catch { return true; } })(),
   documentSize: (() => { try { const value = localStorage.getItem("drishya.documentSize"); return isDocumentSize(value) ? value : "standard"; } catch { return "standard"; } })(),
   reasoningDetail: storedPresentation('reasoningDetail') === 'hidden' ? 'hidden' : storedPresentation('reasoningDetail') === 'collapsed' ? 'collapsed' : 'expanded',
@@ -182,7 +194,8 @@ export const useApp = create<State>((set, get) => ({
     const memory = workspaceMemory(src);
     if (opts.at !== undefined || opts.play) memory.clear(id);
     const saved = memory.session(id).get('location') as (Partial<State> & { start?: number }) | undefined;
-    set({ error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, compareOpen: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
+    setCheckoutContext(id);
+    set({ checkoutId:undefined,checkoutRoot:undefined,checkoutPrefix:undefined, error: undefined, replayDiagnostics: opts.at !== undefined || !!opts.play, promptStep: undefined, developerWorkspace: false, compareOpen: false, recordingId: id, projection: undefined, historyPage: undefined, graph: undefined, mapFocusPath: undefined, selectedOp: undefined, expandedOp: undefined, focusObservationId: undefined, readingPassageId: undefined, filter: undefined, screen: 'viewer', held: false, follow: true, briefingOpen: false, searchOpen: false, screenView: undefined, trailAt: undefined, currentFile: undefined, filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined, filePanelLine: undefined, explore: false, compareAgents: false });
     const current = newest('projection');
     let opened = () => {};
     const mine = { id, done: new Promise<void>(resolve => { opened = resolve; }) };
@@ -294,6 +307,11 @@ export const useApp = create<State>((set, get) => ({
     if (to !== undefined) get().seek(to, { hold: true });
   },
 
+  setHistoryMode(mode) {
+    const source = get().source;
+    if (source) workspaceMemory(source).session(HISTORY_MODE_SCOPE).set(HISTORY_MODE_KEY, mode);
+    set({ historyMode: mode });
+  },
   select(opId) {
     const clockRunning = get().mode === 'replay' && get().playing;
     set({ selectedOp: opId, expandedOp: undefined, promptStep: undefined, ...(opId && !clockRunning ? { playing: false, held: true } : {}) });

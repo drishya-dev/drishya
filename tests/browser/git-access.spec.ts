@@ -1,4 +1,4 @@
-import {openGitDestination} from './git-navigation.ts';
+import {openChanges,openGitDestination} from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
@@ -31,13 +31,21 @@ const open=async(page:import('@playwright/test').Page,recording:string)=>{
 };
 const grant=(scope:import('@playwright/test').Locator)=>scope.getByRole('button',{name:'Approve read-only Git',exact:true});
 
-for(const [first,firstTitle,second,secondTitle] of [['Git review','Git review','Git graph','Git graph'],['Git graph','Git graph','Git review','Git review']] as const){
-  test(`one approval in ${firstTitle} opens ${secondTitle} and the workspace without asking again`,async({page})=>{
-    const recording=await session(first.replace(' ','-'),first==='Git review'?'77777777-7777-4777-8777-777777777772':'77777777-7777-4777-8777-777777777773');
+/** Changes is a window with its own way back; Git graph is a dialog. Both ask for the one Git approval. */
+const reader=(page:import('@playwright/test').Page,destination:'Changes'|'Git graph')=>destination==='Changes'?page.getByRole('region',{name:'Changes',exact:true}):page.getByRole('dialog',{name:'Git graph',exact:true});
+const show=async(page:import('@playwright/test').Page,destination:'Changes'|'Git graph')=>{if(destination==='Changes')await openChanges(page,'Uncommitted');else await openGitDestination(page);};
+const leave=async(page:import('@playwright/test').Page,destination:'Changes'|'Git graph')=>{
+  if(destination==='Changes')await reader(page,destination).getByRole('button',{name:'Back to agent',exact:true}).click();
+  else await reader(page,destination).getByRole('button',{name:'Close Git graph',exact:true}).click();
+};
+
+for(const [first,second] of [['Changes','Git graph'],['Git graph','Changes']] as const){
+  test(`one approval in ${first} opens ${second} and the workspace without asking again`,async({page})=>{
+    const recording=await session(first.replace(' ','-'),first==='Changes'?'77777777-7777-4777-8777-777777777772':'77777777-7777-4777-8777-777777777773');
     await page.request.get(`${server.url}/v1/recordings/${recording}/git`,{headers:{authorization:`Bearer ${server.token}`}});
     await open(page,recording);
-    await openGitDestination(page,first);
-    const dialog=page.getByRole('dialog',{name:firstTitle,exact:true});
+    await show(page,first);
+    const dialog=reader(page,first);
     await expect(grant(dialog)).toBeVisible();
     await expect(dialog.locator('.git-access')).toContainText('Nothing is written to the repository');
     await expect(dialog.locator('.git-access')).toContainText('deleted files and other branches');
@@ -46,13 +54,13 @@ for(const [first,firstTitle,second,secondTitle] of [['Git review','Git review','
     await grant(dialog).click();
     await expect(grant(dialog)).toHaveCount(0);
     // The approval button changes its name while the shared grant is still pending.
-    await expect(first==='Git review'?dialog.locator('.git-review-layout'):dialog.locator('.atlas-layout')).toBeVisible();
-    await dialog.getByRole('button',{name:`Close ${firstTitle}`,exact:true}).click();
-    await openGitDestination(page,second);
-    const next=page.getByRole('dialog',{name:secondTitle,exact:true});
+    await expect(first==='Changes'?dialog.locator('.compare-body'):dialog.locator('.atlas-layout')).toBeVisible();
+    await leave(page,first);
+    await show(page,second);
+    const next=reader(page,second);
     await expect(next).toBeVisible();
     await expect(next.locator('.git-access')).toHaveCount(0);
-    await expect(second==='Git review'?next.locator('.git-patch'):next.locator('.atlas-layout')).toBeVisible();
+    await expect(second==='Changes'?next.locator('.compare-patch'):next.locator('.atlas-layout')).toBeVisible();
   });
 }
 
@@ -60,12 +68,12 @@ test('a held status read shows no approval to click',async({page})=>{
   let release=()=>{};const held=new Promise<void>(done=>{release=done;});
   await page.route(`**/v1/recordings/*/git`,async route=>{await held;await route.continue();});
   await open(page,id);
-  for(const [destination,title] of [['Git review','Git review'],['Git graph','Git graph']] as const){
-    await openGitDestination(page,destination);
-    const dialog=page.getByRole('dialog',{name:title,exact:true});
+  for(const destination of ['Changes','Git graph'] as const){
+    await show(page,destination);
+    const dialog=reader(page,destination);
     await expect(dialog.getByText('Checking Git access…')).toBeVisible();
     await expect(grant(dialog)).toHaveCount(0);
-    await dialog.getByRole('button',{name:`Close ${title}`,exact:true}).click();
+    await leave(page,destination);
   }
   release();
 });

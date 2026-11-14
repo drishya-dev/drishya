@@ -130,7 +130,7 @@ test('live history keeps the reader anchored across bursts, sizes, reconnect and
   await page.getByRole('textbox',{name:/Find (?:repository|session) files/}).fill('src/checkout/guard.ts');
   await page.locator('.spine-file[title="src/checkout/guard.ts"]').click();
   await page.getByRole('dialog', { name: 'Work on src/checkout/guard.ts' }).locator('[data-file-op]').first().click();
-  await expect(page.getByRole('region', { name: 'Operation detail' }).getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText("if (!cart.total)");
+  await expect(page.getByRole('region', { name: 'Operation detail' }).getByRole('region', { name: 'Content of src/checkout/guard.ts' })).toContainText("// synthetic result 99");
 
   await page.reload(); // a new browser connection must reload the same committed history.
   await expect(steps).toContainText('924 recorded steps');

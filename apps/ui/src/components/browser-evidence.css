@@ -1,6 +1,7 @@
 .browser-evidence,.web-evidence{min-width:0;display:grid;gap:8px}
 .browser-url{display:block;overflow-wrap:anywhere;color:var(--t1);font:var(--text-xs)/1.5 var(--mono)}
-.browser-address{border-bottom:1px solid var(--line-2);padding-bottom:7px;font-size:var(--text-2xs)}
+.browser-address{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;border-bottom:1px solid var(--line-2);padding-bottom:7px;font-size:var(--text-2xs)}
+.browser-url-source{color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);white-space:nowrap}
 .browser-action{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;font:var(--text-xs)/1.5 var(--mono)}
 .browser-action small{color:var(--t3);font:var(--text-2xs)/1.5 var(--sans)}
 .browser-query{white-space:pre-wrap;overflow-wrap:anywhere;font:var(--text-xs)/1.5 var(--mono)}
@@ -15,7 +16,6 @@
 .browser-scrubber input{min-width:48px;flex:1;accent-color:var(--t1);height:18px}
 .browser-scrubber button{border:1px solid var(--line-2);background:transparent;color:var(--t1);border-radius:var(--round-xs);width:24px;height:24px;cursor:pointer}
 .browser-scrubber button:disabled{opacity:.35;cursor:default}
-.browser-scrubber :focus-visible,.browser-url:focus-visible{outline:1px solid var(--t1);outline-offset:3px}
 
 .browser-batch{margin:0;padding-left:18px;display:grid;gap:5px;font:var(--text-2xs)/1.5 var(--mono)}
 .browser-batch li{overflow-wrap:anywhere}

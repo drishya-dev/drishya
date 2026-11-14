@@ -45,5 +45,20 @@ export default defineConfig({
   server: {
     proxy: { '/v1': { target: 'http://127.0.0.1:7878', changeOrigin: true } },
   },
-  build: { target: 'es2022', sourcemap: false, chunkSizeWarningLimit: 800 },
+  build: {
+    target: 'es2022',
+    sourcemap: false,
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (!id.includes('@codemirror') && !id.includes('@lezer')) {
+              return 'vendor';
+            }
+          }
+        },
+      },
+    },
+  },
 });

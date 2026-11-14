@@ -3,24 +3,25 @@
    font size must not resize the product, and every computed length equals LAYOUT-1's px. --ui-scale is always 1. */
 :root[data-ui-version=modern] { font-size: calc(16px * var(--ui-scale, 1)); }
 
-/* LAYOUT-1 · Large screens and browser zoom.
-   Zooming out (67 % on a laptop is 2150 CSS px) and large monitors both give the page more CSS pixels. The reading column
-   already stops growing at 1280 px, but the docks, the header groups and the Workspace stayed pinned to the screen edges,
-   so the space between the divisions grew without limit. Decision: the whole working composition (header groups, Files,
-   history column, Toolbox, Workspace, peek) is one stage that stops at --stage-max and is centred. The map stays full
-   width behind it, so extra width becomes more map, never a wider gap between a dock and the thing it belongs to.
-   Nothing here applies at or below --stage-max, so 600 to 1920 px are exactly as before. No motion is involved. */
+/* LAYOUT-1c: a 2560-device-pixel stage fills laptop/desktop windows at every browser zoom.
+   Only a genuinely wider physical window centres the working composition; text remains browser-sized.
+   UI-37: the stage is never narrower than 2560 CSS px either. Device pixels alone capped every high-density
+   screen (a 4K monitor at 150 %, a Retina laptop at 2x) to a centred strip with empty gutters, while a
+   standard screen with the same CSS size filled edge to edge. Zooming out (ratio below 1) is unchanged. */
 :root[data-ui-version=modern] {
-  --stage-max: 1920px;
+  --stage-max: max(2560px, calc(2560px / var(--device-ratio, 1)));
   --stage-edge: max(0px, calc((100vw - var(--stage-max)) / 2));
 }
+/* Extra zoom-out space goes to passages, not longer prose lines. The existing 1280 CSS-px measure stays at 100%. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-inner {
+  max-width:max(1280px, calc(1280px / var(--device-ratio, 1)));
+}
 
-@media (min-width: 1921px) {
-  :root[data-ui-version=modern][data-experience=classic] {
+:root[data-ui-version=modern][data-experience=classic][data-stage-limited] {
     /* Header groups: identity at the stage's left edge, actions at its right. */
     .workspace-header .modern-session-header { padding-inline: calc(24px + var(--stage-edge)); }
     .workspace-leading { left: calc(18px + var(--stage-edge)); }
-    .toolbox-rail { left: calc(18px + var(--stage-edge)); right: calc(18px + var(--stage-edge)); }
+    .toolbox-rail { left: calc(18px + var(--stage-edge)); right: calc(50px + var(--stage-edge)); }
     .connected-workspace .folder-explorer { left: calc(18px + var(--stage-edge)); }
     .connected-workspace .history { margin-inline: var(--stage-edge); }
     .connected-workspace .developer-workspace {
@@ -28,28 +29,70 @@
       right: calc(18px + var(--stage-edge));
     }
     .connected-workspace.folders-hidden .developer-workspace { left: calc(18px + var(--stage-edge)); }
-    /* The file peek is placed in script (ReadingWindow.tsx reads --stage-max); the Git drawer is placed here. */
-    .modern-git-drawer { right: calc(16px + var(--stage-edge)); }
+    /* The file peek is placed in script (ReadingWindow.tsx reads --stage-max). */
     .search, .connected-workspace > .search { right: calc(24px + var(--stage-edge)); }
-    .connected-workspace .follow-pill { right: calc(128px + var(--stage-edge)); }
-    .connected-workspace:has(.modern-native-composer):has(.history-transport) .follow-pill { right: calc(132px + var(--stage-edge)); }
+    .connected-workspace .history-transport { left: calc(12px + var(--stage-edge)); right: calc(12px + var(--stage-edge)); }
+    .connected-workspace .follow-pill { right: calc(12px + var(--stage-edge)); }
+    .connected-workspace .history-transport .follow-pill { right: auto; }
+    .connected-workspace:has(.modern-replay-transport) .follow-pill { right: calc(12px + var(--stage-edge)); }
     /* The map reader is a panel of the stage, not of the screen. */
     .product-dialog.map-reader { right: calc(20px + var(--stage-edge)); width: min(calc(46vw - 32px), 880px); }
     /* Queued inputs are placed inline by the component. */
-    .queued-input-receipts { right: calc(20px + var(--stage-edge)) !important; }
-  }
+    .queued-input-receipts[data-floating] { right: calc(12px + var(--stage-edge)) !important; }
 }
 
 /* Yash, 10 Nov: the world scrolls from the screen's top under floating controls.
    Composer visibility must not reserve space in either independent side rail. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {
   top:0;
-  scroll-padding-top:calc(var(--workspace-tools-bottom,134px) + 8px);
+  scroll-padding-top:calc(max(var(--workspace-tools-bottom,134px), var(--reading-edge-top, 0px)));
+  scroll-padding-bottom:var(--reading-edge-bottom, var(--composer-gap, 0px));
 }
 /* Only the document's initial content clears controls; later scrolled material
-   remains visible all the way to y=0 rather than clipping at this inset. */
+   remains visible behind the masked reading-edge veils rather than clipping at this inset. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner {
-  padding-top:calc(var(--workspace-tools-bottom,134px) + 16px);
+  padding-top:calc(max(var(--workspace-tools-bottom,134px), var(--reading-edge-top, 0px)) + 28px);
+  padding-bottom:max(112px, calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 32px));
+}
+@media(max-width:820px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner {
+    padding-bottom:max(124px, calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 48px));
+  }
+}
+/* SHIP-6e, revised for UI-39 (Yash, 13 Nov): the work runs under the header and the composer at full strength, as he
+   designed it, so the visualization fills the window. Above 820 px the controls sit at the window's edges, and the one
+   that crosses the column (the prompt) has its own blurred surface, so whatever passes under a control is covered.
+   At 820 px and below, Tools, Follow latest and the prompt sit over the column's lines, so there History's own
+   content fades to a tenth under the measured chrome; nothing is painted over the ground. */
+@media(max-width:820px) {
+  :root[data-ui-version=modern] .connected-workspace:not(.developer-workspace-open):not(.exploring) .history {
+    -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.1) 0,rgba(0,0,0,.1) calc(var(--reading-edge-top,0px) - 4px),#000 calc(var(--reading-edge-top,0px) + 36px),#000 calc(100% - var(--reading-edge-bottom,0px) - 36px),rgba(0,0,0,.1) calc(100% - var(--reading-edge-bottom,0px) + 4px));
+    mask-image:linear-gradient(to bottom,rgba(0,0,0,.1) 0,rgba(0,0,0,.1) calc(var(--reading-edge-top,0px) - 4px),#000 calc(var(--reading-edge-top,0px) + 36px),#000 calc(100% - var(--reading-edge-bottom,0px) - 36px),rgba(0,0,0,.1) calc(100% - var(--reading-edge-bottom,0px) + 4px));
+  }
+}
+/* Yash, 13 Nov: the reading column starts after the Files panel (or its chips, when minimised) and ends before the
+   Toolbox, with the same gap at both ends, at every browser zoom. Viewer.tsx measures the chrome and sets the margins;
+   until it has, the stylesheet's own placement (the 1280 px cap, centred) stands. UI-42: once placed, the column spans
+   the whole space with no cap, so a passage's cards wrap across all of it; prose keeps its 75ch measure on the left
+   edge (reading-type.css) and cards keep their sizes. Above 820 px only: narrower, Files is an overlay and the column
+   is the window. */
+@media(min-width:821px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open):not(.exploring)[style*="--reading-pad-left"] .history-inner {
+    margin-left:var(--reading-pad-left); margin-right:var(--reading-pad-right); max-width:none;
+  }
+}
+/* UI-45 (Yash, 13 Nov: prose "cut at the edge" of the Files panel in a half-width window). Up to 820 px Files and the Toolbox
+   are drawers over History. Viewer.tsx measures what is left beside them: where a readable column (360 px) fits it moves
+   over and reflows beside the drawer (data-side-fit=docked, margins set like the wide placement), the scrim goes quiet
+   and a click outside still closes the drawer; where it does not (covered), History behind the drawer is dimmed to a
+   ghost so no half-cut words show at the drawer's edge. */
+@media(max-width:820px) {
+  :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-side-fit=docked]:not(.developer-workspace-open):not(.exploring) .history-inner {
+    margin-left:var(--reading-pad-left,0px); margin-right:var(--reading-pad-right,0px); max-width:none;
+  }
+  :root[data-ui-version=modern] .connected-workspace[data-side-fit=docked] .files-scrim { background:transparent; }
+  :root[data-ui-version=modern] .connected-workspace[data-side-fit=covered]:not(.developer-workspace-open) .history { opacity:.08; }
+  :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .connected-workspace:not(.developer-workspace-open) .history { transition:opacity 160ms var(--ease-out); }
 }
 /* Drawers stay in front of the prompt. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer {
@@ -78,3 +121,53 @@
 :root[data-ui-version=modern][data-experience=classic] .history .prose table {
   font-family:var(--sans);
 }
+
+/* SHIP-2f: agent reasoning is secondary ink, slightly smaller and bounded by a thin left rule; answers stay full strength. */
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose.prose-reasoning:not(.reasoning-gap) {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.65;
+  padding-left: 12px;
+  border-left: 1px solid color-mix(in srgb, var(--agent, var(--line-3)) 40%, var(--line));
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose.prose-reasoning :is(.md-h, h1, h2, h3, h4, strong, b) {
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history .prose.prose-reasoning .prose-label {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  margin-bottom: 6px;
+}
+
+/* SHIP-2f: at narrow laptop widths (600 px), operation cards expand across the reading column rather than leaving half the row empty. */
+@media (max-width: 720px) {
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history .ops-row {
+    margin-right: 26px;
+  }
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history .op:not([data-hover-reading]),
+  :root[data-ui-version=modern][data-experience] .connected-workspace .history .browser-strip {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+/* SHIP-6g: one stacking order across Modern: fixed bottom controls stay below Files overlay and its scrim, and all open menus/dropdowns sit above both. */
+:root[data-ui-version=modern] .connected-workspace .history-transport,
+:root[data-ui-version=modern] .connected-workspace .follow-pill,
+:root[data-ui-version=modern] .connected-workspace .catalog-toggle { z-index:16; }
+:root[data-ui-version=modern] .connected-workspace .history-transport .follow-pill { z-index:auto; }
+:root[data-ui-version=modern] .connected-workspace .transport.modern-replay-transport { z-index:22; }
+:root[data-ui-version=modern] .connected-workspace .prompt-composer { z-index:12; }
+:root[data-ui-version=modern] .connected-workspace.file-peek-open :is(.history-transport,.follow-pill,.catalog-toggle) { z-index:16; }
+:root[data-ui-version=modern] .connected-workspace .product-dialog.map-reader { z-index:30; }
+:root[data-ui-version=modern] .origins { z-index:45; }
+:root[data-ui-version=modern] .connected-workspace .workspace-header { z-index:38; }
+:root[data-ui-version=modern] .connected-workspace:has(.files-scrim) :is(.workspace-leading,.workspace-secondary) { z-index:38; }
+:root[data-ui-version=modern] .files-scrim { position:fixed; inset:0; z-index:34; background:color-mix(in srgb,var(--bg) 53.333%,transparent); }
+:root[data-ui-version=modern] .connected-workspace .folder-explorer:has(:is(.checkout-picker,.tree-evidence-filter)[open]) { overflow:visible; z-index:36; }
+:root[data-ui-version=modern] .connected-workspace .folder-explorer .tree-evidence-filter-menu { z-index:20; }
+:root[data-ui-version=modern] .connected-workspace .workspace-header:has(details[open]),
+:root[data-ui-version=modern] .connected-workspace :is(.workspace-leading,.workspace-secondary,.modern-review-control):has(details[open]),
+:root[data-ui-version=modern] .connected-workspace .prompt-composer:has(details[open],.composer-add-menu:not([hidden])) { z-index:70; }
+:root[data-ui-version=modern] .connected-workspace .workspace-header:has(details[open]) .studio-actions { z-index:5; }

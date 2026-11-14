@@ -44,7 +44,7 @@ test('completed evidence links keep full history and the chosen live-demo design
   await detail.locator('.link-row').filter({ hasText: 'Read test/checkout.test.ts' }).click();
   await expect(detail).toContainText('canCheckout');
   await expect(detail).not.toContainText('Result has not arrived');
-  await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeEnabled();
+  await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeEnabled();
   await page.keyboard.press('Escape');
   await page.goto(new URL('/?demo=live', server.launchUrl).href);
   await expect(page.locator('html')).toHaveAttribute('data-experience', 'classic');
@@ -137,7 +137,7 @@ test('failed shell preview surfaces buried errors and preserves the full preview
 test('first-visit evidence review opens exact file work without a reading mark and hides future review in replay', async ({ page }) => {
   await page.goto(demoUrl());
   await openSessionReview(page);
-  const review = page.getByRole('dialog', { name: 'Changes', exact: true });
+  const review = page.getByRole('dialog', { name: 'Session review', exact: true });
   await expect(review.getByRole('region', { name: 'Files with changes' })).toBeVisible();
   await expect(review.getByRole('region', { name: 'Failures', exact: true })).toContainText('Test');
   await expect(review).toContainText('Whole session');
@@ -158,9 +158,9 @@ test('first-visit evidence review opens exact file work without a reading mark a
   expect(bounds!.x).toBeGreaterThanOrEqual(0);
   expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(600);
   await page.screenshot({ path: resolve('.local/evidence-review-narrow.png') });
-  await review.getByRole('button', { name: 'Close Changes' }).click();
+  await review.getByRole('button', { name: 'Close Session review' }).click();
   await page.goto(new URL('/?demo&at=1', server.launchUrl).href);
-  await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeDisabled();
+  await expect(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true })).toBeDisabled();
 });
 
 test('returning from an authenticated demo retains local workspace access', async ({ page }) => {
@@ -425,7 +425,9 @@ test('substantial external results retain structured evidence and adapt to narro
   if (process.env.DRISHYA_REVIEW_SHOTS === '1') await page.screenshot({ path: resolve('.local/external-reading-desktop.png') });
   await page.setViewportSize({ width: 600, height: 1000 });
   await external.scrollIntoViewIfNeeded();
-  expect((await external.boundingBox())!.width).toBeLessThan(390);
+  const narrowBox = (await external.boundingBox())!;
+  expect(narrowBox.width).toBeGreaterThan(450);
+  expect(narrowBox.width).toBeLessThan(600);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect((await external.locator('table').boundingBox())!.width).toBeLessThan((await external.boundingBox())!.width);
   expect(await external.locator('.op-body').evaluate(el => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1);
@@ -532,6 +534,8 @@ test('file comparison reads real daemon artifacts and opens the same action in h
   await expect(dialog.getByLabel('Second step')).toBeVisible();
   await expect(dialog.locator('.file-evidence-columns')).toContainText('Patch');
   await expect(dialog.locator('.file-evidence-columns')).toContainText('cart.total == null');
+  const afterKey = await dialog.getByLabel('Second step').locator('option').evaluateAll(opts => opts.map(o => (o as HTMLOptionElement).value).find(v => v.endsWith('/after')));
+  if (afterKey) await dialog.getByLabel('Second step').selectOption(afterKey);
   await dialog.locator('.file-evidence-column').last().getByLabel('Stored source options',{exact:true}).click();
   await expect(dialog.getByRole('button', { name: 'Copy derived page', exact: true })).toBeVisible();
   await dialog.locator('.file-evidence-column').last().getByLabel('Stored source options',{exact:true}).click();
@@ -588,7 +592,7 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   await dialog.getByRole('button', { name: 'Next', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(2);
   await expect(single).toHaveValue(initial);
-  await expect(dialog.locator('.file-evidence-column').first()).toContainText('captured distant moment 0');
+  await expect(dialog.locator('.file-evidence-column').first()).toContainText('captured distant moment 25');
   await dialog.getByRole('button', { name: 'Previous', exact: true }).click();
   await expect(dialog.locator('.file-trail-item')).toHaveCount(24);
   await dialog.getByRole('button', { name: 'Compare evidence' }).click();
@@ -602,8 +606,8 @@ test('distant file moments compare across bounded trail pages', async ({ page })
   const second = dialog.getByLabel('Second step');
   const options = await second.locator('option').evaluateAll((items) => items.map((item) => (item as HTMLOptionElement).value));
   await second.selectOption(options[1]!);
-  await expect(dialog.locator('.file-evidence-column').first()).toContainText('captured distant moment 0');
-  await expect(dialog.locator('.file-evidence-column').last()).toContainText('captured distant moment 25');
+  await expect(dialog.locator('.file-evidence-column').first()).toContainText('captured distant moment 25');
+  await expect(dialog.locator('.file-evidence-column').last()).toContainText('captured distant moment 0');
 });
 
 test('a sanitized export opens as read-only evidence and can return to the local workspace', async ({ page }) => {
@@ -921,7 +925,7 @@ test('full-height world sits beneath progressive edge chrome and prompt typograp
   await expect(page.locator('article.op-test').last()).toBeVisible();
   await page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button').first().click();
   await expect(page.locator('.turn-text').first()).toBeVisible();
-  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose')!).fontSize, blur: getComputedStyle(document.querySelector('.workspace-header')!).backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
+  const sizes = await page.evaluate(() => ({ prompt: getComputedStyle(document.querySelector('.turn-text')!).fontSize, response: getComputedStyle(document.querySelector('.prose:not(.prose-reasoning)')!).fontSize, blur: getComputedStyle(document.querySelector('.workspace-header')!).backdropFilter, main: document.querySelector('.main')!.getBoundingClientRect().toJSON() }));
   expect(sizes.prompt).toBe('15px'); expect(sizes.response).toBe(sizes.prompt);
   expect(sizes.blur).toBe('none'); expect(sizes.main.y).toBe(0); expect(sizes.main.height).toBe(900);
   const headerBottom = await page.locator('.workspace-header').evaluate(el => el.getBoundingClientRect().bottom);

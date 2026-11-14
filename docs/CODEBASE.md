@@ -101,7 +101,7 @@ Authenticated `/v1/working-locations` GET/PUT/DELETE persists bounded navigation
 
 **12 October reading navigation:** [51](review/51-evidence-reading-navigation.md) adds `EvidenceTrail` and a scoped `EvidenceNavigationProvider`, with eight ephemeral visits/64 control slots per visit, existing selected evidence references and bounded async scroll restoration. File/current/operation readers share Back/Forward; source/diff controls survive detours. ImportContext explicitly distinguishes captured work/current disk and preserves consent. Replay boundary/source/session changes reset retained controls; no source responses are cached in the trail, persisted or added to capture contracts.
 
-**11 October current Git:** `GitReview` uses separately consented fixed-argv read-only inspection through WorkspaceAccess; Git DTOs are separate from event contracts. `GitReview.tsx` provides patch review, redacted browser-local notes and privacy-previewed local Markdown packets. See [44](review/44-current-git-review.md) for bounds, races and unsupported scope.
+**11 October current Git:** `GitReview` uses separately consented fixed-argv read-only inspection through WorkspaceAccess; Git DTOs are separate from event contracts. The browser side is the Changes window (`CompareWindow.tsx`, GIT-8 and GIT-9): patch review of the working tree and of comparisons, redacted browser-local reviewed marks and notes, and privacy-previewed local Markdown packets (`GitReview.tsx` is gone; the daemon class `GitReview` remains the consent and snapshot service). See [44](review/44-current-git-review.md) for bounds, races and unsupported scope, and [GIT-9](review/git-9-changes.md).
 
 **11 October developer navigation:** `ImportContext.tsx` links qualified current static imports to current/captured reading and explicit map focus. `map-focus.ts` provides a bounded direct neighborhood; MapCanvas retains original coordinates and reports scoped counts. Recording search distinguishes captured evidence from indexed filenames and hides future replay snippets; `failure-preview.ts` selects literal error lines from captured previews. No backend/schema change; see [43](review/43-developer-feedback-navigation.md).
 
@@ -233,7 +233,6 @@ Replay works with the map absent. The indexer (`indexer`) and the model layer (`
 | `projection` | The reducer, plus derived rules: shell classification, test-output parsing, patch/diff | `src/reduce.ts`, `src/shell.ts`, `src/tests.ts`, `src/patch.ts` |
 | `indexer` | Repository map: file enumeration, import extraction and resolution, deterministic layout | `src/index.ts` |
 | `scene` | `compose()`, markers, pacing (`dwellFor`), step lookups — runs in Node and the browser | `src/index.ts` |
-| `explain` | Nemotron on Nebius Token Factory: evidence packs, consent preview, citation validation | `src/index.ts` |
 | `apps/daemon` | `drishya` CLI and the local API server | `src/cli.ts`, `src/commands.ts`, `src/server.ts`, `src/app.ts` |
 | `apps/ui` | Base UI: React 19 + Vite + Zustand | `src/App.tsx`, `src/components/*` |
 

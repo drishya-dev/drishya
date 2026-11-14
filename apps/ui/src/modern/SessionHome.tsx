@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type CSSProperties } from 'react'; import { plural } from '../lib/plural.ts';
 import type { DiscoveredSource, RecordingSummary } from '@drishya/contracts';
 import type {ReaderRecording} from "../api.ts";
 import { BrandMark } from '../components/BrandMark.tsx';
@@ -10,8 +10,10 @@ import { foldTemporary, parentFolder, timeSection, workspaceGroups } from '../li
 import { useApp } from '../state.ts';
 import { useWorkspaceState, useWorkspaceMemory } from '../lib/workspace-memory-react.ts';
 import { GitHubStarLink } from './GitHubStarLink.tsx';
+import { HomeOverview } from './HomeOverview.tsx';
 import './session-home.css';
 import './home-active.css';
+import './home-opening.css';
 import { cleanSessionTitle } from '../lib/session-title.ts';
 import { elapsed } from '../lib/now-state.ts';
 import { importLabel, writingSince, type ImportProgress } from '../lib/home-import.ts';
@@ -22,8 +24,8 @@ function SessionStats({stats}: {stats: RecordingSummary['stats']}) {
   const basis = stats.source === 'claude-cost-state' ? 'reported by Claude Code' : 'recorded by Codex';
   return <span className="mh-row-stats">
     {stats.durationMs !== undefined && <span title={`${stats.durationMs} ms · ${basis}`}>{elapsed(stats.durationMs)}</span>}
-    {stats.source === 'claude-cost-state' && stats.linesAdded !== undefined && <span className="mh-stat-added" title={`${stats.linesAdded} lines added · ${basis}`}>+{statCount.format(stats.linesAdded)}</span>}
-    {stats.source === 'claude-cost-state' && stats.linesRemoved !== undefined && <span className="mh-stat-removed" title={`${stats.linesRemoved} lines removed · ${basis}`}>−{statCount.format(stats.linesRemoved)}</span>}
+    {stats.source === 'claude-cost-state' && stats.linesAdded !== undefined && <span className="mh-stat-added" title={`${plural(stats.linesAdded, 'line')} added · ${basis}`}>+{statCount.format(stats.linesAdded)}</span>}
+    {stats.source === 'claude-cost-state' && stats.linesRemoved !== undefined && <span className="mh-stat-removed" title={`${plural(stats.linesRemoved, 'line')} removed · ${basis}`}>−{statCount.format(stats.linesRemoved)}</span>}
     {stats.source === 'codex-turns' && stats.lastOutcome !== undefined && stats.lastOutcome !== 'completed' && <span title={`Last turn ${stats.lastOutcome} · ${basis}`}>{stats.lastOutcome}</span>}
   </span>;
 }
@@ -47,6 +49,10 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
   const memory=useWorkspaceMemory('@home'), list=useRef<HTMLDivElement>(null), restoring=useRef(true);
   const pendingFocus=useRef<{index:number;top:number}|undefined>(undefined);
   const [listTop,setListTop]=useState(0),[refreshing,setRefreshing]=useState(false);
+  // SHIP-3: the opening fills the first screen; the library is a sheet that comes up over it. The list scrolls only once the sheet is docked.
+  const scroller=useRef<HTMLDivElement>(null),[docked,setDocked]=useState(false);
+  const dock=(smooth:boolean)=>{const node=scroller.current;if(!node)return;const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;node.scrollTo({top:node.scrollHeight,behavior:smooth&&!reduce?'smooth':'auto'});};
+  useLayoutEffect(()=>{if(memory.get('home/docked')||((memory.get('home/top') as number|undefined)??0)>0)dock(false);},[memory]);
   const refreshSessions=async()=>{if(refreshing)return;setRefreshing(true);try{await refresh();}finally{setRefreshing(false);}};
   const inventory=useMemo(()=>{
     const ids=new Set(recordings.map(r=>r.id));
@@ -87,6 +93,9 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
     sectionTop+=sectionHeight+rows.length*rowHeight;return {label,rows,first,end};
   });
   const resume=inventory.find(s=>s.key===resumeId);
+  const latest=[...inventory].filter(s=>!s.nested).sort((a,b)=>(Date.parse(b.time??'')||0)-(Date.parse(a.time??'')||0))[0];
+  const writing=new Set(active.map(s=>s.key));
+  const projects=rail(inventory).filter(g=>g.key!=='subagents').map(g=>({key:g.key,name:g.name,minor:g.key==='temporary'||!g.root,count:g.items.length,latest:g.items.map(s=>s.time??'').sort().at(-1)||undefined}));
   // A row can gain its recording while the journal is still being read, so its key changes mid-import.
   const progressOf=(session:Session)=>opening[session.key]??(session.recording?.sourcePath?opening[session.recording.sourcePath]:undefined);
   const open=(session:Session)=>{if(session.recording){location.hash=`#/r/${session.key}`;void useApp.getState().openRecording(session.key);}else if(session.source)onOpen(session.source,false);};
@@ -113,7 +122,7 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
     const row=(event.target as HTMLElement).closest<HTMLElement>('[data-session-index]');
     const current=Number(row?.dataset.sessionIndex??-1),page=Math.max(1,Math.floor((list.current?.clientHeight??rowHeight)/rowHeight));
     const next=Math.max(0,Math.min(ordered.length-1,event.key==='Home'?0:event.key==='End'?ordered.length-1:current+(event.key==='ArrowDown'?1:event.key==='ArrowUp'?-1:event.key==='PageDown'?page:-page)));
-    event.preventDefault();setShown(n=>Math.max(n,Math.ceil((next+1)/50)*50));
+    event.preventDefault();dock(false);setShown(n=>Math.max(n,Math.ceil((next+1)/50)*50));
     let headings=0,previous='';for(let i=0;i<=next;i++){const label=timeSection(ordered[i]!.time,now);if(label!==previous){headings++;previous=label;}}
     // Jump to a real row, then focus after React mounts that bounded window.
     const top=next*rowHeight+headings*sectionHeight;
@@ -127,12 +136,27 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
     if(row){row.focus({preventScroll:true});pendingFocus.current=undefined;}
   },[shown,listTop,rowHeight]);
   const first=Math.max(0,Math.floor(workspaceTop/64)-4),end=Math.min(groups.length,first+40);
-  return <div className={`home mh-home${showIntro?'':' mh-home-compact'}`} style={{'--mh-row-height':`${rowHeight}px`,'--mh-section-height':`${sectionHeight}px`} as CSSProperties}>
+  return <div className={`home mh-home mh-home-v2${showIntro?'':' mh-home-compact'}${docked?' mh-docked':''}`} onWheel={event=>{/* The header and footer sit outside the scroller: the wheel over them still moves the page. */if(!scroller.current?.contains(event.target as Node))scroller.current?.scrollBy({top:event.deltaY});}} style={{'--mh-row-height':`${rowHeight}px`,'--mh-section-height':`${sectionHeight}px`} as CSSProperties}>
     <header className="mh-header"><div className="brand static"><BrandMark/>Drishya<span>Local agent workspace</span></div><div>{localEvidence&&<button className="btn ghost" onClick={()=>window.dispatchEvent(new Event('drishya-search-library'))}><InterfaceGlyph name="search"/>Search sessions</button>}<button className="btn ghost" aria-label="Workspace settings" onClick={()=>useApp.setState({settingsOpen:true})}><SettingsGlyph/>Settings</button></div></header>
-    <section className="mh-intro"><div><span className="mh-eyebrow">Your work, in view</span><h1>{showIntro?'Your agents. In view.':'Your sessions.'}</h1>{showIntro&&<p id="home-introduction">Drishya brings agent work, code and review into one local workspace.</p>}</div><div className="mh-intro-actions"><button aria-expanded={showIntro} className="btn ghost mh-about" aria-label="About Drishya" onClick={()=>setIntro(!showIntro)}><svg className="mh-about-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg><span>{showIntro?'Less introduction':'About Drishya'}</span></button><button className="btn mh-refresh" onClick={()=>void refreshSessions()} disabled={refreshing} aria-busy={refreshing}><InterfaceGlyph name="refresh"/>{refreshing?'Refreshing…':'Refresh sessions'}</button></div></section>
+    <div className="mh-scroll" ref={scroller} onScroll={event=>{const node=event.currentTarget,next=node.scrollTop>=node.scrollHeight-node.clientHeight-2;if(next!==docked){setDocked(next);memory.set('home/docked',next);}}}>
+    <section className="mh-opening" aria-label="Drishya">
+      <div className="mh-opening-words">
+        <span className="mh-opening-mark" aria-hidden="true"><BrandMark/></span>
+        <p className="mh-wordmark" aria-hidden="true">drishya<span lang="hi">दृश्य</span></p>
+        <p className="mh-opening-line">See the work behind the change.</p>
+        <div className="mh-opening-actions">
     {active.length>0&&<section className="mh-active" aria-label="Running now" title="These journals changed within the last minute. Drishya cannot tell whether the agent process is alive."><b className="mh-active-label">Running now</b>{active.slice(0,4).map(session=><button key={session.key} data-session-key={session.key} onClick={()=>session.source?onOpen(session.source,true):open(session)} title="Writing now · journal changed within the last minute"><span className={`mh-harness-icon ${session.harness}`} aria-hidden="true">{session.harness==='codex'?'C':'✳'}</span><strong>{session.title}</strong><small>{session.root?.replaceAll('\\','/').split('/').at(-1)??'No workspace'}</small></button>)}{active.length>4&&<small className="mh-active-more">+{active.length-4} more</small>}</section>}
     {resume&&<button className="mh-resume" onClick={()=>open(resume)}><span className="mh-resume-icon"><InterfaceGlyph name="arrow"/></span><span><small>Resume your last workspace</small><strong>{resume.title}</strong><span>{resume.root?.replace(/\\/g,'/').split('/').at(-1)??'Local session'} · {resume.harness==='codex'?'Codex':'Claude Code'}</span></span><span aria-hidden="true">↗</span></button>}
-    <section className="mh-library" aria-label="Session library"><div className="mh-filters"><label className="mh-search"><InterfaceGlyph name="search"/><input aria-label="Find sessions" placeholder="Search sessions or workspaces…" maxLength={200} value={query} onChange={e=>{setQuery(e.target.value);reset();}} onKeyDown={e=>{if(e.key==='Escape'&&query){e.preventDefault();e.stopPropagation();setQuery('');reset();}}}/>{query&&<button className="mh-clear-search icon-btn" aria-label="Clear session search" onClick={()=>{setQuery('');reset();}}>×</button>}</label><select aria-label="Harness" value={harness} onChange={e=>{setHarness(e.target.value);reset();}}><option value="all">All harnesses</option><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select><select aria-label="Session time range" value={days} onChange={e=>{setDays(Number(e.target.value));reset();}}><option value={0}>All time</option><option value={1}>Last day</option><option value={7}>Last week</option><option value={30}>Last month</option></select></div>
+          {!resume&&!active.length&&latest&&<button className="mh-latest" onClick={()=>open(latest)}><span className="mh-resume-icon"><InterfaceGlyph name="arrow"/></span><span><small>Open your latest session</small><strong>{latest.title}</strong></span></button>}
+          <button className="mh-browse" onClick={()=>dock(true)}>{inventory.length?`Browse ${inventory.filter(s=>!s.nested).length} sessions`:'Your sessions'}<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></button>
+        </div>
+        <p className="mh-opening-facts">Local · open source · no telemetry</p>
+      </div>
+    </section>
+    <div className="mh-sheet">
+    <section className="mh-intro"><div><span className="mh-eyebrow">Your work, in view</span><h1>{showIntro?'Your agents. In view.':'Your sessions.'}</h1>{showIntro&&<p id="home-introduction">Drishya brings agent work, code and review into one local workspace.</p>}</div><div className="mh-intro-actions"><button aria-expanded={showIntro} className="btn ghost mh-about" aria-label="About Drishya" onClick={()=>setIntro(!showIntro)}><svg className="mh-about-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg><span>{showIntro?'Less introduction':'About Drishya'}</span></button><button className="btn mh-refresh" onClick={()=>void refreshSessions()} disabled={refreshing} aria-busy={refreshing}><InterfaceGlyph name="refresh"/>{refreshing?'Refreshing…':'Refresh sessions'}</button></div></section>
+    <HomeOverview sessions={inventory.filter(s=>!s.nested)} groups={projects} now={now} onGroup={key=>{choose(key);dock(true);}}/>
+    <section className="mh-library" aria-label="Session library"><div className="mh-filters"><label className="mh-search"><InterfaceGlyph name="search"/><input aria-label="Find sessions" placeholder="Search sessions or workspaces…" onFocus={()=>dock(true)} maxLength={200} value={query} onChange={e=>{setQuery(e.target.value);reset();}} onKeyDown={e=>{if(e.key==='Escape'&&query){e.preventDefault();e.stopPropagation();setQuery('');reset();}}}/>{query&&<button className="mh-clear-search icon-btn" aria-label="Clear session search" onClick={()=>{setQuery('');reset();}}>×</button>}</label><select aria-label="Harness" value={harness} onChange={e=>{setHarness(e.target.value);reset();}}><option value="all">All harnesses</option><option value="codex">Codex</option><option value="claude-code">Claude Code</option></select><select aria-label="Session time range" value={days} onChange={e=>{setDays(Number(e.target.value));reset();}}><option value={0}>All time</option><option value={1}>Last day</option><option value={7}>Last week</option><option value={30}>Last month</option></select></div>
       {error&&<div className="mh-error" role="alert">{error}<button className="btn ghost" onClick={()=>void refreshSessions()} disabled={refreshing}>Retry</button></div>}
       <div className="mh-columns"><aside ref={workspaces} className="mh-workspaces" aria-label="Workspaces" onKeyDown={event=>{if(phone&&workspacesOpen&&event.key==='Escape'){event.preventDefault();event.stopPropagation();setWorkspacesOpen(false);workspaceTrigger.current?.focus({preventScroll:true});}}} onBlur={event=>{if(phone&&!event.currentTarget.contains(event.relatedTarget))setWorkspacesOpen(false);}}><button ref={workspaceTrigger} className="mh-workspace-trigger" aria-label="Choose workspace" aria-expanded={phone&&workspacesOpen} aria-controls="home-workspace-options" onClick={()=>setWorkspacesOpen(!workspacesOpen)}><InterfaceGlyph name="folder"/><span>{group?.name??'All workspaces'}</span><small>{group?selection.length:matches.length}</small><svg className="mh-chevron" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5 6 7.5 9 4.5"/></svg></button><header><span>Workspaces</span><span>{groups.length}</span></header><div id="home-workspace-options" className={`mh-workspace-options${workspacesOpen?' open':''}`}><button className={`mh-workspace${group?'':' selected'}`} onClick={()=>choose('all')} aria-pressed={!group}><InterfaceGlyph name="local"/><span><strong>All sessions</strong><small>Across your local workspaces</small></span><b>{matches.length}</b></button><div className="mh-workspace-list" tabIndex={0} aria-label="Scroll workspaces" onScroll={e=>setWorkspaceTop(e.currentTarget.scrollTop)}><div style={{height:groups.length*64,position:'relative'}}><div style={{position:'absolute',top:first*64,left:0,right:0}}>{groups.slice(first,end).map(g=><button key={g.key} className={`mh-workspace${workspace===g.key?' selected':''}`} onClick={()=>choose(g.key)} aria-pressed={workspace===g.key} title={g.root??'No workspace'}><InterfaceGlyph name="folder"/><span><strong>{g.name}</strong><small>{g.detail??(g.root?parentFolder(g.root):'No workspace recorded')}</small></span><b>{g.items.length}</b></button>)}</div></div></div></div></aside>
         <div className="mh-results"><header><div><h2>{group?.name??'All sessions'}</h2><span>{ordered.length} session{ordered.length===1?'':'s'}{!sources?' · discovering local sessions…':''}</span></div>{filtered&&<button className="btn ghost mh-clear-filters" onClick={clearFilters}>Clear filters</button>}{recovery==='unavailable'&&<span className="mh-save-status" title={recoveryError}>Reading positions could not be saved</span>}</header><div className="mh-session-list" tabIndex={0} aria-label="Sessions; use arrow keys to navigate" onKeyDown={navigateSessions} ref={list} onWheel={()=>{restoring.current=false;}} onScroll={e=>{setListTop(e.currentTarget.scrollTop);if(!restoring.current)memory.set('home/top',e.currentTarget.scrollTop);if(e.currentTarget.scrollTop+e.currentTarget.clientHeight>=e.currentTarget.scrollHeight-200)setShown(n=>Math.min(ordered.length,n+50));}}>
@@ -141,6 +165,8 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
           {ordered.length>shown&&<button className="btn mh-load" onClick={()=>setShown(n=>n+50)}>Load more sessions · {ordered.length-shown} remaining</button>}
         </div></div>
       </div>
-    </section><footer className="mh-footer"><span>Local capture. No telemetry.</span><GitHubStarLink/><span/></footer>
+    </section>
+    </div>
+    </div><footer className="mh-footer"><span>Local capture. No telemetry.</span><GitHubStarLink/><span/></footer>
   </div>;
 }

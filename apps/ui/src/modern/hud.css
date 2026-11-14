@@ -7,13 +7,13 @@
 :root[data-ui-version=modern] .modern-session-header .studio-session h1 { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.5;font-size:var(--text-xs);max-width:100%; }
 :root[data-ui-version=modern] .modern-session-header .brand,:root[data-ui-version=modern] .modern-session-header .studio-actions { padding:7px 10px;border:1px solid var(--line);border-radius:var(--round-lg);background:color-mix(in srgb,var(--s1) 80%,transparent);backdrop-filter:blur(16px); }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .folder-explorer { bottom:auto;max-height:min(75dvh,calc(100dvh - var(--workspace-tools-bottom,132px) - 30px));backdrop-filter:blur(16px);background:color-mix(in srgb,var(--s1) 82%,transparent); }
-:root[data-ui-version=modern] .modern-toolbox { backdrop-filter:blur(16px); }:root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.open { background:color-mix(in srgb,var(--s1) 86%,transparent);backdrop-filter:blur(16px);box-shadow:0 20px 40px #0007; }
+:root[data-ui-version=modern] .modern-tool-station:not(.toolbox-minimized) { backdrop-filter:blur(16px); }:root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.open { background:color-mix(in srgb,var(--s1) 86%,transparent);backdrop-filter:blur(16px);box-shadow:0 20px 40px #0007; }
 .composer-minimize { position:absolute;right:10px;top:-13px;z-index:1;min-width:28px;height:26px;padding:3px 8px;border:1px solid var(--line-2);border-radius:var(--round-md);background:var(--s2);color:var(--t2);font:var(--text-xs)/1.5 var(--sans);cursor:pointer; }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.composer-minimized { width:180px;height:38px;min-height:38px;max-height:38px;border-radius:var(--round-lg); }.composer-minimized>:not(.composer-minimize):not(.composer-mini-stop) { display:none!important; }.composer-minimized>.composer-minimize { position:static;width:100%;height:100%;border:0;border-radius:inherit;background:none;font:var(--text-xs) var(--sans); }
 .toolbox-collapse { position:absolute;right:9px;top:8px;z-index:1;width:24px;height:24px;border:1px solid var(--line);background:var(--s2);color:var(--t2);border-radius:var(--round-sm);cursor:pointer; } :where(:root:not([data-ui-skin=clarity])) .modern-toolbox .md-dock-heading { padding-right:36px!important; }.toolbox-minimized>.modern-toolbox { display:none!important; }:root[data-ui-version=modern][data-experience=classic] .toolbox-minimized { width:42px;min-width:42px;height:42px;min-height:42px;overflow:visible; }.toolbox-minimized .toolbox-collapse { inset:0;width:42px;height:42px;font-size:var(--text-lg);background:var(--s1);border-radius:var(--round-lg); }
-@supports not (backdrop-filter:blur(1px)) { :root[data-ui-version=modern] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-toolbox,.modern-native-composer) { background:var(--s1)!important; } }
-:root[data-ui-version=modern][data-low-resource] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-toolbox,.modern-native-composer) { backdrop-filter:none!important;background:var(--s1)!important; }
-@media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-toolbox,.modern-native-composer) { backdrop-filter:none!important; } }
+@supports not (backdrop-filter:blur(1px)) { :root[data-ui-version=modern] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-tool-station:not(.toolbox-minimized),.modern-native-composer) { background:var(--s1)!important; } }
+:root[data-ui-version=modern][data-low-resource] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-tool-station:not(.toolbox-minimized),.modern-native-composer) { backdrop-filter:none!important;background:var(--s1)!important; }
+@media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] :is(.studio-session,.modern-session-header .brand,.studio-actions,.folder-explorer,.modern-tool-station:not(.toolbox-minimized),.modern-native-composer) { backdrop-filter:none!important; } }
 @media(max-width:700px) { :root[data-ui-version=modern] .modern-session-header .studio-session {padding:6px 9px;border-radius:var(--round-lg);}:root[data-ui-version=modern] .modern-session-header .brand {padding:6px;}:root[data-ui-version=modern] .modern-session-header .studio-actions {padding:4px;} }
 
 :root[data-ui-version=modern] .modern-native-composer>.composer-minimize { position:absolute;right:10px;top:8px;z-index:5;width:28px;height:28px;border:0;background:transparent;display:grid;place-items:center; }
@@ -63,7 +63,7 @@
 :root[data-ui-version=modern] .modern-session-header .studio-actions svg {fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;}
 /* The Changes entry is a word, not an icon: it keeps the label's width instead of spilling out of a 34 px square. */
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.review-open {width:auto;min-width:34px;padding:0 9px;}
-/* UI-1: Workspace, Git review and Git graph join the one navigation cluster as icons; their names stay in aria-label and title. */
+/* UI-1: Workspace and Git graph join the one navigation cluster as icons; their names stay in aria-label and title. */
 :root[data-ui-version=modern] .modern-session-header .workspace-view-slot>:is(.git-open,.workspace-open) {font-size:0;gap:0;}
 /* UI-11: their hidden label is a text node; in the grid it became a second row and lifted the icon 4 px above its neighbours. A flex box centres the glyph alone. */
 :root[data-ui-version=modern][data-experience=classic] .modern-session-header .studio-actions>.workspace-view-slot>:is(.git-open,.workspace-open) {display:flex;align-items:center;justify-content:center;}
@@ -74,6 +74,7 @@
 :root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:var(--text-md);font-weight:var(--weight-medium);line-height:1.5;margin:0;}
 @media(max-width:700px) {:root[data-ui-version=modern] .modern-session-header .studio-session h1 {font-size:var(--text-sm);}}
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .history {right:0;padding-right:var(--stage-rail);}
+:root[data-ui-version=modern][data-experience=classic] .connected-workspace .history-prompt-marks {right:calc(14px + var(--stage-edge,0px));}
 :root[data-ui-version=modern] .developer-workspace-open .complete-prompt-rail {display:none;}
 .prompt-rail-preview>time {display:block;color:var(--t2);font:var(--text-2xs)/1.6 var(--mono);margin:3px 0 6px;}
 
@@ -95,14 +96,10 @@
 .session-line-branch[data-reading] {flex:0 0 var(--branch-reading-width);max-width:none;}
 .session-line-branch[data-reading] .session-branch-name {position:absolute;left:0;top:calc(100% + 6px);z-index:1;width:max-content;max-width:min(640px,calc(100vw - var(--branch-reading-left) - 12px));white-space:pre-wrap;overflow-wrap:anywhere;background:var(--s1);color:var(--t1);border:1px solid var(--line);border-radius:var(--round-sm);padding:6px 8px;}
 @media(max-width:700px) {.session-line-meta {display:flex;}.session-line-harness {display:none;}.session-line-branch {max-width:60%;}}
-:root[data-ui-version=modern] .git-entry-choices {position:fixed;inset:auto;margin:0;width:224px;max-width:calc(100vw - 16px);padding:4px;border:1px solid var(--line);border-radius:var(--round-md);background:var(--s1);color:var(--t1);box-shadow:0 8px 24px #0003;}
-.git-entry-choices:popover-open {display:grid;gap:2px;}
-.git-entry-choices>button {display:grid;gap:2px;justify-items:start;padding:9px 10px;min-height:48px;border:0;border-radius:var(--round-sm);background:none;color:var(--t1);text-align:left;font:var(--text-xs)/1.4 var(--sans);cursor:pointer;}
-.git-entry-choices>button:is(:hover,:focus-visible) {background:var(--s3);}
-.git-entry-choices>button>strong {font-weight:var(--weight-medium);}.git-entry-choices>button>small {color:var(--t3);font-size:var(--text-2xs);}
-/* UI-8 (Yash, 3 Nov). A minimised Toolbox waits at the middle of its edge, and the stage, with its prompt rail, widens into the room it gave back. */
+/* UI-8 / UI-33: a minimised Toolbox waits at the middle of its edge and History widens into the freed room; the prompt rail stays in its own outer lane. */
 @media (min-width: 821px) {
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace[data-toolbox-minimized] { --stage-rail: 76px; }
+ /* padding-right:var(--stage-rail) keeps cards clear of the Toolbox without narrowing History below its 1280px 2-column measure. */
  :root[data-ui-version=modern][data-experience=classic] .modern-tool-station.toolbox-minimized { top:calc(50% - 21px); bottom:auto; }
 }
 /* UI-8: every header panel hangs from the cluster's right edge, 6 px below it: Search, the session menu and the Git menu share one edge. */

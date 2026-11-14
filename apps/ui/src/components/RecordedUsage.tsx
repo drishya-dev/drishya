@@ -122,7 +122,7 @@ export function UsagePeek() {
     {mode === 'replay' && !reading && !report ? <p>Recorded accounting is available in full session history.</p> : <>
       <Limits point={recorded} harness={harness} />
       <Context reading={reading} report={report} pending={pending} harness={harness} main={!!main && readings?.some(r => r.agentId !== main)} />
-      <Disclosure surface="session/usage-token-details" initiallyOpen={false}><summary>Token details</summary>
+      <Disclosure surface="session/usage-token-details" initiallyOpen={false} className="usage-token-details"><summary>Token details</summary>
         {recorded ? <Tokens point={recorded} /> : <section aria-label="Tokens"><h4>Tokens</h4><p className="usage-absent">{joined ? 'This session continues across more than one journal, and each reports its own usage, so no single total is shown.' : 'No usage values recorded for this session.'}</p></section>}
         {recorded && <Work point={recorded} />}
       </Disclosure>

@@ -83,14 +83,14 @@ export function ProductShell({ children }: { children: ReactNode }) {
 }
 
 const THEMES = [
-  ['dark', 'Jet Black', 'Linear Dark · graphite and indigo'],
+  ['dark', 'Jet Black', 'Linear Dark · graphite and azure'],
   ['midnight', 'Midnight', 'Deep navy · sky blue'],
   ['light', 'Paper', 'Pristine Light · off-white and blue'],
 ] as const;
 
 // Modern names describe our materials, without claiming another theme's identity.
 const MODERN_THEMES = [
-  ['dark', 'Jet Black', 'Neutral graphite · indigo'],
+  ['dark', 'Jet Black', 'Neutral graphite · azure'],
   ['midnight', 'Midnight', 'Midnight black · electric blue'],
   ['light', 'Daylight', 'White · sky blue'],
 ] as const;

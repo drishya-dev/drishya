@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
 import type { CurrentFile } from '../api.ts';
 import type { SourceVersions } from '../lib/source-versions.ts';
 import { compareDraft } from '../lib/draft-comparison.ts';
@@ -8,7 +8,7 @@ import { WholeSource } from './WholeSource.tsx';
 
 function Snapshot({file,label}:{file:CurrentFile;label:string}) {
   const viewport=useRef<HTMLDivElement>(null);
-  return <section><h3>{label}<small title={file.modifiedAt}>{file.totalLines} lines{file.redacted?' · redacted':''}</small></h3><div ref={viewport} className="source-reading source-snapshot" tabIndex={0} aria-label={label}><WholeSource text={file.text} path={file.path} viewport={viewport} wrap/></div></section>;
+  return <section><h3>{label}<small title={file.modifiedAt}>{plural(file.totalLines,'line')}{file.redacted?' · redacted':''}</small></h3><div ref={viewport} className="source-reading source-snapshot" tabIndex={0} aria-label={label}><WholeSource text={file.text} path={file.path} viewport={viewport} wrap/></div></section>;
 }
 export function SourceComparison({path,before,after,close,beforeLabel='Retained reading',afterLabel='Latest disk snapshot',context='Local comparison of checked file snapshots · no changes applied'}:{path:string;before:CurrentFile;after:CurrentFile;close:()=>void;beforeLabel?:string;afterLabel?:string;context?:string}) {
   const comparison=useMemo(()=>compareDraft(before.text,after.text),[before.text,after.text]);

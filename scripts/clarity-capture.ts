@@ -140,7 +140,7 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
   }
   if (surface === 'changes') {
     await press(page.locator('button.review-open'));
-    await populated(page.getByRole('dialog', { name: 'Changes', exact: true }));
+    await populated(page.getByRole('dialog', { name: 'Session review', exact: true }));
     if (c.id === 'demo') await populated(page.locator('.review-file').first());
     return 'material';
   }
@@ -199,9 +199,9 @@ async function prepare(page: Page, c: GuardCase, surface: string): Promise<'mate
     await page.addStyleTag({ content: '.cm-cursorLayer { visibility: hidden !important; animation: none !important; }' });
   } else if (surface === 'git') {
     await press(desk.getByRole('button', { name: 'Back to agent', exact: true }));
-    await press(page.getByRole('button', { name: 'Git', exact: true }));
-    await press(page.getByRole('button', { name: 'Git review', exact: true }));
-    const review = page.getByRole('dialog', { name: 'Git review', exact: true }); await visible(review);
+    await press(page.locator('.modern-session-header').getByRole('button', { name: 'Changes', exact: true }));
+    const review = page.getByRole('region', { name: 'Changes', exact: true }); await visible(review);
+    await press(review.getByRole('button', { name: 'Uncommitted', exact: true }));
     const approve = review.getByRole('button', { name: 'Approve read-only Git', exact: true });
     await approve.or(review.getByRole('button', { name: 'Refresh changes', exact: true })).waitFor({ state: 'visible' });
     if (await approve.isVisible()) await press(approve);
@@ -239,7 +239,7 @@ export async function captureSurfaces(browser: Browser, server: Server, cases: G
         for (const end = Date.now() + 30_000; !(await desk.isVisible()) && !(await page.locator('.history').isVisible()); await page.waitForTimeout(50)) requireCase(Date.now() < end, 'Neither the history nor the Workspace appeared');
         if (await desk.isVisible()) await press(desk.getByRole('button', { name: 'Back to agent', exact: true }));
         await visible(page.locator('.history'));
-        // Likewise a Git review or file dialog kept from the previous capture: every shot starts with nothing open.
+        // Likewise a Changes window or file dialog kept from the previous capture: every shot starts with nothing open.
         for (let i = 0; i < 3 && await page.getByRole('dialog').count(); i++) { await page.keyboard.press('Escape'); await page.waitForTimeout(300); }
       }
       await page.evaluate(value => { document.documentElement.dataset.palette = value; }, palette);

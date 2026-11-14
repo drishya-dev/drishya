@@ -56,7 +56,7 @@ test('investigation finishing: captured action to draft, explicit synthetic subm
   const composer=page.getByRole('region',{name:'Harness prompt',exact:true});await expect(composer.getByRole('textbox',{name:'Prompt for selected harness session',exact:true})).toHaveValue(new RegExp(operationId));
   await composer.getByRole('button',{name:'Send prompt',exact:true}).click();await expect(composer.getByRole('group',{name:'Confirm session access',exact:true})).toBeVisible();
   await composer.locator('input[type=checkbox]').check();await composer.getByRole('button',{name:'Confirm and send',exact:true}).click();await expect.poll(()=>submitted).toBe(1);
-  await page.getByLabel('More workspace options',{exact:true}).click();await expect(page.locator('.workspace-menu[open]')).toContainText('Request submitted to native controller');await page.getByRole('button',{name:'Review new activity',exact:true}).click();await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toContainText('Since this turn began');await expect(page.getByRole('dialog',{name:'Changes',exact:true})).toContainText('SYNTHETIC_CORRECTION_CHECK');await page.keyboard.press('Escape');
+  await page.getByLabel('More workspace options',{exact:true}).click();await expect(page.locator('.workspace-menu[open]')).toContainText('Request submitted to native controller');await page.getByRole('button',{name:'Review new activity',exact:true}).click();await expect(page.getByRole('dialog',{name:'Session review',exact:true})).toContainText('Since this turn began');await expect(page.getByRole('dialog',{name:'Session review',exact:true})).toContainText('SYNTHETIC_CORRECTION_CHECK');await page.keyboard.press('Escape');
   await page.getByLabel('More workspace options',{exact:true}).click();await page.getByRole('button',{name:'Back to reading',exact:true}).click();await expect(page.locator('article.selected')).toHaveAttribute('data-op-id',operationId);
   expect(readFileSync(join(root,'src/checkout/guard.ts'),'utf8')).not.toContain('corrected');
 });
@@ -71,23 +71,28 @@ test('investigation finishing: encrypted recovery previews and restores exact dr
   expect(readFileSync(join(root,'src/cart/total.ts'),'utf8')).not.toContain('recoveryOnly');expect(submissions).toBe(0);
 });
 
-test('empty Notes returns focus to the exact selected step', async ({ page }) => {
+test('empty Notes offers Add a note to the selected step or Choose a step with a hint', async ({ page }) => {
   await open(page);
   const notes = page.getByRole('dialog', { name: 'Notes', exact: true });
-  const returnToStep = notes.getByRole('button', { name: 'Return to selected step', exact: true });
+  const addSelected = notes.getByRole('button', { name: 'Add a note to the selected step', exact: true });
+  const chooseStep = notes.getByRole('button', { name: 'Choose a step', exact: true });
   await command(page, 'Notes');
-  await expect(notes).toContainText('No notes yet. Open a step and add one.');
-  await expect(returnToStep).toHaveCount(0);
-  await page.keyboard.press('Escape');
+  await expect(notes).toContainText('No notes yet.');
+  await expect(chooseStep).toBeVisible();
+  await expect(addSelected).toHaveCount(0);
+  await chooseStep.click();
+  await expect(notes).toHaveCount(0);
+  await expect(page.locator('.history-note-hint')).toContainText('Add a note');
   await selectAction(page);
+  await expect(page.locator('.history-note-hint')).toHaveCount(0);
   const card = page.locator(`article[data-op-id="${operationId}"]`);
   await expect(card).toHaveClass(/\bselected\b/);
   await command(page, 'Notes');
-  await returnToStep.press('Enter');
+  await addSelected.press('Enter');
   await expect(notes).toHaveCount(0);
-  await expect(card).toBeFocused();
-  await expect(card).toBeInViewport();
-  await expect(card.getByText('Add a note', { exact: true })).toBeVisible();
+  const field = card.getByRole('textbox', { name: 'Note on this step', exact: true });
+  await expect(field).toBeVisible();
+  await expect(field).toBeFocused();
 });
 
 test('investigation finishing: selected saved moments produce an exact portable packet and survive reload',async({page})=>{
@@ -126,7 +131,7 @@ test('investigation finishing: every material and core reader remains usable acr
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${materialsId}`);await expect(page.locator('.history')).toBeVisible();await page.getByRole('button',{name:'Workspace settings',exact:true}).click();const settings=page.getByRole('dialog',{name:'Workspace settings',exact:true});await settings.getByRole('button',{name:theme,exact:true}).click();await page.keyboard.press('Escape');
     for(const op of representatives){await command(page,'Notes');await page.getByRole('dialog',{name:'Notes',exact:true}).getByRole('button',{name:`${op.title} ↗`,exact:true}).click();const inspector=page.getByRole('region',{name:'Operation detail',exact:true});await expect(inspector).toBeVisible();await expect(inspector).not.toBeEmpty();expect(await inspector.evaluate(node=>node.scrollWidth-node.clientWidth),`${theme}/${op.kind}`).toBeLessThanOrEqual(1);await page.keyboard.press('Escape');}
     await command(page,'Open developer workspace');const workspace=page.getByRole('region',{name:'Developer workspace',exact:true}),grant=workspace.getByRole('button',{name:'Approve workspace reading',exact:true});await expect(grant.or(workspace.getByRole('tablist'))).toBeVisible();if(await grant.isVisible())await grant.click();await page.getByRole('textbox',{name:'Find repository files',exact:true}).fill('src/cart/total.ts');await page.locator('[data-spine-path="src/cart/total.ts"]').click();const file=workspace.getByRole('region',{name:'Workspace file src/cart/total.ts',exact:true});await file.getByRole('button',{name:'Edit file',exact:true}).click();await file.getByRole('textbox',{name:'Local draft for src/cart/total.ts',exact:true}).fill('export const paletteDraft = 71;\n');await file.getByRole('button',{name:'Compare draft',exact:true}).click();await expect(file.getByRole('region',{name:'Draft comparison for src/cart/total.ts',exact:true})).toContainText('paletteDraft');await page.screenshot({path:resolve(`.local/finishing-reading-${theme.replaceAll(' ','-')}.png`)});await file.getByLabel('File actions for src/cart/total.ts',{exact:true}).click();await file.getByRole('button',{name:'Discard draft',exact:true}).click();await workspace.getByRole('button',{name:'Back to agent',exact:true}).click();
-    await command(page,'Review current Git changes');const git=page.getByRole('dialog',{name:'Git review',exact:true}),gitGrant=git.getByRole('button',{name:'Approve read-only Git',exact:true});await expect(gitGrant.or(git.locator('.git-review-layout'))).toBeVisible();if(await gitGrant.isVisible())await gitGrant.click();await expect(git.locator('.git-selected-file-header strong')).toHaveAttribute('title','src/cart/total.ts');expect(await git.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finishing-git-${theme.replaceAll(' ','-')}.png`)});await git.getByRole('button',{name:'Close Git review',exact:true}).click();
+    await command(page,'Review current Git changes');const git=page.getByRole('region',{name:'Changes',exact:true}),gitGrant=git.getByRole('button',{name:'Approve read-only Git',exact:true});await expect(gitGrant.or(git.locator('.compare-body'))).toBeVisible();if(await gitGrant.isVisible())await gitGrant.click();await expect(git.locator('.compare-file-title strong')).toHaveAttribute('title','src/cart/total.ts');expect(await git.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/finishing-git-${theme.replaceAll(' ','-')}.png`)});await git.getByRole('button',{name:'Back to agent',exact:true}).click();
     for(const name of ['Find commands','Review findings','Prompt overview']){await command(page,name);const dialog=page.locator('dialog[open]');await expect(dialog).toBeVisible();await expect(dialog.locator('[role=alert]')).toHaveCount(0);expect(await dialog.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);await page.keyboard.press('Escape');}
     await command(page,'Choose a session');await expect(page.locator('.home')).toBeVisible();await page.screenshot({path:resolve(`.local/finishing-home-${theme.replaceAll(' ','-')}.png`)});
   }

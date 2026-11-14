@@ -11,7 +11,8 @@ import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, ren
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { isPersonPrompt, isBlobText } from '@drishya/contracts';
-import type { BlobText, Observation, RecordingSummary, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
+import type { BlobText, Observation, RecordingSummary, RedactionNote, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
+import { PRIVACY_POLICY_VERSION, redactText } from '../../privacy/src/index.ts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
 import { recordingStats } from './recording-stats.ts';
 
@@ -354,9 +355,11 @@ export class Store {
   readonly dataDir: string;
   private stmts = new Map<string, StatementSync>();
   private policyCache = new Map<string, Set<string>>();
+  private readonly isMemory: boolean;
 
   constructor(dataDir: string, opts: { memory?: boolean; readOnly?: boolean } = {}) {
     this.dataDir = dataDir;
+    this.isMemory = !!opts.memory;
     mkdirSync(dataDir, { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(opts.memory ? ':memory:' : join(dataDir, 'drishya.db'), { readOnly: opts.readOnly });
     this.blobs = new BlobStore(join(dataDir, 'blobs'));
@@ -470,6 +473,256 @@ export class Store {
     }
     this.db.prepare('INSERT OR IGNORE INTO meta(key, value) VALUES (?, ?)').run('schema_version', String(SCHEMA_VERSION));
     this.db.prepare('UPDATE meta SET value = ? WHERE key = ?').run(String(SCHEMA_VERSION), 'schema_version');
+    const storedPolicy = (this.db.prepare("SELECT value FROM meta WHERE key = 'privacy_policy_version'").get() as { value: string } | undefined)?.value;
+    if (storedPolicy !== PRIVACY_POLICY_VERSION) this.upgradePrivacyPolicy();
+  }
+
+/** Re-runs current redaction rules over stored observations, blobs, previews, derived caches and search index when the policy version changes. */
+  private upgradePrivacyPolicy() {
+    const hasRows = !!(
+      this.db.prepare('SELECT 1 FROM observations LIMIT 1').get() ||
+      this.db.prepare('SELECT 1 FROM recordings LIMIT 1').get() ||
+      this.db.prepare('SELECT 1 FROM graphs LIMIT 1').get() ||
+      this.db.prepare('SELECT 1 FROM generated LIMIT 1').get() ||
+      this.db.prepare('SELECT 1 FROM bookmarks LIMIT 1').get()
+    );
+    if (!hasRows) {
+      this.db.prepare('INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)').run('privacy_policy_version', PRIVACY_POLICY_VERSION);
+      return;
+    }
+    if (!this.isMemory) {
+      const historyDb = join(this.dataDir, 'history', 'index.db');
+      for (const suffix of ['', '-wal', '-shm']) rmSync(historyDb + suffix, { force: true });
+    }
+    const blobResults = new Map<string, { sha: string; bytes: number; preview: string; hits: { rule: string; count: number }[] } | null>();
+    const replacedOldShas = new Set<string>();
+    const modifiedContentRecordings = new Set<string>();
+    let anyDbContentChanged = false;
+
+    const mergeNotes = (existing: RedactionNote[], added: RedactionNote[]): RedactionNote[] => {
+      if (!added.length) return existing;
+      const merged = new Map<string, RedactionNote>();
+      for (const n of [...existing, ...added]) {
+        const k = `${n.field}\u0000${n.rule}`;
+        const cur = merged.get(k);
+        if (cur) cur.count += n.count;
+        else merged.set(k, { ...n });
+      }
+      return [...merged.values()];
+    };
+
+    const safeRedactedKey = (key: string, taken: Record<string, unknown>, field: string, hits: RedactionNote[]): { key: string; changed: boolean } => {
+      const r = redactText(key);
+      if (r.text === key && !Object.hasOwn(taken, key)) return { key, changed: false };
+      for (const h of r.hits) hits.push({ field, rule: h.rule, count: h.count });
+      let candidate = r.text;
+      for (let n = 2; Object.hasOwn(taken, candidate); n++) candidate = `${r.text} #${n}`;
+      return { key: candidate, changed: candidate !== key };
+    };
+
+    const redactStored = (value: unknown, field: string, hits: RedactionNote[], checkBlobs: boolean): { value: unknown; changed: boolean } => {
+      if (typeof value === 'string') {
+        const r = redactText(value);
+        if (r.text === value) return { value, changed: false };
+        for (const h of r.hits) hits.push({ field, rule: h.rule, count: h.count });
+        return { value: r.text, changed: true };
+      }
+      if (Array.isArray(value)) {
+        let changed = false;
+        const out = value.map((item, i) => {
+          const res = redactStored(item, `${field}[${i}]`, hits, checkBlobs);
+          if (res.changed) changed = true;
+          return res.value;
+        });
+        return { value: changed ? out : value, changed };
+      }
+      if (value && typeof value === 'object') {
+        const o = value as Record<string, unknown>;
+        if (o.kind === 'captured-image') return { value, changed: false };
+        if (checkBlobs && isBlobText(o)) {
+          let cached = blobResults.get(o.$blob);
+          if (cached === undefined) {
+            const raw = this.blobs.get(o.$blob);
+            if (raw !== undefined) {
+              const r = redactText(raw);
+              if (r.text !== raw) {
+                const put = this.blobs.put(r.text);
+                replacedOldShas.add(o.$blob);
+                cached = { sha: put.sha, bytes: put.bytes, preview: r.text.slice(0, PREVIEW), hits: r.hits };
+              } else {
+                cached = null;
+              }
+            } else {
+              cached = null;
+            }
+            blobResults.set(o.$blob, cached);
+          }
+          if (cached) {
+            for (const h of cached.hits) hits.push({ field, rule: h.rule, count: h.count });
+            return { value: { $blob: cached.sha, bytes: cached.bytes, preview: cached.preview } satisfies BlobText, changed: true };
+          }
+          const pr = redactText(o.preview);
+          if (pr.text !== o.preview) {
+            for (const h of pr.hits) hits.push({ field: field ? `${field}.preview` : 'preview', rule: h.rule, count: h.count });
+            return { value: { ...o, preview: pr.text }, changed: true };
+          }
+          return { value, changed: false };
+        }
+        let changed = false;
+        const out: Record<string, unknown> = Object.create(null);
+        for (const [k, child] of Object.entries(o)) {
+          const tentativeField = field ? `${field}.${k}` : k;
+          const rk = safeRedactedKey(k, out, tentativeField, hits);
+          const f = field ? `${field}.${rk.key}` : rk.key;
+          if (rk.changed) changed = true;
+          const rc = redactStored(child, f, hits, checkBlobs);
+          if (rc.changed) changed = true;
+          out[rk.key] = rc.value;
+        }
+        return { value: changed ? out : value, changed };
+      }
+      return { value, changed: false };
+    };
+
+    this.tx(() => {
+      this.db.exec('DELETE FROM projections');
+
+      const updateRecTitle = this.db.prepare('UPDATE recordings SET title = ?, revision = revision + 1 WHERE id = ?');
+      for (const row of this.db.prepare('SELECT id, title FROM recordings').all() as { id: string; title: string }[]) {
+        const cleanTitle = redactText(row.title).text;
+        if (cleanTitle !== row.title) {
+          updateRecTitle.run(cleanTitle, row.id);
+          anyDbContentChanged = true;
+        }
+      }
+
+      const updateBookmark = this.db.prepare('UPDATE bookmarks SET note = ? WHERE id = ?');
+      for (const row of this.db.prepare('SELECT id, note FROM bookmarks').all() as { id: string; note: string }[]) {
+        const cleanNote = redactText(row.note).text;
+        if (cleanNote !== row.note) {
+          updateBookmark.run(cleanNote, row.id);
+          anyDbContentChanged = true;
+        }
+      }
+
+      const updateGenerated = this.db.prepare('UPDATE generated SET body = ? WHERE recording_id = ? AND key = ?');
+      for (const row of this.db.prepare('SELECT recording_id, key, body FROM generated').all() as { recording_id: string; key: string; body: string }[]) {
+        try {
+          const parsed = JSON.parse(row.body);
+          const res = redactStored(parsed, '', [], false);
+          if (res.changed) {
+            updateGenerated.run(JSON.stringify(res.value), row.recording_id, row.key);
+            anyDbContentChanged = true;
+          }
+        } catch {
+          const clean = redactText(row.body).text;
+          if (clean !== row.body) { updateGenerated.run(clean, row.recording_id, row.key); anyDbContentChanged = true; }
+        }
+      }
+
+      const updateGraph = this.db.prepare('UPDATE graphs SET body = ? WHERE root = ?');
+      for (const row of this.db.prepare('SELECT root, body FROM graphs').all() as { root: string; body: string }[]) {
+        try {
+          const parsed = JSON.parse(row.body);
+          const res = redactStored(parsed, '', [], false);
+          if (res.changed) {
+            updateGraph.run(JSON.stringify(res.value), row.root);
+            anyDbContentChanged = true;
+          }
+        } catch {
+          const clean = redactText(row.body).text;
+          if (clean !== row.body) { updateGraph.run(clean, row.root); anyDbContentChanged = true; }
+        }
+      }
+
+      const selectBatch = this.db.prepare('SELECT rowid, recording_id, body FROM observations WHERE rowid > ? ORDER BY rowid LIMIT 500');
+      const updateObs = this.db.prepare('UPDATE observations SET body = ? WHERE rowid = ?');
+      let lastRowId = 0;
+      for (;;) {
+        const rows = selectBatch.all(lastRowId) as { rowid: number; recording_id: string; body: string }[];
+        if (!rows.length) break;
+        for (const row of rows) {
+          lastRowId = row.rowid;
+          const obs = JSON.parse(row.body) as Observation;
+          const newHits: RedactionNote[] = [];
+          const pRes = redactStored(obs.payload, '', newHits, true);
+          let changed = pRes.changed;
+          if (changed) obs.payload = pRes.value as Observation['payload'];
+          if (typeof obs.workspaceRoot === 'string') {
+            const wr = redactText(obs.workspaceRoot);
+            if (wr.text !== obs.workspaceRoot) {
+              obs.workspaceRoot = wr.text;
+              for (const h of wr.hits) newHits.push({ field: 'workspaceRoot', rule: h.rule, count: h.count });
+              changed = true;
+            }
+          }
+          if (newHits.length) obs.redactions = mergeNotes(obs.redactions ?? [], newHits);
+          const promotePolicy = obs.privacyPolicyVersion === 'p3';
+          if (promotePolicy) obs.privacyPolicyVersion = PRIVACY_POLICY_VERSION;
+          if (changed) {
+            anyDbContentChanged = true;
+            modifiedContentRecordings.add(row.recording_id);
+            updateObs.run(JSON.stringify(obs), row.rowid);
+          } else if (promotePolicy) {
+            updateObs.run(JSON.stringify(obs), row.rowid);
+          }
+        }
+      }
+
+      if (modifiedContentRecordings.size) {
+        const delSearch = this.db.prepare('DELETE FROM search WHERE recording_id = ?');
+        const insSearch = this.db.prepare('INSERT INTO search(text, recording_id, observation_id) VALUES (?, ?, ?)');
+        const recBatch = this.db.prepare('SELECT seq, body FROM observations WHERE recording_id = ? AND seq > ? ORDER BY seq LIMIT 500');
+        for (const recId of modifiedContentRecordings) {
+          const curRec = this.getRecording(recId);
+          if (curRec) {
+            const metaTitle = this.captureMetadata(recId).title;
+            const cleanMetaTitle = metaTitle ? redactText(metaTitle).text : undefined;
+            const redIdx = cleanMetaTitle ? cleanMetaTitle.indexOf('[REDACTED:') : -1;
+            if (cleanMetaTitle && redIdx >= 0 && curRec.title.length >= redIdx && curRec.title.slice(0, redIdx) === cleanMetaTitle.slice(0, redIdx) && cleanMetaTitle !== curRec.title) {
+              this.db.prepare('UPDATE recordings SET title = ? WHERE id = ?').run(cleanMetaTitle, recId);
+            }
+          }
+          this.db.prepare('UPDATE recordings SET revision = revision + 1 WHERE id = ?').run(recId);
+          delSearch.run(recId);
+          let lastSeq = -1;
+          for (;;) {
+            const rows = recBatch.all(recId, lastSeq) as { seq: number; body: string }[];
+            if (!rows.length) break;
+            for (const r of rows) {
+              lastSeq = r.seq;
+              const o = JSON.parse(r.body) as Observation;
+              const text = searchableText(o);
+              if (text) insSearch.run(text, recId, o.id);
+            }
+          }
+        }
+      }
+
+      this.db.prepare('INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)').run('privacy_policy_version', PRIVACY_POLICY_VERSION);
+    });
+
+    if (replacedOldShas.size) {
+      const stillReferenced = new Set<string>();
+      const blobObsBatch = this.db.prepare(`SELECT rowid, body FROM observations WHERE rowid > ? AND body LIKE '%"$blob":"%' ORDER BY rowid LIMIT 500`);
+      let lastRowId = 0;
+      for (;;) {
+        const rows = blobObsBatch.all(lastRowId) as { rowid: number; body: string }[];
+        if (!rows.length) break;
+        for (const row of rows) {
+          lastRowId = row.rowid;
+          for (const m of row.body.matchAll(/"\$blob":"([0-9a-f]{64})"/g)) stillReferenced.add(m[1]!);
+        }
+      }
+      for (const oldSha of replacedOldShas) {
+        if (!stillReferenced.has(oldSha)) this.blobs.delete(oldSha);
+      }
+    }
+
+    if (anyDbContentChanged && !this.isMemory) {
+      this.db.exec('VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
+    }
+    this.policyCache.clear();
   }
 
   private q(sql: string): StatementSync {
@@ -825,7 +1078,7 @@ export class Store {
     const capturedTitle = titled ? ((JSON.parse(titled.body) as Observation).payload as { title: string }).title : undefined;
     const prompt = user ? (JSON.parse(user.body) as Observation).payload as { text?: string | BlobText } : undefined;
     const text = typeof prompt?.text === 'string' ? prompt.text : prompt?.text?.preview;
-    return { title: capturedTitle ?? text?.replace(/\s+/g, ' ').trim().slice(0, 120), workspaceRoot: observation?.workspaceRoot ?? payload?.cwd };
+    const normalized = text?.replace(/\s+/g, ' ').trim(); const fallbackTitle = normalized ? (normalized.length > 120 ? `${normalized.slice(0, 119).trimEnd()}…` : normalized) : undefined; return { title: capturedTitle ?? fallbackTitle, workspaceRoot: observation?.workspaceRoot ?? payload?.cwd };
   }
 
   /** Moves long strings into blobs, leaving a small reference with a preview. */

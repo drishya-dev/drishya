@@ -22,6 +22,8 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-strong: 600;
+
+  --focus-ring: color-mix(in srgb, var(--t2, #c1c1bd) 82%, transparent);
 }
 
 /* `<small>` otherwise shrinks relative to its parent, which lands off the scale. */
@@ -61,12 +63,13 @@ small { font-size: var(--text-2xs); }
   --agent-rose-ink: #802a5a;
 }
 
-/* SHIP-21: the three shipped palettes and their Settings previews own all paint here. */
+/* SHIP-21: the three shipped palettes and their Settings previews own all paint here.
+   UI-39: Jet Black's ink is the website's cream (t1) and three steps below it at the old steps' lightness, same hue. */
 :root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
   --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
-  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f4f4f6;
-  --t2:#d0d1d9; --t3:#a9abb8; --t4:#8e90a0; --focus:#8b92ec;
-  --palette-active:#5e6ad2; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
+  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f1eee4;
+  --t2:#d5d2c8; --t3:#afaca2; --t4:#949187; --focus:#4f9cff;
+  --palette-active:#4f9cff; --accent-partner:#34d6e6; --brand-ink:#f1eee4; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
   --syntax-number:#fc9e47; --syntax-type:#48c1f7; --syntax-property:#30c9c5;
   --source:#80b8ff; --external:#f296df; --edited:#d4b137;
   --pass:#83f7d1; --fail:#ff9b8f; --graph-node:#e8edf5; --graph-edge:#b4bfce;
@@ -92,7 +95,7 @@ small { font-size: var(--text-2xs); }
   --pass:#83f7d1; --fail:#ff9e96; --graph-node:#edf5ff; --graph-edge:#9db9e2;
   color-scheme:dark;
 }
-:root[data-ui-version=modern] .theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#5e6ad2;--swatch-border:#27272a;}
+:root[data-ui-version=modern] .theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#4f9cff;--swatch-border:#27272a;}
 :root[data-ui-version=modern] .theme-light {--swatch-bg:#f6f9fb;--swatch-node:#fcffff;--swatch-raised:#eef3f6;--swatch-accent:#0593c6;--swatch-border:#d7e0e6;}
 :root[data-ui-version=modern] .theme-midnight {--swatch-bg:#070d1b;--swatch-node:#0d1628;--swatch-raised:#14213a;--swatch-accent:#8db8ff;--swatch-border:#253753;}
 
@@ -391,3 +394,4 @@ small { font-size: var(--text-2xs); }
 
 /* Git light is an illustrated material with its own dark backing in every palette. */
 :root { --git-haze-violet:#29144d; --git-haze-cyan:#082438; --git-canvas:#010102; }
+@media (forced-colors: active) { :root { --focus-ring: Highlight; } }

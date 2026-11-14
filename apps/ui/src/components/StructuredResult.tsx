@@ -1,13 +1,32 @@
-import type {ReactNode} from 'react';
-import {WithOriginal} from './OriginalToggle.tsx';
+import {useMemo,useState,type ReactNode} from 'react';
+import {ReadingCaption,WithOriginal} from './OriginalToggle.tsx';
 import {CapturedResultViews} from './CapturedResultViews.tsx';
-import {useMemo} from 'react';
 import {CapturedOutcomes} from './CapturedOutcomes.tsx';
 import { toolOutputText } from '../lib/tool-output.ts';
 import { ToolOutput } from './ToolOutput.tsx';
-import {dataLabel,isDataRecord,parseCapturedJson} from '../lib/structured-data.ts';
+import {dataLabel,isDataRecord,parseCapturedJson,structuredData} from '../lib/structured-data.ts';
 /** Render only the captured preview. React escapes every value; no remote HTML or execution. */
-export function StructuredResult({text}:{text:string}){const decoded=useMemo(()=>toolOutputText(text).decoded,[text]);return <><CapturedOutcomes output={text}/><div className="result-readings"><CapturedResultViews text={text} fallback={<ResultBody text={text} decoded={decoded}/>} inlineReading={decoded||structuredLayout(text)===undefined}/></div></>;}
+export function StructuredResult({text}:{text:string}){
+  const formatted=useMemo(()=>toolOutputText(text),[text]);
+  const [raw,setRaw]=useState(false);
+  const unwrappedJson=useMemo(()=>{
+    if(!formatted.decoded||raw)return false;
+    try{return parseCapturedJson(formatted.text)!==undefined&&structuredData(formatted.text)!==undefined;}catch{return false;}
+  },[formatted.decoded,formatted.text,raw]);
+  const viewText=formatted.decoded&&!raw&&unwrappedJson?formatted.text:text;
+  const shownText=formatted.decoded&&!raw?formatted.text:text;
+  return <>
+    <CapturedOutcomes output={formatted.decoded?formatted.text:text}/>
+    {formatted.decoded&&(unwrappedJson||raw)&&<div className="structured-tool-output"><ReadingCaption label={raw?'Envelope':'Tool data'} title={raw?undefined:'Unwrapped from the MCP content envelope the tool returned'} original={raw} onToggle={()=>setRaw(value=>!value)}/></div>}
+    <div className="result-readings">
+      <CapturedResultViews
+        text={viewText}
+        fallback={<ResultBody text={shownText} decoded={!raw&&formatted.decoded&&!unwrappedJson} envelopeText={text}/>}
+        inlineReading={(!raw&&unwrappedJson)||(!formatted.decoded&&structuredLayout(text)===undefined)||(raw&&structuredLayout(text)===undefined)}
+      />
+    </div>
+  </>;
+}
 /** The compact layouts a result already gets in place: a short record table or a flat field list. Anything else is undefined. */
 function structuredLayout(text: string): ReactNode | undefined {
   let value: unknown;
@@ -22,9 +41,8 @@ function structuredLayout(text: string): ReactNode | undefined {
   if (record(value) && Object.keys(value).length <= 6 && Object.values(value).every(scalar)) return <WithOriginal text={text}><dl className="result-fields">{Object.entries(value).map(([key, v]) => <div key={key}><dt>{key}</dt><dd>{dataLabel(v)}</dd></div>)}</dl></WithOriginal>;
   return undefined;
 }
-function ResultBody({ text,decoded }: { text: string;decoded:boolean }) {
-  if(decoded) return <ToolOutput text={text} inspect={false}/>;
+function ResultBody({ text,decoded,envelopeText }: { text: string;decoded:boolean;envelopeText:string }) {
+  if(decoded) return <ToolOutput text={envelopeText} inspect={false}/>;
   try { parseCapturedJson(text); } catch { return <pre className="output result-prose">{text}</pre>; }
   return structuredLayout(text) ?? <pre className="output">{text}</pre>;
 }
-

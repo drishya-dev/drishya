@@ -14,19 +14,6 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { recordingIdFor } from '@drishya/capture-core';
-import {
-  httpComplete,
-  listModels,
-  modelConfigFromEnv,
-  prepareBriefing,
-  prepareExplain,
-  prepareLabels,
-  preview,
-  sendPrepared,
-  type Complete,
-  type ModelConfig,
-  type Prepared,
-} from '@drishya/explain';
 import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
@@ -66,9 +53,6 @@ export interface ServerOptions {
   app?: App;
   /** LINK-1: tests inject a fake `gh`; the default runs the person's installed GitHub CLI. */
   gh?: GhRun;
-  model?: ModelConfig;
-  /** The model transport. Tests inject one; the default speaks HTTP to `model.baseUrl`. */
-  complete?: Complete;
   /** Clock in ms, injectable for session-lifetime tests. */
   now?: () => number;
   /** A session unused for this long is signed out. Default 12 h. */
@@ -130,8 +114,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const app = opts.app ?? new App(opts.dataDir);
   const readStorageUsage = storageUsageReader(app.store.dataDir);
   const workspace = new WorkspaceAccess(app);
-  const gitReview = new GitReview(workspace,undefined,app.history);
   const github = new GithubLinks(app, opts.gh);
+  const gitReview = new GitReview(workspace, undefined, app.history, github);
   const gitCompare = new GitCompareService(app, gitReview, github);
   const repositoryRoot = repositoryRoots();
   const imports = new Map<string, { recordingId: string; total: number }>();
@@ -157,8 +141,6 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     s.lastSeen = t;
     return true;
   };
-  const model = opts.model ?? modelConfigFromEnv();
-  const complete = opts.complete ?? httpComplete(model);
   const uiDir = opts.uiDir ?? defaultUiDir();
   const clients = new Set<ServerResponse>();
   let port = opts.port ?? 7878;
@@ -274,10 +256,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         version: VERSION,
         dataDir: app.store.dataDir,
         adapters: Object.values(app.ingest.descriptors),
-        llm: { configured: !!model.apiKey, baseUrl: model.baseUrl, models: { nano: model.nanoModel, super: model.superModel, ultra: model.ultraModel } },
       });
     }
-    if (a === 'models' && m === 'GET') return json(res, { models: await listModels(model) });
     if (a === 'changes' && m === 'GET') {
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       res.write(': connected\n\n');
@@ -328,6 +308,17 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     }
 
     if (a === 'recordings' && id) {
+      // Checkout keys are read contexts only. In particular they never reach controller,
+      // journal import/delete/export, or mutation of the captured session's metadata.
+      if (id.includes('~')) {
+        app.checkoutOwner(id);
+        if (!['workspace', 'git', 'graph', 'compare-evidence'].includes(sub ?? '') || sub === 'workspace' && ['setup', 'image', 'image-grant'].includes(subId ?? '')) throw new HttpError(400, 'A checkout view supports Files, Git and the map only.');
+      }
+      if (sub === 'checkout' && m === 'POST') {
+        const body=await readJson(req,256);
+        if(Object.keys(body).some(key=>key!=='prefix') || body.prefix!==undefined && typeof body.prefix!=='string')throw new HttpError(400,'Choose a recorded checkout.');
+        return json(res,await app.chooseCheckout(id,body.prefix));
+      }
       const firstId = id.split('+')[0]!;
       if(sub==='segments'&&m==='GET') {
         const recording=app.recording(firstId);
@@ -359,6 +350,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'git' && !subId && m === 'GET') return json(res, gitReview.status(id));
       if (sub === 'git' && subId === 'approve' && m === 'POST') return json(res, await gitReview.approve(id));
       if (sub === 'git' && subId === 'snapshot' && m === 'GET') return json(res, await gitReview.snapshot(id, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER)));
+      if(sub==='git'&&subId==='generation'&&m==='GET')return json(res,await gitReview.generation(id));
       if(sub==='git'&&subId==='history'&&m==='GET'){const page=await gitReview.history(id,{start:intParam(url,'start',0,0,10_000_000),referenceStart:intParam(url,'referenceStart',0,0,10_000_000),reference:url.searchParams.get('reference')??'all',query:url.searchParams.get('q')??'',generation:url.searchParams.get('generation')??undefined});return json(res,{...page,sessionLinks:{...sessionLinks(app.store,id,page.commits.map(commit=>commit.hash)),...page.sessionLinks}});}
       if(sub==='git'&&subId==='compare-refs'&&m==='GET')return json(res,await gitCompare.refs(id));
       if(sub==='git'&&subId==='compare'&&m==='GET')return json(res,await gitCompare.compare(id,{base:url.searchParams.get('base')??'',head:url.searchParams.get('head')??''}));
@@ -395,7 +387,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (!sub && m === 'GET') return json(res, { recording: { ...app.recording(firstId), live: app.ingest.isLive(firstId), privacyOutdated: app.ingest.privacyOutdated(firstId), health: app.ingest.health(firstId) } });
       if (!sub && m === 'DELETE') {
         app.recording(firstId);
-        await controller.forget(firstId); workspace.revoke(firstId); gitReview.revoke(firstId);
+        await controller.forget(firstId); workspace.revokeRecording(firstId); gitReview.revoke(firstId);
         const removed = await app.forget(firstId);
         return json(res, { ok: true, ...removed });
       }
@@ -683,49 +675,6 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         return json(res, { id: app.store.addBookmark(firstId, step, note) });
       }
       if (sub === 'generated' && m === 'GET') return json(res, { generated: app.store.listGenerated(firstId) });
-
-      // Model calls: explicit, previewable, derived (audit A04). Without `consent` the route returns
-      // the exact request and its digest. With `consent`, it rebuilds the request from current
-      // evidence and sends it only if the digest still matches what the person reviewed;
-      // otherwise nothing is sent and the new preview comes back with 409.
-      if ((sub === 'explain' || sub === 'briefing' || sub === 'labels') && m === 'POST') {
-        const body = await readJson(req);
-        const large = app.paged(id);
-        const p = large ? undefined : app.projection(id);
-        const art = (artId: string) => {
-          try {
-            return p ? app.artifactText(p, artId).text : undefined;
-          } catch {
-            return undefined;
-          }
-        };
-        let prep: Prepared;
-        let key: string;
-        if (sub === 'explain') {
-          const opId = String(body.operationId ?? '');
-          if (p && !p.operations.some((o) => o.id === opId)) throw new HttpError(404, 'operation not found');
-          prep = p ? prepareExplain(p, opId, art, model) : await app.history.prepare(app.readingId(id), sub, model, body);
-          key = `explain:${opId}`;
-        } else if (sub === 'briefing') {
-          const from = body.from === undefined ? undefined : Number(body.from);
-          const to = body.to === undefined ? undefined : Number(body.to);
-          prep = p ? prepareBriefing(p, art, model, { from, to }) : await app.history.prepare(app.readingId(id), sub, model, body);
-          key = `briefing:${from ?? 0}-${to ?? 'end'}`;
-        } else {
-          prep = p ? prepareLabels(p, model) : await app.history.prepare(app.readingId(id), sub, model, body);
-          key = 'labels';
-        }
-        const shown = preview(prep);
-        if (typeof body.consent !== 'string') {
-          // A cached answer is reused only if it came from this exact request.
-          const stored = app.store.getGenerated(firstId, key) as { identity?: { digest?: string }; result?: unknown } | undefined;
-          return json(res, { preview: shown, cached: stored?.identity?.digest === prep.digest ? stored.result : undefined });
-        }
-        if (!safeEqual(body.consent, prep.digest)) return json(res, { error: 'The evidence, model or destination changed since you reviewed it. Check the updated preview and confirm again.', preview: shown }, 409);
-        const result = await sendPrepared(prep, complete);
-        app.store.putGenerated(firstId, key, { identity: { digest: prep.digest, model: prep.request.model, endpoint: prep.request.endpoint }, result });
-        return json(res, { result });
-      }
     }
     throw new HttpError(404, 'no such route');
   };

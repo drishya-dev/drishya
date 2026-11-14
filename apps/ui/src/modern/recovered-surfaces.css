@@ -26,9 +26,22 @@
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .send-confirmation { margin:0 12px 12px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-turn-details:has(>*) { padding:0 12px 10px; }
 /* The original compact Toolbox, not the Legacy review desk in a new skin. */
-:root[data-ui-version=modern][data-experience=classic] .modern-tool-station { padding:0; border:0; background:none; box-shadow:none; }
-:root[data-ui-version=modern][data-experience=classic] .modern-toolbox { position:static; inset:auto; z-index:auto; width:100%; max-width:none; min-width:0; max-height:none; display:block; padding:7px; background:var(--modern-panel-material); border:1px solid var(--line-2); border-radius:var(--round-lg); box-shadow:0 10px 30px #0002,inset 0 1px #ffffff04; overflow:visible; }
-.modern-toolbox .md-dock-heading { display:flex; align-items:center; justify-content:space-between; padding:9px 8px 13px; font:var(--weight-medium) var(--text-xs)/1.5 var(--sans); color:var(--t1); }
+:root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .workbench-station.modern-tool-station:not(.toolbox-minimized) { padding:0; background:var(--modern-panel-material); border:1px solid var(--line-2); border-radius:var(--round-lg); box-shadow:0 10px 30px #0002,inset 0 1px #ffffff04; }
+:root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .workbench-station.modern-tool-station.toolbox-minimized { padding:0; border:0; background:none; box-shadow:none; }
+:root[data-ui-version=modern][data-experience=classic] .modern-toolbox { position:static; inset:auto; z-index:auto; width:100%; max-width:none; min-width:0; max-height:none; box-sizing:border-box; display:block; padding:0 7px; background:none; border:0; border-radius:0; box-shadow:none; overflow:visible; }
+:root[data-ui-version=modern] .modern-toolbox::before,
+:root[data-ui-version=modern] .modern-toolbox::after { content:''; display:block; position:sticky; left:0; right:0; z-index:2; pointer-events:none; margin-inline:-7px; opacity:0; }
+:root[data-ui-version=modern] .modern-toolbox::before { top:0; height:22px; margin-bottom:-22px; background:linear-gradient(to bottom,var(--s1),transparent); }
+:root[data-ui-version=modern] .modern-toolbox::after { bottom:0; height:28px; margin-top:-21px; background:linear-gradient(to bottom,transparent,var(--s1) 88%); }
+:root[data-ui-version=modern] .modern-tool-station[data-scroll-top='1'] > .modern-toolbox::before,
+:root[data-ui-version=modern] .modern-tool-station[data-scroll-bottom='1'] > .modern-toolbox::after { opacity:1; }
+@media (prefers-reduced-motion: no-preference) {
+ :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .modern-toolbox::before,
+ :root[data-ui-version=modern][data-ui-motion]:not([data-low-resource]) .modern-toolbox::after { transition:opacity 120ms var(--ease-out); }
+}
+.modern-toolbox .md-dock-heading { display:flex; align-items:center; justify-content:space-between; padding:16px 8px 13px; font:var(--weight-medium) var(--text-xs)/1.5 var(--sans); color:var(--t1); }
+:root[data-ui-version=modern] .modern-toolbox .tool-list { margin-top:8px; }
+:root[data-ui-version=modern] .modern-toolbox .tool-heading { padding:6px 8px; }
 .md-dock-led { width:4px; height:4px; border-radius:50%; background:var(--t3); }
 /* Repository review has its own home, paired with Files / Repository across the stage. */
 :root[data-ui-version=modern][data-experience=classic] .modern-review-control { position:absolute; top:calc(var(--workspace-header-h,56px) + 16px); right:18px; z-index:8; padding:3px; border:1px solid var(--line-2); border-radius:var(--round-md); background:var(--s1); }
@@ -53,38 +66,6 @@
 .modern-toolbox .md-runtime-tool { display:block; font:var(--text-2xs)/1.6 var(--mono); color:var(--t3); padding:6px 0; overflow-wrap:anywhere; }
 .md-clear-filter { width:100%; padding:8px; font:var(--text-2xs)/1.5 var(--sans); color:var(--focus); }
 :root[data-ui-version=modern] .modern-toolbox [aria-pressed=true] { background:color-mix(in srgb,var(--focus) 10%,var(--s1)); }
-/* A compact right reader; metadata must not take the patch's reading space. */
-.modern-git-drawer>header>.reading-resize {left:0;width:10px;}
-.modern-git-drawer>header>.reading-resize::after {top:25%;bottom:25%;left:3px;}
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout.git-files-hidden {grid-template-columns:minmax(0,1fr);}
-.modern-git-drawer .git-review-layout>aside[hidden] {display:none;}
-.modern-git-drawer .git-file-name {display:flex;flex-direction:column;min-width:0;gap:3px;}
-.modern-git-drawer .git-file-name :is(strong,small) {overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-.modern-git-drawer .git-file-name strong {font-weight:var(--weight-medium);font-size:var(--text-2xs);color:var(--t1);}
-.modern-git-drawer .git-file-name small {font-size:var(--text-2xs);color:var(--t3);}
-:root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { position:fixed; inset:var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) 16px auto auto; margin:0; width:min(var(--git-reader-width,680px),calc(100vw - 32px)); max-width:calc(100vw - 32px); height:auto; max-height:calc(100dvh - var(--drawer-top,calc(var(--workspace-header-h,56px) + 10px)) - 16px); z-index:40; border:1px solid var(--line-2); border-radius:var(--round-lg); background:var(--bg); box-shadow:-12px 10px 46px #0005; overflow:auto; }
-:root[data-ui-version=modern] .modern-git-drawer>header { position:sticky; top:0; z-index:3; padding:8px 14px; min-height:44px; background:var(--s1); }
-:root[data-ui-version=modern] .modern-git-drawer>header h2 { display:flex; align-items:center; gap:9px; font:var(--weight-medium) var(--text-sm)/1.5 var(--sans); letter-spacing:0; }
-:root[data-ui-version=modern] .modern-git-drawer>header .icon-btn { width:28px; height:28px; font-size:var(--text-md); }
-.modern-git-context { display:flex; align-items:center; gap:10px; padding:10px 14px 0; font-size:var(--text-2xs); }
-.modern-git-context strong { color:var(--t1); font-weight:var(--weight-medium); }.modern-git-context small { margin-left:auto; color:var(--t3); font-size:var(--text-2xs); }
-:root[data-ui-version=modern] .modern-git-drawer>section { margin:14px; padding:14px; border:1px solid var(--line); border-radius:var(--round-md); background:var(--s1); font-size:var(--text-xs); line-height:1.7; }
-:root[data-ui-version=modern] .modern-git-drawer .btn { font-size:var(--text-xs); min-height:var(--control-md); padding:5px 8px; border-radius:var(--round-sm); }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-toolbar { display:flex; align-items:center; flex-wrap:wrap; padding:9px 14px; gap:6px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-toolbar>span { flex:1 1 170px; min-width:0; overflow-wrap:anywhere; margin-right:auto; font:var(--text-2xs)/1.6 var(--mono); }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout { grid-template-columns:clamp(146px,22%,220px) minmax(0,1fr); align-items:start; gap:12px; padding:0 12px 14px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside { background:var(--s1); border:1px solid var(--line); border-radius:var(--round-md); padding:4px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside button { min-height:32px; gap:6px; border:0; border-radius:var(--round-sm); font-size:var(--text-2xs); padding:7px 5px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside .file-icon { width:15px; height:15px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside button[aria-pressed=true] { background:var(--s3); }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout :is(section>header,footer) { padding:9px 0; gap:6px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout section>header strong { font-size:var(--text-2xs); min-width:100%; }
-:root[data-ui-version=modern] .modern-git-drawer .git-patch { padding:3px 0 8px; }
-:root[data-ui-version=modern] .modern-git-drawer .git-patch-reader .code { font-size:var(--text-xs); line-height:1.75; }
-:root[data-ui-version=modern] .modern-git-drawer .reader-tools { gap:4px; padding:5px 0; }
-:root[data-ui-version=modern] .modern-git-drawer .reader-tools :is(input,button,label) { font-size:var(--text-xs); }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout footer label { font-size:var(--text-2xs); }
-:root[data-ui-version=modern] .modern-git-drawer .git-review-layout footer textarea { min-height:52px; padding:8px 10px; font-size:var(--text-xs); }
 /* Slim translucent header: centered session identity, no floating frame around the page. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace .workspace-header { border:0; box-shadow:none; background:color-mix(in srgb,var(--bg) 82%,transparent); backdrop-filter:blur(14px); padding:0; }
 :root[data-ui-version=modern][data-experience=classic] .workspace-header .modern-session-header { margin:0; padding:8px 24px; min-height:56px; border:0; border-radius:0; background:none; grid-template-columns:minmax(130px,1fr) minmax(0,2fr) minmax(130px,1fr); grid-template-rows:40px; gap:14px; box-shadow:none; }
@@ -101,16 +82,13 @@
 @media(hover:hover) and (pointer:fine) { .modern-attachment:hover,.modern-toolbox button:hover,.modern-toolbox summary:hover,:root[data-ui-version=modern] .modern-review-control .git-open:hover,:root[data-ui-version=modern] .modern-session-header .studio-actions :is(.btn,.workspace-menu>summary):hover { background:var(--s2); color:var(--t1); } }
 @media(max-width:820px) {
  :root[data-ui-version=modern][data-experience=classic] .connected-workspace .modern-native-composer.open { width:calc(100vw - 28px); }
- :root[data-ui-version=modern][data-experience=classic] .modern-git-drawer { inset:8px; width:calc(100vw - 16px); height:calc(100dvh - 16px); max-height:calc(100dvh - 16px); max-width:none; }
- :root[data-ui-version=modern] .modern-git-drawer .git-review-layout { grid-template-columns:minmax(0,1fr); padding:0 14px 14px; }
- :root[data-ui-version=modern] .modern-git-drawer .git-review-layout>aside { max-height:120px; }
  :root[data-ui-version=modern][data-experience=classic] .workspace-header .modern-session-header { grid-template-columns:auto minmax(0,1fr) auto; margin:0; gap:10px; padding:8px 14px; }
  :root[data-ui-version=modern] .modern-session-header .brand>span:not(.brand-mark) { display:none; }
  :root[data-ui-version=modern] .modern-session-header .studio-actions { gap:4px; }
  :root[data-ui-version=modern] .modern-session-header .search-open { width:31px; padding:7px; }
  :root[data-ui-version=modern] .modern-session-header .search-open>span,:root[data-ui-version=modern] .modern-session-header .search-open>kbd { display:none; }
  .modern-composer-top { gap:6px; padding-inline:12px; }.modern-composer-identity { font-size:var(--text-2xs); }.modern-composer-state {display:block;font-size:var(--text-2xs);max-width:82px;flex:none;}.modern-native-composer .native-options>summary>span {display:none;}.modern-native-composer .native-options-glyph {width:18px;height:18px;}
- .modern-git-context { padding:10px 14px 0; }.modern-git-context small { font-size:var(--text-2xs); } :where(:root:not([data-ui-skin=clarity])) .modern-review-control { right:14px!important; }
+ :where(:root:not([data-ui-skin=clarity])) .modern-review-control { right:14px!important; }
 }
 @media(prefers-reduced-motion:reduce) { :root[data-ui-version=modern] .workspace-header, :root[data-ui-version=modern] .modern-session-header { backdrop-filter:none!important; } }
 :root[data-ui-version=modern][data-low-resource] .workspace-header, :root[data-ui-version=modern][data-low-resource] .modern-session-header { backdrop-filter:none!important; }
@@ -125,17 +103,24 @@
 :root[data-ui-version=modern] .modern-session-header .studio-actions { grid-column:3; grid-row:1; }
 
 
-/* Ordinary phone controls share a floating row above the measured composer. */
+/* Narrow windows stack controls above the measured composer without hardcoding widths. */
 @media(max-width:820px) {
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:calc(var(--composer-gap,12px) + 4px);}
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .catalog-toggle {left:14px;right:auto;bottom:calc(var(--composer-gap,12px) + 4px);}
- :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer):has(.history-transport) .follow-pill {right:132px;bottom:calc(var(--composer-gap,12px) + 4px);}
+ :root[data-ui-version=modern] .connected-workspace:has(.modern-replay-transport) .catalog-toggle {left:14px;right:auto;bottom:92px;}
 }
 :root[data-ui-version=modern] .modern-native-composer #prompt-size-status:not(.sr-only) { padding:2px 15px 4px; }
 :root[data-ui-version=modern] .modern-native-composer.composer-minimized>.queued-input-receipts { display:block!important; }
 
-/* AUDIT-1: Back to latest sits beside Follow, below the toolbox, in the page's own neutral. */
-:root[data-ui-version=modern] .connected-workspace .follow-pill {right:128px;bottom:12px;background:var(--s2);color:var(--t1);border:1px solid var(--line-2);}
+/* Back to latest shares one right-aligned bottom group with Follow latest. */
+:root[data-ui-version=modern] .connected-workspace .history-transport {display:flex;align-items:center;justify-content:flex-end;gap:8px;height:auto;min-height:34px;}
+:root[data-ui-version=modern] .history-follow-slot {display:contents;pointer-events:auto;}
+:root[data-ui-version=modern] .history-follow-slot:empty {display:none;}
+:root[data-ui-version=modern] .connected-workspace .history-transport>.btn {height:34px;min-height:34px;box-sizing:border-box;display:inline-flex;align-items:center;flex:none;}
+:root[data-ui-version=modern] .connected-workspace .workspace-follow {height:34px;min-height:34px;box-sizing:border-box;white-space:nowrap;flex:none;}
+:root[data-ui-version=modern] .connected-workspace .follow-pill {position:fixed;inset:auto 12px 12px auto;transform:none;width:auto;min-width:34px;height:34px;min-height:34px;padding:0 10px;box-sizing:border-box;border-radius:var(--round-full);background:var(--s2);color:var(--t1);border:1px solid var(--line-2);font-size:var(--text-md);line-height:1;display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:none;pointer-events:auto;}
+:root[data-ui-version=modern] .connected-workspace .history-transport .follow-pill {position:static;inset:auto;margin:0;}
+:root[data-ui-version=modern] .connected-workspace:has(.modern-replay-transport) .follow-pill {bottom:92px;right:12px;}
 :root[data-ui-version=modern] .connected-workspace .follow-pill:hover {background:var(--s3);}
 
 /* Quiet at rest: Expand belongs to the card in hand. */
@@ -153,12 +138,9 @@
 }
 :root[data-ui-version=modern] .verification-basis.bad {color:var(--fail);}
 
-/* AUDIT-1, live: past queue receipts wait for the composer; an input still waiting always shows. */
-:root[data-ui-version=modern] .modern-native-composer>.queued-input-receipts:not([data-waiting]) { opacity:0;transition:opacity 120ms ease-out; }
-:root[data-ui-version=modern] .modern-native-composer:is(:hover,:focus-within)>.queued-input-receipts { opacity:1; }
+:root[data-ui-version=modern]:has(.connected-workspace .modern-replay-transport):has(.connected-workspace .follow-pill) .queued-input-receipts[data-floating] { bottom:134px; }
 :root[data-ui-version=modern] .history .notice-line { padding-inline:6px; }
 .command-cd { color:var(--t3); }
-:root[data-ui-version=modern] .connected-workspace .follow-pill { width:auto;min-width:30px;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding-inline:9px; }
 :root[data-ui-version=modern] .connected-workspace .follow-pill>small { font:var(--text-2xs)/1 var(--mono);color:var(--t2); }
 :root[data-ui-version=modern] .state.state-reported,.pill.st-reported,.command-outcome.outcome-reported { color:var(--fail);font-weight:var(--weight-strong); }
 .pill.st-reported { border-color:color-mix(in srgb,var(--fail) 35%,transparent);font-weight:inherit; }

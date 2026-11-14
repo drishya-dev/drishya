@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
-let dir:string, app:App, server:RunningServer, claude:string, codex:string, missing:string, clean:string, livePath:string;
+let dir:string, app:App, server:RunningServer, claude:string, codex:string, missing:string, clean:string, zero:string, small:string, livePath:string;
 const at=(i:number)=>new Date(Date.UTC(2026,9,30,10,0,i)).toISOString();
 const user=(i:number)=>({type:'response_item',timestamp:at(i),payload:{type:'message',role:'user',content:[{type:'input_text',text:`Synthetic prompt ${i}`}]}});
 const usage=(i:number,n:number)=>({type:'event_msg',timestamp:at(i),payload:{type:'token_count',info:{model_context_window:100000,last_token_usage:{input_tokens:n}}}});
@@ -26,17 +26,25 @@ test.beforeEach(async()=>{
   codex=await imported('codex','codex',[user(0),usage(1,80000),compact(2),usage(3,9000),user(4)]);
   missing=await imported('missing','codex',[compact(1),usage(2,7000),user(3)]);
   clean=await imported('clean','codex',[user(0)]);
+  // Codex records the first reading after a boundary with every input field at 0 before it has sent a request (UI-36b); a real small reading must stay.
+  zero=await imported('zero','codex',[user(0),usage(1,80000),compact(2),usage(3,0),user(4)]);
+  small=await imported('small','codex',[user(0),usage(1,80000),compact(2),usage(3,4000),user(4)]);
   livePath=join(dir,'codex.jsonl');server=await startServer({app,port:0,token:'synthetic-compaction-browser'});
 });
 test.afterEach(async()=>{await server?.close();await app?.close();if(dir&&resolve(dir).startsWith(resolve(tmpdir())+sep))rmSync(dir,{recursive:true,force:true});});
-async function open(page:import('@playwright/test').Page,id:string,step?:number){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0${step===undefined?'':`&at=${step}`}#/r/${id}`);await page.locator('.viewer').waitFor();}
+async function open(page:import('@playwright/test').Page,id:string,step?:number,motion:0|1=0){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=${motion}${step===undefined?'':`&at=${step}`}#/r/${id}`);await page.locator('.viewer').waitFor();}
 for(const width of [600,1440]) test(`captured metrics, summaries and categories at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:1000});await open(page,claude);
   const boundary=page.getByRole('region',{name:'Compaction',exact:true});await boundary.scrollIntoViewIfNeeded();
-  await expect(boundary).toContainText('80,000 tokens');await expect(boundary).toContainText('6,000 tokens');await expect(boundary).toContainText('manual');await expect(boundary).toContainText('3,400 ms');await expect(boundary.locator('.context-track')).toHaveCount(2);
-  expect(await boundary.locator('.context-track').first().evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-  expect(await boundary.locator('.context-track > span').first().evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
-  expect(await boundary.locator('.context-foot').evaluate(el=>getComputedStyle(el).display)).toBe('flex');
+  await expect(boundary).toContainText('Context compacted');
+  await expect(boundary).toContainText('80k → 6k tokens · 93% freed');
+  await expect(boundary).toContainText('You compacted · 3 s');
+  await expect(boundary.locator('.context-track')).toHaveCount(1);
+  const trackBox=(await boundary.locator('.context-track').boundingBox())!;
+  const solidBox=(await boundary.locator('.context-track-solid').boundingBox())!;
+  expect(solidBox.width / trackBox.width).toBeCloseTo(6000 / 80000, 1);
+  expect(await boundary.locator('.context-track').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+  expect(await boundary.locator('.context-track-solid').evaluate(el=>getComputedStyle(el).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
   await page.screenshot({path:resolve(`.local/content12-synthetic-receipt-${width}.png`)});
   const summary=boundary.getByRole('button',{name:'Read summary'});await summary.focus();await page.keyboard.press('Enter');
   await expect(boundary).toContainText('Synthetic retained line 1');await expect(boundary).toContainText('200 of 350');
@@ -50,12 +58,34 @@ for(const width of [600,1440]) test(`captured metrics, summaries and categories 
   await page.screenshot({path:resolve(`.local/content12-synthetic-${width}.png`)});
 });
 test('Codex request readings, encrypted/missing states and replay cutoffs',async({page})=>{
-  await open(page,codex);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await receipt.scrollIntoViewIfNeeded();await expect(receipt).toContainText('Request input readings around compaction');await expect(receipt).toContainText('80,000 tokens');await expect(receipt).toContainText('9,000 tokens');await expect(receipt).toContainText('Summary encrypted by harness');await expect(receipt).toContainText('Duration · Not recorded');
+  await open(page,codex);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await receipt.scrollIntoViewIfNeeded();
+  await expect(receipt).toContainText('Last request before and first after');
+  await expect(receipt).toContainText('80k → 9k tokens · 89% freed of 100k');
+  await expect(receipt).toContainText('Summary encrypted by harness');
+  await expect(receipt.locator('.context-track')).toHaveCount(1);
+  const trackBox=(await receipt.locator('.context-track').boundingBox())!;
+  const solidBox=(await receipt.locator('.context-track-solid').boundingBox())!;
+  const faintBox=(await receipt.locator('.context-track-faint').boundingBox())!;
+  expect(faintBox.width / trackBox.width).toBeCloseTo(80000 / 100000, 1);
+  expect(solidBox.width / trackBox.width).toBeCloseTo(9000 / 100000, 1);
   const c=app.projection(codex).compactions![0]!;
   await open(page,codex,c.step);await expect(page.getByRole('region',{name:'Compaction',exact:true})).toHaveCount(0);
-  await open(page,codex,c.step+1);const past=page.getByRole('region',{name:'Compaction',exact:true});await expect(past).toContainText('80,000 tokens');await expect(past).not.toContainText('9,000 tokens');
-  await open(page,missing);await expect(page.getByRole('region',{name:'Compaction',exact:true})).toContainText('Last request beforeNot recorded');
+  await open(page,codex,c.step+1);const past=page.getByRole('region',{name:'Compaction',exact:true});
+  await expect(past).toContainText('Last request before 80k · first after not recorded');
+  await expect(past).not.toContainText('9k');
+  await expect(past.locator('.context-track')).toHaveCount(0);
+  await open(page,missing);
+  await expect(page.getByRole('region',{name:'Compaction',exact:true})).toContainText('Last request before not recorded');
+  await expect(page.locator('.context-track')).toHaveCount(0);
   await open(page,clean);await expect(page.locator('.context-evidence,.context-report')).toHaveCount(0);
+});
+test('a zero first reading after a Codex compaction is not recorded, never "100% freed"',async({page})=>{
+  await open(page,zero);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await receipt.scrollIntoViewIfNeeded();
+  await expect(receipt).toContainText('Last request before 80k · first after not recorded');
+  await expect(receipt).not.toContainText('freed');await expect(receipt).not.toContainText('→');
+  await expect(receipt.locator('.context-track')).toHaveCount(0);
+  await open(page,small);const real=page.getByRole('region',{name:'Compaction',exact:true});await real.scrollIntoViewIfNeeded();
+  await expect(real).toContainText('80k → 4k tokens · 95% freed of 100k');await expect(real.locator('.context-track')).toHaveCount(1);
 });
 test('a later summary stays hidden and live append does not change past evidence',async({page})=>{
   const p=app.projection(claude), c=p.compactions![0]!;await open(page,claude,c.step+1);const receipt=page.getByRole('region',{name:'Compaction',exact:true});await expect(receipt.getByRole('button',{name:'Read summary'})).toHaveCount(0);await expect(page.locator('.context-summary-reader')).toHaveCount(0);

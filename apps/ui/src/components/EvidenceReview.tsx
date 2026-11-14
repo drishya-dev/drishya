@@ -1,4 +1,4 @@
-import {FileReadingActions} from './FileReadingActions.tsx';
+import {FileReadingActions} from './FileReadingActions.tsx'; import {plural} from '../lib/plural.ts';
 import {SessionDiff} from './SessionDiff.tsx';
 import {InterfaceGlyph} from './InterfaceGlyph.tsx';
 import {ReviewTools} from './ReviewInsights.tsx';
@@ -12,8 +12,8 @@ import {fileName, fileFolder} from '../lib/file-identity.ts';
 import './review-changes.css';
 
 /** A first-visit review entry. Daemon facts cover the whole recording, not its resident page. */
-/** Modern calls this the Changes view everywhere (UI-8); the older experiences keep "Review work". */
-const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Changes' : 'Review work';
+/** Modern calls this the Session review (GIT-9: Changes is the header window that compares branches and reviews the working tree); the older experiences keep "Review work". */
+const reviewName = () => document.documentElement.dataset.uiVersion === 'modern' ? 'Session review' : 'Review work';
 
 /** `trigger={false}`: Modern's header carries Compare (GIT-8) instead; this dialog (failures, recorded checks, gaps, each file's edits) stays one palette step away and opens on the `drishya-session-review` event. */
 export function EvidenceReview({ projection, label = reviewName(), after=-1, trigger=true }: { projection: Projection; label?: string;after?:number;trigger?:boolean }) {
@@ -124,7 +124,7 @@ function ReviewContent({ projection, close, after, left }: { projection: Project
     {error && <p role="alert">{error} <button className="btn" onClick={() => setRetry(n => n + 1)}>Retry</button></p>}
     {!facts ? !error && <p role="status">Opening step…</p> : <div ref={dialog}>
       <div className="review-counts"><span><strong>{facts.editedFileCount.toLocaleString()}</strong> {facts.editedFileCount === 1 ? 'file' : 'files'} changed</span><span><strong>{facts.counts.failures.toLocaleString()}</strong> failed</span><span><strong>{facts.counts.tests.toLocaleString()}</strong> test {facts.counts.tests === 1 ? 'run' : 'runs'}</span></div>
-      {!!facts.unplacedCount&&after>=0&&<p className="review-note">{facts.unplacedCount} entries have no position in the session, so they only show in the whole-session view.</p>}
+      {!!facts.unplacedCount&&after>=0&&<p className="review-note">{facts.unplacedCount} {facts.unplacedCount===1?'entry has':'entries have'} no position in the session, so {facts.unplacedCount===1?'it only shows':'they only show'} in the whole-session view.</p>}
       <div className="review-layout"><section className="review-files" aria-label="Files with changes"><h3>Changed files</h3>
         {facts.editedFileCount ? Array.from({ length: shown.files }, (_, page) => pages[page] && <FilesPage key={page} data={pages[page]} close={leave} />) : <p className="muted">No change inputs recorded.</p>}
         {more('files', facts.editedFileCount, FILES_PER_PAGE)}

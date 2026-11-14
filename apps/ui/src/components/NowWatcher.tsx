@@ -57,8 +57,9 @@ export function NowWatcher() {
   }, [tab]);
   useEffect(() => {
     if (!mark) return;
-    const links = [...document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"][type="image/png"]')];
-    const originals = links.map((link) => link.href);
+    // Every typed tab icon is swapped (the SVG one is what browsers prefer), and each gets its own href and type back.
+    const links = [...document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"][type="image/svg+xml"],link[rel~="icon"][type="image/png"]')];
+    const originals = links.map((link) => link.href), types = links.map((link) => link.type);
     let disposed = false;
     const image = new Image();
     image.onload = () => {
@@ -71,10 +72,10 @@ export function NowWatcher() {
       context.fillStyle = palettePaint('--bg'); context.beginPath(); context.arc(48, 48, 15, 0, Math.PI * 2); context.fill();
       context.fillStyle = palettePaint(MARK_COLOR[mark]); context.beginPath(); context.arc(48, 48, 11, 0, Math.PI * 2); context.fill();
       const url = canvas.toDataURL('image/png');
-      for (const link of links) link.href = url;
+      for (const link of links) { link.type = 'image/png'; link.href = url; }
     };
     image.src = originals[0] ?? '/brand/drishya-32.png';
-    return () => { disposed = true; links.forEach((link, index) => { link.href = originals[index]!; }); };
+    return () => { disposed = true; links.forEach((link, index) => { link.type = types[index]!; link.href = originals[index]!; }); };
   }, [mark,theme]);
 
   return null;

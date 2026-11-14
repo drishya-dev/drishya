@@ -8,6 +8,7 @@ import type {CommandQuery,CommandPage} from '../../../packages/scene/src/command
 import type {ScreenRun} from '../../../packages/scene/src/screen.ts';
 import type {ToolInventory,ToolTrail,ToolFilter} from '../../../packages/scene/src/tools.ts';
 import { Worker } from 'node:worker_threads';
+import { join } from 'node:path';
 import type { ArtifactSlice } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
 import type { HistoryPage, HistoryQuery, HistorySummary } from '../../../packages/scene/src/history.ts';
@@ -18,7 +19,6 @@ import type { SinceSnapshot } from '../../../packages/scene/src/since.ts';
 import type { VerificationTrail } from '../../../packages/scene/src/verification.ts';
 import type { FixChain } from '../../../packages/scene/src/fix-chains.ts';
 import type { ReadBeforeWrite } from '../../../packages/scene/src/read-before-write.ts';
-import type { ModelConfig, Prepared } from '@drishya/explain';
 import type {LibrarySearchQuery,LibrarySearchPage} from '../../../packages/store/src/search-types.ts';
 import type {GitSessionQuery,GitSessionEvidence} from './git-session-evidence.ts';
 import type {DelegationThread} from './delegation-types.ts';
@@ -30,17 +30,33 @@ export class HistoryService {
   private pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void }>();
   private sequence = 0;
   private closed = false;
+  private exitPromise?: Promise<void>;
+  private startingWorker?: Promise<Worker>;
   constructor(privateDir: string, onRead?: (id: string) => void) { this.dir = privateDir; this.onRead = onRead; }
   private readonly onRead?: (id: string) => void;
   private readonly dir: string;
 
-  private request<T>(method: string, args: unknown): Promise<T> {
-    if (this.closed) return Promise.reject(new Error('History service is closed'));
-    const viewId = (args as { id?: unknown } | undefined)?.id;
-    if (typeof viewId === 'string' && method !== 'forget') this.onRead?.(viewId);
-    if (!this.worker) {
+  private async ensureWorker(): Promise<Worker> {
+    if (this.closed) throw new Error('History service is closed');
+    if (this.worker) return this.worker;
+    if (this.startingWorker) return this.startingWorker;
+
+    const start = (async () => {
+      if (this.exitPromise) {
+        await this.exitPromise;
+      }
+      if (this.closed) throw new Error('History service is closed');
+      if (this.worker) return this.worker;
+
       const extension = import.meta.url.endsWith('.mjs') ? 'mjs' : 'ts';
-      const worker = new Worker(new URL(`./history-worker.${extension}`, import.meta.url), { workerData: { dir: this.dir }, resourceLimits: { maxOldGenerationSizeMb: 384, maxYoungGenerationSizeMb: 16 } });
+      const worker = new Worker(new URL(`./history-worker.${extension}`, import.meta.url), {
+        workerData: { dir: this.dir },
+        resourceLimits: { maxOldGenerationSizeMb: 384, maxYoungGenerationSizeMb: 16 },
+      });
+
+      let resolveExit!: () => void;
+      this.exitPromise = new Promise<void>((resolve) => { resolveExit = resolve; });
+
       this.worker = worker;
       worker.once('online', () => { if (this.worker === worker) this.onlineWorker = worker; });
       worker.on('message', (message: { id: number; value?: unknown; error?: string }) => {
@@ -50,20 +66,46 @@ export class HistoryService {
         if (message.error) task.reject(new Error(message.error)); else task.resolve(message.value);
         if (!this.pending.size) worker.unref();
       });
+
       const fail = (error: Error) => {
         if (this.worker !== worker) return; // an old worker's exit must not reject its replacement's requests
         for (const task of this.pending.values()) task.reject(error);
         this.pending.clear();
         if (this.worker === worker) { this.worker = undefined; this.onlineWorker = undefined; }
       };
-      worker.on('error', fail);
-      worker.on('exit', (code) => fail(new Error(`History worker exited (${code})`)));
+
+      worker.on('error', (err) => {
+        if (err instanceof Error && (err.message.includes('database is locked') || err.message.includes('busy'))) {
+          console.error(`history: cache database ${join(this.dir, 'history', 'index.db')} remained locked after 5s wait`);
+        }
+        void worker.terminate().catch(() => {});
+        fail(err);
+      });
+      worker.on('exit', (code) => {
+        fail(new Error(`History worker exited (${code})`));
+        resolveExit();
+      });
       worker.unref();
-    }
+      return worker;
+    })();
+
+    this.startingWorker = start;
+    start.finally(() => {
+      if (this.startingWorker === start) this.startingWorker = undefined;
+    });
+
+    return start;
+  }
+
+  private async request<T>(method: string, args: unknown): Promise<T> {
+    if (this.closed) throw new Error('History service is closed');
+    const viewId = (args as { id?: unknown } | undefined)?.id;
+    if (typeof viewId === 'string' && method !== 'forget') this.onRead?.(viewId);
+    const worker = await this.ensureWorker();
     const id = ++this.sequence;
     const result = new Promise<T>((resolve, reject) => this.pending.set(id, { resolve: (value) => resolve(value as T), reject }));
-    this.worker.ref();
-    this.worker.postMessage({ id, method, args });
+    worker.ref();
+    worker.postMessage({ id, method, args });
     return result;
   }
 
@@ -107,14 +149,20 @@ export class HistoryService {
   artifact(id: string, artifactId: string, start: number, count: number) { return this.request<ArtifactSlice>('artifact', { id, artifactId, start, count }); }
   artifactFind(id: string, artifactId: string, query: string, start: number, continuation?: string) { return this.request<BlobSearchResult | undefined>('artifact-find', { id, artifactId, query, start, continuation }); }
   file(id: string, path: string, start = 0, count = 100, step?: number, query = '', selectedOperationId?: string) { return this.request<FileOperationPage>('file', { id, path, start, count, step, query, selectedOperationId }); }
-  prepare(id: string, task: string, model: ModelConfig, body: Record<string, unknown>) { return this.request<Prepared>('prepare', { id, task, model: { ...model, apiKey: undefined }, body }); }
   marker(id: string, step: number, types: Marker['type'][], direction: 1 | -1) { return this.request<number | undefined>('marker', { id, step, types, direction }); }
   forget(id: string) { return this.request<void>('forget', { id }); }
   async close() {
     if (this.closed) return;
     // Await requests before terminating so derived writes never race shutdown/cleanup.
-    if (this.worker) await this.request('close', {});
+    if (this.worker) {
+      try {
+        await this.request('close', {});
+      } catch {
+        // worker may have already exited or errored
+      }
+    }
     this.closed = true;
     if (this.worker) await this.worker.terminate();
+    if (this.exitPromise) await this.exitPromise;
   }
 }

@@ -1,3 +1,4 @@
+import {stageWidth} from '../lib/stage-geometry.ts';
 import {useLayoutEffect,useRef,useState,type CSSProperties,type RefObject,type PointerEvent} from 'react';
 import {useWorkspaceState} from '../lib/workspace-memory-react.ts';
 import {readingWindowLayout,resizeReadingWindow,type ReadingWindowLayout,type ReadingEdge,type WindowRect,type ReadingWindowBounds} from '../lib/reading-window.ts';
@@ -18,20 +19,15 @@ export function useReadingWindow(ref:RefObject<HTMLDialogElement|null>,id:string
    const composer=document.querySelector<HTMLElement>('.prompt-composer');
    // Layout height ignores the composer's finite scale animation; geometry must not chase it.
    const bottom=peek&&composer?innerHeight-composer.offsetHeight-(parseFloat(getComputedStyle(composer).bottom)||0)-12:innerHeight-12;
-   // The right-docked Git drawer starts below the navigation buttons so Review and Graph stay reachable.
-   const drawer=ref.current?.classList.contains('modern-git-drawer')&&innerWidth>820;
-   const drawerTop=Math.max((header?.bottom??52)+12,controls&&controls.height>0?controls.bottom+12:0);
-   if(drawer)ref.current?.style.setProperty('--drawer-top',`${drawerTop}px`);
-   // LAYOUT-1: past --stage-max (Modern only; the variable is undefined elsewhere) the peek docks to the stage, not the screen edge.
-   // The build writes design lengths in rem (identity at the 16 px root), so the variable is resolved to CSS pixels here.
-   const rootStyle=getComputedStyle(document.documentElement),stageRaw=rootStyle.getPropertyValue('--stage-max').trim(),stageMax=parseFloat(stageRaw)*(stageRaw.endsWith('rem')?parseFloat(rootStyle.fontSize)||16:1)||innerWidth,stageEdge=Math.max(0,Math.round((innerWidth-stageMax)/2));
-   const top=peek?Math.min(Math.max(100,(controls?.bottom??124)+12),bottom-120):drawer?drawerTop:(header?.bottom??52)+12;
+   // Resolve the same physical-width CSS cap as the docks, including calc() after a zoom change.
+   const stageMax=stageWidth(),stageEdge=Math.max(0,Math.round((innerWidth-stageMax)/2));
+   const top=peek?Math.min(Math.max(100,(controls?.bottom??124)+12),bottom-120):(header?.bottom??52)+12;
    const next:ReadingWindowBounds={width:innerWidth,height:innerHeight,top,...(peek?{left:stageEdge+Math.round(Math.min(innerWidth,stageMax)*.48),right:innerWidth-48-stageEdge,bottom}:{})};
    setViewport(previous=>JSON.stringify(previous)===JSON.stringify(next)?previous:next);
    const node=ref.current!;setSize(previous=>previous.width===node.offsetWidth&&previous.height===node.offsetHeight?previous:{width:node.offsetWidth,height:node.offsetHeight});
   };
   const observer=new ResizeObserver(measure);observer.observe(ref.current);const header=document.querySelector('.workspace-header');if(header)observer.observe(header);for(const selector of ['.prompt-composer','.workspace-secondary']){const element=document.querySelector(selector);if(element)observer.observe(element);}
-  window.addEventListener('resize',measure);measure();return()=>{observer.disconnect();window.removeEventListener('resize',measure);};
+  window.addEventListener('resize',measure);window.addEventListener('drishya-stage-change',measure);measure();return()=>{observer.disconnect();window.removeEventListener('resize',measure);window.removeEventListener('drishya-stage-change',measure);};
  },[id,ref]);
  useLayoutEffect(()=>{drag.current=null;},[id,viewport.width,viewport.height]);
  const peek=enabled&&ref.current?.classList.contains('file-peek-reader');

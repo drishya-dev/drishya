@@ -1,13 +1,13 @@
 // Spatial WebGL points/edges with a flat low-resource fallback. Every label is DOM.
 // Only opt-in orbit runs continuously, at a bounded rate and outside manual navigation.
 
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural, pluralWord } from '../lib/plural.ts';
 import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
 import { groupMemberPaths, mapDetail, type MapGroup } from '../lib/map-detail.ts';
-import { QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
+import { MAP_REST_ALPHA, QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
 import { placeLabels, type LabelCandidate } from '../lib/map-labels.ts';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
@@ -297,7 +297,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     if (spatialActive && spatialCanvas.current && renderer.current && size.w && size.h) {
       const target = spatialCanvas.current;
       if (target.width !== c.width || target.height !== c.height) { target.width = c.width; target.height = c.height; }
-      const opacity = explore ? .96 : .68;
+      const opacity = explore ? .96 : MAP_REST_ALPHA;
       const vertex = (node: MapGroup): MapVertex => {
         const p = project(node);
         return { ...p, size: (node.members ? Math.min(8, 4 + Math.log2(node.members.length) * .4) : 2.5) * p.scale, alpha: (node.opacity ?? 1) * opacity };
@@ -342,7 +342,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const pa = project(a);
       const pb = project(b);
       if (Math.max(pa.x, pb.x) < 0 || Math.max(pa.y, pb.y) < 0 || Math.min(pa.x, pb.x) > size.w || Math.min(pa.y, pb.y) > size.h) continue;
-      const base = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : .68);
+      const base = Math.min(a.opacity ?? 1, b.opacity ?? 1) * (explore ? .82 : MAP_REST_ALPHA);
       if (base < .02) continue;
       if (!zones.length) {
         g.globalAlpha = base;
@@ -392,7 +392,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       const p = project(n);
       if (p.x < -10 || p.y < -10 || p.x > size.w + 10 || p.y > size.h + 10) continue;
       // Group detail crossfades without semantic rings or a changed file position.
-      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : .68) * (zones.length && !sharpIds.has(n.id) ? quietFactor(p.x, p.y, zones, QUIET_NODE_FLOOR) : 1);
+      g.globalAlpha = (n.opacity ?? 1) * (explore ? .96 : MAP_REST_ALPHA) * (zones.length && !sharpIds.has(n.id) ? quietFactor(p.x, p.y, zones, QUIET_NODE_FLOOR) : 1);
       g.beginPath();
       const radius = n.members ? Math.min(4.5, 2 + Math.log2(n.members.length) * .25) : hoveredPath === n.id ? r0 + .5 : r0;
       g.arc(p.x, p.y, radius, 0, Math.PI * 2);
@@ -625,7 +625,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         <div className="map-tip" style={{ left: tip.x + 12, top: tip.y + 8 }}>
           <div className="map-tip-path">{tip.node.path}</div>
           <div className="muted">
-            {tip.node.members ? `${tip.node.members.length} files · ` : tip.node.lines ? `${tip.node.lines} lines · ` : ''}
+            {tip.node.members ? `${plural(tip.node.members.length, 'file')} · ` : tip.node.lines ? `${plural(tip.node.lines, 'line')} · ` : ''}
             {heatMap.get(tip.node.id) ? 'touched in this run' : 'not touched in this run'}
           </div>
           {tipMembers && <ul className="map-tip-members" aria-label="Files in this group">{tipMembers.paths.map(path => <li key={path}>{path}</li>)}{tipMembers.more > 0 && <li className="muted">+ {tipMembers.more} more</li>}</ul>}
@@ -633,7 +633,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       )}
       {graph && explore && (
         <div className="map-legend">{connections?.root&&graph.temporal==='current'&&<span>Importer → dependency · up to40 static imports</span>}
-          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${displayNodes.length} map items · zoom for detail`}>{connectionsOpen && neighborhood ? `${viewGraph?.nodes.length} neighborhood files · ${viewGraph?.edges.length} shown imports` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} observed files · ${viewGraph?.edges.length} shown imports` : `${graph.nodes.length} files · ${graph.edges.length} imports`}</span>
+          <span title={`${detail?.depth === 99 ? 'Files' : 'Spatial density groups'} · ${plural(displayNodes.length, 'map item')} · zoom for detail`}>{connectionsOpen && neighborhood ? `${plural(viewGraph?.nodes.length ?? 0, 'neighborhood file')} · ${plural(viewGraph?.edges.length ?? 0, 'shown import')}` : observedOnly ? `${viewGraph?.nodes.length}/${graph.nodes.length} ${pluralWord(graph.nodes.length, 'observed file')} · ${plural(viewGraph?.edges.length ?? 0, 'shown import')}` : `${plural(graph.nodes.length, 'file')} · ${plural(graph.edges.length, 'import')}`}</span>
 
           {!!graph.stats.nestedCheckouts&&<span title="Directories with their own .git (agent worktrees, submodules, nested clones) are other checkouts, not this workspace.">{graph.stats.nestedCheckouts} nested checkout{graph.stats.nestedCheckouts===1?'':'s'} not shown</span>}
           <MapActions graph={graph} />

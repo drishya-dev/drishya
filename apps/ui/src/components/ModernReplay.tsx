@@ -1,4 +1,4 @@
-import {useEffect,useRef} from 'react';
+import {useEffect,useRef} from 'react'; import {pluralWord} from '../lib/plural.ts';
 import type {Marker,Scene} from '@drishya/scene';
 import {useApp} from '../state.ts';
 import './modern-replay.css';
@@ -35,7 +35,7 @@ export function ModernReplayTransport({scene,markers}:{scene:Scene;markers:reado
    <button className="icon-btn modern-replay-exit" aria-label="Exit replay" title="Back to live history" onClick={()=>{const app=useApp.getState();app.set({replayDiagnostics:false});app.showHistory();}}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5-7 7 7 7M2 12h20"/></svg></button>
   </div>
   <div className="modern-replay-position">
-   <div className="modern-replay-scrubber"><svg viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true"><path d={turns}/></svg><input type="range" min={0} max={total} step={1} value={position} disabled={!scene.total} aria-label="Timeline" aria-valuemin={0} aria-valuemax={scene.total} aria-valuenow={position} aria-valuetext={`${position} of ${scene.total} steps`} onChange={event=>useApp.getState().seek(Number(event.target.value),{hold:true})}/></div>
+   <div className="modern-replay-scrubber"><svg viewBox="0 0 1000 8" preserveAspectRatio="none" aria-hidden="true"><path d={turns}/></svg><input type="range" min={0} max={total} step={1} value={position} disabled={!scene.total} aria-label="Timeline" aria-valuemin={0} aria-valuemax={scene.total} aria-valuenow={position} aria-valuetext={`${position} of ${scene.total} ${pluralWord(scene.total,'step')}`} onChange={event=>useApp.getState().seek(Number(event.target.value),{hold:true})}/></div>
    <output aria-label="Replay position">{position.toLocaleString()} / {scene.total.toLocaleString()}</output>
   </div>
  </footer>;

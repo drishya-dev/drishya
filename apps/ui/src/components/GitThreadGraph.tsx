@@ -5,6 +5,7 @@ import type {GitCommit,GitSessionLink} from '../../../daemon/src/git-types.ts';
 import {gitRibbonGeometry} from '../lib/git-ribbon-geometry.ts';
 import {gitThreadLayout} from '../lib/git-thread-layout.ts';
 import {branchAt,gitLight,hashSeed,lightCache,lightLayout,type LightBranch} from '../lib/git-light.ts';
+import {resolveSquashJoins,type SquashEvidence} from '../lib/git-squash.ts';
 import {LightRenderer} from '../lib/light-renderer.ts';
 import {ago} from '../lib/git-commit-rows.ts';
 import './git-thread-graph.css';
@@ -13,7 +14,7 @@ import {useApp} from '../state.ts';
 const ribbonColors=Array.from({length:10},(_,i)=>`var(--git-ribbon-${i})`);
 const MIN_SCALE=.04,MAX_SCALE=2.5,clampScale=(value:number)=>Math.max(MIN_SCALE,Math.min(MAX_SCALE,value));
 
-export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence,mirror,onHover,reveal,links}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:{changes:Map<string,string>;branches:Map<string,string>};commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
+export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary,seeds,resetKey,moreOlder,moreNewer,loading,extend,offset,evidence,mirror,onHover,reveal,links}:{select?:(hash:string)=>void;mirrorRef?:string;links?:Map<string,GitSessionLink>;mirror?:string;onHover?:(hash:string)=>void;reveal?:{hash:string;n:number};evidence?:SquashEvidence;commits:GitCommit[];selected:string;choose:(hash:string)=>void;primary?:{name:string;tip:string};seeds:Set<string>;resetKey:string;moreOlder:boolean;moreNewer:boolean;loading:boolean;extend:(direction:'older'|'newer')=>void;offset:number}) {
   const graph=useMemo(()=>gitThreadLayout(commits,primary?.tip,seeds,offset),[commits,primary?.tip,offset]),viewport=useRef<HTMLDivElement>(null);
   const [scale,setScale]=useState(.6),[hovered,setHovered]=useState(''),[orbit,setOrbit]=useState(false),[angle,setAngle]=useState(.35);
   const [branchKey,setBranchKey]=useState(''),[pinnedKey,setPinnedKey]=useState('');
@@ -31,16 +32,23 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
   const ribbons=useMemo(()=>lit?undefined:gitRibbonGeometry(graph,scale,angle,lowResource,offset),[lit,graph,scale,angle,lowResource,offset]);
   // A branch head whose whole change a newer primary commit wrote exactly (same paths, same contents) was squash-merged
   // there; Git keeps no parent link for that, so this is the only evidence, and it is exact or absent.
-  const squash=useMemo(()=>{
-    const into=new Map<string,string>(),byX=[...graph.nodes].filter(node=>node.primary).sort((a,b)=>a.x-b.x);
-    for(const node of graph.nodes){
-      const mark=!node.primary?evidence?.branches.get(node.hash):undefined;if(!mark)continue;
-      const target=byX.find(candidate=>candidate.x>node.x&&evidence!.changes.get(candidate.hash)===mark);
-      if(target)into.set(node.hash,target.hash);
+  const squashJoins=useMemo(()=>{
+    const preliminary=lightLayout(graph,scale);
+    const mainSet=new Set(graph.nodes.filter(n=>n.primary).map(n=>n.hash));
+    return resolveSquashJoins(commits,mainSet,preliminary.branches,graph.nodes,evidence);
+  },[graph,commits,scale,evidence]);
+  const squash=useMemo(()=>new Map([...squashJoins.values()].map(join=>[join.head,join.target] as const)),[squashJoins]);
+  const light=useMemo(()=>{
+    if(!lit)return undefined;
+    const built=lightLayout(graph,scale,squash);
+    for(const branch of built.branches){
+      const join=squashJoins.get(branch.head);
+      if(!join)continue;
+      branch.squashBasis=join.basis;
+      if(join.pr!==undefined)branch.squashPr=join.pr;
     }
-    return into;
-  },[graph,evidence]);
-  const light=useMemo(()=>lit?lightLayout(graph,scale,squash):undefined,[lit,graph,scale,squash]);
+    return built;
+  },[lit,graph,scale,squash,squashJoins]);
   const worldHeight=light?.height??graph.height,heightNow=useRef(worldHeight);heightNow.current=worldHeight;
   useLayoutEffect(()=>{const el=viewport.current;if(!centerRiver.current||!el)return;centerRiver.current=false;el.scrollTop=Math.max(0,(worldHeight*scale+48)/2-el.clientHeight/2);},[scale,worldHeight]);
   useLayoutEffect(()=>{
@@ -195,6 +203,16 @@ export function GitThreadGraph({select,mirrorRef,commits,selected,choose,primary
   </div>;
 }
 
+function squashNote(branch:LightBranch,merge:GitCommit):string {
+  const target=merge.hash.slice(0,7);
+  const pr=branch.squashPr?`PR #${branch.squashPr} · `:'';
+  const subject=`“${merge.subject}”`;
+  if(branch.squashBasis==='patch-id')return `Git has no merge link: ${pr}${target} ${subject} matches this branch’s net patch.`;
+  if(branch.squashBasis==='path-superset')return `Git has no merge link: ${pr}${target} ${subject} wrote identical contents for all of this branch’s changed files.`;
+  if(branch.squashBasis==='github-pr'||branch.squashBasis==='github-subject-pr')return `Git has no merge link: ${pr}${target} ${subject} names this branch as the merged pull request.`;
+  return `Git has no merge link: ${pr}${target} ${subject} wrote exactly this branch’s file contents.`;
+}
+
 /** What a branch strand is, from Git alone: its name if a ref names its head, where it left and rejoined, and its commits. */
 export function BranchPeek({branch,byHash,primary,focused,open}:{branch:LightBranch;byHash:Map<string,GitCommit>;primary?:string;focused?:boolean;open?:()=>void}) {
   const commits=branch.members.map(hash=>byHash.get(hash)).filter((commit):commit is GitCommit=>!!commit);
@@ -203,9 +221,9 @@ export function BranchPeek({branch,byHash,primary,focused,open}:{branch:LightBra
   const first=commits[0],name=head?.labels[0];
   return <div className={`thread-peek thread-branch-peek${focused?' interactive':''}`} role="status">
     <code>{name??'Unnamed branch'}{head&&head.labels.length+head.omittedLabels>1?` +${head.labels.length+head.omittedLabels-1}`:''}</code>
-    <strong>{commits.length} {commits.length===1?'commit':'commits'} · {merge?`${branch.squash?'squash-merged':'merged'} into ${primary??'the primary line'} at ${merge.hash.slice(0,7)}`:'not merged in this history'}</strong>
+    <strong>{commits.length} {commits.length===1?'commit':'commits'} · {merge?`${branch.squash?'squash-merged':'merged'} into ${primary??'the primary line'} at ${merge.hash.slice(0,7)}${branch.squash&&branch.squashPr?` (#${branch.squashPr})`:''}`:'not merged in this history'}</strong>
     <span>{authors.slice(0,3).join(', ')}{authors.length>3?` +${authors.length-3}`:''}{first&&head?` · ${ago(first.time)} → ${ago(head.time)}`:''}{fork?` · left ${fork.hash.slice(0,7)}`:''}</span>
-    {branch.squash&&merge&&<span>Git has no merge link: {merge.hash.slice(0,7)} “{merge.subject}” wrote exactly this branch’s file contents.</span>}
+    {branch.squash&&merge&&<span>{squashNote(branch,merge)}</span>}
     <ol>{[...commits].reverse().slice(0,5).map(commit=><li key={commit.hash}><code>{commit.hash.slice(0,7)}</code>{commit.subject||'Untitled commit'}</li>)}{commits.length>5&&<li className="more">{commits.length-5} earlier</li>}</ol>
     {focused?<button type="button" className="btn ghost" onClick={open}>Open newest commit</button>:<small>Click the strand to focus this branch</small>}
   </div>;
