@@ -176,7 +176,9 @@ export function CompactionEvidence({ id, summaryId, commandNote }: { id?: string
   const after = p.context?.readings.find(r => r.id === boundary.nextReadingId && available(r.availableAfterStep, true));
   const direct = p.agents.find(a => a.id === boundary.agentId)?.harness === 'claude-code';
   const left = direct ? boundary.beforeTokens : before?.input.tokens;
-  const right = direct ? boundary.afterTokens : after?.input.tokens;
+  // Codex records a first reading after the boundary with every input field at 0 (the harness has not sent a request yet;
+  // the raw record carries only a total). A zero input is no reading, so it must not read as "100% freed".
+  const right = direct ? boundary.afterTokens : (after?.input.tokens ? after.input.tokens : undefined);
   const window = !direct ? (before?.window ?? after?.window) : undefined;
 
   const phrase = triggerPhrase(boundary.trigger, boundary.durationMs);
