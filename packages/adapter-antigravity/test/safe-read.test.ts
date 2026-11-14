@@ -1,3 +1,5 @@
+import {readOutput} from '../src/tasks.ts';
+import {readChildren} from '../src/subagents.ts';
 import { afterEach, expect, it, vi } from 'vitest';
 import { mkdtemp, mkdir, writeFile, rename, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -39,4 +41,12 @@ for (const kind of ['media', 'artifact']) it(`refuses a directory swap between v
     expect(value[0]?.text).toBeUndefined(); expect(value[0]?.unavailable).toBeDefined();
   }
   expect(interception.reads).toBe(0);
+});
+
+for (const kind of ['output','subagent']) it(`refuses a directory swap before ${kind} bytes are read`, async () => {
+ const root=await mkdtemp(join(tmpdir(),'ag-side-swap-'));roots.push(root);const folder=join(root,'brain','one','.system_generated',kind==='output'?'tasks':'subagents'),outside=join(root,'outside');await mkdir(folder,{recursive:true});await mkdir(outside);
+ const name=kind==='output'?'task-1.log':'child.json';await writeFile(join(folder,name),kind==='output'?'inside':JSON.stringify({conversationId:'child',spawnStepIndex:1}));await writeFile(join(outside,name),'outside-never-read');
+ interception.beforeOpen=async()=>{await rename(folder,folder+'-original');await symlink(outside,folder,process.platform==='win32'?'junction':'dir');};
+ if(kind==='output'){const value=await readOutput(root,'one',join(folder,name));expect(value.available).toBe(false);}else expect(await readChildren(root,'one')).toEqual([]);
+ expect(interception.reads).toBe(0);
 });

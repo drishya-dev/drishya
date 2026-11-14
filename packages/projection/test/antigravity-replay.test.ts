@@ -1,3 +1,6 @@
+import {seal} from '@drishya/capture-core';
+import {reduce} from '../src/reduce.ts';
+import {descriptor} from '../../adapter-antigravity/src/index.ts';
 import { appendFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -86,4 +89,13 @@ it('keeps a test-classified background command unknown when later snapshots have
     if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe scratch cleanup');
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+it('does not expose a later native child receipt in the earlier completed spawn', () => {
+ const raw=[{kind:'tool.call',operationId:'spawn',payload:{tool:'invoke_subagent',input:{},intent:{kind:'spawn',description:'Synthetic review'}}},{kind:'tool.result',operationId:'spawn',payload:{tool:'invoke_subagent',text:'Synthetic return',outcome:{kind:'spawn',text:'Synthetic return'}}},{kind:'message.assistant',payload:{text:'Synthetic later passage'}},{kind:'agent.spawn',operationId:'spawn',payload:{childAgentId:'agent:child',agentType:'synthetic-child',basis:'source-id'}}];
+ const observations=raw.map((raw,n)=>({...seal({raw:raw as any,recordingId:'r',adapter:descriptor,sourceId:'s',generation:0,byteOffset:n,observedAt:'2026-01-01T00:00:00Z'}),receivedSequence:n}));
+ const p=reduce('r',observations,{get:()=>undefined,put:()=>({sha:'synthetic',bytes:0})},{adapters:{antigravity:descriptor}}),op=p.operations[0]!,ends=p.timeline.flatMap((t,i)=>t.type==='op-end'?[i]:[]);
+ expect(ends).toHaveLength(2);
+ const before=asOfProjection(p,ends[0]!+1);expect(before.operations[0]?.detail).not.toHaveProperty('childAgentId');expect(before.links.some(l=>l.relation==='spawned')).toBe(false);expect(before.agents.some(a=>a.id==='r.agent:child')).toBe(false);
+ const after=asOfProjection(p,ends[1]!+1);expect(after.operations[0]?.detail).toHaveProperty('childAgentId','r.agent:child');expect(after.links.some(l=>l.relation==='spawned')).toBe(true);expect(op.endSequence).toBe(p.operations[0]?.endSequence);
 });

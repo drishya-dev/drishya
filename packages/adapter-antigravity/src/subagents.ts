@@ -1,6 +1,6 @@
-import { open, readdir, realpath } from 'node:fs/promises';
+import { readdir, realpath } from 'node:fs/promises';
 import { join, relative } from 'node:path';
-import { conversationId, readableRoot, within } from './paths.ts';
+import { conversationId, readableRoot, within, openObservation } from './paths.ts';
 
 export interface ChildReference {
   conversationId: string;
@@ -40,7 +40,9 @@ export async function readChildren(root: string, id: string): Promise<ChildRefer
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}\.json$/.test(name)) continue;
     const candidate = await realpath(join(canonicalDirectory, name)).catch(() => undefined);
     if (!candidate || !within(canonicalDirectory, candidate) || relative(canonicalDirectory, candidate) !== name) continue;
-    const handle = await open(candidate, 'r');
+    let handle;
+    try { handle = await openObservation(root, join(directory, name), 'subagent', id); }
+    catch { continue; }
     try {
       const info = await handle.stat();
       if (!info.isFile() || info.size > 64 * 1024) continue;

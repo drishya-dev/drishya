@@ -34,3 +34,13 @@ The two blocking code defects are fixed: cold restart restores a sanitized inspe
 - delegation-thread/types and DelegationDetail: exact imported-child lookup and every child link using existing classes. No layout/style/motion redesign.
 
 Keep AG-3 unticked/claimed until the external native interruption line is resolved. The PR can be reviewed under AGENTS' external-acceptance exception; it is not a declaration that all Antigravity integration is accepted. Merge #469 first; #472 supplies product identity. AG-4, AG-5 and the final integration gate remain separate work.
+
+## Final integration review follow-up, 14 November
+
+Yash approved reopening only pinned side-file reads and native child replay after review found two blockers. These changes are delivered in the cumulative AG-5 branch for one integration review, not merged into main.
+
+- Output logs and child receipts now use openObservation's validated inode-pinned read-only open. The child allow-list admits only same-conversation `.system_generated/subagents/<id>.json`; no private paths, cross-conversation reads or extra native writes. Directory/junction swaps between validation and open are refused before any bytes are read. Existing media/artifact guards stay intact.
+- A late Antigravity agent.spawn receipt snapshots the earlier completed operation, adds a derived revision boundary, and versions its child association/provenance. It is not another native tool completion. Historical projections hide native children and stops before their evidence boundary. Claude/Codex branches remain unchanged. Reducer r45, no event schema change.
+- Eleven focused tests pass, including two adversarial swap tests and a completed-spawn replay test that checks operation, agent and link visibility before/after the receipt. Backend typecheck passes. The currently running broad gate is frozen at c04947e4 before this delta; do not attribute its result to this fix without the recorded delta/final validation.
+
+The external signed-in native-application interruption case is still unrun: there is no isolated authenticated profile and shared Antigravity must not be force-crashed. Killing a background task does not satisfy that line.

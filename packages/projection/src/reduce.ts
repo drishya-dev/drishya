@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r44';
+export const REDUCER_VERSION = 'r45';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -822,8 +822,16 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           const st = ops.get(opId);
           if (st && st.op.detail.kind === 'spawn') {
             if (o.source.adapterId === 'antigravity') {
+              // Child metadata may arrive after the native call completed. Preserve the
+              // prior completed view instead of injecting a future child into replay.
+              hasResultVersions = true;
+              st.op.resultVersions ??= [structuredClone({ availableAfterStep: (st.op.endSequence ?? st.op.startSequence) + 1, status: st.op.status, endSequence: st.op.endSequence, endTime: st.op.endTime, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds })];
               (st.antigravityChildren ??= new Set()).add(child);
               st.op.detail.childAgentId = st.antigravityChildren.size === 1 ? child : undefined;
+              st.op.observationIds.push(o.id);
+              // A projection revision boundary, not an additional native tool completion.
+              if (st.completed) timeline.push({ type: 'op-end', id: `e_${opId}_${o.id}`, operationId: opId, sequence: o.receivedSequence, agentId: st.op.agentId, time: o.sourceTime });
+              st.op.resultVersions.push(structuredClone({ availableAfterStep: step() + (st.completed ? 0 : 1), status: st.op.status, endSequence: st.op.endSequence, endTime: st.op.endTime, detail: st.op.detail, artifactIds: st.op.artifactIds, observationIds: st.op.observationIds }));
             } else st.op.detail.childAgentId = child;
             dirtyOperations.add(opId);
           }

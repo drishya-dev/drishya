@@ -1,6 +1,5 @@
-import { open } from 'node:fs/promises';
 import { join } from 'node:path';
-import { localPath, readablePath } from './paths.ts';
+import { localPath, readablePath, openObservation } from './paths.ts';
 
 export const OUTPUT_LIMIT = 256 * 1024;
 export type CapturedOutput =
@@ -48,7 +47,7 @@ export async function readOutput(root: string, conversation: string, reference: 
   try { path = await readablePath(root, candidate, 'output', conversation); }
   catch (error) { return { available: false, reason: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'removed' : 'outside-harness-folder' }; }
   let handle;
-  try { handle = await open(path, 'r'); }
+  try { handle = await openObservation(root, candidate, 'output', conversation); }
   catch (error) { return { available: false, reason: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'removed' : 'unreadable' }; }
   try {
     const info = await handle.stat();

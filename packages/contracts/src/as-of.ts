@@ -41,6 +41,8 @@ export function asOfProjection(projection: Projection, requestedStep: number): P
     })),
     // Turn timing, outcome and errors describe the finished turn: a past step must not show what came later.
     turns: undefined,
+    // Antigravity child metadata can be observed after its parent's completed call.
+    agents: projection.agents.filter(agent => agent.harness !== 'antigravity' || agent.firstSequence < step).map(agent => agent.harness === 'antigravity' && agent.stoppedSequence !== undefined && agent.stoppedSequence >= step ? { ...agent, stoppedSequence: undefined } : agent),
     operations,
     prose: projection.prose.filter((p) => proseIds.has(p.id)),
     gaps: projection.gaps.filter(g => g.sequence < step),

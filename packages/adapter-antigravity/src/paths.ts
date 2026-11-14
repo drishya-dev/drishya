@@ -47,13 +47,14 @@ const defaultArtifacts = ['implementation_plan.md', 'task.md', 'walkthrough.md']
 /** Only journals, their bounded output references and the index are observation inputs.
  * Only explicitly referenced image uploads are permitted as media; scratch files and credential-bearing siblings remain excluded.
  */
-export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 'output' | 'media' | 'artifact', recordedArtifact?: string): boolean {
+export function allowedRelative(path: string, purpose: 'index' | 'transcript' | 'output' | 'media' | 'artifact' | 'subagent', recordedArtifact?: string): boolean {
   const p = path.replace(/\\/g, '/');
   if (purpose === 'index') return p === 'conversation_summaries.db';
   if (!/^brain\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}\//.test(p)) return false;
   const tail = p.split('/').slice(2).join('/');
   if (purpose === 'transcript') return /^\.system_generated\/logs\/transcript(?:_full)?\.jsonl$/.test(tail);
   if (purpose === 'output') return /^\.system_generated\/(?:steps\/\d+\/output\.txt|tasks\/task-\d+\.log)$/.test(tail);
+  if (purpose === 'subagent') return /^\.system_generated\/subagents\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}\.json$/.test(tail);
   if (purpose === 'media') return /^(?:\.system_generated\/logs\/media\/step_\d+_media_\d+|(?:\.user_uploaded|\.tempmediaStorage)\/[a-zA-Z0-9][a-zA-Z0-9_.-]{0,199})\.(?:png|jpe?g|gif|webp)$/i.test(tail);
   const names = recordedArtifact === undefined ? defaultArtifacts : artifactName(recordedArtifact) ? [recordedArtifact] : [];
   return names.some(name => tail === name || tail === `${name}.metadata.json` || tail === `${name}.resolved` || (tail.startsWith(`${name}.resolved.`) && /^\d+$/.test(tail.slice(`${name}.resolved.`.length))));
@@ -78,7 +79,7 @@ export async function readablePath(root: string, candidate: string, purpose: Par
 }
 
 /** Pin a validated regular inode before reading bytes; reject swaps of any path component. */
-export async function openObservation(root: string, candidate: string, purpose: 'media' | 'artifact', id: string, recordedArtifact?: string) {
+export async function openObservation(root: string, candidate: string, purpose: 'media' | 'artifact' | 'output' | 'subagent', id: string, recordedArtifact?: string) {
   const canonical = await readablePath(root, candidate, purpose, id, recordedArtifact);
   const before = await lstat(canonical, { bigint: true });
   if (!before.isFile() || before.isSymbolicLink() || before.ino === 0n) throw new Error('Antigravity file identity cannot be verified');
