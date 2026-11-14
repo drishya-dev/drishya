@@ -184,6 +184,7 @@ let showCompareTimer = 0;
 let pendingCompareRow: HTMLTableRowElement | undefined;
 let activePointerRow: HTMLTableRowElement | undefined;
 let pointerInProof = false;
+let restoringCompareFocus = false;
 let proofExpansionPinned = false;
 let proofExpansionHover = false;
 let proofExpansionFocus = false;
@@ -280,13 +281,20 @@ for (const row of compareRows) {
     }
     queueHideCompareProof();
   });
-  row.addEventListener('focus', () => showCompareProof(row));
+  row.addEventListener('focus', () => { if (!restoringCompareFocus) showCompareProof(row); });
   row.addEventListener('blur', queueHideCompareProof);
   row.addEventListener('click', () => { selectCompareRow(row); showCompareProof(row); });
   row.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectCompareRow(row); showCompareProof(row); }
   });
 }
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !openCompareRow) return;
+  event.preventDefault();
+  const row = openCompareRow, restore = compareProof.contains(document.activeElement);
+  hideCompareProof();
+  if (restore) { restoringCompareFocus = true; row.focus({ preventScroll: true }); restoringCompareFocus = false; }
+});
 compareProof.addEventListener('pointerenter', () => {
   pointerInProof = true;
   window.clearTimeout(hideCompareTimer);

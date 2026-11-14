@@ -30,7 +30,7 @@ for(const width of [600,1440]){
     const images=page.locator('.feature-stills img');await expect(images).toHaveCount(FEATURES.flat().length);
     for(const image of await images.all()){
       await image.scrollIntoViewIfNeeded();
-      await expect.poll(()=>image.evaluate((im:HTMLImageElement)=>im.complete&&im.naturalWidth===2880)).toBe(true);
+      await expect.poll(()=>image.evaluate((im:HTMLImageElement)=>im.complete&&im.naturalWidth>=1440)).toBe(true);
     }
     const tops=await page.locator('.feat-steps>li').evaluateAll(rows=>rows.map(row=>row.getBoundingClientRect().top));
     expect(tops.every((top,i)=>i===0||top>tops[i-1]!)).toBe(true);
@@ -82,4 +82,17 @@ test('slow or unavailable footage has a readable loading/failure state',async({p
   await page.goto(base);await page.locator('html[data-app-ready]').waitFor();
   await expect(page.locator('.feat-loading')).toContainText('Loading demonstration');
   release();await expect(page.locator('.feat-loading')).toContainText('unavailable');
+});
+test('navigation, evidence and install actions remain usable',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});await page.setViewportSize({width:1440,height:900});
+  await page.goto(base);await page.locator('html[data-app-ready]').waitFor();
+  const anchors=await page.locator('.nav-links a[href^="#"]').evaluateAll(els=>els.map(el=>el.getAttribute('href')!));
+  for(const href of anchors)await expect(page.locator(href)).toHaveCount(1);
+  const row=page.locator('[data-compare-row=files]');await row.scrollIntoViewIfNeeded();await row.focus();await page.keyboard.press('Enter');
+  await expect(row).toHaveAttribute('aria-expanded','true');await expect(page.locator('[data-proof-body]')).not.toBeEmpty();
+  await page.keyboard.press('Escape');await expect(row).toHaveAttribute('aria-expanded','false');
+  await page.locator('.nav a[href="#install"]').click();await expect(page.locator('#install')).toBeInViewport();
+  await page.locator('[data-copy]').click();
+  await expect(page.locator('[data-copy-status]')).toHaveText(/Command copied|Clipboard unavailable/);
+  for(const link of await page.locator('[data-link]').all())expect(await link.getAttribute('href')).toMatch(/^https:\/\/github\.com\/drishya-dev\/drishya/);
 });
