@@ -7,8 +7,17 @@ export function visualLines(root:HTMLElement,visibleOnly=false):{top:number;bott
   const range=document.createRange(),walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT),boxes:{top:number;bottom:number}[]=[];
   for(let node=walker.nextNode();node;node=walker.nextNode()){
     if(!(node as Text).data.trim())continue;
+    const parent=(node as Text).parentElement;
+    let clip:DOMRect|undefined;
+    if(visibleOnly){
+      // Not lines a reader sees: the floating reading chips, text inside a closed <details>, and text a whole-line clamp hides.
+      if(parent?.closest('.captured-result-views'))continue;
+      const closed=parent?.closest('details');
+      if(closed&&!closed.open&&!parent?.closest('summary'))continue;
+      clip=parent?.closest<HTMLElement>('.line-clamp[data-clamped]')?.getBoundingClientRect();
+    }
     range.selectNodeContents(node);
-    for(const rect of range.getClientRects())if(rect.height>0&&rect.width>0)boxes.push({top:rect.top,bottom:rect.bottom});
+    for(const rect of range.getClientRects())if(rect.height>0&&rect.width>0&&(!clip||(rect.top<clip.bottom-1&&rect.bottom>clip.top+1)))boxes.push({top:rect.top,bottom:rect.bottom});
   }
   boxes.sort((a,b)=>a.top-b.top||a.bottom-b.bottom);
   const lines:{top:number;bottom:number}[]=[];

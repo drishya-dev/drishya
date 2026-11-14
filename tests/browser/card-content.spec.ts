@@ -61,14 +61,15 @@ const clampsAreWhole=(el:Locator)=>el.evaluate((card,src)=>{
 const bodyEdge=(el:Locator)=>el.evaluate(card=>{
  const body=card.querySelector<HTMLElement>('.op-body')!,box=body.getBoundingClientRect(),cut=body.hasAttribute('data-cut')?parseFloat(body.style.getPropertyValue('--card-cut')):undefined;
  const edge=box.top+(cut??body.clientHeight),range=document.createRange(),walker=document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
- let straddling=0;
+ let straddling=0,hidden=0;
  for(let t=walker.nextNode() as Text|null;t;t=walker.nextNode() as Text|null){
   if(!t.data.trim()||t.parentElement!.closest('.captured-result-views'))continue;
+  const closed=t.parentElement!.closest('details');if(closed&&!closed.open&&!t.parentElement!.closest('summary'))continue;
   const clip=t.parentElement!.closest('.line-clamp[data-clamped]')?.getBoundingClientRect();
   range.selectNodeContents(t);
-  for(const r of range.getClientRects()){if(!r.height||(clip&&(r.top>=clip.bottom-1||r.bottom<=clip.top+1)))continue;if(r.top<edge-1&&r.bottom>edge+1)straddling++;}
+  for(const r of range.getClientRects()){if(!r.height||(clip&&(r.top>=clip.bottom-1||r.bottom<=clip.top+1)))continue;if(r.top<edge-1&&r.bottom>edge+1)straddling++;else if(r.top>=edge-1&&cut===undefined)hidden++;}
  }
- return {cut:cut!==undefined,straddling,clipped:cut===undefined?body.scrollHeight-body.clientHeight:0};
+ return {cut:cut!==undefined,straddling,hidden,clipped:cut===undefined?body.scrollHeight-body.clientHeight:0};
 });
 
 for(const width of [1440,600]){
@@ -79,7 +80,7 @@ for(const width of [1440,600]){
    for(let i=0;i<count;i++){
     const el=cards.nth(i);await settle(page,el);if(await el.evaluate(c=>c.classList.contains('expanded')))continue;
     const edge=await bodyEdge(el);
-    expect(edge.straddling,`card ${i} cuts a line`).toBe(0);expect(edge.clipped,`card ${i} hides content`).toBeLessThanOrEqual(1);
+    expect(edge.straddling,`card ${i} cuts a line`).toBe(0);expect(edge.hidden,`card ${i} has lines below its edge`).toBe(0);expect(edge.clipped,`card ${i} hides content`).toBeLessThanOrEqual(1);
     if(i===3)await frame(el,`wide-output-${width}`);
    }
   });
