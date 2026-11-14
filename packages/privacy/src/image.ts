@@ -6,6 +6,14 @@
 /** Largest single image kept, decoded bytes. */
 export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
+/**
+ * SEC-3: bytes do not bound the memory a browser needs to decode an image. A few kilobytes of PNG can declare
+ * 30000 x 30000 pixels (gigabytes decoded), so the declared size is limited too. 64 megapixels is above any
+ * screenshot of a real display and decodes to 256 MB at most.
+ */
+export const MAX_IMAGE_PIXELS = 64_000_000;
+export const tooManyPixels = (size?: { width?: number; height?: number }) => !!size && (size.width ?? 0) * (size.height ?? 0) > MAX_IMAGE_PIXELS;
+
 export type ImageOmission = 'too-large' | 'unrecognised' | 'protected' | 'recording-budget';
 
 /** An image captured from a journal. `data` is base64 and present only when the bytes were kept. */
@@ -81,6 +89,6 @@ export function captureImage(data: unknown, size?: { width?: unknown; height?: u
     ...(typeof size?.width === 'number' && size.width > 0 ? { width: size.width } : sniff.width ? { width: sniff.width } : {}),
     ...(typeof size?.height === 'number' && size.height > 0 ? { height: size.height } : sniff.height ? { height: sniff.height } : {}),
   };
-  if (bytes > MAX_IMAGE_BYTES) return { kind: 'captured-image', mime: sniff.mime, bytes, ...dims, omitted: 'too-large' };
+  if (bytes > MAX_IMAGE_BYTES || tooManyPixels(sniff)) return { kind: 'captured-image', mime: sniff.mime, bytes, ...dims, omitted: 'too-large' };
   return { kind: 'captured-image', mime: sniff.mime, bytes, ...dims, data };
 }

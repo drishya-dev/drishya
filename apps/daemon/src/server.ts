@@ -68,6 +68,9 @@ export interface ServerOptions {
   watchRoots?: WatchRoot[];
 }
 
+/** At most this many open change streams (one per viewer tab). */
+const MAX_STREAMS = 64;
+
 /** A subscriber this far behind is disconnected; on reconnect it resyncs from revisions (B1b). */
 const MAX_SSE_BUFFER = 1024 * 1024;
 
@@ -267,6 +270,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       });
     }
     if (a === 'changes' && m === 'GET') {
+      // SEC-3: a viewer is one tab; a signed-in script could otherwise hold open streams without bound.
+      if (clients.size >= MAX_STREAMS) throw new HttpError(429, 'too many open change streams');
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       res.write(': connected\n\n');
       // Every (re)connect starts with the current revisions, so a viewer that missed notices

@@ -74,6 +74,8 @@ export interface Scenario {
   editNew: string;
   mcpServer: string;
   mcpTool: string;
+  /** Extra base64 images to attach to a prompt (declared as PNG). */
+  extraImages?: string[];
 }
 
 /** Every payload, in one run of text. */
@@ -137,6 +139,7 @@ const claudeWriter: Writer = (file, s) => {
       { type: 'image', source: { type: 'base64', media_type: 'image/png', data: PNG_B64 } },
       { type: 'image', source: { type: 'base64', media_type: 'image/png', data: SVG_B64 } },
       { type: 'image', source: { type: 'url', url: SINK + '/remote.png' } },
+      ...(s.extraImages ?? []).map((data) => ({ type: 'image', source: { type: 'base64', media_type: 'image/png', data } })),
     ] }),
   ]);
 };
@@ -162,6 +165,7 @@ const codexWriter: Writer = (file, s) => {
       { type: 'input_image', image_url: 'data:image/png;base64,' + PNG_B64 },
       { type: 'input_image', image_url: 'data:image/png;base64,' + SVG_B64 },
       { type: 'input_image', image_url: SINK + '/remote.png' },
+      ...(s.extraImages ?? []).map((data) => ({ type: 'input_image', image_url: 'data:image/png;base64,' + data })),
     ] }),
     { timestamp: at(13), type: 'event_msg', payload: { type: 'task_complete', turn_id: 'turn-1' } },
   ]);

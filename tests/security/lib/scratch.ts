@@ -88,7 +88,7 @@ export function rawCall(port: number, path: string, opts: CallOptions = {}): Pro
     const headers: Record<string, string> = { host: opts.host ?? `127.0.0.1:${port}` };
     for (const [key, value] of Object.entries(opts.headers ?? {})) if (value !== undefined) headers[key] = value;
     if (opts.body !== undefined && headers['content-length'] === undefined) headers['content-length'] = String(Buffer.byteLength(opts.body));
-    const req = request({ host: '127.0.0.1', port, path, method: opts.method ?? 'GET', headers, timeout: opts.timeoutMs ?? 20_000 }, (res) => {
+    const req = request({ host: '127.0.0.1', port, path, method: opts.method ?? 'GET', headers, timeout: opts.timeoutMs ?? 20_000, agent: false }, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (c: Buffer) => chunks.push(c));
       res.on('end', () => {
