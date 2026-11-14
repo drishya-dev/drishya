@@ -71,6 +71,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | AUDIT-1 | @yash + Claude Opus 5.5 | `claude/audit-1` | 2026-11-01 | Audit with fixes in place (Yash, 1 Nov): `docs/review/audit-1-product-audit.md` records every surface and observation; bounded presentation fixes land as they are found, one commit per surface, across `apps/ui/src/**` CSS and components. More than 15 files by Yash's explicit whole-product scope. Larger features or backend work become TASKS items. Screenshots stay in `.local/`. |
 | MOTION-3 | @yash + Claude Opus 5.5 | `claude/motion-3` | 2026-11-04 | `docs/review/motion-3-evaluation.md`; fixes, if any, in History arrival/hover motion (`History.tsx`, `Origins.tsx`, `material-motion.ts`, their CSS) and their specs |
 | MAP-3 | @yash + Claude Fable 5.2 | brainstorm merged (#464, `docs/review/map-3-lit-files.md`); Yash picks a direction | 2026-11-12 | The repository map component and a new chip layer. |
+| SHIP-5 | @yash + Antigravity | `ag-builder/ship-5-question-answer` | 2026-11-14 | `apps/ui/src/components/QuestionCard.tsx`, `apps/ui/src/components/question-card.css`, `apps/ui/test/question-card.test.ts`, new `tests/browser/question-card.spec.ts`, `docs/TASKS.md`, `docs/STATUS.md`. No daemon, no live-path files (LIVE-7 owns those). |
 
 
 ---
