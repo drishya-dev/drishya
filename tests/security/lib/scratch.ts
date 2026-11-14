@@ -46,16 +46,25 @@ export interface Scratch {
 }
 
 const saved = new Map<string, string | undefined>();
-const HOME_VARS = ['HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'DRISHYA_HOME', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM'];
+const HOME_VARS = ['DRISHYA_CLAUDE_HOME', 'DRISHYA_CODEX_HOME', 'HOME', 'USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'CODEX_HOME', 'CLAUDE_CONFIG_DIR', 'XDG_CONFIG_HOME', 'DRISHYA_HOME', 'GIT_CONFIG_GLOBAL', 'GIT_CONFIG_NOSYSTEM'];
 
 /** Points every home-relative lookup at an empty directory for the life of one test file. */
-export function isolateHome(home: string) {
+/**
+ * @param home an empty directory
+ * @param keepOperatingSystemHome leave HOME, USERPROFILE and the application-data folders alone. A real browser
+ *   launched by the same process needs them; the harness folders and the store are redirected either way.
+ */
+export function isolateHome(home: string, keepOperatingSystemHome = false) {
   for (const key of HOME_VARS) if (!saved.has(key)) saved.set(key, process.env[key]);
   mkdirSync(home, { recursive: true });
-  process.env.HOME = home;
-  process.env.USERPROFILE = home;
-  process.env.APPDATA = join(home, 'AppData', 'Roaming');
-  process.env.LOCALAPPDATA = join(home, 'AppData', 'Local');
+  process.env.DRISHYA_CLAUDE_HOME = join(home, '.claude');
+  process.env.DRISHYA_CODEX_HOME = join(home, '.codex');
+  if (!keepOperatingSystemHome) {
+    process.env.HOME = home;
+    process.env.USERPROFILE = home;
+    process.env.APPDATA = join(home, 'AppData', 'Roaming');
+    process.env.LOCALAPPDATA = join(home, 'AppData', 'Local');
+  }
   process.env.CODEX_HOME = join(home, '.codex');
   process.env.CLAUDE_CONFIG_DIR = join(home, '.claude');
   process.env.XDG_CONFIG_HOME = join(home, '.config');
@@ -114,7 +123,7 @@ export interface ScratchOptions extends Partial<ServerOptions> {
 export async function startScratch(opts: ScratchOptions = {}): Promise<Scratch> {
   const dir = tempDir();
   const home = join(dir, 'home');
-  isolateHome(home);
+  isolateHome(home, opts.keepOperatingSystemHome);
   const uiDir = join(dir, 'ui');
   mkdirSync(join(uiDir, 'assets'), { recursive: true });
   writeFileSync(join(uiDir, 'index.html'), '<!doctype html><title>Synthetic UI</title>');

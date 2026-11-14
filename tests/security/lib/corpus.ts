@@ -51,7 +51,7 @@ export const PAYLOADS: Payload[] = [
 /** Hostile file names that are valid on every system we run on. */
 export const HOSTILE_FILE_NAMES = [
   'img-onerror-x-onerror=window.__pwned=1.ts',
-  "quote'and\"double.ts",
+  "quote'single(paren)&amp;.ts",
   'a b  c.ts',
   '#hash%20pct.ts',
   'unicode-\u202Efdp.ts',

@@ -41,6 +41,8 @@ const assertData = (reply: Reply, label: string) => {
   const type = String(reply.headers['content-type'] ?? '');
   expect(type, label).not.toMatch(/html|xml|javascript|svg/i);
   expect(reply.headers['x-content-type-options'], label).toBe('nosniff');
+  // Nothing that carries captured content is kept by the browser (SEC-3 item 9).
+  expect(reply.headers['cache-control'], label).toBe('no-store');
   expect(Object.keys(reply.headers).filter((k) => k.startsWith('access-control-')), label).toEqual([]);
   // An error never leaks a stack frame or a local path.
   if (reply.status >= 400) {
@@ -127,6 +129,7 @@ describe('images', () => {
       expect(reply.status).toBe(200);
       expect(String(reply.headers['content-type'])).toMatch(/^image\/(png|jpeg|gif|webp)$/);
       expect(reply.headers['x-content-type-options']).toBe('nosniff');
+      expect(reply.headers['cache-control']).toBe('no-store');
       expect(String(reply.headers['content-security-policy'])).toContain("default-src 'self'");
     }
     // Nothing that is not a raster image is served as one, whatever the journal claimed.

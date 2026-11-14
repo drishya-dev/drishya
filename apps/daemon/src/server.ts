@@ -654,13 +654,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         res.end(image.body);
         return;
       }
-      // CONTENT-1: an image this recording captured inline, by content hash. Immutable, so cacheable.
+      // CONTENT-1: an image this recording captured inline, by content hash. The bytes never change, but they are the person's screenshots, so the browser must not keep them
+      // on disk after the session (SEC-3 item 9): no-store, like every other response that carries captured content.
       if (sub === 'images' && subId && m === 'GET') {
         const ids = app.readingId(id).split('+');
         for (const key of ids) app.recording(key);
         const image = readImage(app.store, ids, subId);
         if (!image) throw new HttpError(404, 'No captured image with that hash in this recording.');
-        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'private, max-age=31536000, immutable', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' });
+        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' });
         res.end(image.body);
         return;
       }
