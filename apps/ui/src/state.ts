@@ -1,4 +1,5 @@
 import {setCheckoutContext} from './api.ts';
+import { probeStage } from './lib/live-probe.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
 // always compose(projection, cursor) — the store never holds a hand-built scene.
 
@@ -244,7 +245,9 @@ export const useApp = create<State>((set, get) => ({
       if (get().source !== source || get().recordingId !== recordingId) return;
     }
     const current = newest('projection');
+    probeStage('refresh-start');
     const recordings = await source.recordings();
+    probeStage('recordings-done');
     if (!current() || get().recordingId !== recordingId) return;
     const count = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + r.observationCount, 0);
     const bytes = recordings.filter((r) => recordingId.split('+').includes(r.id)).reduce((n, r) => n + (r.sourceBytes ?? 0), 0);
@@ -254,6 +257,7 @@ export const useApp = create<State>((set, get) => ({
       return;
     }
     const projection = await source.projection(recordingId);
+    probeStage('projection-done');
     if (!current() || get().recordingId !== recordingId) return; // superseded by a newer load
     const { step, mode } = get();
       set({ error: undefined, projection, recordings, renderedRevisions: revisionsOf(recordings), recording: recordings.find((r) => r.id === recordingId) ?? recordings.find((r) => r.id === recordingId.split('+')[0]) ?? get().recording,
