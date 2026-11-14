@@ -8,11 +8,19 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 
 ## 1. Audience and message
 
-**Who:** developers who code with agents (Claude Code, Codex, Antigravity) and want to understand what the agent did. They are not "vibe coders" who never read the diff, and not sceptics who refuse agents. They are the large middle: they prompt, look away, come back to a wall of text, and either trust it blindly or spend twenty minutes reconstructing what happened.
+**The situation (15 Nov 2026):**
+- AI agents now write a large share of code, and the developer's job has moved from writing it to directing and reviewing an agent.
+- The tools are still the ones built for people writing code: a terminal transcript, the IDE, a Git client, GitHub. None of them shows what the agent did to get there: what it searched for, which files it opened, what it ran and saw fail, what it changed.
+- Yet software engineering still runs on understanding: code review, debugging, ownership, knowing your own codebase.
+- With agents, **the agent's process has become part of the evidence**, the way a PR description and commit history were for a human change. You can't review well what you never saw being made.
+
+**Who:**
+1. **People building with AI who don't read every line** (vibe coders): they ship code nobody understands and can't tell what the agent touched. Drishya lets them watch and learn their own codebase as it is built.
+2. **Engineers who use agents and review the work:** they don't want blind trust or twenty minutes of reconstruction. Drishya shows them what the agent explored, so they can reason about its choices, read the same files beside it, and review the change with real Git tools.
 
 **The pain, in their words:** "the agent knows the change, I don't."
 
-**The promise:** Drishya shows you the agent's real work as it happens, beside your repository: what it read, ran, saw fail and edited, as the real material. So you understand the change, and your codebase, instead of trusting a summary.
+**The promise:** see what your agent is exploring and doing, as it happens, and work on it like an engineer: read the files beside it, review the change, compare branches and PRs, follow the history, all in one local place.
 
 **Proof points:** every one is true of Release 1. Re-check each against the shipped build before posting.
 
@@ -30,26 +38,26 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 - "works with every agent";
 - anything about features in the next release (the embed, more Antigravity).
 
-**One line:** *See what your coding agent actually did, while it does it.*
+**One line:** *See what your coding agent is doing, and review it like an engineer.*
 
-**Product Hunt tagline (60 characters max):** *Watch your coding agent's real work, live, beside your repo* (58)
+**Product Hunt tagline (60 characters max):** *See what your coding agent is doing, and review it properly* (59)
 
 ---
 
-## 2. The story: six problems, six answers (revised 15 Nov)
+## 2. The story: six problems, six answers (revised 15 Nov, night)
 
-Yash, 15 Nov: show every current problem and what Drishya does for each, and move the message from "agent visualization" to "agent visualization plus a developer workspace", pointing at the best of it. The product is ready, so the marketing has to be as good as the product.
+Yash, 15 Nov: show the current problems as AI coding spreads (vibe coding, not knowing what the agent explored) and what Drishya does for each. Move from "agent visualization" to "agent visualization plus a developer workspace". **The repository map is decoration: never present it as an answer.**
 
-| # | The problem developers have today | What Drishya does |
+| # | The problem today | What Drishya does |
 |---|---|---|
-| 1 | **A wall of text.** You see the agent's summary, not its work. | The real material, live: every file it read, command it ran, test that failed and edit it made, on a map of your repository. |
-| 2 | **You stop knowing your own codebase.** The agent knows the change; you don't. | You understand it while it happens. Open any file and see its earlier changes: which session changed it, and what the agent read before editing. |
-| 3 | **Reviewing means five tools.** Terminal, IDE, Git client, GitHub, back again. | One workspace beside the agent's work: Files and peek, Workspace, Git review, Compare branches and PRs, the Git graph, search. |
-| 4 | **Every agent has its own place.** | One view for Claude Code, Codex and Antigravity. |
-| 5 | **Long sessions can't be reviewed later.** Scrolling back is hopeless. | Replay any session, at any size; it opens at once. Read it as Work or as Conversation, and search it. Answer the agent's questions in place. |
+| 1 | **Vibe coding.** Code ships that nobody has read, and nobody knows what the agent touched. | Watch the agent work, live: every search, file read, command and its output, the failing test and the edit. It shows the real material, not a summary, so even someone who doesn't read every line sees what changed and why it was opened. |
+| 2 | **You can't see what the agent explored.** It reads thirty files and runs ten commands; you get "Done". | Every step it took, in order, as it happens. See what it looked at before deciding. |
+| 3 | **You can't reason alongside it.** To judge its plan you need what it saw. | Open the file it is reading, side by side with its work, along with the file's earlier changes and the session that made them. Answer its questions in place, and send the next prompt to the Claude Code or Codex session Drishya drives. |
+| 4 | **Reviewing is scattered** across the terminal, IDE, Git client and GitHub. | One workspace: Workspace, Git review of the change, Compare for branch and PR changes, the Git graph, search across sessions. |
+| 5 | **Every agent has its own place, and old sessions are unreviewable.** | Claude Code, Codex and Antigravity in one view; replay any session at any size, read it as Work or Conversation, and search it. |
 | 6 | **Your code shouldn't leave your machine** to be understood. | Local only: no telemetry, secrets redacted before storing, loopback only, open source (Apache-2.0). |
 
-The film shows problems 1 to 3 in its opening, answers all six, and ends on the developer workspace (problem 3) as the strongest image: the agent's work and your tools in one place.
+The film ends on the developer workspace as its strongest image: the agent's work and your engineering tools in one place.
 
 ## 3. The video: one film, and cuts from it
 
@@ -68,14 +76,15 @@ The film shows problems 1 to 3 in its opening, answers all six, and ends on the 
 
 ### The film's script (90 s; captions plus quiet product sound; optional voice track added later)
 
-1. **0–12 s, the problems.** Real terminal footage of an agent session, cut fast, with three caption cards: "A wall of agent text." → "Which files did it change? Why?" → "Five tools to review it." End on the terminal frozen mid-scroll.
-2. **12–16 s, the turn.** A split screen: the terminal on the left, Drishya opening on the same session on the right. Caption: "See what your agent actually did."
-3. **16–42 s, answer 1: live, real.** Drishya full frame, a live Claude Code session: it reads a file, runs the tests, a test fails (red), it edits, the tests pass, and its prose rises beneath. Each step lands on the repository map. Captions in 2 to 4 words per step.
-4. **42–52 s, answer 2: understand your code.** The Files peek on the edited file, showing its earlier changes and the session that made them. Caption: "Know every change, and why."
-5. **52–70 s, answer 3: the developer workspace (the hero beat).** Workspace, Git review of the change, Compare a branch against main, the Git graph, search, in one continuous move with no tab switch. Caption: "Your agent's work and your tools, in one place."
-6. **70–78 s, answers 4 and 5.** Home with Claude Code, Codex and Antigravity sessions, a large session opening at once, Work and Conversation switched, a question answered in place. Caption: "Every agent. Every session. Any size."
-7. **78–85 s, answer 6.** A calm frame. Caption: "Runs on your machine. No telemetry. Open source."
-8. **85–90 s.** The logo, the install command and the GitHub link.
+1. **0–12 s, the situation.** Real terminal footage of an agent session, cut fast, with caption cards: "AI writes the code now." → "It explored 30 files. You saw 'Done'." → "Who understands this change?"
+2. **12–16 s, the turn.** A split screen: the terminal on the left, Drishya opening on the same session on the right. Caption: "See what your agent is doing."
+3. **16–38 s, live and real.** A live Claude Code session in Drishya: it searches, reads files (their real content arrives), runs the tests, a test fails (red), it edits (the diff), the tests pass, and its own words appear beneath. Captions of 2 to 4 words per step.
+4. **38–50 s, read along.** Open the file it just read, side by side with its work, along with that file's earlier changes and the session that made them. Caption: "Read what it read. Reason with it."
+5. **50–56 s, steer it.** Answer its question in place, then send the next prompt. Caption: "Answer it. Steer it."
+6. **56–74 s, the hero beat: review like an engineer.** Workspace, Git review of the change, Compare for a branch and a PR, the Git graph, search, in one continuous move with no tab switch. Caption: "Then review it like an engineer. All in one place."
+7. **74–80 s.** Home with Claude Code, Codex and Antigravity sessions, then a large old session opening at once. Caption: "Every agent. Every session."
+8. **80–86 s.** A calm frame. Caption: "Runs on your machine. No telemetry. Open source."
+9. **86–90 s.** The logo, the install command and the GitHub link.
 
 ### Voice: no AI voice; captions carry the film; your voice is an optional later layer (decided 15 Nov)
 
@@ -120,7 +129,7 @@ Decided for quality, truth and privacy (real sessions must not leak). Two to fiv
 2. Codex live: a different small task on the same repository.
 3. An Antigravity session (read-only) shown on Home and opened.
 4. Work ↔ Conversation switching mid-session.
-5. The map with an edited file lit, and the Files peek with its earlier changes.
+5. The file the agent is reading opened side by side with its work, with its earlier changes.
 6. Git review, Compare (branch versus main) and the Git graph.
 7. Search across the session; a question card answered in place.
 8. A very large session opening at once (use a synthetic large fixture, not a real private session).
@@ -144,7 +153,7 @@ Install line is a placeholder: use SHIP-9's exact command.
 **LinkedIn: company page (D0, with the film)**
 > Coding agents do the work. You get a wall of text.
 >
-> Drishya shows you what your agent actually did, while it does it: every file it read, every command it ran, the test that failed and the edit that fixed it. Real material, live, on a map of your own repository.
+> Drishya shows you what your agent actually did, while it does it: every file it read, every command it ran, the test that failed and the edit that fixed it. Real material, live, beside your code, with Files, Git review and Compare to review it.
 >
 > • Claude Code and Codex, live and replayed; Antigravity sessions too
 > • Files, Git review, Compare, search, beside the agent's work
@@ -167,7 +176,7 @@ Install line is a placeholder: use SHIP-9's exact command.
 
 **X: launch thread (D0, from the company account; the builders quote it)**
 1. Your coding agent just changed 14 files. Do you know what it did? Drishya shows you, live. [the 30 s cut]
-2. Every file it read, command it ran, test that failed and edit that fixed it: the real material, on a map of your repo.
+2. Every file it read, command it ran, test that failed and edit that fixed it: the real material, beside your code.
 3. Claude Code and Codex live and replayed; Antigravity sessions too. Files, Git review, Compare and search beside it.
 4. 100% local. No telemetry. Open source. `<install command>` · github.com/drishya-dev/drishya
 
@@ -183,7 +192,7 @@ Install line is a placeholder: use SHIP-9's exact command.
 
 **Product Hunt (D+1, 00:01 PT)**
 - **Tagline:** *Watch your coding agent's real work, live, beside your repo*
-- **Description (260 characters max):** *Drishya plays what Claude Code, Codex and Antigravity actually did (files read, commands run, failures, edits) live on a map of your repository, with Files, Git review and search beside it. Local only, no telemetry, open source.*
+- **Description (260 characters max):** *Drishya plays what Claude Code, Codex and Antigravity actually did (files read, commands run, failures, edits) live, beside your code, with Files, Git review, Compare and search to review it. Local only, no telemetry, open source.*
 - **Gallery:**
   1. the film as the video;
   2. 5 frames from SITE-2's approved set (live work, Files peek, Git review, Compare, three harnesses), each with a 4-word headline.
