@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
+import { checkPackage, foreignImports, localIdentity } from './lib/package-contents.ts';
 
 const root = resolve(import.meta.dirname, '..');
 const scratch = mkdtempSync(join(tmpdir(), 'drishya-package-'));
@@ -68,6 +69,14 @@ async function verifyRecordings(base: string, cookie: string) {
 }
 
 try {
+  // SEC-5: what `npm pack` would publish is compared with the allowlist before anything is installed.
+  const dry = JSON.parse(command(process.execPath, [npmCli, 'pack', '--dry-run', '--json'], join(root, 'dist/package'))) as { files: { path: string }[] }[];
+  const packedPaths = dry[0]!.files.map((file) => file.path);
+  const contents = checkPackage(join(root, 'dist/package'), packedPaths, localIdentity(root));
+  assert.deepEqual(contents, [], `package contents:\n${contents.join('\n')}`);
+  for (const path of packedPaths.filter((name) => /^apps\/daemon\/src\/.+\.mjs$/.test(name))) {
+    assert.deepEqual(foreignImports(readFileSync(join(root, 'dist/package', path), 'utf8')), [], `${path}: the bundled daemon imports only node: built-ins`);
+  }
   const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
   const tarball = join(scratch, packed[0]!.filename);
   command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
