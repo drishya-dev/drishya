@@ -186,15 +186,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
   // Both sign-in methods share the existing expiry, cap and cookie policy.
   const issueSession = (res: ServerResponse) => {
-        const t = now();
-        for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
-        while (sessions.size >= maxSessions) {
-          const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
-          sessions.delete(oldest[0]);
-        }
-        const sid = randomBytes(24).toString('hex');
-        sessions.set(sid, { created: t, lastSeen: t });
-        res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
+    const t = now();
+    for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
+    while (sessions.size >= maxSessions) {
+      const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
+      sessions.delete(oldest[0]);
+    }
+    const sid = randomBytes(24).toString('hex');
+    sessions.set(sid, { created: t, lastSeen: t });
+    res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
   };
   const inFlight = new Set<Promise<void>>();
   const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {

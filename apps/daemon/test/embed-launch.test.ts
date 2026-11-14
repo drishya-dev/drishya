@@ -44,9 +44,9 @@ it('inherited worker opens/reuses only its own instance with credential-free pri
   await supervisor.close();supervisor=undefined;expect(await readdir(directory)).toEqual([]);
  }finally{await supervisor?.close();await rm(home,{recursive:true,force:true});}
 },30_000);
-it('newline transport rejects oversized, malformed and partial data without echoing',()=>{
+it('newline transport rejects oversized, malformed and partial data without echoing',async()=>{
  for(const value of ['x'.repeat(65),'not json\n','{"half":']) {
-  const input=new PassThrough();let failed=false;jsonLines(input,64,()=>{},()=>{failed=true;});input.end(value);if(value.endsWith('\n')||value.length>64) expect(failed).toBe(true);
+  const input=new PassThrough();let failed=false;jsonLines(input,64,()=>{},()=>{failed=true;});input.end(value);await new Promise(resolve=>setImmediate(resolve));expect(failed).toBe(true);
  }
 });
 

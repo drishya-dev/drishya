@@ -129,9 +129,16 @@ export async function embedWorker(): Promise<void> {
   let app: App | undefined, running: RunningServer | undefined, cleanup: (() => Promise<void>) | undefined;
   const codes = new EmbedCodes();
   let work = Promise.resolve(), queued = 0, closing = false;
+  // Windows may terminate the supervisor without delivering a pipe EOF promptly.
+  // Only observe our captured parent PID; never signal or attach to another process.
+  const parentPid = process.ppid;
+  const parentWatch = setInterval(() => {
+    try {process.kill(parentPid, 0);} catch {void close();}
+  }, 1000);
+  parentWatch.unref();
   const close = async () => {
     if (closing) return;
-    closing = true; codes.clear();
+    closing = true; clearInterval(parentWatch); codes.clear();
     await work.catch(() => undefined);
     codes.clear();
     await running?.close(); await app?.close(); await cleanup?.(); channel.destroy();

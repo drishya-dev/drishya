@@ -1,4 +1,5 @@
 import {realpath} from 'node:fs/promises';
+import {recordingIdFor} from '@drishya/capture-core';
 import {isAbsolute} from 'node:path';
 import type {App} from './app.ts';
 import type {EmbedCodes} from './embed-auth.ts';
@@ -35,7 +36,7 @@ export async function openEmbed(app: App, baseUrl: string, codes: EmbedCodes, in
       if (cwd && (!source.cwd || await canonical(source.cwd).catch(() => undefined) !== cwd)) continue;
       eligible.push(source);
     }
-    eligible.sort((a,b) => b.modifiedAt.localeCompare(a.modifiedAt) || a.adapterId.localeCompare(b.adapterId) || a.path.localeCompare(b.path));
+    eligible.sort((a,b) => b.modifiedAt.localeCompare(a.modifiedAt) || recordingIdFor(a.adapterId,a.path).localeCompare(recordingIdFor(b.adapterId,b.path)));
     const source = eligible[0];
     if (!source) throw new EmbedError('NO_SESSION');
     recordingId = (await app.ingest.importSource(source.adapterId, source.path)).recordingId;
