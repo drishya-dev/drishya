@@ -80,15 +80,14 @@ it('maps only native swarm add to delegation, never title/status/kill control as
  for(const action of ['models','title','status','kill','unrecognised'])expect(intentFor('swarm',{action,name:'synthetic-child'})).toEqual({kind:'other'});
 });
 
-it('uses exact native swarm result-step receipts for parallel child references, never model/name guesses', async () => {
+it('keeps parallel swarm child receipts unresolved rather than assigning both children to the last call', async () => {
  const root=await mkdtemp(join(tmpdir(),'ag-native-swarm-')),folder=join(root,'brain','synthetic'),logs=join(folder,'.system_generated','logs'),children=join(folder,'.system_generated','subagents');await mkdir(logs,{recursive:true});await mkdir(children,{recursive:true});
  try {
   for(const id of ['first','second'])await writeFile(join(children,id+'.json'),JSON.stringify({conversationId:id,spawnStepIndex:34,subagentDescriptor:{typeName:'unrelated-type',role:'synthetic'}}));
   const context={...ctx,sourcePath:join(logs,'transcript.jsonl')},parser=liveParser(createParser(context),context,root,'synthetic',()=>undefined);
   const input=row(32,'PLANNER_RESPONSE',{tool_calls:['one','two'].map(name=>({name:'swarm',args:{action:JSON.stringify('add'),name:JSON.stringify(name),model:JSON.stringify('requested-only'),brief:JSON.stringify('Synthetic review')}}))});
   const raws=[];for(const value of [input,row(33,'GENERIC',{content:'Synthetic first receipt'}),row(34,'GENERIC',{content:'Synthetic second receipt'})]){await parser.prepare?.(value);raws.push(...parser.parse(value));}
-  const spawned=raws.filter(r=>r.kind==='agent.spawn');expect(spawned).toHaveLength(2);expect(new Set(spawned.map(r=>r.payload.nativeConversationId))).toEqual(new Set(['first','second']));expect(spawned.every(r=>r.payload.spawnStepIndex===34&&r.operationId==='synthetic:32:call:1')).toBe(true);
-  expect(spawned.every(r=>r.payload.model===undefined)).toBe(true);
+  const spawned=raws.filter(r=>r.kind==='agent.spawn');expect(spawned).toHaveLength(0);const gaps=raws.filter(r=>r.kind==='capture.gap'&&r.payload.spawnStepIndex===34);expect(gaps).toHaveLength(2);expect(new Set(gaps.map(r=>r.payload.nativeConversationId))).toEqual(new Set(['first','second']));expect(gaps.every(r=>r.operationId===undefined)).toBe(true);
  } finally {await rm(root,{recursive:true,force:true});}
 });
 

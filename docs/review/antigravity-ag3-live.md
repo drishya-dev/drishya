@@ -44,3 +44,5 @@ Yash approved reopening only pinned side-file reads and native child replay afte
 - Eleven focused tests pass, including two adversarial swap tests and a completed-spawn replay test that checks operation, agent and link visibility before/after the receipt. Backend typecheck passes. The currently running broad gate is frozen at c04947e4 before this delta; do not attribute its result to this fix without the recorded delta/final validation.
 
 The external signed-in native-application interruption case is still unrun: there is no isolated authenticated profile and shared Antigravity must not be force-crashed. Killing a background task does not satisfy that line.
+
+Parallel native swarm child receipts are now explicitly unresolved: a shared planner result step cannot identify a unique request. This is a visible captured-data gap, not a name/model/timing join. Single-request invoke/swarm child references retain exact opening. The final focused safety/native/replay set has 20 passing tests.

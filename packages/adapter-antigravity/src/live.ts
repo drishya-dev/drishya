@@ -27,6 +27,12 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
   let preparedMedia: MediaResult | undefined, artifactRefresh = 0;
   const calls = new Map<string, Call>(), tasks = new Map<string, Task>(), ambiguousTasks = new Set<string>();
   const spawnOwners = new Map<number, Call>(), childrenEmitted = new Map<string, string>();
+  const ambiguousSpawnSteps = new Set<number>();
+  const rememberSpawn = (call: Call, step: number) => {
+    const group = call.id.split(':call:')[0];
+    if ([...calls.values()].filter(candidate => isChildSpawn(candidate) && candidate.id.split(':call:')[0] === group).length > 1) { ambiguousSpawnSteps.add(step); spawnOwners.delete(step); }
+    else spawnOwners.set(step, call);
+  };
   let children: ChildReference[] = [], childRefresh = 0, prepared: CapturedOutput | undefined;
   let lastStep = 0, taskOffset = 0, metaSignature = '';
   const agentId = ctx.agentId ?? 'agent:main';
@@ -91,6 +97,13 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
     for (const child of children) {
       const call = spawnOwners.get(child.spawnStepIndex), key = `${child.spawnStepIndex}:${child.conversationId}`;
       const signature = JSON.stringify([child.agentType, child.role, child.state]);
+      if (ambiguousSpawnSteps.has(child.spawnStepIndex)) {
+        if (childrenEmitted.get(key) !== signature) {
+          childrenEmitted.set(key, signature);
+          out.push({ recordId: `${id}:${child.spawnStepIndex}:child:${child.conversationId}`, part: 0, agentId, kind: 'capture.gap', availability: 'metadata-only', payload: { reason: 'unsupported-content', detail: `Antigravity recorded a child receipt at result step ${child.spawnStepIndex} for multiple subagent requests. Its individual parent call is unresolved. Recorded child conversation: ${child.conversationId}.`, nativeConversationId: child.conversationId, spawnStepIndex: child.spawnStepIndex } });
+        }
+        continue;
+      }
       if (!call || childrenEmitted.get(key) === signature) continue;
       childrenEmitted.set(key, signature);
       out.push({ recordId: `${id}:${child.spawnStepIndex}:child:${child.conversationId}`, part: 0, agentId, operationId: call.id, kind: 'agent.spawn',
@@ -136,7 +149,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
         }
         if (o.kind === 'tool.result') completeArtifact(o.operationId, p);
         if (o.kind === 'tool.result' && call) {
-          if (isChildSpawn(call) && Number.isSafeInteger(step)) spawnOwners.set(step, call);
+          if (isChildSpawn(call) && Number.isSafeInteger(step)) rememberSpawn(call, step);
           const native = taskId(object(object(p.outcome).run).backgroundTaskId);
           if (call.tool === 'run_command' && native) rememberTask(call, native, step);
           if (p.resultUpdate === true && typeof p.nativeTaskId === 'string') {
@@ -173,7 +186,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
         if (raw.kind === 'tool.call') rememberCall(raw.operationId, p);
         const call = raw.operationId ? calls.get(raw.operationId) : undefined;
         if (raw.kind !== 'tool.result' || !call) continue;
-        if (isChildSpawn(call)) spawnOwners.set(step, call);
+        if (isChildSpawn(call)) rememberSpawn(call, step);
         if (prepared) {
           p.outputSource = prepared.available ? { path: prepared.path, bytes: prepared.bytes, truncated: prepared.truncated, source: 'captured-harness-file' } : { unavailable: prepared.reason };
           if (prepared.available && !call.protected) {
