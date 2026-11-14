@@ -16,6 +16,8 @@ const repoRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
 const HELP = `drishya ${VERSION} — see what your coding agents did. Observe only.
 
+  drishya embed <recording|--latest> [--cwd DIR]    open a private top-level harness pane
+  drishya embed-mcp                                stdio launcher for a capable local host
   drishya serve [--port 7878] [--no-open] [--dev]   start the local app
   drishya sources [--json]                           list Claude Code and Codex sessions on this machine
   drishya import <path> [--workspace DIR] [--live]   import one session journal (auto-detects the harness)
@@ -30,6 +32,36 @@ Data lives in ${dataDir()} (override with DRISHYA_HOME).`;
 
 export async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
+  if (cmd === 'embed-worker') {
+    if (rest.length) throw new Error('embed worker takes only its inherited control channel');
+    return (await import('./embed-runtime.ts')).embedWorker();
+  }
+  if (cmd === 'embed-mcp') {
+    if (rest.length) throw new Error('embed-mcp takes no arguments');
+    return (await import('./embed-mcp.ts')).embedMcp();
+  }
+  if (cmd === 'embed') {
+    const {EmbedError, embedFailure, selection} = await import('./embed-launch.ts');
+    let supervisor: import('./embed-runtime.ts').EmbedSupervisor | undefined;
+    try {
+      // Refuse framing before touching storage or starting a worker, including malformed values.
+      if (rest.some(arg => arg === '--frame-ancestor' || arg.startsWith('--frame-ancestor='))) throw new EmbedError('IFRAME_UNSUPPORTED');
+      const parsed = parseArgs({args:rest,allowPositionals:true,options:{latest:{type:'boolean'},cwd:{type:'string'}}});
+      if (parsed.positionals.length > 1) throw new EmbedError('INVALID_SELECTION');
+      const input = selection({...(parsed.positionals[0] ? {sessionId:parsed.positionals[0]} : {}),
+        ...(parsed.values.latest ? {latest:true} : {}),...(parsed.values.cwd !== undefined ? {cwd:parsed.values.cwd} : {})});
+      supervisor = (await import('./embed-runtime.ts')).embedSupervisor();
+      const launched = await supervisor.open(input);
+      const stop = async () => {await supervisor?.close();};
+      process.once('SIGINT', () => {void stop();}); process.once('SIGTERM', () => {void stop();});
+      process.stdout.once('error', () => {void stop();});
+      process.stdout.write(JSON.stringify(launched) + '\n');
+    } catch (error) {
+      await supervisor?.close();
+      process.stdout.write(JSON.stringify({error:embedFailure(error)}) + '\n'); process.exitCode = 1;
+    }
+    return;
+  }
   const { values, positionals } = parseArgs({
     args: rest,
     allowPositionals: true,

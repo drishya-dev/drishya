@@ -1,3 +1,4 @@
+import type {EmbedCodes} from './embed-auth.ts';
 import {queuedInputChunk} from './queued-inputs.ts';
 import {recordedFileRoots,withFileRootDiskState} from './file-roots.ts';
 import { HistoryLoading } from './history.ts';
@@ -42,6 +43,8 @@ export interface RecordingsTiming {
 }
 
 export interface ServerOptions {
+  /** Set only by the local embed supervisor; normal serve has no embed auth endpoint. */
+  embedCodes?: EmbedCodes;
   /** In-process benchmark observer only; no endpoint, headers or persistence are added. */
   recordingsTiming?: (sample: RecordingsTiming) => void;
   port?: number;
@@ -181,6 +184,18 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     return !!sid && sessionValid(sid);
   };
 
+  // Both sign-in methods share the existing expiry, cap and cookie policy.
+  const issueSession = (res: ServerResponse) => {
+        const t = now();
+        for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
+        while (sessions.size >= maxSessions) {
+          const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
+          sessions.delete(oldest[0]);
+        }
+        const sid = randomBytes(24).toString('hex');
+        sessions.set(sid, { created: t, lastSeen: t });
+        res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
+  };
   const inFlight = new Set<Promise<void>>();
   const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
@@ -193,18 +208,24 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
 
       if (!url.pathname.startsWith('/v1/')) return serveStatic(uiDir, url.pathname, res);
       if (url.pathname === '/v1/health') return json(res, { ok: true, version: VERSION });
+      if (url.pathname === '/v1/embed/session') {
+        if (!opts.embedCodes) throw new HttpError(404, 'embed launch is not enabled');
+        if (req.method !== 'POST') throw new HttpError(405, 'POST required');
+        res.setHeader('cache-control', 'no-store');
+        if (url.search || req.headers.authorization) throw new HttpError(400, 'JSON launch exchange required');
+        if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '')) throw new HttpError(415, 'JSON body required');
+        const body = await readJson(req, 2048) as Record<string, unknown> | null;
+        if (!body || Array.isArray(body) || Object.keys(body).sort().join(',') !== 'code,recordingId'
+          || typeof body.code !== 'string' || typeof body.recordingId !== 'string'
+          || !app.store.getRecording(body.recordingId) || !opts.embedCodes.consume(body.code, body.recordingId))
+          throw new HttpError(401, 'invalid or expired launch');
+        issueSession(res);
+        return json(res, {ok: true, recordingId: body.recordingId});
+      }
       if (url.pathname === '/v1/session' && req.method === 'POST') {
         const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
         if (!bearer || !safeEqual(bearer, token)) throw new HttpError(401, 'invalid launch token');
-        const t = now();
-        for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
-        while (sessions.size >= maxSessions) {
-          const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
-          sessions.delete(oldest[0]);
-        }
-        const sid = randomBytes(24).toString('hex');
-        sessions.set(sid, { created: t, lastSeen: t });
-        res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
+        issueSession(res);
         return json(res, { ok: true });
       }
       if (!authed(req)) throw new HttpError(401, 'not signed in to this Drishya launch — open the link printed by `drishya serve`');
@@ -728,6 +749,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     app,
     server,
     close: async () => {
+      opts.embedCodes?.clear();
       await controller.close();
       await new Promise<void>((ok) => {
         for (const c of clients) c.end();
