@@ -32,6 +32,8 @@ export interface StoredCursor {
   generation: number;
   fingerprint: string;
   inOversized?: boolean;
+  /** Sanitized adapter-owned inspection checkpoint; cursor JSON needs no DB migration. */
+  adapterCheckpoint?: unknown;
 }
 
 export interface SourceRow {

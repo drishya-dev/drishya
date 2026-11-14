@@ -167,15 +167,35 @@ export class Ingestor extends EventEmitter {
    * Discovery plus a per-adapter error for any location that could not be read (B1, audit A05):
    * a permission failure must not look like a machine with no sessions.
    */
+  private restoreAdapterCheckpoints(adapter: Adapter): void {
+    if (!adapter.restoreCheckpoint) return;
+    for (const recording of this.store.listRecordings()) {
+      if (recording.harness !== adapter.descriptor.harness) continue;
+      for (const source of this.store.getSources(recording.id)) {
+        if (source.cursor.adapterCheckpoint !== undefined) adapter.restoreCheckpoint(source.path, source.cursor.adapterCheckpoint);
+      }
+    }
+  }
+
+  /** Cursor control metadata gets the same pre-persistence privacy boundary as observations. */
+  private sealedAdapterCheckpoint(adapter: Adapter, source: SourceRow): unknown {
+    if (!adapter.checkpoint) return undefined;
+    const value = adapter.checkpoint(source.path);
+    if (value === undefined || Buffer.byteLength(JSON.stringify(value)) > 512 * 1024) return undefined;
+    const sealed = seal({ raw: { part: 0, kind: 'checkpoint', agentId: source.agentId ?? 'agent:main', payload: { adapterCheckpoint: value } }, recordingId: source.recordingId, adapter: adapter.descriptor, sourceId: source.id, generation: source.cursor.generation, byteOffset: -1, observedAt: this.now().toISOString() });
+    return (sealed.payload as { adapterCheckpoint?: unknown }).adapterCheckpoint;
+  }
+
   async discoverReport(adapterId?:string): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }> {
     const errors: DiscoveryError[] = [];
     const lists = await Promise.all(
-      this.adapters.filter(a=>!adapterId||a.descriptor.id===adapterId).map((a) =>
-        a.discover().catch((e: unknown) => {
+      this.adapters.filter(a=>!adapterId||a.descriptor.id===adapterId).map((a) => {
+        this.restoreAdapterCheckpoints(a);
+        return a.discover().catch((e: unknown) => {
           errors.push({ adapterId: a.descriptor.id, ...describeError(e) });
           return [] as DiscoveredSource[];
-        }),
-      ),
+        });
+      }),
     );
     const all = lists.flat();
     for (const adapter of this.adapters.filter(a => !adapterId || a.descriptor.id === adapterId)) {
@@ -209,6 +229,7 @@ export class Ingestor extends EventEmitter {
 
   async importSource(adapterId: string, mainPath: string, opts: { title?: string; lineageSeen?: Set<string>; lineageSources?: string[] } & SyncOptions = {}): Promise<ImportResult> {
     const adapter = this.adapter(adapterId);
+    this.restoreAdapterCheckpoints(adapter);
     const path = this.existingNativeSource(adapter, resolve(mainPath))?.sourcePath ?? resolve(mainPath);
     await stat(adapter.readPath ? await adapter.readPath(path) : path); // fail early, before creating a recording
     const recordingId = recordingIdFor(adapterId, path);
@@ -373,6 +394,7 @@ export class Ingestor extends EventEmitter {
 
     try {
       // New companion files (e.g. a subagent started since the last read) join the recording.
+      this.restoreAdapterCheckpoints(adapter);
       const set = await adapter.sourceSet(rec.sourcePath!);
       for (const c of set.companions) this.store.upsertSource({ id: sourceIdFor(c.path), recordingId, path: c.path, agentId: c.agentId, role: 'companion', cursor: initialCursor() });
 
@@ -453,6 +475,7 @@ export class Ingestor extends EventEmitter {
       try {
         res = await readJsonl(readPath, cursor, readOpts);
         if (adapter.readPath) Object.assign(res.cursor, { readPath });
+        if (adapter.checkpoint) res.cursor.adapterCheckpoint = this.sealedAdapterCheckpoint(adapter, src);
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code === 'ENOENT') return { added, gaps, more: false, missing: true };
         throw e;

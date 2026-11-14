@@ -3,7 +3,7 @@ import type { Dirent } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
-import { initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser, type SourceCursor } from '@drishya/capture-core';
+import { fingerprintOf, initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser, type SourceCursor } from '@drishya/capture-core';
 import { sanitize } from '@drishya/privacy';
 import { defaultRoots, readableRoot, readablePath, conversationId, within, localPath } from './paths.ts';
 import { summaries, type Summary } from './summaries.ts';
@@ -102,7 +102,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
 }
 
 interface Scan { lastStep: number; title?: string; pathCounts: Map<string, number> }
-interface Inspection { signature: string; size: number; result: Scan; cursor: SourceCursor }
+interface Inspection { signature: string; size: number; result: Scan; cursor: SourceCursor; restored?: boolean }
 function chooseSummary(id: string, captured: Summary | undefined, inspection: Scan): Summary {
   const workspaces = [...(captured?.workspaces ?? [])];
   workspaces.sort((a, b) => [...inspection.pathCounts].reduce((sum, [path, count]) => sum + (within(b, path) ? count : 0) - (within(a, path) ? count : 0), 0));
@@ -148,7 +148,15 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
   }
   async function inspect(path: string): Promise<Scan> {
     const info = await stat(path), signature = `${info.size}:${info.mtimeMs}`;
-    const cached = inspections.get(path);
+    let cached = inspections.get(path);
+    if (cached?.restored) {
+      // Persisted metadata is a hint, never authority over the native file. A bounded
+      // prefix check rejects a same-size/same-time replacement before trusting it.
+      const fingerprint = await fingerprintOf(path);
+      if (info.size === cached.size && fingerprint !== cached.cursor.fingerprint || info.size > cached.size && Number(cached.cursor.fingerprint.split(':')[1]) < 1024) {
+        inspections.delete(path); cached = undefined;
+      } else cached.restored = false;
+    }
     if (cached?.signature === signature) return cached.result;
     // Appended receipts need only the unread suffix. Rewrites/truncations restart the
     // inspection; readJsonl also checks the prefix identity before trusting the cursor.
@@ -183,6 +191,47 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     descriptor,
     diagnostics: () => diagnostics,
     identity(path) { return locate(path).id; },
+    restoreCheckpoint(path, checkpoint) {
+      let location: ReturnType<typeof locate>;
+      try { location = locate(path); } catch { return; }
+      const state = object(checkpoint);
+      if (state.version !== 1 || state.conversation !== location.id || !Array.isArray(state.files) || state.files.length > 2) return;
+      for (const value of state.files) {
+        const entry = object(value), cursor = object(entry.cursor), result = object(entry.result);
+        if (entry.name !== 'transcript.jsonl' && entry.name !== 'transcript_full.jsonl') continue;
+        const physical = join(location.root, 'brain', location.id, '.system_generated', 'logs', entry.name);
+        if (inspections.has(physical)) continue;
+        if (typeof entry.signature !== 'string' || !/^\d+:\d+(?:\.\d+)?$/.test(entry.signature)
+          || !Number.isSafeInteger(entry.size) || Number(entry.size) < 0 || Number(entry.signature.split(':')[0]) !== entry.size
+          || !Number.isSafeInteger(cursor.offset) || Number(cursor.offset) < 0 || Number(cursor.offset) > Number(entry.size)
+          || !Number.isSafeInteger(cursor.generation) || Number(cursor.generation) < 0
+          || typeof cursor.fingerprint !== 'string' || !/^[a-f0-9]{16}:\d{1,4}$/.test(cursor.fingerprint) || Number(cursor.fingerprint.split(':')[1]) > 1024
+          || !Number.isSafeInteger(result.lastStep) || Number(result.lastStep) < -1
+          || !Array.isArray(result.pathCounts) || result.pathCounts.length > 20_000) continue;
+        const counts = new Map<string, number>();
+        let valid = true;
+        for (const pair of result.pathCounts) {
+          if (!Array.isArray(pair) || pair.length !== 2 || typeof pair[0] !== 'string' || pair[0].length > 8192 || !Number.isSafeInteger(pair[1]) || pair[1] < 0) { valid = false; break; }
+          counts.set(pair[0], pair[1]);
+        }
+        if (!valid) continue;
+        inspections.set(physical, { signature: entry.signature, size: Number(entry.size), restored: true,
+          cursor: { offset: Number(cursor.offset), generation: Number(cursor.generation), fingerprint: cursor.fingerprint, ...(cursor.inOversized === true ? { inOversized: true } : {}) },
+          result: { lastStep: Number(result.lastStep), title: typeof result.title === 'string' ? result.title.slice(0, 1000) : undefined, pathCounts: counts } });
+      }
+      if (!selected.has(location.id)) selected.set(location.id, path);
+    },
+    checkpoint(path) {
+      const { root, id } = locate(path);
+      const files = ['transcript_full.jsonl', 'transcript.jsonl'].flatMap(name => {
+        const entry = inspections.get(join(root, 'brain', id, '.system_generated', 'logs', name));
+        if (!entry) return [];
+        return [{ name, signature: entry.signature, size: entry.size,
+          cursor: { offset: entry.cursor.offset, generation: entry.cursor.generation, fingerprint: entry.cursor.fingerprint, ...(entry.cursor.inOversized ? { inOversized: true } : {}) },
+          result: { lastStep: entry.result.lastStep, title: entry.result.title, pathCounts: [...entry.result.pathCounts] } }];
+      });
+      return { version: 1, conversation: id, files };
+    },
     async readPath(path) { const { root, id } = locate(path); return await choose(root, id) ?? path; },
     async discover() {
       diagnostics = [];
