@@ -76,11 +76,13 @@ for (const width of [1440, 2000, 2560]) {
       const side = vis('.workspace-leading > *, .folder-explorer, .modern-toolbox, .complete-prompt-rail, .history-prompt-marks');
       const content = { left: r.left + parseFloat(c.paddingLeft), right: r.right - parseFloat(c.paddingRight) };
       const prose = vis('.history .prose p');
+      // The indent is measured on prose that sits directly in a reading column with the standard 6 px inset: a paragraph of a list item, or of a prose block that carries its own larger inset, is a different case.
+      const topLevel = [...document.querySelectorAll<HTMLElement>('.history .prose > p')].filter(p => getComputedStyle(p.parentElement!).paddingLeft === '6px' && p.getBoundingClientRect().width > 0).map(p => p.getBoundingClientRect());
       return {
         maxWidth: c.maxWidth, width: content.right - content.left,
         space: Math.min(...vis('.modern-toolbox, .complete-prompt-rail, .history-prompt-marks').map(x => x.left)) - Math.max(...vis('.workspace-leading > *, .folder-explorer').map(x => x.right)) - 48,
         under: vis('.history article.op').filter(o => side.some(k => o.right > k.left + 1 && o.left < k.right - 1 && o.bottom > k.top + 1 && o.top < k.bottom - 1)).length,
-        proseMax: Math.max(0, ...prose.map(p => p.width)), proseLeft: prose[0] ? prose[0].left - content.left : 0,
+        proseMax: Math.max(0, ...prose.map(p => p.width)), proseLeft: topLevel[0] ? topLevel[0].left - content.left : 0,
       };
     });
     expect(m.maxWidth, 'the 1280 px cap is lifted once the column is placed').toBe('none');
