@@ -129,6 +129,9 @@ export class ProjectionFold {
     const h = this.h;
     if (h.format !== FOLD_FORMAT || h.reducerVersion !== REDUCER_VERSION) return undefined;
     const last = h.recordingId;
+    // Antigravity replaces a step's receipt in place (same id and sequence), orders by its own step index rather than a
+    // clock, and adds side-file observations without a journal line. None of that is an append, so it is always rebuilt.
+    if (added.some(o => o.source.adapterId === 'antigravity')) return undefined;
     const bySequence = [...added].sort((a, b) => a.receivedSequence - b.receivedSequence);
     const carry = new Map(Object.entries(h.sourceClocks).map(([k, v]) => [k, v.clock]));
     let sequence = h.sequences[last] ?? -1;

@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,7 @@ import type { Observation, Projection } from '@drishya/contracts';
 import { orderObservations, projectionDigest, ProjectionFold, reduce, REDUCER_VERSION } from '@drishya/projection';
 import { Store } from '@drishya/store';
 import { Ingestor } from '../src/index.ts';
+import { createAntigravityAdapter } from '../../adapter-antigravity/src/index.ts';
 
 // LIVE-7b parity guard: folding the observations of a journal in two steps (everything up to a split, then the
 // rest appended) gives exactly the projection a full rebuild gives, at every split point, for every synthetic
@@ -100,6 +101,34 @@ describe('a fold appended at any split point equals a full rebuild', () => {
       // checkout-fix has a sub-agent journal whose records interleave in time with the main one's, so a split
       // that stores the main journal first must send the caller back to a rebuild for the rest.
       if (!path.includes('checkout-fix')) { expect(finished.rebuilt).toBe(0); expect(live.rebuilt).toBe(0); }
+    });
+  }
+});
+
+// Antigravity (AG-1 to AG-5): a step journalled again replaces its receipt in place, and side files (task logs, artifacts) add
+// observations without a new journal line. Whatever the fold does with those it must never serve something a rebuild would not:
+// each split either appends to exactly the rebuild's projection or refuses (and the caller rebuilds once).
+describe('Antigravity: a fold appended at any split point equals a full rebuild', () => {
+  const names = ['corpus', 'native-cases'];
+  const root = () => join(dir, 'ag-fixtures');
+  const journalOf = (name: string) => join(root(), 'brain', `synthetic-${name}`, '.system_generated', 'logs', 'transcript.jsonl');
+  const index = () => ingest.adapters.findIndex(a => a.descriptor.id === 'antigravity');
+  let original: (typeof ingest.adapters)[number];
+  beforeAll(() => {
+    for (const name of names) { mkdirSync(join(journalOf(name), '..'), { recursive: true }); copyFileSync(join(fixtures, 'antigravity', `${name}.ndjson`), journalOf(name)); }
+    original = ingest.adapters[index()]!;
+    ingest.adapters.splice(index(), 1, createAntigravityAdapter([root()]));
+  });
+  afterAll(() => { ingest.adapters.splice(index(), 1, original); });
+  for (const name of names) {
+    it(`antigravity/${name}.ndjson`, async () => {
+      const { recordingId } = await ingest.importSource('antigravity', journalOf(name));
+      const finished = checkSplits(recordingId, false);
+      const live = checkSplits(recordingId, true);
+      expect(finished.appended + finished.rebuilt).toBeGreaterThan(0);
+      expect(live.appended + live.rebuilt).toBeGreaterThan(0);
+      // Antigravity never appends: its receipts are replaced in place and ordered by step index, so every split is a rebuild.
+      expect(finished.appended + live.appended).toBe(0);
     });
   }
 });
