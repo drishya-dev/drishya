@@ -17,6 +17,7 @@ import {buildHandoff,type HandoffFile} from '../lib/changes-handoff.ts';
 import {GitPatchReader} from './GitPatchReader.tsx';
 import {FileIcon} from './FileIcon.tsx';
 import {InterfaceGlyph} from './InterfaceGlyph.tsx'; import {plural,pluralWord} from '../lib/plural.ts';
+import {useWaitNotice} from '../lib/use-wait-notice.ts';
 import './compare-window.css';
 
 // GIT-8, named Changes by GIT-9. It replaces the header's old Changes: two branches (or a pull request against its base) from their merge-base, with
@@ -103,6 +104,11 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
   const [result,setResult]=useState<GitCompareResult>(),[snapshot,setSnapshot]=useState<GitSnapshot>();
   const loaded=useRef('');
   const [loading,setLoading]=useState(false),[error,setError]=useState<string>(),[refresh,setRefresh]=useState(0);
+  const accessWait = useWaitNotice({
+    waiting: consent === undefined && !error,
+    quietMessage: 'Checking Git access…',
+    longMessage: 'Checking Git access for this workspace…',
+  });
   const [evidence,setEvidence]=useState<CompareEvidence>(),[evidenceFor,setEvidenceFor]=useState('');
   const [patch,setPatch]=useState<{key:string;file:GitFile}>(),[patchError,setPatchError]=useState<{key:string;message:string}>();
   const [marks,setMarks]=useState(()=>loadReviewMarks(cid)),[saveError,setSaveError]=useState<string>();
@@ -164,6 +170,14 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
     if(preset==='uncommitted')return (snapshot?.files??[]).map(file=>({path:file.path,group:'tree',git:file,note:gitWord(file.status),...(file.status.trim()==='??'?{}:patchCounts(file.patch))}));
     return (result?.files??[]).map(file=>({path:file.path,group:file.group,file,added:file.added,removed:file.removed,binary:file.binary,note:word(file.group==='base'?file.baseStatus:file.headStatus)}));
   },[preset,snapshot,result]);
+  const isUncommitted = preset === 'uncommitted';
+  const compareWait = useWaitNotice({
+    waiting: loading && !rows.length,
+    quietMessage: isUncommitted ? 'Reading uncommitted changes…' : 'Calculating branch differences…',
+    longMessage: isUncommitted
+      ? 'Reading working tree changes from Git. This can take a moment for repositories with many files.'
+      : 'Comparing branch changes and merge base. This can take a moment for divergent branches.',
+  });
   const rowKey=rows.map(row=>row.path).join('\0');
 
   // What this session's agents wrote, for every file in the list (the daemon answers 200 paths at a time).
@@ -298,9 +312,9 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
         <button className="btn ghost" title="Return to the agent’s work, exactly where you left it" onClick={close}>Back to agent</button>
       </span>
     </header>
-    {consent===undefined&&!error?<p className="compare-note" role="status">Checking Git access…</p>
+    {consent===undefined&&!error?<p className="compare-note" role="status">{accessWait.isImmediate?'':accessWait.message}</p>
       :!workspace?.root?<p className="compare-note">This session recorded no repository on this machine, so there is nothing to compare.</p>
-      :!ready?<><GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);setError(undefined);void grantGit(checkoutId??id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>{error&&<p className="compare-note" role="alert">{error}</p>}</>
+      :!ready?<><GitAccess workspaceApproved={!!workspace?.approved} busy={granting} disabled={granting||!workspace?.root} grant={()=>{setGranting(true);setError(undefined);void grantGit(checkoutId??id,!!workspace?.approved,approve).then(()=>setConsent(true)).catch(e=>setError(e.message)).finally(()=>setGranting(false));}}/>{error&&<p className="compare-note" role="alert">{error} <button className="btn ghost small" onClick={()=>setRefresh(n=>n+1)}>Retry</button></p>}</>
       :<>
       <div className="compare-sides" aria-label="Sides compared">
         {preset==='uncommitted'?<span className="compare-line"><b>{snapshot?.branch??'Working tree'}</b>{snapshot&&<span>{snapshot.head.slice(0,10)}</span>}<span>{identity} · uncommitted changes</span></span>
@@ -313,12 +327,12 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
         {result&&<span className="compare-counts" role="status">{result.state==='unrelated'?'No shared history':result.state==='shallow'?'History is shallow here':ahead===undefined?'':<><b>{ahead}</b> ahead · <b>{behind}</b> behind</>}{result.source==='github'&&<span className="compare-source" title="Read from GitHub through your signed-in gh; only this branch’s changes are known">from GitHub</span>}</span>}
         {result&&result.commitTotal>0&&<Commits result={result} jump={jump}/>}
       </div>
-      {(error||saveError)&&<p className="compare-note" role="alert">{error??saveError}</p>}
+      {(error||saveError)&&<p className="compare-note" role="alert">{error??saveError} <button className="btn ghost small" onClick={()=>setRefresh(n=>n+1)}>Retry</button></p>}
       {checking&&<p className="compare-note" role="status">Checking reviewed content…</p>}
       <div className={`compare-body${!loading&&!error&&!rows.length&&!row&&!(preset==='uncommitted'&&snapshot?.omissions?.length)?' compare-body-empty':''}`}>
         <aside className="compare-files" aria-label="Changed files" aria-busy={loading||filtering&&!evidenceReady}>
           {preset==='pr'&&!pull?<p className="compare-note">{pulls?.status==='ready'&&!pulls.pulls.length?'No open pull requests.':'Choose a pull request.'}</p>
-          :loading&&!rows.length?<p className="compare-note" role="status">Reading…</p>
+          :loading&&!rows.length?<p className="compare-note" role="status">{compareWait.isImmediate?'':compareWait.message}</p>
           :<>
             {preset==='uncommitted'&&snapshot?.totalAllowed!==undefined&&snapshot.totalAllowed>snapshot.limit&&<nav className="compare-pages" aria-label="Changed file pages">
               <button className="btn ghost" disabled={loading||checking||!snapshot.pageStart} onClick={()=>{setPageStart(Math.max(0,(snapshot.pageStart??0)-snapshot.limit));setSelected('');}}>Previous files</button>

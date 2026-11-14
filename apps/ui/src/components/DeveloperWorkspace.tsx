@@ -23,6 +23,7 @@ import { FileIcon } from './FileIcon.tsx';
 import { ImportContext } from './ImportContext.tsx';
 import { Markdown } from '../lib/markdown.tsx';
 import { useCurrentSource } from '../lib/use-current-source.ts';
+import { useWaitNotice } from '../lib/use-wait-notice.ts';
 import { SourceComparison, SourceVersionNotice } from './SourceVersions.tsx';
 import { SourceFind } from './SourceFind.tsx';
 import { WholeSource } from './WholeSource.tsx';
@@ -181,6 +182,11 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
   const overDocumentLimit=!!file&&!documentFits(file,documentSize);
   const formatted=markdown&&(reading.formatted??true)&&!overDocumentLimit;
   const [error,setError] = useState(''),[preparing,setPreparing]=useState(false);
+  const workspaceWait = useWaitNotice({
+    waiting: !file && !error && !current.error && !!path,
+    quietMessage: 'Reading current source…',
+    longMessage: 'Reading current source from disk. You can keep working in other panes.',
+  });
   const [compareSource,setCompareSource]=useState(false),[compareDisk,setCompareDisk]=useState(false);
   const [editing,setEditing] = useState(!!drafts.get(id,path)), [loadingDraft,setLoadingDraft] = useState(false), [copied,setCopied] = useState('');
   const [comparing, setComparing] = useState(false);
@@ -254,7 +260,7 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
       {markdown&&overDocumentLimit&&<p className="muted small desk-document-limit" role="status">{documentLimitMessage(documentSize)} Showing Source.</p>}
       {formatted ? <><div className="desk-markdown" ref={body} onScroll={e=>memory.set(`${locationKey}/scroll/document`,{top:e.currentTarget.scrollTop,left:e.currentTarget.scrollLeft})} tabIndex={0} aria-label={`Rendered document ${path}`}>{previewDocument ? <Markdown text={previewDocument.text} document /> : documentError ? <p role="alert">{documentError}<button className="btn ghost" onClick={()=>setReading(old=>({...old,formatted:false}))}>Read source</button></p> : <p role="status">Rendering document…</p>}</div><footer><span>{current.candidate?'Retained reading':'Current disk'}{previewDocument?` · ${plural(previewDocument.totalLines,'line')}${previewDocument.redacted?' · redacted':''}`:''}</span><button className="btn ghost" disabled={current.busy} onClick={()=>void current.refresh()}>Refresh</button></footer></> : <>
       <div className="desk-source-tools"><SourceFind query={query} change={value => {setQuery(value);setActiveLine(undefined);}} matches={matches} activeLine={activeLine} move={direction => { if(matches.length) { const index=matches.indexOf(activeLine ?? -1); setActiveLine(matches[index<0 ? direction>0 ? 0 : matches.length-1 : (index+direction+matches.length)%matches.length]); } }} label={`Find in ${path}`} idleLabel="" scopeLabel="this file" compact={modern} /><form onSubmit={e => { e.preventDefault(); const n=Number(line); if(!file || !/^\d+$/.test(line) || !Number.isSafeInteger(n) || n<1 || n>file.totalLines) {setError('Enter an existing line number.');return;} setError('');setActiveLine(n); }}><input aria-label={`Go to line in ${path}`} inputMode="numeric" placeholder="Line" value={line} onChange={e => setLine(e.target.value)} /><button className="btn ghost" disabled={!file}>Go</button></form><button className="btn ghost" aria-pressed={wrap} onClick={() => setWrap(!wrap)}>Wrap</button>{!modern && copyFileAction}</div>
-      {file ? <div ref={body} onScroll={e => { const node=e.currentTarget; memory.set(`${locationKey}/scroll/${start}`,{top:node.scrollTop,left:node.scrollLeft}); }} className={`desk-code source-reading${wrap?' wrap-source':''}`} tabIndex={0} aria-label={`Source ${path}`}><WholeSource text={file.text} path={path} viewport={body} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={pendingLine.current} revealRequest={revealRequest}/></div> : !error && <p role="status" className="desk-loading">Reading current source…</p>}
+      {file ? <div ref={body} onScroll={e => { const node=e.currentTarget; memory.set(`${locationKey}/scroll/${start}`,{top:node.scrollTop,left:node.scrollLeft}); }} className={`desk-code source-reading${wrap?' wrap-source':''}`} tabIndex={0} aria-label={`Source ${path}`}><WholeSource text={file.text} path={path} viewport={body} wrap={wrap} matches={new Set(matches)} activeLine={activeLine} revealLine={pendingLine.current} revealRequest={revealRequest}/></div> : !error && !current.error && (workspaceWait.isImmediate ? null : <p role="status" className={`desk-loading${workspaceWait.isLong ? ' wait-notice-long' : ''}`}>{workspaceWait.message}</p>)}
       <footer><span>{file ? `${current.candidate?'Retained reading':'Current disk'} · ${plural(file.totalLines,'line')}${file.redacted?' · redacted':''}`:'Current disk'}</span><button className="btn ghost" disabled={current.busy} onClick={() => void current.refresh()}>Refresh</button>{draft && <small>Draft retained</small>}<span role="status">{copied}</span></footer></>}
     </>}
     {current.error&&<p className="desk-error" role="alert">{current.error}<button className="btn ghost" onClick={()=>void current.refresh()}>Retry source</button></p>}

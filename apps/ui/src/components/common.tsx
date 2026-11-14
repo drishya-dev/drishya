@@ -1,9 +1,10 @@
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import {outputPathNodes} from './CapturedPath.tsx';
-import { useContext, useEffect, useState, type ReactNode, type Ref } from 'react';
+import { memo, useContext, useEffect, useMemo, useState, type ReactNode, type Ref } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 import { materialCache, type MaterialScope } from '../lib/artifact-cache.ts';
+import { isTableShaped } from '../lib/tool-output.ts';
 import { useApp } from '../state.ts';
 import type { DataSource } from '../api.ts';
 
@@ -137,13 +138,17 @@ export function DiffView({ hunks, path, maxLines, skipLines = 0, showRemaining =
   );
 }
 
-export function Output({ text, maxLines }: { text: string; maxLines?: number }) {
+// Memoised (LIVE-7): a live update re-renders the whole history, and without this every mounted
+// output card rescanned each of its lines for file locations on every update (about 90 ms per update on a
+// 1,700-observation Codex session). Props are the text and a line cap, so equal props are the same pixels.
+export const Output = memo(function Output({ text, maxLines }: { text: string; maxLines?: number }) {
   const root=useApp(s=>s.recording?.workspaceRoot);
   const all = text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\n$/, '').split('\n');
   const lines = maxLines ? all.slice(-maxLines) : all;
   const pathBudget={remaining:64,characters:131072};
+  const table = useMemo(() => isTableShaped(text), [text]);
   return (
-    <pre className="output">
+    <pre className={`output${table ? ' output-scroll' : ''}`} tabIndex={table ? 0 : undefined} role={table ? 'region' : undefined} aria-label={table ? 'Command output table' : undefined}>
       {maxLines && all.length > maxLines && <span className="ln-more">…{all.length - maxLines} earlier lines{'\n'}</span>}
       {lines.map((l, i) => (
         <span key={i} className={/\b(FAIL|Error|failed|×|✗)\b/.test(l) ? 'out-bad' : /\b(PASS|passed|✓)\b/.test(l) ? 'out-good' : undefined}>
@@ -153,7 +158,7 @@ export function Output({ text, maxLines }: { text: string; maxLines?: number }) 
       ))}
     </pre>
   );
-}
+});
 
 // ─── provenance ──────────────────────────────────────────────────────────────────────────
 

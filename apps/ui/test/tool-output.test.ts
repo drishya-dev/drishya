@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { looksLikeMarkdown, toolOutputText } from '../src/lib/tool-output';
+import { isTableShaped, looksLikeMarkdown, toolOutputText } from '../src/lib/tool-output';
 describe('structured tool output display', () => {
   it('decodes nested MCP execution responses and arrays without dropping mixed evidence',()=>{
     const result={output:'first\nsecond',exit_code:0};
@@ -60,5 +60,43 @@ describe('structured tool output display', () => {
     const envelope=JSON.stringify({output:'ran',exit_code:0});
     for (const line of ['"quoted"','42','-1','true','null','  plain text','']) expect(toolOutputText(line)).toEqual({text:line,decoded:false});
     expect(toolOutputText(['start','  '+envelope,'42'].join('\n'))).toEqual({text:['start','ran\nExit code: 0','42'].join('\n'),decoded:true});
+  });
+
+  describe('isTableShaped literal output detection (UI-50)', () => {
+    it('detects pipe tables printed to stdout', () => {
+      const table = '| Command | Status | Duration |\n|---|---|---|\n| build | ok | 1.2s |\n| test | ok | 3.4s |';
+      expect(isTableShaped(table)).toBe(true);
+    });
+
+    it('detects ASCII +--+ tables printed to stdout', () => {
+      const ascii = '+----------+--------+\n| Language | Files  |\n+----------+--------+\n| Rust     | 42     |\n+----------+--------+';
+      expect(isTableShaped(ascii)).toBe(true);
+    });
+
+    it('detects console.table box-drawing tables', () => {
+      const box = '┌─────────┬────────┬─────────┐\n│ (index) │  task  │ status  │\n├─────────┼────────┼─────────┤\n│    0    │ "lint" │ "pass"  │\n└─────────┴────────┴─────────┘';
+      expect(isTableShaped(box)).toBe(true);
+    });
+
+    it('detects tab-separated tabular output', () => {
+      const tabs = 'filename\tsize\tstatus\nindex.ts\t1024\tok\nmain.ts\t2048\tok';
+      expect(isTableShaped(tabs)).toBe(true);
+    });
+
+    it('detects multi-column fixed width output on wide lines', () => {
+      const ps = 'UID        PID  PPID  C STIME TTY          TIME CMD\nroot         1     0  0 10:00 ?        00:00:01 /sbin/init\nuser      1234     1  0 10:05 ?        00:00:05 /usr/bin/node server.js';
+      expect(isTableShaped(ps)).toBe(true);
+    });
+
+    it('does not classify normal prose command output as table-shaped', () => {
+      const gitLog = 'commit 3f8a12b (HEAD -> main)\nAuthor: Dev <dev@example.com>\nDate:   Fri Nov 14 10:00:00 2026\n\n    fix(ui): ensure buttons align properly on narrow viewports';
+      expect(isTableShaped(gitLog)).toBe(false);
+
+      const sentence = 'All 12 tests passed successfully in 3.4 seconds.';
+      expect(isTableShaped(sentence)).toBe(false);
+
+      const bulletList = '- item 1\n- item 2\n- item 3';
+      expect(isTableShaped(bulletList)).toBe(false);
+    });
   });
 });

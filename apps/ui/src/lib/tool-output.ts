@@ -218,3 +218,48 @@ export function looksLikeMarkdown(text: string): boolean {
   }
   return hasHeading2Plus || hasFence || (hasHeading1 && (hasList || hasInlineMarkdown)) || (hasList && hasInlineMarkdown);
 }
+
+/**
+ * UI-50: Detect literal output that is table-shaped or structured columnar data where
+ * wrapping mid-row would break column/row alignment (Markdown tables, box-drawing tables,
+ * tab-delimited columns, or fixed-width columns).
+ */
+export function isTableShaped(text: string): boolean {
+  if (!text || text.length > 2 * 1024 * 1024) return false;
+  const lines = text.split('\n');
+  let pipeLines = 0;
+  let boxLines = 0;
+  let tabLines = 0;
+  let columnLines = 0;
+  let hasRule = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // 1. Pipe tables: lines starting and ending with pipe, or divider lines
+    if (/^\|.*\|\s*$/.test(trimmed) || /^\+[-=+]+\+$/.test(trimmed)) {
+      pipeLines++;
+    } else if (trimmed.includes('|') && /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?\s*$/.test(trimmed)) {
+      pipeLines++;
+      hasRule = true;
+    }
+
+    // 2. Box-drawing characters (Node.js console.table, rich CLI tables)
+    if (/[┌┬┐├┼┤└┴┘│─║═╔╦╗╠╬╣╚╩╝]/.test(trimmed)) {
+      boxLines++;
+    }
+
+    // 3. Tab characters separating columns
+    if (line.includes('\t')) {
+      tabLines++;
+    }
+
+    // 4. Fixed-width multi-space column separators on wide lines (e.g. ps, ls -l, docker ps)
+    if (/\S\s{2,}\S/.test(trimmed) && trimmed.length >= 45) {
+      columnLines++;
+    }
+  }
+
+  return (pipeLines >= 2) || (boxLines >= 2) || (tabLines >= 2) || (pipeLines >= 1 && hasRule) || (columnLines >= 3);
+}

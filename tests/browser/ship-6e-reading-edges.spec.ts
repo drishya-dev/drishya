@@ -190,9 +190,9 @@ for (const harness of ['claude-code', 'codex'] as const) {
       expect(m.historyTop).toBe(0);
       expect(m.paintedEdges).toBe(0);
       if (width <= 820) {
-        // Full strength begins just below the measured top chrome and ends just above the bottom chrome.
-        expect(m.historyMask).toContain(`rgb(0, 0, 0) ${m.edgeTopPx + 36}px`);
-        expect(m.historyMask).toContain(`calc(100% - ${m.edgeBottomPx + 36}px)`);
+        // UI-49: Full strength begins just below the measured top chrome and ends just above the bottom chrome.
+        expect(m.historyMask).toContain(`rgb(0, 0, 0) ${m.edgeTopPx + 2}px`);
+        expect(m.historyMask).toContain(`calc(100% - ${m.edgeBottomPx + 2}px)`);
       } else expect(m.historyMask, 'wide windows show the work at full strength (Yash, 13 Nov)').toBe('none');
       expect(m.edgeTopPx).toBeGreaterThan(40);
       expect(m.edgeBottomPx).toBeGreaterThan(40);

@@ -20,6 +20,7 @@ import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { Fragment, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
+import { useWaitNotice } from '../lib/use-wait-notice.ts';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationFailed } from '@drishya/contracts';
 import { asOfProjection, compose, markers, stepOfObservation, stepOfOperation, type Scene } from '@drishya/scene';
@@ -70,6 +71,12 @@ function WorkspaceViewer() {
   const workingWindow = developerWorkspace || compareOpen;
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
+  const sessionWait = useWaitNotice({
+    waiting: !projection,
+    error,
+    quietMessage: 'Loading history…',
+    longMessage: 'Opening a large session with many recorded steps. Reconstructing history; leave the window open.',
+  });
   const historyPage = useApp((s) => s.historyPage);
   const loadHistoryWindow = useApp((s) => s.loadHistoryWindow);
   const graph = useApp((s) => s.graph);
@@ -272,7 +279,21 @@ function WorkspaceViewer() {
     };
   }, [!!projection && !!scene && !!historical, foldersHidden, explore, experience, workingWindow, catalogOpen, historyMode]);
 
-  if (!projection || !scene || !historical) return <div className="center notice">{error ? <><p role="alert">{error}</p><button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button></> : 'Loading history…'}</div>;
+  if (!projection || !scene || !historical) {
+    if (sessionWait.isError) {
+      return (
+        <div className="center notice">
+          <p role="alert">{error}</p>
+          <button className="btn" onClick={() => useApp.setState({ screen: 'home', error: undefined })}>Back to sessions</button>
+        </div>
+      );
+    }
+    return (
+      <div className={`center notice${sessionWait.isLong ? ' wait-notice-long' : ''}`} role="status">
+        {sessionWait.isImmediate ? null : sessionWait.message}
+      </div>
+    );
+  }
   // Keep the viewport and finite arrivals alive across paged forward steps.
   // A backward seek must conceal later evidence until its as-of page arrives.
   const awaitingEarlierPage = !!historyPage && scene.step > step;
@@ -309,7 +330,7 @@ function WorkspaceViewer() {
       <Search projection={projection} />
       <ScreenHost />
     </div>
-    {awaitingEarlierPage && <div className="center notice" style={{ position: 'absolute', inset: 0 }} role="status">{error ? <><p role="alert">History update failed: {error}</p><button className="btn" onClick={() => void useApp.getState().loadHistoryWindow({ step }).catch(failure => useApp.setState({ error: failure.message }))}>Retry</button><button className="btn" onClick={() => useApp.setState({ screen: 'home', playing: false })}>Back to sessions</button></> : 'Loading history…'}</div>}
+    {awaitingEarlierPage && <div className="center notice" style={{ position: 'absolute', inset: 0 }} role="status">{error ? <><p role="alert">History update failed: {error}</p><button className="btn" onClick={() => void useApp.getState().loadHistoryWindow({ step }).catch(failure => useApp.setState({ error: failure.message }))}>Retry</button><button className="btn" onClick={() => useApp.setState({ screen: 'home', playing: false })}>Back to sessions</button></> : (sessionWait.isImmediate ? null : sessionWait.message)}</div>}
     </>
   );
 }
@@ -805,6 +826,11 @@ function Search({ projection }: { projection: Projection }) {
   const [scope, setScope] = useState<'captured' | 'files'>('captured');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const searchWait = useWaitNotice({
+    waiting: loading,
+    quietMessage: 'Searching session…',
+    longMessage: 'Searching session… This can take a moment for long journals.',
+  });
   const graph = useApp(s => s.graph);
   const mode = useApp(s => s.mode);
   const step = useApp(s => s.step);
@@ -878,7 +904,7 @@ function Search({ projection }: { projection: Projection }) {
           </Fragment>
         ))}
         {scope === 'files' && files.map(file => <button key={file.id} onClick={() => {const ref=prosePath(file.path,useApp.getState().recording?.workspaceRoot,true);if(ref)openCapturedPath(ref);}}>{file.path}<span aria-hidden="true"> ↗</span></button>)}
-        {loading && <div role="status">Searching session…</div>}
+        {loading && (searchWait.isImmediate ? null : <div role="status">{searchWait.message}</div>)}
         {error && <div role="alert">{error}</div>}
         {noMatches && !loading && !error && <div className="search-empty">
           <div role="status"><strong>{emptyTitle}</strong><p>{refine}</p></div>

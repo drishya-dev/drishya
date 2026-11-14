@@ -43,6 +43,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     return () => { window.clearTimeout(timer); document.removeEventListener('visibilitychange', visible); };
   }, [now]);
 
+  const discoverNow = useRef<(() => void) | undefined>(undefined);
   const refreshRevision = useRef(0);
   const refresh = async () => {
     if (!source) return;
@@ -72,7 +73,7 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
   useEffect(() => {
     refresh().catch((e) => setErr(e.message));
     let active = true;
-    const stop = source?.subscribe(() => { void source.recordings().then((r) => { if (active && useApp.getState().source === source) set({ recordings: r }); }).catch((e) => { if (active && useApp.getState().source === source) setErr(e.message); }); });
+    const stop = source?.subscribe(() => { void source.recordings().then((r) => { if (active && useApp.getState().source === source) set({ recordings: r }); }).catch((e) => { if (active && useApp.getState().source === source) setErr(e.message); }); }, { onSources: () => discoverNow.current?.() });
     return () => { active = false; stop?.(); };
   }, [source]);
 
@@ -91,7 +92,10 @@ export function Home({ openDemo }: { openDemo: (growing?: boolean) => void }) {
     };
     const timer = window.setInterval(discover, DISCOVERY_MS);
     document.addEventListener('visibilitychange', discover);
-    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', discover); };
+    // The daemon says when a harness starts a session journal, so the row appears within about a second
+    // instead of at the next slow scan (LIVE-7). The scan above stays as the fallback.
+    discoverNow.current = discover;
+    return () => { window.clearInterval(timer); document.removeEventListener('visibilitychange', discover); discoverNow.current = undefined; };
   }, [source]);
 
   const importing = Object.keys(opening).length > 0;
