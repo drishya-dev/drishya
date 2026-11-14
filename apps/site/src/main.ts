@@ -1,5 +1,6 @@
 import './site.css';
 import './product.css';
+import { FEATURES } from './footage.ts';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
@@ -10,11 +11,11 @@ import { createDots, type Dots } from './dots.ts';
 import { createMap, type Tone } from './map.ts';
 import { appScreen, terminalScreen } from './product.ts';
 
-// One place for what SHIP-9 and the builders decide at release. Links without a page yet stay on '#'.
+// Install version is selected by SHIP-9. Source links work without a separate docs service.
 const SITE = {
   install: 'npx drishya',
   repo: 'https://github.com/drishya-dev/drishya',
-  links: { docs: '#', discussions: '#', changelog: '#', issues: '#' } as Record<string, string>,
+  links: { docs: 'https://github.com/drishya-dev/drishya#readme', changelog: 'https://github.com/drishya-dev/drishya/releases', issues: 'https://github.com/drishya-dev/drishya/issues' } as Record<string, string>,
 };
 
 const reduced = document.documentElement.dataset.motion === 'reduced';
@@ -48,22 +49,34 @@ const stage = $('[data-stage]'), frameEl = $<HTMLIFrameElement>('[data-frame]');
 const fit = () => stage.style.setProperty('--s', String(viewport.clientWidth / 1440));
 new ResizeObserver(fit).observe(viewport); fit();
 let wantedStep = 0, frameReady = false, refreshing = false, tourActive = () => false;
+let seekQueued = false, seekReadyAt = 0, seekInFlight = false, sentStep = -1, requestId = 0;
 addEventListener('message', e => {
-  if (e.origin !== location.origin) return;
-  if (e.data?.type === 'drishya-ready') { frameReady = true; seek(wantedStep); }
-  else if (e.data?.type === 'drishya-seeked') seekReadyAt = performance.now() + Math.min(400, Number(e.data.ms) || 0);
+  // Another same-origin window must not be able to advance the laptop's handshake.
+  if (e.origin !== location.origin || e.source !== frameEl.contentWindow) return;
+  if (e.data?.type === 'drishya-ready') { frameReady = true; sentStep = -1; seek(wantedStep); }
+  else if (e.data?.type === 'drishya-seeked' && seekInFlight && e.data.requestId === requestId) {
+    seekInFlight = false;
+    frameEl.dataset.step = String(e.data.step);
+    // Include React's paint, not just the synchronous store write, in SITE-3's pacing budget.
+    seekReadyAt = performance.now() + Math.min(400, Math.max(0, Number(e.data.ms) || 0));
+    seek(wantedStep);
+  }
 });
-// One seek per frame at most: a fast scroll asks for many steps, and only the last one needs rendering.
-let seekQueued = false, seekReadyAt = 0;
-// The app reports what a step cost; the next one waits as long again, so the replay never holds more than half the page's
-// time. On a fast machine that is under a frame and changes nothing; on a slow one the scroll keeps its own frames (SITE-3).
 const pump = () => {
   if (performance.now() < seekReadyAt) { requestAnimationFrame(pump); return; }
   seekQueued = false;
-  frameEl.contentWindow?.postMessage({ type: 'drishya-seek', step: wantedStep }, location.origin);
+  if (!frameReady || refreshing || seekInFlight || sentStep === wantedStep) return;
+  seekInFlight = true;
+  sentStep = wantedStep;
+  frameEl.contentWindow?.postMessage({ type: 'drishya-seek', step: sentStep, requestId: ++requestId }, location.origin);
 };
-// While ScrollTrigger refreshes (a resize), its timelines are rewound and replayed; the laptop only needs the final step.
-function seek(step: number) { wantedStep = step; if (!frameReady || seekQueued || refreshing) return; seekQueued = true; requestAnimationFrame(pump); }
+// A fast scroll coalesces to its latest position; it never queues a backlog of React renders.
+function seek(step: number) {
+  wantedStep = step;
+  if (!frameReady || seekQueued || refreshing || seekInFlight || sentStep === wantedStep) return;
+  seekQueued = true;
+  requestAnimationFrame(pump);
+}
 // The real app is about 340 KB compressed and takes a long task to start, so it loads as the laptop comes near, or
 // earlier while the page is calm (SITE-3: never in the middle of the scroll that is about to reach it).
 let frameRequested = false;
@@ -320,10 +333,20 @@ addEventListener('scroll', () => {
 addEventListener('resize', () => { if (openCompareRow) positionProof(openCompareRow); });
 if (reduced) {
   mountScreens();
+  wantedStep = 45;
   for (const o of sample.operations) heroMap.light(o.path, toneOf(o), false);
   $$('.screen').forEach(el => (el.style.display = 'none'));
   frameEl.src = new URL('demo.html', location.href).pathname;
   $$('.tour-steps li').forEach(li => li.classList.add('on'));
+  $$('.feat-steps li').forEach((li, index) => {
+    const stills = document.createElement('div'); stills.className = 'feature-stills';
+    for (const [frameIndex, frame] of FEATURES[index]!.entries()) {
+      const image = document.createElement('img'); image.src = `footage/${frame.img}.jpg`;
+      image.alt = `${li.querySelector('h3')!.textContent} · view ${frameIndex + 1} of ${FEATURES[index]!.length}`;
+      image.width = 1440; image.height = 900; image.loading = 'lazy'; stills.append(image);
+    }
+    li.append(stills);
+  });
   revealSite();
 } else {
   animate();
@@ -401,37 +424,39 @@ function animate() {
   // Features: one window showing the whole real screen. Each step is one frame or a short sequence; a cursor clicks
   // only the control the step is about, and the camera zooms only to that control, then back out.
   // Frames are real Drishya on a real Drishya session (scripts/site-footage-real.ts, reviewed before publishing).
-  type Frame = { img: string; click?: [number, number]; zoom?: [number, number, number, number] };
-  const FEATURES: Frame[][] = [
-    // Click positions are where the real control was on screen, measured by the footage script.
-    [{ img: 'explorer', click: [.155, .472] }],
-    [{ img: 'history-a' }, { img: 'history-b', click: [.032, .587] }],
-    [{ img: 'workspace' }],
-    [{ img: 'changes-session', click: [.419, .111] }, { img: 'changes-branch', click: [.472, .111] }, { img: 'changes-branch-pick', click: [.369, .161] },
-     { img: 'changes-branch-picked', click: [.446, .31] }, { img: 'changes-pr-pick', click: [.522, .111] }, { img: 'changes-pr', click: [.397, .201] }],
-    [{ img: 'git-graph' }, { img: 'git-graph-branch', click: [.149, .413] }],
-    [{ img: 'tool', click: [.869, .754] }, { img: 'tool-next', click: [.882, .471] }],
-    [{ img: 'prompt', zoom: [.6, .5, .4, .5], click: [.936, .678] }],
-    [{ img: 'composer', click: [.5, .957] }],
-  ];
   function featureScenes() {
     const camera = $('[data-feat-camera]'), win = $('[data-feat-window]'), steps = $$('.feat-steps li');
     const cursorEl = $('.feat-cursor', win), ripple = $('.feat-ripple', win);
     const names = [...new Set(FEATURES.flat().map(f => f.img))];
-    camera.innerHTML = names.map(n => `<img src="footage/${n}.jpg" alt="" decoding="async" data-frame-name="${n}" />`).join('');
+    camera.innerHTML = names.map(n => `<img src="footage/${n}.jpg" alt="" width="1440" height="900" decoding="async" data-frame-name="${n}" />`).join('');
+    const loading = document.createElement('p'); loading.className = 'feat-loading'; loading.role = 'status'; loading.textContent = 'Loading demonstration…'; win.append(loading);
+    let currentImage = names[0]!;
+    const imageByName = new Map([...camera.querySelectorAll<HTMLImageElement>('img')].map(im => [im.dataset.frameName!, im]));
+    const framePositions: {time: number; name: string}[] = [];
+    const refreshLoading = () => {
+      const image = imageByName.get(currentImage)!;
+      const failed = image.dataset.failed === 'true';
+      loading.textContent = failed ? 'Demonstration image unavailable. Reload to try again.' : 'Loading demonstration…';
+      loading.hidden = image.dataset.ready === 'true';
+    };
+    for (const im of camera.querySelectorAll<HTMLImageElement>('img')) void im.decode().then(() => { im.dataset.ready = 'true'; refreshLoading(); }, () => { im.dataset.failed = 'true'; refreshLoading(); });
     new IntersectionObserver((entries, io) => { if (entries.some(e => e.isIntersecting)) { io.disconnect(); for (const im of camera.querySelectorAll('img')) void im.decode().catch(() => {}); } }, { rootMargin: '200% 0px' }).observe(win);
     const img = (n: string) => $(`[data-frame-name="${n}"]`, camera);
     const W = () => win.clientWidth, H = () => win.clientHeight;
     const zoomTo = (z?: [number, number, number, number]) => { if (!z) return { scale: 1, x: 0, y: 0 }; const [zx, zy, zw, zh] = z, sc = 0.94 / Math.max(zw, zh); return { scale: sc, x: () => (0.5 - (zx + zw / 2) * sc) * W(), y: () => (0.5 - (zy + zh / 2) * sc) * H() }; };
     gsap.set(steps, { autoAlpha: 0, y: 24 }); gsap.set(steps[0]!, { autoAlpha: 1, y: 0 });
     gsap.set(img(FEATURES[0]![0]!.img), { opacity: 1 });
-    const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' }, scrollTrigger: { trigger: '.features', start: 'top top', end: () => `+=${innerHeight * FEATURES.flat().length * 0.55}`, pin: '.features-pin', scrub: true, invalidateOnRefresh: true } });
+    refreshLoading();
+    const sizeFeatures = () => $('.features').style.setProperty('--features-scroll', `${innerHeight * FEATURES.flat().length * 0.55}px`);
+    sizeFeatures(); ScrollTrigger.addEventListener('refreshInit', sizeFeatures);
+    const tl = gsap.timeline({ defaults: { ease: 'power3.inOut' }, scrollTrigger: { trigger: '.features', start: 'top top', end: 'bottom bottom', scrub: true, invalidateOnRefresh: true } });
     let shown = FEATURES[0]![0]!.img, t = 0;
     FEATURES.forEach((frames, i) => {
       if (i > 0) { tl.to(steps[i - 1]!, { autoAlpha: 0, y: -24, duration: 0.3 }, t).to(steps[i]!, { autoAlpha: 1, y: 0, duration: 0.4 }, t + 0.2); }
       frames.forEach((f, j) => {
         // Inside a sequence a click causes the next screen: the cursor clicks on the screen still showing, then it changes.
         const swapAt = j > 0 && f.click ? t + 0.95 : t;
+        framePositions.push({time: swapAt, name: f.img});
         if (f.img !== shown) { tl.to(img(shown), { opacity: 0, duration: 0.35 }, swapAt).to(img(f.img), { opacity: 1, duration: 0.35 }, swapAt); shown = f.img; }
         tl.to(cursorEl, { opacity: 0, duration: 0.12 }, t);
         tl.to(camera, { ...zoomTo(f.zoom), duration: 0.55 }, t + 0.1);
@@ -446,6 +471,11 @@ function animate() {
       tl.to(camera, { scale: 1, x: 0, y: 0, duration: 0.45 }, t); t += 0.5;
     });
     tl.to({}, { duration: 0.3 }, t);
+    tl.eventCallback('onUpdate', () => {
+      const time = tl.time();
+      const next = framePositions.findLast(frame => frame.time <= time)?.name ?? names[0]!;
+      if (next !== currentImage) { currentImage = next; refreshLoading(); }
+    });
   }
 
   // The tour: one pinned timeline, scrubbed by scroll, so every step plays forward and rewinds exactly.
@@ -471,29 +501,31 @@ function animate() {
 
     // The laptop is laid out at its full-screen size and shown smaller at rest, so growing never upscales pixels.
     // At rest it sits in the right-hand column; while the three screens play it fills the screen.
-    const wide = matchMedia('(min-width: 900px)').matches;
+    const wide = () => matchMedia('(min-width: 900px)').matches;
     const laptop = $('.laptop'), lid = $('.laptop-lid'), screen = $('.laptop-screen'), hinge = $('.laptop-hinge-shadow'), base = $('.laptop-base'), caption = $('.tour-steps'), slot = $('.laptop-slot');
     // Measured against the pin, not the viewport, so the resting place is the same at any scroll position (and on refresh).
     const pin = $('.tour-pin');
-    const rest = () => { const r = slot.getBoundingClientRect(), p = pin.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / full, x: r.left + r.width / 2 - (p.left + p.width / 2), y: r.top + r.height / 2 - (p.top + p.height / 2) }; };
+    const rest = () => { if (!wide()) return { scale: 1, x: 0, y: 0 }; const r = slot.getBoundingClientRect(), p = pin.getBoundingClientRect(), full = laptop.offsetWidth; return { scale: r.width / (full * 1.12), x: r.left + r.width / 2 - (p.left + p.width / 2), y: r.top + r.height / 2 - (p.top + p.height / 2) }; };
     // Keep a readable annotation rail beside the laptop while the pinned scene expands.
     // On narrower desktop windows, shift the laptop right and scale it just enough to preserve the rail.
     const activeLaptop = () => {
+      if (!wide()) return { scale: 1, x: 0, y: 0 };
       const full = laptop.offsetWidth;
       const rail = caption.offsetWidth + 40;
-      const scale = Math.min(1, Math.max(.62, (pin.clientWidth - rail) / full));
-      const centeredLeft = (pin.clientWidth - full * scale) / 2;
-      return { scale, x: Math.max(0, rail - centeredLeft), y: 0 };
+      const scale = Math.min(1, (pin.clientWidth - rail - 48) / (full * 1.12));
+      return { scale, x: rail / 2, y: 0 };
     };
+    const captionLeft = () => { let left = 0; for (let node: HTMLElement | null = caption; node && node !== pin; node = node.offsetParent as HTMLElement | null) left += node.offsetLeft; return left; };
+    ScrollTrigger.addEventListener('refreshInit', () => gsap.set(laptop, { yPercent: wide() ? -50 : 0 }));
     // Centred vertically by GSAP's yPercent, so the scroll tweens own only the pixel offsets.
     gsap.set(lid, { transformOrigin: '50% 100%', rotateX: -78 });
     gsap.set(screen, { opacity: .18 });
     gsap.set(hinge, { scaleX: .64, opacity: .42, transformOrigin: '50% 50%' });
     gsap.set(base, { y: 8, scaleX: .98, transformOrigin: '50% 0' });
     gsap.set(laptop, { transformPerspective: 1200, rotateY: -2.5, rotateX: 1.1 });
-    if (wide) gsap.set(laptop, { yPercent: -50, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
-    if (wide) tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: () => activeLaptop().scale, x: () => activeLaptop().x, y: () => activeLaptop().y, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
-    if (wide) tl.to(caption, { x: () => -Math.max(0, caption.getBoundingClientRect().left - 24), scale: 0.9, transformOrigin: '0 50%', duration: 0.6, ease: 'power3.inOut' }, 0);
+    gsap.set(laptop, { yPercent: () => wide() ? -50 : 0, scale: () => rest().scale, x: () => rest().x, y: () => rest().y });
+    tl.fromTo(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y }, { scale: () => activeLaptop().scale, x: () => activeLaptop().x, y: () => activeLaptop().y, duration: 0.6, ease: 'power3.inOut', immediateRender: false }, 0);
+    tl.to(caption, { x: () => wide() ? -Math.max(0, captionLeft() - 24) : 0, scale: () => wide() ? 0.9 : 1, transformOrigin: '0 50%', duration: 0.6, ease: 'power3.inOut' }, 0);
     tl.to(lid, { rotateX: 0, duration: .5, ease: 'power4.out' }, 0);
     tl.to(base, { y: 0, scaleX: 1, duration: .5, ease: 'power3.out' }, .08);
     tl.to(hinge, { scaleX: 1, opacity: 1, duration: .4, ease: 'power2.out' }, .08);
@@ -512,7 +544,7 @@ function animate() {
     show(3, 5.4); replay(12, 21, 5.5, 1.3);
     show(4, 6.9); replay(21, 29, 7.0, 1.4);
     show(5, 8.5); replay(29, 45, 8.6, 1.6);
-    if (wide) { tl.to(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y, duration: 0.6, ease: 'power3.inOut' }, 10.2); tl.to(caption, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut' }, 10.2); }
+    { tl.to(laptop, { scale: () => rest().scale, x: () => rest().x, y: () => rest().y, duration: 0.6, ease: 'power3.inOut' }, 10.2); tl.to(caption, { scale: 1, x: 0, y: 0, duration: 0.6, ease: 'power3.inOut' }, 10.2); }
     tl.to({}, { duration: 0.3 }, 10.8);
   }
 }

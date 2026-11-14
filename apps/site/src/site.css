@@ -321,3 +321,32 @@ html[data-section="features"] .backdrop { opacity: .34; }
   .workflow-details p { max-width: 60ch; }
 }
 @media (prefers-reduced-motion: reduce) { .workflow-details a span { transition: none; } }
+
+/* Sticky ownership keeps scroll geometry stable when footage or viewport dimensions change. */
+html:not([data-motion="reduced"]) .features { height: calc(100svh + var(--features-scroll, 880svh)); }
+html:not([data-motion="reduced"]) .features-pin { position: sticky; top: 0; }
+.feat-loading { position: absolute; z-index: 4; inset: auto 16px 16px; padding: 12px 16px; border: 1px solid var(--line-2); border-radius: 6px; background: var(--s1); color: var(--t1); font-size: 14px; }
+.feat-loading[hidden] { display: none; }
+html[data-motion="reduced"] { scroll-behavior: auto; }
+html[data-motion="reduced"] .tour { height: auto; }
+html[data-motion="reduced"] .tour-pin, html[data-motion="reduced"] .features-pin { position: relative; min-height: 0; padding-block: 80px; }
+html[data-motion="reduced"] .tour-grid { display: block; }
+html[data-motion="reduced"] .tour-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; }
+html[data-motion="reduced"] .tour-steps li, html[data-motion="reduced"] .feat-steps li { grid-area: auto; }
+html[data-motion="reduced"] .laptop-slot, html[data-motion="reduced"] .tour-progress, html[data-motion="reduced"] .feat-stage { display: none; }
+html[data-motion="reduced"] .laptop { position: relative; left: auto; top: auto; margin: 40px auto 0; width: min(84%, 1000px); }
+html[data-motion="reduced"] .feature-heading { position: relative; inset: auto; transform: none; margin-bottom: 48px; }
+html[data-motion="reduced"] .features-grid { display: block; transform: none; }
+html[data-motion="reduced"] .feat-steps { display: grid; gap: 64px; }
+html[data-motion="reduced"] .feat-steps p { max-width: 65ch; }
+.feature-stills { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 24px; }
+.feature-stills img { width: 100%; height: auto; border: 1px solid var(--line-2); border-radius: 8px; }
+.feature-stills img:only-child { grid-column: 1 / -1; }
+@media (max-width: 899px) {
+  .tour-grid { grid-template-columns: 1fr; }
+  .tour-pin { align-content: center; gap: 24px; }
+  .tour-steps { margin-bottom: 24px; }
+  .laptop { align-self: start; width: calc(100% / 1.12 - 16px); margin-inline: auto; }
+  html[data-motion="reduced"] .tour-steps, .feature-stills { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .button, .chapter-rail a, .compare-table tbody tr { transition: none; } }
