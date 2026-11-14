@@ -83,7 +83,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 - In CLI-started sessions (observer mode): options render read-only without bullet circles, showing a clear "Answer in Claude Code" or "Answer in Codex" badge and "Waiting for your answer in <harness>", with zero controls that look clickable.
 - Answered questions mark chosen options (`data-chosen`), display typed text, and keep "Sent by Drishya" controller receipt distinct from captured answers.
 - Deliberate stop shows "Stopped by you". State words in `SessionWorkspace.tsx` updated (`Needs an answer`, `Needs approval`, `Working`, `Stopped by you`).
-- Checks: `check:real -- questions` (Claude Code 19 sessions, 67 hits, `rec_024517cd` 9 questions); unit tests `apps/ui/test/question-card.test.ts` (7/7 pass) and `apps/ui/test/ask-question.test.ts` (17/17 pass); paint policy passes; full browser suite in `tests/browser/question-card.spec.ts` (7/7 pass at 600 and 1440 px with frames in `.local/`); `check:affected` completely green (71 units, UI build, 39 browser tests pass).
+- Checks: `check:real -- questions` passes both harnesses (Claude Code 19 sessions, 67 hits, `rec_024517cd` 9 questions; Codex 1 session, 1 hit, `rec_c777ea7f` 1 question, 2 options); unit tests `apps/ui/test/question-card.test.ts` (7/7 pass) and `apps/ui/test/ask-question.test.ts` (17/17 pass); paint policy passes; full browser suite in `tests/browser/question-card.spec.ts` (7/7 pass at 600 and 1440 px with frames in `.local/`); `check:affected` completely green (71 units, UI build, 39 browser tests pass).
 
 ### Yash with Claude Sonnet 5.5 — 14 Nov: UI-36b, a zero reading after a Codex compaction
 
