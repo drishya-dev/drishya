@@ -42,11 +42,12 @@
 }
 
 /* Yash, 10 Nov: the world scrolls from the screen's top under floating controls.
-   Composer visibility must not reserve space in either independent side rail. */
+   Composer visibility must not reserve space in either independent side rail.
+   UI-49: reserve top/bottom chrome clearance in scroll-padding so the row being read never rests under chrome. */
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history {
   top:0;
-  scroll-padding-top:calc(max(var(--workspace-tools-bottom,134px), var(--reading-edge-top, 0px)));
-  scroll-padding-bottom:var(--reading-edge-bottom, var(--composer-gap, 0px));
+  scroll-padding-top:calc(max(var(--workspace-tools-bottom,134px), var(--reading-edge-top, 0px)) + 12px);
+  scroll-padding-bottom:calc(max(var(--reading-edge-bottom, 56px), var(--composer-gap, 0px)) + 12px);
 }
 /* Only the document's initial content clears controls; later scrolled material
    remains visible behind the masked reading-edge veils rather than clipping at this inset. */
@@ -54,20 +55,31 @@
   padding-top:calc(max(var(--workspace-tools-bottom,134px), var(--reading-edge-top, 0px)) + 28px);
   padding-bottom:max(112px, calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 32px));
 }
-@media(max-width:820px) {
+@media(max-width:900px) {
   :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner {
-    padding-bottom:max(124px, calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 48px));
+    padding-bottom:max(144px, calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 32px));
   }
 }
-/* SHIP-6e, revised for UI-39 (Yash, 13 Nov): the work runs under the header and the composer at full strength, as he
-   designed it, so the visualization fills the window. Above 820 px the controls sit at the window's edges, and the one
-   that crosses the column (the prompt) has its own blurred surface, so whatever passes under a control is covered.
-   At 820 px and below, Tools, Follow latest and the prompt sit over the column's lines, so there History's own
-   content fades to a tenth under the measured chrome; nothing is painted over the ground. */
-@media(max-width:820px) {
+/* UI-49 (Yash, 14 Nov): narrow windows veil only the empty margin behind chrome, never text being read.
+   Stops fade to transparent behind the chrome without intruding into the reading window. */
+@media(max-width:900px) {
   :root[data-ui-version=modern] .connected-workspace:not(.developer-workspace-open):not(.exploring) .history {
-    -webkit-mask-image:linear-gradient(to bottom,rgba(0,0,0,.1) 0,rgba(0,0,0,.1) calc(var(--reading-edge-top,0px) - 4px),#000 calc(var(--reading-edge-top,0px) + 36px),#000 calc(100% - var(--reading-edge-bottom,0px) - 36px),rgba(0,0,0,.1) calc(100% - var(--reading-edge-bottom,0px) + 4px));
-    mask-image:linear-gradient(to bottom,rgba(0,0,0,.1) 0,rgba(0,0,0,.1) calc(var(--reading-edge-top,0px) - 4px),#000 calc(var(--reading-edge-top,0px) + 36px),#000 calc(100% - var(--reading-edge-bottom,0px) - 36px),rgba(0,0,0,.1) calc(100% - var(--reading-edge-bottom,0px) + 4px));
+    -webkit-mask-image:linear-gradient(to bottom,
+      transparent 0,
+      transparent calc(var(--reading-edge-top, 0px) - 16px),
+      #000 calc(var(--reading-edge-top, 0px) + 2px),
+      #000 calc(100% - var(--reading-edge-bottom, 0px) - 2px),
+      transparent calc(100% - var(--reading-edge-bottom, 0px) + 16px),
+      transparent 100%
+    );
+    mask-image:linear-gradient(to bottom,
+      transparent 0,
+      transparent calc(var(--reading-edge-top, 0px) - 16px),
+      #000 calc(var(--reading-edge-top, 0px) + 2px),
+      #000 calc(100% - var(--reading-edge-bottom, 0px) - 2px),
+      transparent calc(100% - var(--reading-edge-bottom, 0px) + 16px),
+      transparent 100%
+    );
   }
 }
 /* Yash, 13 Nov: the reading column starts after the Files panel (or its chips, when minimised) and ends before the

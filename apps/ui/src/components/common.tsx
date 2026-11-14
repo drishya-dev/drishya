@@ -1,9 +1,10 @@
 import { HistoryArtifacts } from '../lib/history-artifacts.ts';
 import {outputPathNodes} from './CapturedPath.tsx';
-import { useContext, useEffect, useState, type ReactNode, type Ref } from 'react';
+import { useContext, useEffect, useMemo, useState, type ReactNode, type Ref } from 'react';
 import type { Artifact, ArtifactSlice, Hunk, Provenance } from '@drishya/contracts';
 import { Highlighted, langOf } from '../lib/highlight.tsx';
 import { materialCache, type MaterialScope } from '../lib/artifact-cache.ts';
+import { isTableShaped } from '../lib/tool-output.ts';
 import { useApp } from '../state.ts';
 import type { DataSource } from '../api.ts';
 
@@ -142,8 +143,9 @@ export function Output({ text, maxLines }: { text: string; maxLines?: number }) 
   const all = text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\n$/, '').split('\n');
   const lines = maxLines ? all.slice(-maxLines) : all;
   const pathBudget={remaining:64,characters:131072};
+  const table = useMemo(() => isTableShaped(text), [text]);
   return (
-    <pre className="output">
+    <pre className={`output${table ? ' output-scroll' : ''}`} tabIndex={table ? 0 : undefined} role={table ? 'region' : undefined} aria-label={table ? 'Command output table' : undefined}>
       {maxLines && all.length > maxLines && <span className="ln-more">…{all.length - maxLines} earlier lines{'\n'}</span>}
       {lines.map((l, i) => (
         <span key={i} className={/\b(FAIL|Error|failed|×|✗)\b/.test(l) ? 'out-bad' : /\b(PASS|passed|✓)\b/.test(l) ? 'out-good' : undefined}>
