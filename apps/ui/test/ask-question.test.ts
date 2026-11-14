@@ -1,5 +1,14 @@
 import { expect, it } from 'vitest';
-import { askQuestions, isQuestionTool, questionAcceptance } from '../src/lib/ask-question.ts';
+import {
+  askQuestions,
+  isQuestionTool,
+  questionAcceptance,
+  recordQuestionReceipt,
+  getQuestionReceipt,
+  recordQuestionStop,
+  isQuestionStopped,
+  clearQuestionReceipts,
+} from '../src/lib/ask-question.ts';
 
 const input = { questions: [
   { question: 'Which area?', header: 'Area', multiSelect: false, options: [{ label: 'Cart', description: 'totals' }, { label: 'Checkout' }] },
@@ -146,4 +155,50 @@ it('keeps native multiline/unrecognised and visibly clipped results literal inst
  expect(askQuestions(nativeInput,nativeReply('A1: Right\nextra unframed line'),'ask_question')[0]?.answer).toBeUndefined();
  expect(askQuestions(nativeInput,nativeReply('A1: '+'x'.repeat(4000)+'…'),'ask_question')[0]?.answer).toBeUndefined();
  expect(askQuestions(nativeInput,nativeReply('A9: Right'),'ask_question')[0]?.answer).toBeUndefined();
+});
+
+it('stores and retrieves question receipts distinct from journal results', () => {
+  clearQuestionReceipts();
+  expect(getQuestionReceipt('rec-1', 'op-1')).toBeUndefined();
+  const questions = askQuestions({ questions: [{ id: 'q0', question: 'Which area?', options: [{ label: 'Cart' }, { label: 'Checkout' }] }] });
+  recordQuestionReceipt('rec-1', 'op-1', { q0: { options: ['Cart'], text: 'custom note' } }, questions);
+  const receipt = getQuestionReceipt('rec-1', 'op-1');
+  expect(receipt).toBeDefined();
+  expect(receipt?.chosen).toEqual(['Cart']);
+  expect(receipt?.typed).toBe('custom note');
+  expect(getQuestionReceipt('rec-1', 'op-2')).toBeUndefined();
+});
+
+it('records and checks deliberate stop status for a question operation', () => {
+  clearQuestionReceipts();
+  expect(isQuestionStopped('rec-1', 'op-1')).toBe(false);
+  recordQuestionStop('rec-1', 'op-1');
+  expect(isQuestionStopped('rec-1', 'op-1')).toBe(true);
+  expect(isQuestionStopped('rec-1', 'op-2')).toBe(false);
+  clearQuestionReceipts();
+  expect(isQuestionStopped('rec-1', 'op-1')).toBe(false);
+});
+
+it('keeps native Antigravity questions passive beside the merged live question card', async () => {
+  const {createElement} = await import('react');
+  const {renderToStaticMarkup} = await import('react-dom/server');
+  const {QuestionCard} = await import('../src/components/QuestionCard.tsx');
+  const {useApp} = await import('../src/state.ts');
+  const previous = useApp.getState();
+  const op = {id:'ag-native-question',tool:'ask_question',status:'running',artifactIds:[],classification:{kind:'derived'},detail:{kind:'other',input:nativeInput}} as any;
+  const liveRequest = {id:'unrelated-request',questions:[{id:'q0',question:'Choose a panel?',multiple:false,allowText:true,options:[{id:'o0',label:'Left'}]}]};
+  try {
+    useApp.setState({recordingId:'rec-native-test',recording:{id:'rec-native-test',harness:'antigravity'} as any});
+    const waiting = renderToStaticMarkup(createElement(QuestionCard,{op,liveRequest}));
+    expect(waiting).toContain('Answer in Antigravity');
+    expect(waiting).not.toContain('<form');
+    expect(waiting).not.toContain('Send answer');
+    const answered = renderToStaticMarkup(createElement(QuestionCard,{op:{...op,status:'done',detail:{...op.detail,resultPreview:nativeReply('A1: Right')}}}));
+    expect(answered).toContain('Right');
+    expect(answered).toContain('(chosen)');
+    expect(answered).toContain('Question and answer');
+    const skipped = renderToStaticMarkup(createElement(QuestionCard,{op:{...op,status:'done',detail:{...op.detail,resultPreview:nativeReply('A1: User Skipped')}}}));
+    expect(skipped).toContain('Question skipped');
+    expect(skipped).not.toContain('(chosen)');
+  } finally {useApp.setState(previous);}
 });

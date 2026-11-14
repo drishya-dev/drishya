@@ -14,7 +14,7 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { recordingIdFor } from '@drishya/capture-core';
-import type { ChangeEvent, HealthEvent } from '@drishya/ingest';
+import { SourceWatch, defaultWatchRoots, type ChangeEvent, type HealthEvent, type WatchRoot } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
 import { storageUsageReader } from './storage.ts';
@@ -63,6 +63,8 @@ export interface ServerOptions {
   maxSessions?: number;
   /** Synthetic/native transport substitution for integration tests; never exposed over HTTP. */
   controllerFactory?: (app: App, workspace: WorkspaceAccess) => HarnessController;
+  /** Where session journals appear, for the Home notice (default: the built-in harnesses' folders). */
+  watchRoots?: WatchRoot[];
 }
 
 /** A subscriber this far behind is disconnected; on reconnect it resyncs from revisions (B1b). */
@@ -119,6 +121,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const gitCompare = new GitCompareService(app, gitReview, github);
   const repositoryRoot = repositoryRoots();
   const imports = new Map<string, { recordingId: string; total: number }>();
+  let lastDiscovery: { at: number; sources: Awaited<ReturnType<typeof app.ingest.discover>> } | undefined;
   const controller = opts.controllerFactory?.(app, workspace) ?? new HarnessController(app, workspace);
   app.ingest.resetLiveFlags();
   const token = opts.token ?? randomBytes(24).toString('hex');
@@ -162,6 +165,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const onHealth = (ev: HealthEvent) => broadcast(`event: health\ndata: ${JSON.stringify(ev)}\n\n`);
   app.ingest.on('change', onChange);
   app.ingest.on('health', onHealth);
+  // LIVE-7: a harness starting a session tells connected viewers within about a second. It looks at file
+  // names only, and runs only while a viewer is listening.
+  const sourceWatch = new SourceWatch(opts.watchRoots ?? defaultWatchRoots(), () => broadcast('event: sources\ndata: {}\n\n'));
 
   const allowedHosts = () => new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
   const allowedOrigins = () => new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, ...(opts.devOrigins ?? [])]);
@@ -265,16 +271,19 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       // converges even if nothing new is ever written (audit A07).
       res.write(`event: sync\ndata: ${JSON.stringify({ revisions: app.store.revisions() })}\n\n`);
       clients.add(res);
+      sourceWatch.start();
       const beat = setInterval(() => writeEvent(res, ': beat\n\n') || clients.delete(res), 25_000);
       req.on('close', () => {
         clearInterval(beat);
         clients.delete(res);
+        if (!clients.size) sourceWatch.stop();
       });
       return;
     }
     if (a === 'revisions' && m === 'GET') return json(res, { revisions: app.store.revisions() });
     if (a === 'sources' && m === 'GET') {
       const report = await app.ingest.discoverReport();
+      lastDiscovery = { at: Date.now(), sources: report.sources };
       return json(res, { ...report, sources: await Promise.all(report.sources.map(async s => ({ ...s, repositoryRoot: await repositoryRoot(s.cwd) }))) });
     }
     if (a === 'imports' && m === 'GET') return json(res, { imports: [...imports].map(([path, { recordingId, total }]) => ({ path, bytes: app.store.sourceBytes(recordingId), total })) });
@@ -290,8 +299,15 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     if (a === 'import' && m === 'POST') {
       const body = await readJson(req);
       // Only sources that discovery found may be imported over the API: no arbitrary file reads.
-      const sources = await app.ingest.discover();
-      const src = sources.find((s) => samePath(s.path, String(body.path ?? '')) && (!body.adapterId || s.adapterId === body.adapterId));
+      // The person just chose a row Home listed from a discovery of the last seconds, so reuse that list
+      // instead of scanning every journal again before the import can start (LIVE-7: about 0.25 s).
+      const wanted = (s: { path: string; adapterId: string }) => samePath(s.path, String(body.path ?? '')) && (!body.adapterId || s.adapterId === body.adapterId);
+      let src = lastDiscovery && Date.now() - lastDiscovery.at < 15_000 ? lastDiscovery.sources.find(wanted) : undefined;
+      if (!src) {
+        const sources = await app.ingest.discover();
+        lastDiscovery = { at: Date.now(), sources };
+        src = sources.find(wanted);
+      }
       if (!src) throw new HttpError(400, 'not a discovered harness session');
       imports.set(src.path, { recordingId: recordingIdFor(src.adapterId, src.path), total: src.bytes });
       const r = await app.ingest.importSource(src.adapterId, src.path, { title: src.title }).finally(() => imports.delete(src.path));
@@ -559,8 +575,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (sub === 'live' && m === 'POST') {
         const body = await readJson(req);
         app.recording(firstId);
-        if (body.on) app.ingest.startLive(firstId);
-        else await app.ingest.stopLive(firstId);
+        if (body.on) {
+          app.ingest.startLive(firstId);
+          // The page reloads as soon as this returns; wait (briefly) for the first read so it sees what the agent wrote meanwhile, not the state at the last import.
+          await Promise.race([app.ingest.liveTurn(firstId), new Promise<void>((ok) => setTimeout(ok, 1500).unref())]);
+        } else await app.ingest.stopLive(firstId);
         return json(res, { live: app.ingest.isLive(firstId) });
       }
       if (sub === 'sync' && m === 'POST') return json(res, await app.ingest.sync(firstId));
@@ -703,6 +722,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       await controller.close();
       await new Promise<void>((ok) => {
         for (const c of clients) c.end();
+        sourceWatch.stop();
         app.ingest.off('change', onChange);
         app.ingest.off('health', onHealth);
         server.close(() => ok());

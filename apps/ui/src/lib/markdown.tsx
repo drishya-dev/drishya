@@ -12,7 +12,7 @@ import {ExternalLink,LinkCard,LinksOpen} from '../components/LinkCard.tsx';
 import {branchCandidate,commitCandidate,webUrl} from './link-kinds.ts';
 import {OriginalToggle,OriginalOwned} from '../components/OriginalToggle.tsx';
 import {tableCells, tableHeader} from './markdown-table.ts';
-import './markdown-table.css';
+import './markdown.css';
 
 type PathAction = (path: string, line?: number) => void;
 export function Markdown({ text, onPath, document = false, workspaceRoot }: { text: string; onPath?: PathAction; document?: boolean; workspaceRoot?:string }) {
@@ -43,13 +43,13 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
       }
       blocks.push(<MarkdownTable key={key++} headers={table.cells} rows={rows} align={table.align} raw={originalLines.slice(start,i).join('\n')} onPath={onPath} workspaceRoot={workspaceRoot} document={document}/>);continue;
     }
-    if (document && /^\s*>/.test(line)) {
+    if (/^\s*>/.test(line)) {
       const quote:string[]=[];while(i<lines.length && /^\s*>/.test(lines[i]!))quote.push(lines[i++]!.replace(/^\s*> ?/,''));
       blocks.push(<blockquote key={key++}>{renderMarkdown(quote.join('\n'), onPath, document, depth + 1, workspaceRoot)}</blockquote>);continue;
     }
-    if (document && /^\s*(---+|\*\*\*+)\s*$/.test(line)) {blocks.push(<hr key={key++}/>);i++;continue;}
+    if (/^\s*(---+|\*\*\*+)\s*$/.test(line)) {blocks.push(<hr key={key++}/>);i++;continue;}
     // HTML is never interpreted, and as a paragraph it reads like broken prose; show it as the source it is.
-    if (document && /^\s*<(?:!--|\/?[a-z][\w-]*[\s/>])/i.test(line)) {
+    if (/^\s*<(?:!--|\/?[a-z][\w-]*[\s/>])/i.test(line)) {
       const markup:string[]=[];while(i<lines.length && lines[i]!.trim())markup.push(lines[i++]!);
       blocks.push(<pre className="md-html" key={key++}>{markup.join('\n')}</pre>);continue;
     }
@@ -67,6 +67,7 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
       const indent = marker[1]!.length, ordered = orderedMarker(marker[2]!);
       const start = ordered ? Number.parseInt(marker[2]!, 10) : undefined;
       const items: ReactNode[] = [];
+      let isTaskList = false;
       while (i < lines.length) {
         const item = listMarker(lines[i]!);
         if (!item || item[1]!.length !== indent || orderedMarker(item[2]!) !== ordered) break;
@@ -81,15 +82,29 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
             // Lazy paragraph continuation is valid, but a new block or a
             // paragraph after a blank line belongs outside this list item.
             if (blank || /^(#{1,6}\s|>|```)/.test(next)) break;
+            if (/^\s*(---+|\*\*\*+)\s*$/.test(next)) break;
           }
           const content = next.slice(Math.min(spaces, contentIndent));
           if (/^```/.test(content)) fenced = !fenced;
           body.push(content); i++; blank = !next.trim() && !fenced;
         }
-        const ordinal = ordered ? Number.parseInt(item[2]!, 10) : undefined;
-        items.push(<li key={items.length} value={ordered && ordinal !== start! + items.length ? ordinal : undefined}>{renderMarkdown(body.join('\n'), onPath, document, depth + 1, workspaceRoot)}</li>);
+        const taskMatch = !ordered && /^\[([ xX])\](?:\s+(.*))?$/.exec(body[0]!);
+        if (taskMatch) {
+          isTaskList = true;
+          const checked = taskMatch[1]!.toLowerCase() === 'x';
+          body[0] = taskMatch[2] ?? '';
+          items.push(
+            <li key={items.length} className={`md-task-item${checked ? ' md-task-done' : ''}`}>
+              <input type="checkbox" className="md-task-check" checked={checked} disabled aria-label={checked ? 'Completed task' : 'Incomplete task'} readOnly tabIndex={-1} />
+              <div className="md-task-body">{renderMarkdown(body.join('\n'), onPath, document, depth + 1, workspaceRoot)}</div>
+            </li>
+          );
+        } else {
+          const ordinal = ordered ? Number.parseInt(item[2]!, 10) : undefined;
+          items.push(<li key={items.length} value={ordered && ordinal !== start! + items.length ? ordinal : undefined}>{renderMarkdown(body.join('\n'), onPath, document, depth + 1, workspaceRoot)}</li>);
+        }
       }
-      blocks.push(ordered ? <ol className="md-list" key={key++} start={start === 1 ? undefined : start}>{items}</ol> : <ul className="md-list" key={key++}>{items}</ul>);
+      blocks.push(ordered ? <ol className="md-list" key={key++} start={start === 1 ? undefined : start}>{items}</ol> : <ul className={`md-list${isTaskList ? ' md-task-list' : ''}`} key={key++}>{items}</ul>);
       continue;
     }
     const h = /^(#{1,6})\s+(.*)$/.exec(line);
@@ -105,7 +120,8 @@ function renderMarkdown(text: string, onPath: PathAction | undefined, document: 
     const para: string[] = [];
     while (i < lines.length && lines[i]!.trim() && !listMarker(lines[i]!) && !/^\s*(```|#{1,6}\s)/.test(lines[i]!)) {
       if(para.length && tableHeader(lines,i))break;
-      if(document && para.length && /^\s*>/.test(lines[i]!))break;
+      if(para.length && /^\s*>/.test(lines[i]!))break;
+      if(/^\s*(---+|\*\*\*+)\s*$/.test(lines[i]!))break;
       para.push(lines[i++]!);
     }
     const text = para.join(' ');

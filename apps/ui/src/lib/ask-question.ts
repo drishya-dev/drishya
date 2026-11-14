@@ -5,6 +5,87 @@ export const isQuestionTool = (tool: unknown) => tool === 'AskUserQuestion' || t
 export interface AskOption { label: string; description?: string }
 export interface AskQuestion { id?: string; question: string; header?: string; multiSelect: boolean; options: AskOption[]; /** The answer text, when the result names this question. */ answer?: string; chosen: string[]; /** Recorded Antigravity ordinal protocol, not an inferred answer. */ native?: boolean; skipped?: boolean; /** Answer words that are not one of the offered options (the person typed their own). */ typed?: string }
 
+export interface QuestionReceipt {
+  sentAt: number;
+  answers: Record<string, { options: string[]; text?: string }>;
+  chosen: string[];
+  typed?: string;
+}
+
+const receipts = new Map<string, QuestionReceipt>();
+const stops = new Set<string>();
+
+/**
+ * Record a controller answer receipt for a question.
+ * Submitted controller receipt remains distinct from captured journal answers.
+ */
+export function recordQuestionReceipt(
+  recordingId: string,
+  key: string,
+  answers: Record<string, { options: string[]; text?: string }>,
+  questions?: AskQuestion[]
+) {
+  const chosen: string[] = [];
+  const typedParts: string[] = [];
+  for (const q of questions ?? []) {
+    const qAnswer = answers[q.id ?? q.question] ?? Object.values(answers)[0];
+    if (qAnswer) {
+      if (qAnswer.options?.length) {
+        for (const optId of qAnswer.options) {
+          const opt = q.options.find((o, idx) => o.label === optId || `o${idx}` === optId);
+          if (opt) chosen.push(opt.label);
+          else chosen.push(optId);
+        }
+      }
+      if (qAnswer.text?.trim()) typedParts.push(qAnswer.text.trim());
+    }
+  }
+  if (!chosen.length && !typedParts.length) {
+    for (const val of Object.values(answers)) {
+      if (val.options?.length) chosen.push(...val.options);
+      if (val.text?.trim()) typedParts.push(val.text.trim());
+    }
+  }
+  receipts.set(`${recordingId}/${key}`, {
+    sentAt: Date.now(),
+    answers,
+    chosen,
+    typed: typedParts.length ? typedParts.join(', ') : undefined,
+  });
+  if (key) {
+    receipts.set(key, {
+      sentAt: Date.now(),
+      answers,
+      chosen,
+      typed: typedParts.length ? typedParts.join(', ') : undefined,
+    });
+  }
+}
+
+export function getQuestionReceipt(recordingId?: string, key?: string): QuestionReceipt | undefined {
+  if (!key) return undefined;
+  if (recordingId && receipts.has(`${recordingId}/${key}`)) {
+    return receipts.get(`${recordingId}/${key}`);
+  }
+  return receipts.get(key);
+}
+
+export function recordQuestionStop(recordingId: string, key: string) {
+  stops.add(`${recordingId}/${key}`);
+  stops.add(key);
+}
+
+export function isQuestionStopped(recordingId?: string, key?: string): boolean {
+  if (!key) return false;
+  if (recordingId && stops.has(`${recordingId}/${key}`)) return true;
+  return stops.has(key);
+}
+
+export function clearQuestionReceipts() {
+  receipts.clear();
+  stops.clear();
+}
+
 const text = (value: unknown, max = 600) => typeof value === 'string' ? value.slice(0, max) : undefined;
 
 export function askQuestions(input: unknown, result?: string, tool?: string): AskQuestion[] {

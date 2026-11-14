@@ -26,6 +26,8 @@ import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { reduce, REDUCER_VERSION } from '@drishya/projection';
 import type { SourceRow, Store } from '@drishya/store';
 
+export { SourceWatch, defaultWatchRoots, type WatchRoot } from './source-watch.ts';
+
 export const defaultAdapters = (): Adapter[] => [claudeAdapter, codexAdapter, antigravityAdapter];
 
 export interface ChangeEvent {
@@ -78,6 +80,14 @@ export interface IngestorOptions {
 
 /** Bytes of records sealed and stored before the ingest yields to the daemon's other work. */
 const SLICE_BYTES = 1024 * 1024;
+/**
+ * How often a followed journal's size is looked at. A tick is one stat per source and reads only when the
+ * size moved, so a short interval costs next to nothing; the interval is the worst-case wait before a new
+ * record is read (LIVE-7: 500 ms before, p95 about 460 ms of every step's delay).
+ */
+const LIVE_POLL_MS = 100;
+/** A followed recording looks for new companion journals (a sub-agent's) about every two seconds. */
+const COMPANION_EVERY_TICKS = 20;
 // Scheduling budget only: complete-record commit size and hard limits stay unchanged.
 const RECORD_YIELD_MS = 8;
 const MAX_RECORD_BYTES = 16 * 1024 * 1024;
@@ -668,7 +678,7 @@ export class Ingestor extends EventEmitter {
    * meanwhile collapse into a single pending wake-up. Each turn reads a bounded number of bytes;
    * a backlog continues on the next pass instead of in one long read.
    */
-  startLive(recordingId: string, intervalMs = 500) {
+  startLive(recordingId: string, intervalMs = LIVE_POLL_MS) {
     if (this.live.has(recordingId)) return;
     this.store.updateRecordingMeta(recordingId, { live: true });
     this.projectionCache.delete(recordingId);
@@ -682,7 +692,7 @@ export class Ingestor extends EventEmitter {
         // A tick queued before stopLive/close must not touch a store that is shutting down.
         if (this.closed || this.live.get(recordingId) !== run) return;
         tick++;
-        let changed = tick % 4 === 0 || (this.healthRecords.get(recordingId)?.backlog ?? false); // periodic look for new companions
+        let changed = tick === 1 || tick % COMPANION_EVERY_TICKS === 0 || (this.healthRecords.get(recordingId)?.backlog ?? false); // the first look, then a periodic look for new companions
         for (const s of this.store.getSources(recordingId)) {
           const size = (await stat(s.path).catch(() => undefined))?.size ?? -1;
           if (sizes.get(s.path) !== size) changed = true;
@@ -709,6 +719,8 @@ export class Ingestor extends EventEmitter {
     run.timer = setInterval(wake, intervalMs);
     run.timer.unref();
     this.live.set(recordingId, run);
+    // Look at once: what the agent wrote since the last read should not wait for the first tick.
+    wake();
     this.setHealth(recordingId, { followSince: this.now().toISOString() });
     this.emit('change', { type: 'recording', recordingId, revision: this.store.getRecording(recordingId)?.revision ?? 0, observationCount: this.store.countObservations(recordingId), added: 0, live: true } satisfies ChangeEvent);
   }
@@ -724,6 +736,11 @@ export class Ingestor extends EventEmitter {
     this.projectionCache.delete(recordingId);
     this.announceHealth(recordingId);
     this.emit('change', { type: 'recording', recordingId, revision: this.store.getRecording(recordingId)?.revision ?? 0, observationCount: this.store.countObservations(recordingId), added: 0, live: false } satisfies ChangeEvent);
+  }
+
+  /** Resolves when the read in flight (if any) has committed; never rejects. A caller that must show fresh data after starting to follow awaits this. */
+  async liveTurn(recordingId: string): Promise<void> {
+    await this.live.get(recordingId)?.current?.catch(() => undefined);
   }
 
   isLive(recordingId: string) {

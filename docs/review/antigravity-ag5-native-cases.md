@@ -47,3 +47,16 @@ AG-5 remains in progress, not accepted. Native browser input now retains a captu
 Before reconciliation, 44 focused units pass across the native decoder, browser evidence and artifact readers. Real-session acceptance and the final regression checks are still pending. Screenshots and scratch imports remain local.
 
 Yash requested preservation of current main's performance and presentation improvements and one final integration review. Merge current main into this item branch rather than replacing shared files. In particular, preserve SHIP-5's question card/controllers, UI-50 formatting, UI-49 clearance, UI-47 loading and LIVE-7 capture scheduling. Antigravity adds only passive recorded-data handling. Item PRs remain internal dependencies targeting `codex/harness-antigravity`; the final review is one PR from that integration branch into main, never independent item merges into main.
+
+### Current-main merge record
+
+Reconciled main through `fb642882` (including SHIP-5 #487, UI-50 #483, UI-49 #484, UI-41d #485, UI-47 #488 and LIVE-7 #489). Six conflicts were resolved explicitly:
+
+- `QuestionCard.tsx`: retain main's complete interactive/read-only/sent/stopped card and controls. Add only native receipt labels, skip display and an Antigravity passive guard. A supplied live request must not make an Antigravity card interactive.
+- `SessionHome.tsx`: retain main's delayed discovery notice and existing layout; retain Antigravity identity/filter additions.
+- `ask-question.test.ts`: keep both controller-receipt/stop tests and native ordinal/skip tests.
+- ingest `index.ts`: retain main's SourceWatch export, timing and initial follow wake; add Antigravity alongside the two original adapters. No main latency setting was rolled back.
+- `STATUS.md`: retain both builders' handoffs and current claims.
+- `TASKS.md`: retain main's new items/status and regenerate counts from the stacked item checkboxes. No new AG-5 completion mark.
+
+Validation after reconciliation: both TypeScript projects and UI build pass; 121 focused units pass, plus the new passive-card regression (34 tests in its final focused rerun). Eleven Edge browser checks pass with two workers and no retries, covering main's Claude/Codex question display, connected question answer/stop at 600/1440, Antigravity read-only identity and exact child links at 600/1440. These are regression checks, not a claim that all AG-5 real-session acceptance is finished. No full gate or hosted CI was run.

@@ -533,19 +533,53 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
       const lead = runs.find((run) => run.passageIds.includes(wanted.passageId))?.passageIds[0] ?? wanted.passageId;
       const slotOf = (id: string) => [...el.querySelectorAll<HTMLElement>('.passage-slot[data-passage-id]')].find((item) => item.dataset.passageId === id);
       const slot = slotOf(wanted.passageId), leadSlot = slotOf(lead);
-      const part = wanted.kind === 'turn' ? slot?.querySelector<HTMLElement>('.turn')
-        : wanted.kind === 'prose' ? slot?.querySelectorAll<HTMLElement>('.prose')[wanted.index]
-        : slot?.querySelector<HTMLElement>('.ops-row') ?? slot?.querySelector<HTMLElement>('.run-line') ?? leadSlot?.querySelector<HTMLElement>('.run-line') ?? leadSlot?.querySelector<HTMLElement>('.ops-row');
+      const part = wanted.kind === 'turn'
+        ? slot?.querySelector<HTMLElement>('.turn')
+          ?? slot?.querySelector<HTMLElement>('.prose')
+          ?? slot?.querySelector<HTMLElement>('.run-line')
+          ?? slot?.querySelector<HTMLElement>('.ops-row')
+          ?? leadSlot?.querySelector<HTMLElement>('.turn')
+          ?? leadSlot?.querySelector<HTMLElement>('.run-line')
+          ?? leadSlot?.querySelector<HTMLElement>('.ops-row')
+        : wanted.kind === 'prose'
+          ? (slot?.querySelectorAll<HTMLElement>('.prose')[wanted.index]
+            ?? slot?.querySelector<HTMLElement>('.prose')
+            ?? slot?.querySelector<HTMLElement>('.run-line')
+            ?? slot?.querySelector<HTMLElement>('.ops-row')
+            ?? leadSlot?.querySelector<HTMLElement>('.run-line')
+            ?? slot?.querySelector<HTMLElement>('.turn')
+            ?? leadSlot?.querySelector<HTMLElement>('.prose')
+            ?? leadSlot?.querySelector<HTMLElement>('.ops-row'))
+          : (slot?.querySelector<HTMLElement>('.ops-row')
+            ?? slot?.querySelector<HTMLElement>('.run-line')
+            ?? leadSlot?.querySelector<HTMLElement>('.run-line')
+            ?? slot?.querySelector<HTMLElement>('.prose')
+            ?? slot?.querySelector<HTMLElement>('.turn')
+            ?? leadSlot?.querySelector<HTMLElement>('.ops-row')
+            ?? leadSlot?.querySelector<HTMLElement>('.prose')
+            ?? leadSlot?.querySelector<HTMLElement>('.turn'));
       if (part) {
         // A tall run's cards that fold to one line cannot keep an offset deep inside them: the line itself stays in view.
         const height = part.getBoundingClientRect().height, offset = Math.max(wanted.offset, Math.min(0, Math.min(height, 12) - height));
         const delta = part.getBoundingClientRect().top - el.getBoundingClientRect().top - offset;
         if (Math.abs(delta) > 0.5) setScrollTop(el.scrollTop + delta);
+        const partSlot = part.closest<HTMLElement>('.passage-slot[data-passage-id]');
+        const anchorId = partSlot?.dataset.passageId ?? wanted.passageId;
+        const anchorOffset = partSlot ? partSlot.getBoundingClientRect().top - el.getBoundingClientRect().top : offset;
+        readingAnchor.current = { id: anchorId, offset: anchorOffset };
+        memory.set('history/anchor', readingAnchor.current);
+        memory.set('history/top', el.scrollTop);
+        if (useApp.getState().readingPassageId !== anchorId) set({ readingPassageId: anchorId });
         return;
       }
       // Not mounted yet (it moved far): bring its passage into the window, and the next pass finishes the job.
-      const index = scene.passages.findIndex((ps) => ps.id === (slot ? wanted.passageId : lead));
-      if (index >= 0) { setScrollTop(layout.prefix[index]! - wanted.offset); return; }
+      const hasVisibleSlot = slot && slot.dataset.folded !== 'hidden' && slot.dataset.unloaded !== 'true';
+      const targetId = hasVisibleSlot ? wanted.passageId : lead;
+      const index = scene.passages.findIndex((ps) => ps.id === targetId);
+      if (index >= 0 && layout.prefix[index] !== undefined) {
+        setScrollTop(layout.prefix[index]! - wanted.offset);
+        return;
+      }
     }
     if (switching.current) {
       const index = scene.passages.findIndex((ps) => ps.id === anchor.id);
@@ -626,7 +660,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
 
   useLayoutEffect(() => {
     if (!switching.current) return;
-    let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => { switching.current = false; modeAnchor.current = undefined; if (!useApp.getState().follow) rememberReading(); }); });
+    let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => { switching.current = false; modeAnchor.current = undefined; }); });
     return () => cancelAnimationFrame(frame);
   }, [historyMode]);
 
