@@ -6,7 +6,7 @@ export const antigravityMedia: RealCase = {
   harnesses: ['antigravity'], prefilter: '',
   scan(row) {
     const images = Array.isArray(row.media) ? row.media.filter(media => media && typeof media === 'object' && (!media.mime_type || /^image\/(?:png|jpeg|gif|webp)$/i.test(media.mime_type))).length : 0;
-    const artifacts = (Array.isArray(row.tool_calls) ? row.tool_calls : []).filter(call => call && typeof call === 'object' && isPlanArtifact(decodeArgs(call.args))).length;
+    const artifacts = (Array.isArray(row.tool_calls) ? row.tool_calls : []).filter(call => call && typeof call === 'object' && isPlanArtifact(decodeArgs(call.args)) && (() => { const args = decodeArgs(call.args), path = args.Path ?? args.AbsolutePath ?? args.TargetFile; return typeof path === 'string' && /[\\/]brain[\\/][^\\/]+[\\/][^\\/]+\.md(?:\.resolved(?:\.\d+)?)?$/.test(path); })()).length;
     return images || artifacts ? { hits: images + artifacts, only: artifacts } : undefined;
   },
   verify(projection, expected) {

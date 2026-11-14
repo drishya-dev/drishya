@@ -16,6 +16,7 @@ type Row = Record<string, unknown>;
 const object = (value: unknown): Row => value && typeof value === 'object' && !Array.isArray(value) ? value as Row : {};
 const text = (value: unknown) => typeof value === 'string' ? value : '';
 interface Call { id: string; tool: string; input: Row; protected: boolean }
+const isChildSpawn = (call: Call) => call.tool === 'invoke_subagent' || call.tool === 'swarm' && call.input.action === 'add';
 interface Task { call: Call; id: string; step: number; terminal?: { step: number; text: string; time?: string; error: boolean }; emitted?: string; nextPollAt?: number }
 
 /** Async reads stay outside parse(), then ingest seals both journal and side-file material. */
@@ -135,7 +136,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
         }
         if (o.kind === 'tool.result') completeArtifact(o.operationId, p);
         if (o.kind === 'tool.result' && call) {
-          if (call.tool === 'invoke_subagent' && Number.isSafeInteger(step)) spawnOwners.set(step, call);
+          if (isChildSpawn(call) && Number.isSafeInteger(step)) spawnOwners.set(step, call);
           const native = taskId(object(object(p.outcome).run).backgroundTaskId);
           if (call.tool === 'run_command' && native) rememberTask(call, native, step);
           if (p.resultUpdate === true && typeof p.nativeTaskId === 'string') {
@@ -172,7 +173,7 @@ export function liveParser(parser: RecordParser, ctx: ParseContext, root: string
         if (raw.kind === 'tool.call') rememberCall(raw.operationId, p);
         const call = raw.operationId ? calls.get(raw.operationId) : undefined;
         if (raw.kind !== 'tool.result' || !call) continue;
-        if (call.tool === 'invoke_subagent') spawnOwners.set(step, call);
+        if (isChildSpawn(call)) spawnOwners.set(step, call);
         if (prepared) {
           p.outputSource = prepared.available ? { path: prepared.path, bytes: prepared.bytes, truncated: prepared.truncated, source: 'captured-harness-file' } : { unavailable: prepared.reason };
           if (prepared.available && !call.protected) {

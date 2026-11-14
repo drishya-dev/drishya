@@ -40,6 +40,7 @@ export function intentFor(tool: string, args: Args): ToolIntent {
     }
     case 'search_web': return { kind: 'web', query: str(args, 'Query') };
     case 'read_url_content': return { kind: 'web', url: str(args, 'Url', 'URL') };
+    case 'swarm': return args.action === 'add' ? { kind: 'spawn', agentType: str(args, 'name'), description: str(args, 'brief'), prompt: str(args, 'brief') } : { kind: 'other' };
     case 'invoke_subagent': case 'define_subagent': case 'manage_subagents': return { kind: 'spawn', agentType: str(args, 'type_name', 'TypeName'), description: str(args, 'role', 'Role'), prompt: str(args, 'Prompt', 'prompt') };
     default: return { kind: 'other' };
   }
@@ -66,6 +67,7 @@ export function outcomeFor(tool: string, args: Args, content: string): ToolOutco
     case 'find_by_name': return { kind: 'search', lines: content };
     case 'run_command': return { kind: 'shell', stdout: content };
     case 'search_web': case 'read_url_content': return { kind: 'web', text: content, url: str(args, 'Url', 'URL') };
+    case 'swarm': return args.action === 'add' ? { kind: 'spawn', text: content } : { kind: 'other' };
     case 'invoke_subagent': case 'define_subagent': case 'manage_subagents': return { kind: 'spawn', text: content };
     default: return { kind: 'other' };
   }

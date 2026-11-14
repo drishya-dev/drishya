@@ -1110,7 +1110,7 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
     {imagePath?<PathImage op={op} path={imagePath}/>:<OpImages images={op.images!}/>}
     {!imagePath&&['mcp','web'].includes(op.detail.kind)
       ?expanded?<ExpandedMaterial op={op}/>:<OpPreview op={op} resolving={resolving} onSource={measureSource}/>
-      :<details className="image-original"><summary>Original input and output</summary>{imageOriginal}</details>}
+      :<details className="image-original" onClick={op.tool === 'webview_browser' ? event => event.stopPropagation() : undefined}><summary>Original input and output</summary>{imageOriginal}</details>}
   </>:null;
   return (
     <article ref={card}

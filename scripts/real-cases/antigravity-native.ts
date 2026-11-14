@@ -29,7 +29,7 @@ export const antigravityNativeCases: RealCase[] = [
   toolsCase('antigravity-mcp',['call_mcp_tool']),
   toolsCase('antigravity-questions',['ask_question']),
   toolsCase('antigravity-permission',['ask_permission']),
-  toolsCase('antigravity-lifecycle',['manage_task','invoke_subagent']),
+  toolsCase('antigravity-lifecycle',['manage_task','invoke_subagent','swarm','read_board','post_message']),
   {
     name:'antigravity-pdf',about:'Recorded PDF references remain visible; no PDF bytes are imported as images',harnesses:['antigravity'],prefilter:'',
     scan(row) { const refs=(Array.isArray(row.media)?row.media:[]).filter(m=>m&&m.mime_type==='application/pdf'&&typeof m.uri==='string');return refs.length?{hits:refs.length}:undefined; },

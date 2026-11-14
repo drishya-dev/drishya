@@ -745,7 +745,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
             st.op.endSequence = st.scriptWrapper ? Math.max(0, step() - 1) : step();
             st.op.endTime = taskUpdate && typeof p.terminalTime === 'string' ? p.terminalTime : o.sourceTime;
             if (!st.typedOutcome) st.op.status = p.isError ? 'error' : st.nestedPatch ? 'unknown' : 'ok';
-            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || p.callAvailability === 'not-recorded' || (st.intent.kind === 'shell' || st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
+            if (!st.typedOutcome && o.source.adapterId === 'antigravity' && !p.isError && (p.status === 'running' || p.callAvailability === 'not-recorded' || st.op.tool === 'ask_permission' || (st.intent.kind === 'shell' || st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && typeof p.exitCode !== 'number')) st.op.status = p.status === 'running' ? 'running' : 'unknown';
             if (p.isError && !st.typedOutcome) { const declined = declinedFrom(text(p.text)); if (declined) st.op.declined = declined; }
             if (taskUpdate && (st.op.detail.kind === 'shell' || st.op.detail.kind === 'test') && st.op.detail.outputArtifactId) {
               const previousArtifact = st.op.detail.outputArtifactId;

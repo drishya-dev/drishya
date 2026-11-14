@@ -73,3 +73,11 @@ be produced, with the reason. Delete `ag-cases` whenever you like; the recorded 
 ## 14 November: current MCP tool names
 
 The official Everything feature list names `echo`, `get-sum` (not the old `add`) and `get-tiny-image`. Source: https://github.com/modelcontextprotocol/servers/blob/main/src/everything/docs/features.md . Use the client's actual supported MCP registration flow, preserving existing servers and permissions; the user may complete required UI/restart actions. Drishya never reads or edits native MCP configuration or credentials. Install test dependencies only in the throwaway workspace when needed.
+
+## Recorded-case completion notes, 14 November
+
+Do not repeat the approval commands: both executed under the unchanged native policy, so approved/denied acceptance was not produced. A separate native permission record remains explicitly unresolved. Do not switch to a preset that weakens the sandbox just to create this case.
+
+The controlled lifecycle run now contains native task send_input and kill, synthetic move/delete commands, and swarm requests with three child receipts. Runtime model identity is unavailable in these transcript records; requested model strings are not proof of execution identity. Browser video recording was not exposed in the recorded native browser run; screenshots and full script/result evidence are retained. A native application crash is not tested by killing its background task. Do not crash the shared signed-in application while the builders use it.
+
+PDFs are visible as recorded references in Review findings → Capture gaps. Their bytes are not read; no document rendering or OCR is claimed. Screenshots and all real-session inspection data remain local.
