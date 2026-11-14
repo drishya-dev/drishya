@@ -45,7 +45,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | LAND-18 | @harsh + Codex | `codex/land-18-matte-hero-mark` | 2026-11-11 | LAND-11 stacked follow-up. Own `apps/landing/src/identity.ts`, `landing-motion.ts`, `landing-motion.css` and existing landing browser fixtures that assert the old hero mesh. TASKS/STATUS. Static matte logo only. |
 | LAND-10 | @harsh + Codex | `codex/land-10-compact-explanation` | 2026-11-09 | Review corrections to the hero identity sizing and interaction in landing-motion.css and the existing explainer browser spec, after LAND-9. Nine total paths in existing PR #389. |
 | MOTION-4 | @harsh + Codex | `codex/motion-4` | 2026-11-14 | Transferred from Yash with his agreement. Continue draft #403 after the UI work it animates. Check the existing worktree against the 12 Nov handoff, which noted commit 951b638d and pending edits. Yash approved up to 20 source/test/docs paths and isolated open/close lifecycle reservations alongside FINISH-0a/0b, plus Workspace, Screen and peek-tab lifecycles. Shared owners only: ReadingDialog/ProductShell, ProductMenu, Disclosure/dismiss-menus and surface reflow/presence, Modern motion rules and motion-duration tokens; Workspace/Screen/peek mount-return owners, focused units/browser tests, real both-harness/all-palette acceptance and report plus TASKS/STATUS/CONTINUITY. Preserve contents, focus, selection, layout and existing composer spacing; no History arrivals/hover, native policies, evidence/schema, GIT-9 UI consolidation, palette decisions, protected files or hosted dispatch. Update draft #403 to ready only at whole acceptance. Own worktree/install, latest main integration, two browser workers, one suite at a time; Opus reviews/merges. |
-| UI-47 | @yash + Antigravity | `ag-builder/ui-47-loading-messages` | 2026-11-14 | Loading messages that match the wait: measure first/repeat load times across Git graph, Changes, Compare, Files/indexing, peek, Workspace, search, large session, Home overview, Usage; shared wait notice hook/component (<400ms nothing, 400ms-2s placeholder, >2s plain explanation / one-time note, retry on error) in `apps/ui/src/`, review doc, new browser specs, TASKS/STATUS. |
 | UI-48 | @harsh + Codex | `codex/ui-48` | 2026-11-14 | Queued after UI-47. Loading placeholders for the named surfaces and layout-shift checks. Coordinate their close transition with MOTION-4 and reserve only the loading sections before editing. |
 | PERF-4 | @harsh + Codex | `codex/perf-4` | 2026-11-14 | Queued after LIVE-7 and MOTION-4. History worker, reducer checkpoints, reader swap and related units/browser evidence. Coordinate worker and page sections after LIVE-7 lands. |
 | EMBED-1 | @harsh + Codex | `codex/embed-1` | 2026-11-14 | Queued. `docs/review/embed-1-in-app.md` and the two-builder agreement on the host contract. |
@@ -77,6 +76,32 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Gemini 3.8 Flash (Antigravity) — 14 Nov: UI-47 loading messages that match the wait
+
+- Measured first (cold) and repeat (cached) load times across all 10 waiting surfaces on real sessions of both harnesses (Codex `rec_fa9e37da` 1,735 obs on drishya repo; Claude Code `rec_5ee6b391` 2,400 obs on reverent-nobel):
+  - Git graph first load (`GitHistoryReader`): 3,231 ms (cold) vs 875 ms (repeat) - confirms cold uncached load on large repositories exceeds 2s.
+  - Changes (`CompareWindow` uncommitted): 922 ms vs 967 ms.
+  - Compare (`CompareWindow` refs/diff): 389 ms vs 432 ms.
+  - Files & first index (`FolderExplorer`): 313 ms (cold) vs 6–15 ms (repeat).
+  - Peek (`CurrentDocument`): 18 ms vs 18 ms.
+  - Workspace (`DeveloperWorkspace`): 17 ms vs 16 ms.
+  - Search (`LibrarySearch` & session search): 4–8 ms vs 3–7 ms.
+  - Large session open (`Viewer` projection): 15 ms vs 6 ms.
+  - Home session list (`SessionHome` / discovery): 252 ms vs 21 ms.
+  - Usage (`RecordedUsage` / storage): 5 ms vs 1 ms.
+- Implemented shared contract in `use-wait-notice.ts` and `WaitNotice.tsx` with tokens in `wait-notice.css`:
+  - `< 400 ms`: completely silent (`phase: immediate`), no flash or placeholder flicker.
+  - `400 ms – 2000 ms`: quiet status indicator (`phase: quiet`, e.g. "Reading repository history…").
+  - `> 2000 ms`: plain explanation noting one-time cost where true (`phase: long`, "Reading this repository’s history for the first time. This can take a minute; you can keep working, but leave the window open.").
+  - Error: plain failure description with interactive retry button.
+  - Real progress only when measured; fake progress bars never shown.
+- Wired across all 10 surfaces: `GitHistoryReader.tsx`, `CompareWindow.tsx`, `SessionWorkspace.tsx`, `DeveloperWorkspace.tsx`, `LibrarySearch.tsx`, `Viewer.tsx`, `SessionHome.tsx`, and `RecordedUsage.tsx`.
+- Tests & verification:
+  - Playwright browser suite `tests/browser/loading-messages.spec.ts`: 4 passed (throttled long wait and repeat fast load at 1440 and 600 px; error state and interactive retry recovery at 1440 and 600 px; zero failures, zero retries on Edge).
+  - Vitest unit tests: `apps/ui/test/wait-notice.test.ts` (4 passed), `apps/ui/test/palette-paint-policy.test.ts` (2 passed).
+  - `pnpm check:real -- local-branches workspace-files usage-context` (258 real sessions checked, exit code 0).
+  - Visual frames captured at 1440 and 600 px in `docs/review/ui-47-loading-messages.md` and user artifact gallery.
 
 ### Yash with Claude Sonnet 5.5 — 14 Nov: UI-36b, a zero reading after a Codex compaction
 
