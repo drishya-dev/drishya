@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-41e | @yash + Claude Sonnet 5.5 (Fable briefs, reviews, merges) | `claude/ui-41e-mode-switch` | 2026-11-14 | Mode-switch anchor only in `apps/ui/src/components/History.tsx` (`switching`, `modeAnchor`, its capture and restore; PERF-4 owns the quiet swap and scroll anchoring beside it), `tests/browser/conversation-switch.spec.ts`, TASKS/STATUS. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
 | LAND-15 | @harsh + Codex | `codex/land-15-terminal-preview` | 2026-11-11 | Hero video only, stacked on LAND-18. Own new `hero-preview.ts`, `hero-preview.css`, two preview assets, `landing-hero-preview.spec.ts`, player integration in `site.ts` and `scripts/build-landing.ts`, plus TASKS/STATUS. |
@@ -55,6 +54,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — 14 Nov: UI-41e Work → Conversation still jumped to the end
+
+- Mode-switch anchor in `apps/ui/src/components/History.tsx` only: the not-mounted fallback uses the clamped offset and keeps its anchor; a switch back with no scrolling returns to the place the reader left (`modeHome`); a cap on corrections per commit chain stops the "maximum update depth" blank view (600 px, long sessions; also the cause of the `conversation-switch.spec.ts:75` null after UI-48).
+- Fable's exact table did not reproduce on a fresh sample workspace; the causes above did, on specs and on real sessions (40 of 40 round trips on the same turn, 4 sessions, 1440 and 600 px). Not run: a growing live session during the switch.
 
 ### Yash with Claude Sonnet 5.5 — 14 Nov: LIVE-7b, the fold, the file watch and the missing cases
 
