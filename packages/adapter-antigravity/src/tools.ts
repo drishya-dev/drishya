@@ -32,6 +32,10 @@ export function intentFor(tool: string, args: Args): ToolIntent {
     case 'grep_search': return { kind: 'search', mode: 'text', query: str(args, 'Query') ?? '', path: str(args, 'SearchPath'), glob: str(args, 'Includes') };
     case 'find_by_name': return { kind: 'search', mode: 'file', query: str(args, 'Pattern') ?? '', path: str(args, 'SearchDirectory') };
     case 'run_command': return { kind: 'shell', command: str(args, 'CommandLine') ?? '', cwd: str(args, 'Cwd') };
+    case 'call_mcp_tool': {
+      const server = str(args, 'ServerName'), tool = str(args, 'ToolName');
+      return server?.trim() && tool?.trim() ? { kind: 'mcp', server, tool } : { kind: 'other' };
+    }
     case 'search_web': return { kind: 'web', query: str(args, 'Query') };
     case 'read_url_content': return { kind: 'web', url: str(args, 'Url', 'URL') };
     case 'invoke_subagent': case 'define_subagent': case 'manage_subagents': return { kind: 'spawn', agentType: str(args, 'type_name', 'TypeName'), description: str(args, 'role', 'Role'), prompt: str(args, 'Prompt', 'prompt') };

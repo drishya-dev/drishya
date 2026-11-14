@@ -23,7 +23,7 @@ const object = (value: unknown): Row => value && typeof value === 'object' && !A
 const text = (value: unknown) => typeof value === 'string' ? value : '';
 const ignored = new Set(['SYSTEM_MESSAGE', 'EPHEMERAL_MESSAGE', 'CONVERSATION_HISTORY']);
 const results = new Set(['GENERIC', 'VIEW_FILE', 'LIST_DIRECTORY', 'CODE_ACTION', 'RUN_COMMAND', 'SEARCH_WEB', 'GREP_SEARCH', 'INVOKE_SUBAGENT', 'READ_URL_CONTENT']);
-const knownTools = new Set(['read_file', 'view_file', 'write_file', 'write_to_file', 'edit_file', 'replace_file_content', 'multi_replace_file_content', 'grep_search', 'find_by_name', 'list_dir', 'run_command', 'manage_task', 'search_web', 'read_url_content', 'invoke_subagent', 'define_subagent', 'manage_subagents', 'send_message', 'schedule', 'search_marketplace', 'ask_permission', 'ask_question']);
+const knownTools = new Set(['read_file', 'view_file', 'write_file', 'write_to_file', 'edit_file', 'replace_file_content', 'multi_replace_file_content', 'grep_search', 'find_by_name', 'list_dir', 'run_command', 'manage_task', 'search_web', 'read_url_content', 'invoke_subagent', 'define_subagent', 'manage_subagents', 'send_message', 'schedule', 'search_marketplace', 'ask_permission', 'ask_question', 'call_mcp_tool']);
 
 export function createParser(ctx: ParseContext, summary?: Summary): RecordParser {
   const id = basename(dirname(dirname(dirname(ctx.sourcePath))));
@@ -75,7 +75,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
           pair.add(pending);
           out.push(unmatched(pending, base, 0));
           emit({ part: 10 + index, kind: 'tool.call', operationId, denyContent: touchesProtectedFile(intent), contentKeys: ['input', 'intent', 'nativeArtifact'], payload: { tool, input: args, intent, nativeArtifact, protected: touchesProtectedFile(intent), antigravityStep: step, correlationBasis: 'call-order' } });
-          if (!knownTools.has(tool)) emit({ part: 10000 + index, kind: 'unknown', availability: 'metadata-only', payload: { recordType: `tool:${tool}` } });
+          if (!knownTools.has(tool) || tool === 'call_mcp_tool' && intent.kind !== 'mcp') emit({ part: 10000 + index, kind: 'unknown', availability: 'metadata-only', payload: { recordType: `tool:${tool}` } });
         });
       } else if (results.has(type)) {
         const call = resultOwners.get(step) ?? pair.next();
