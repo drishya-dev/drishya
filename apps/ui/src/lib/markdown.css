@@ -1,0 +1,156 @@
+/* UI-50: unified text formatting across prose and cards.
+   Rendered Markdown shares one renderer and one visual style across:
+   - agent prose (.prose, Work and Conversation views)
+   - tool markdown (.tool-markdown in ToolOutput)
+   - plan cards (.plan-document in PlanChecklist)
+   - desk documents (.desk-markdown in DeveloperWorkspace / SessionWorkspace)
+   - captured resources (.resource-document in CapturedResources) */
+
+/* ── Headings ───────────────────────────────────────────────────────────── */
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) :is(.md-h, h1, h2, h3, h4, h5, h6) {
+  font-weight: var(--weight-strong);
+  color: var(--t1);
+  line-height: 1.4;
+  margin: 1.2em 0 0.4em;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) :is(.md-h, h1, h2, h3, h4, h5, h6):first-child {
+  margin-top: 0;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) h1 {
+  font-size: var(--text-xl);
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) h2 {
+  font-size: var(--text-lg);
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) :is(h3, h4, h5, h6, .md-h) {
+  font-size: var(--text-md);
+}
+
+/* ── Blockquotes ────────────────────────────────────────────────────────── */
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) blockquote {
+  margin: 10px 0;
+  padding: 2px 14px;
+  border-left: 2px solid var(--line);
+  color: var(--t2);
+  font-style: normal;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) blockquote > :first-child {
+  margin-top: 0;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* ── Horizontal rules ───────────────────────────────────────────────────── */
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 16px 0;
+}
+
+/* ── Task lists (GFM) ───────────────────────────────────────────────────── */
+.md-task-list {
+  list-style: none !important;
+  padding-inline-start: 0 !important;
+  margin: 6px 0 10px !important;
+}
+.md-task-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 4px 0;
+  list-style: none !important;
+}
+.md-task-check {
+  margin: 0.35em 0 0;
+  flex: none;
+  accent-color: var(--focus);
+  cursor: default;
+  width: 14px;
+  height: 14px;
+}
+.md-task-body {
+  min-width: 0;
+  flex: 1;
+}
+.md-task-item.md-task-done > .md-task-body {
+  color: var(--t3);
+}
+
+/* ── Inline code chips ──────────────────────────────────────────────────── */
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) :not(pre) > code {
+  font-family: var(--mono);
+  font-size: var(--text-xs);
+  background: var(--s2);
+  border: 1px solid var(--line);
+  padding: 1px 4px;
+  border-radius: var(--round-xs);
+  color: var(--t1);
+}
+
+/* ── Raw HTML fallback blocks ───────────────────────────────────────────── */
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) pre.md-html {
+  font: var(--text-xs)/1.6 var(--mono);
+  color: var(--t3);
+  background: var(--s1);
+  border: 1px solid var(--line);
+  border-radius: var(--round-xs);
+  padding: 8px 12px;
+  overflow-x: auto;
+  margin: 8px 0;
+  tab-size: 4;
+}
+
+/* ── Lists and line wrapping ────────────────────────────────────────────── */
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) :is(ul, ol):not(.md-task-list) {
+  margin: 4px 0 8px;
+  padding-inline-start: 1.6em;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) li > p {
+  margin: 0.2em 0;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) li + li {
+  margin-top: 0.35em;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) :is(p, li, .md-lead) {
+  overflow-wrap: anywhere;
+}
+:is(.prose, .tool-markdown, .plan-document, .desk-markdown, .resource-document) pre {
+  tab-size: 4;
+}
+
+/* ── Tables in prose and cards ──────────────────────────────────────────── */
+:is(.md-prose-table, .md-document-table) {
+  min-width: 0;
+  max-width: 100%;
+  margin: 8px 0;
+}
+:is(.md-prose-table, .md-document-table) > .md-table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+  scrollbar-width: thin;
+}
+:is(.md-prose-table, .md-document-table) table {
+  border-collapse: collapse;
+  min-width: 100%;
+  width: 100%;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-xs);
+}
+:is(.md-prose-table, .md-document-table) :is(th, td) {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  min-width: 8ch;
+  overflow-wrap: normal;
+}
+:is(.md-prose-table, .md-document-table) th {
+  font-weight: var(--weight-medium);
+  color: var(--t1);
+  background: var(--s2);
+  text-align: left;
+}
+:is(.md-prose-table, .md-document-table) .md-path {
+  max-width: 100%;
+}

@@ -491,12 +491,28 @@ test('tool cards retain visible results for short and long input/output combinat
     const bounds=await card.evaluate(el=>{const card=el.getBoundingClientRect(),result=el.querySelector('.result-content')!.getBoundingClientRect();return {bottom:card.bottom,outcome:result.top+Math.min(30,result.height)};});
     expect(bounds.outcome,`${kind}/${longInput}/${longOutput}`).toBeLessThan(bounds.bottom);
     const request=card.locator(kind==='shell'?'.command-request':'.tool-input');
-    expect(await request.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(88);
-    expect(await result.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(142);
-    if(longInput) expect(await request.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
-    if(longOutput) expect(await result.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+    const reqClamps=request.locator('.line-clamp');
+    if(await reqClamps.count()>0){
+      const clamped=request.locator('.line-clamp[data-clamped]');
+      if(longInput) expect(await clamped.count()).toBeGreaterThan(0);
+      else expect(await clamped.count()).toBe(0);
+    }else{
+      expect(await request.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(88);
+      if(longInput) expect(await request.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+    }
+    if(kind==='shell'){
+      if(longOutput) expect(await card.locator('.terminal-fold').count()).toBeGreaterThan(0);
+      else expect(await card.locator('.terminal-fold').count()).toBe(0);
+    }else if(await result.locator('.line-clamp').count()>0){
+      const clamped=result.locator('.line-clamp[data-clamped]');
+      if(longOutput) expect(await clamped.count()).toBeGreaterThan(0);
+      else expect(await clamped.count()).toBe(0);
+    }else{
+      expect(await result.evaluate(el=>parseFloat(getComputedStyle(el).maxHeight))).toBe(142);
+      if(longOutput) expect(await result.evaluate(el=>el.scrollHeight>el.clientHeight)).toBe(true);
+    }
     if(kind==='shell'&&longInput&&longOutput) {
-      await card.locator('.op-title').hover();
+      await card.locator('.op-head').hover();
       await expect(card).toHaveAttribute('data-hover-reading','focused');
       const allocation=await card.evaluate(el=>{
         const request=el.querySelector('.command-request')!,result=el.querySelector('.result-content')!,area=el.querySelector('.result-area')!;
@@ -504,7 +520,7 @@ test('tool cards retain visible results for short and long input/output combinat
       });
       expect(allocation.input).toBeCloseTo(Math.min((await page.viewportSize())!.height*.24,180),0);
       expect(allocation.output).toBeCloseTo(Math.max(142,allocation.room-280),0);   // the result may use all the room; the card itself shrinks to fit (UI-9)
-      expect(allocation.rule).toBe('1px');expect(allocation.padding).toBe('6px');
+      expect(allocation.rule).toBe('1px');expect(allocation.padding).toBe('8px');
       await page.keyboard.press('Escape');
     }
   }
