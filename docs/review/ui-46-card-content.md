@@ -32,6 +32,8 @@
 
 **Checked.** `tests/browser/card-content.spec.ts` (fixtures of a long command, a heredoc, long and wide output, a long Markdown write and a tool call with long arguments, at 1440 and 600): no horizontal overflow, each clamp ends between lines, every collapsed card ends on a whole line, line breaks kept, copying returns the original text, Expand shows everything. The `passage-layout`, `diff-line-wrap`, `conversation-view` and history-related specs are unchanged and green; no golden changed.
 
-**Real sessions** (journals are never printed; prefixes and counts only): see the PR.
+**Real sessions** (journals are never printed; prefixes and counts only). Claude Code `rec_ebc58aff` (384 cards at 1440) and `rec_45b046b2` (216 cards) and Codex `rec_372f6b61` (339 cards): no card overflows sideways and no line is cut at a card edge. At 600 a smaller sample (7 to 46 cards each) was clean. Known gap: 10 of 146 MCP cards (browser results) and 1 Read card in `rec_ebc58aff` still have text below the card edge that no cut hides (cause not found); `rec_45b046b2` showed 9 MCP and 5 Read cards of the same kind before the closed-details fix to the counter.
+
+**Not green, not caused here.** `reading-column-edges.spec.ts` at 2000 and 2560 measures the first mounted `.prose p`; card heights decide which rows are mounted, and the paragraph it lands on has 12 px of padding (13 px indent against 8). It fails intermittently at 2560 on clean main.
 
 **Left alone.** Hover zoom keeps its own room (the clamps and the cut lift while a card is read in place). The reading-edge, map and History paging code belong to other tasks.
