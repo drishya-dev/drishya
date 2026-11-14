@@ -47,54 +47,35 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 
 ---
 
-## 3. The videos
+## 3. The video: one film, and cuts from it
 
-All are made from genuine captures on a throwaway public demo repository. No generated or mock UI, ever (doctrine: the *truth* test).
+**Revised 15 Nov (Yash: "shouldnt it be less or one video that gives the whole impression of the product?").** Agreed: one film, not five productions.
+- A launch is judged by one strong video, and two builders on a tight date should make one excellent film rather than four average ones.
+- Every other piece is a cut of the same edit, so it costs no new production.
+- The long walkthrough is dropped for launch. The README, the site and the comment threads answer "how does it work". Make it after week one only if people ask.
+- The side-by-side becomes the film's opening.
 
-| # | Video | Length and format | Where | Purpose |
-|---|---|---|---|---|
-| V1 | **Hook** | 30 to 40 s; 9:16 and 1:1 cuts | X, LinkedIn native, Reddit, YouTube Shorts | Stop the scroll: the agent text wall, then Drishya, live |
-| V2 | **Launch film** | 90 to 120 s; 16:9, with a 1:1 cut | LinkedIn company and personal accounts, Product Hunt, README, the site | The whole story (section 2), with a voiceover |
-| V3 | **Walkthrough** | 6 to 10 min; 16:9 with chapters | YouTube, linked from HN, dev.to and the PH comment | One real task end to end, for people who want depth |
-| V4 | **Side by side** | 45 to 60 s; 16:9 split screen | X, LinkedIn, Reddit | The same agent task: terminal only versus Drishya |
-| V5–V10 | **Feature shorts** | 15 to 30 s each; 1:1 | One every two days after launch | Files peek and history, Git review and Compare, search, questions, the live speed, three harnesses |
+| Piece | Length and format | Where | Made from |
+|---|---|---|---|
+| **The film** | 75 to 90 s; 16:9, with 1:1 and 9:16 versions | README, the site, Product Hunt, LinkedIn (company and both personal accounts), YouTube | The whole story (section 2) |
+| **The 30 s cut** | 30 s; 9:16 and 1:1 | X, Reddit, YouTube Shorts, the README GIF (silent) | The film's opening and its proof section |
+| **The side-by-side cut** | 20 s; 16:9 | Harsh's LinkedIn post, X, r/ChatGPTCoding | The film's opening, terminal versus Drishya |
+| **The feature cuts** | 15 to 20 s each, four or five of them; 1:1 | One every two days after launch | The film's tools section, slightly longer per feature |
 
-### Scripts (voiceover in the builders' own voices; captions always burned in)
+### The film's script (80 s; no narration, captions plus quiet product sound)
 
-**V1, Hook (35 s)**
-- 0–4 s: the terminal scrolling agent text. Caption: "Your agent just changed 14 files."
-- 4–7 s: caption: "Do you know what it did?"
-- 7–25 s: Drishya live on the same session: read → run → fail (red) → edit → pass, with prose rising underneath. Tight zooms.
-- 25–32 s: the Files peek on an edited file, showing its earlier changes. Caption: "Every read, run and edit. Real, live, local."
-- 32–35 s: the logo, "Drishya, open source", the link.
+1. **0–10 s, split screen.** Left: the same agent task in a terminal, text scrolling. Right: Drishya. Caption: "Your agent just changed 14 files. Do you know what it did?"
+2. **10–40 s, Drishya full frame, a live Claude Code session.** It reads a file, runs the tests, a test fails (red), it edits, the tests pass, and its prose rises beneath, each step on the repository map. Captions name each step in 2 to 4 words.
+3. **40–52 s, three harnesses.** A Codex session live, then Home with Claude Code, Codex and Antigravity sessions. Caption: "Claude Code, Codex and Antigravity."
+4. **52–70 s, the tools.** The Files peek on the edited file and its earlier changes, Git review, Compare, search, then a question answered in place. One caption each.
+5. **70–76 s.** Caption: "Everything stays on your machine. No telemetry. Open source."
+6. **76–80 s.** The logo, the install command and the GitHub link.
 
-**V2, Launch film (110 s)**
-1. 0–8 s: the familiar moment.
-2. 8–20 s: Yash or Harsh: "We use coding agents all day. The agent knows the change; we didn't. So we built Drishya."
-3. 20–55 s: the proof (section 2, beat 3) on a live Claude Code session.
-4. 55–75 s: a Codex session, then an Antigravity session on Home: "the same view for Claude Code, Codex and Antigravity".
-5. 75–95 s: the tools: Files peek, Git review, Compare, search, a question answered in place.
-6. 95–105 s: "Everything stays on your machine. No telemetry. Open source."
-7. 105–110 s: the install command and the GitHub link.
+### Voice: no AI voice, and no narration in the film (decided 15 Nov)
 
-**V3, Walkthrough (8 min, chapters)**
-1. Why (0:00).
-2. Install (0:40).
-3. A real task live: fix a failing test and add a small feature (1:20).
-4. Reading it back: Work and Conversation (3:30).
-5. Files, peek and history (4:30).
-6. Git review, Compare and the graph (5:30).
-7. Search and questions (6:30).
-8. Privacy and how it works locally (7:15).
-9. Try it (7:45).
-
-Unscripted narration over a real run; cut dead time only.
-
-**V4, Side by side (50 s):** the same prompt run twice, split screen. Left: the terminal only. Right: Drishya. No voice, just captions on the right ("read `auth.ts`", "test failed", "edited 3 lines") and a final card. Don't claim the agent is faster or better; the point is visibility.
-
-**V5–V10:** one feature each, 20 s, the same caption style, ending on the link.
-
----
+- **Not an AI voice.** The audience is developers wary of AI-generated content, and the product's whole claim is *real, not generated*. A synthetic voice is detectable, and it undercuts that claim in the first seconds. Product Hunt and HN comments also call it out.
+- **No narration in the film at all.** Most LinkedIn and X video is watched muted. Captions plus the product's own quiet sounds carry the story at any volume. It also needs no recording booth, no retakes and no accent worries, and the same cut works everywhere.
+- **The builders' real voices** go where a voice adds trust: a 10 to 20 s face-to-camera or voice note at the top of Yash's LinkedIn post (optional), the Show HN and Product Hunt comments in their own words, and the walkthrough if it is made later.
 
 ## 4. Tools and skills for making the videos
 
@@ -103,11 +84,11 @@ Decided for quality, truth and privacy (real sessions must not leak). Two to fiv
 | Job | Tool | Why |
 |---|---|---|
 | Capture the Drishya UI | **Our own Playwright-driven capture** of the real running app, the same method SITE-2 used (native pointer receipts, deterministic cursor), at 2560×1440 60 fps | Repeatable takes, exact cursor paths, zoom headroom; nothing third-party sees the screen |
-| Capture the terminal and harness apps | **OBS Studio** (free; Windows and Mac) or **Cap** (open source, with auto zoom) at 2560×1440 60 fps | The terminal-only half of V4 and the harness windows in V2 |
-| Compose the short and mid videos (V1, V2, V4, V5–V10) | **Remotion**, through its official Claude Code agent skills (`remotion-dev/skills`) | Videos as React code: captions, title cards, split screen and zoom tracks that Claude, Codex or Antigravity can write and re-render when copy changes. Check Remotion's licence (free for very small companies) before use |
-| Edit the long walkthrough (V3) | **DaVinci Resolve** (free) | A manual cut, chapters, audio clean-up and voice isolation |
-| Voice | The builders' own voices, with a decent USB mic, cleaned in Resolve | Developer audiences trust a real maker's voice over text-to-speech |
-| Captions | **whisper.cpp** locally → SRT → Remotion or Resolve | Local transcription keeps the narration private; most people watch muted |
+| Capture the terminal and harness apps | **OBS Studio** (free; Windows and Mac) or **Cap** (open source, with auto zoom) at 2560×1440 60 fps | The terminal half of the film's opening and the harness windows in the film |
+| Compose the film and every cut | **Remotion**, through its official Claude Code agent skills (`remotion-dev/skills`) | Videos as React code: captions, title cards, split screen and zoom tracks that Claude, Codex or Antigravity can write and re-render when copy changes. Check Remotion's licence (free for very small companies) before use |
+| Final colour, sound mix and export (and a later walkthrough, if made) | **DaVinci Resolve** (free) | Fine timing, product-sound levels and the export per format |
+| Voice | None in the film; no AI voice anywhere (see section 3). The builders' own voices only for the optional LinkedIn intro and a later walkthrough | Captions carry the film muted; a synthetic voice undercuts "real, not generated" |
+| Captions | Written by hand from the script, set in Remotion | No narration to transcribe; whisper.cpp only if a voiced piece is made later |
 | Music | Quiet, royalty-free (YouTube Audio Library) | Under the voice, never over it |
 | Thumbnails and post images | HTML templates with the approved SITE-2 product frames, rendered to PNG with Playwright and designed with the installed **taste-skill**, **impeccable** and **emil-design-eng** skills | One consistent look and real frames, re-rendered per size |
 
@@ -137,7 +118,7 @@ Decided for quality, truth and privacy (real sessions must not leak). Two to fiv
 6. Git review, Compare (branch versus main) and the Git graph.
 7. Search across the session; a question card answered in place.
 8. A very large session opening at once (use a synthetic large fixture, not a real private session).
-9. The same prompt run in a terminal only, for V4.
+9. The same prompt run in a terminal only, for the side-by-side cut.
 10. The install command on a clean terminal.
 
 ---
@@ -154,7 +135,7 @@ Decided for quality, truth and privacy (real sessions must not leak). Two to fiv
 
 Install line is a placeholder: use SHIP-9's exact command.
 
-**LinkedIn: company page (D0, with V2)**
+**LinkedIn: company page (D0, with the film)**
 > Coding agents do the work. You get a wall of text.
 >
 > Drishya shows you what your agent actually did, while it does it: every file it read, every command it ran, the test that failed and the edit that fixed it. Real material, live, on a map of your own repository.
@@ -165,7 +146,7 @@ Install line is a placeholder: use SHIP-9's exact command.
 >
 > Try it: `<install command>` · github.com/drishya-dev/drishya
 
-**LinkedIn: Yash (D0, personal story, with V2 or V1)**
+**LinkedIn: Yash (D0, personal story, with the film or the 30 s cut)**
 > I've spent the last months building with coding agents every day, and one thing kept bothering me: after a long session, the agent "knew" the change and I didn't. I'd either trust it or spend twenty minutes reconstructing what happened.
 >
 > So Harsh and I built Drishya. It plays the agent's real work (what it read, ran, saw fail and edited) live, beside your repository. Not a summary: the actual material.
@@ -173,13 +154,13 @@ Install line is a placeholder: use SHIP-9's exact command.
 > It's free, open source and runs entirely on your machine. We'd love your honest feedback.
 > `<install command>` · github.com/drishya-dev/drishya · with @Harsh
 
-**LinkedIn: Harsh (D0, the builder's angle, with V4)**
+**LinkedIn: Harsh (D0, the builder's angle, with the side-by-side cut)**
 > Same agent, same task, two views. On the left, what you normally see. On the right, Drishya: every read, run and edit as it happens.
 >
 > We built it to read local Claude Code, Codex and Antigravity sessions without touching them, store nothing outside your machine, and stay fast on sessions of almost a gigabyte. Open source, Apache-2.0. Feedback very welcome. With @Yash
 
 **X: launch thread (D0, from the company account; the builders quote it)**
-1. Your coding agent just changed 14 files. Do you know what it did? Drishya shows you, live. [V1]
+1. Your coding agent just changed 14 files. Do you know what it did? Drishya shows you, live. [the 30 s cut]
 2. Every file it read, command it ran, test that failed and edit that fixed it: the real material, on a map of your repo.
 3. Claude Code and Codex live and replayed; Antigravity sessions too. Files, Git review, Compare and search beside it.
 4. 100% local. No telemetry. Open source. `<install command>` · github.com/drishya-dev/drishya
@@ -198,7 +179,7 @@ Install line is a placeholder: use SHIP-9's exact command.
 - **Tagline:** *Watch your coding agent's real work, live, beside your repo*
 - **Description (260 characters max):** *Drishya plays what Claude Code, Codex and Antigravity actually did (files read, commands run, failures, edits) live on a map of your repository, with Files, Git review and search beside it. Local only, no telemetry, open source.*
 - **Gallery:**
-  1. V2 as the video;
+  1. the film as the video;
   2. 5 frames from SITE-2's approved set (live work, Files peek, Git review, Compare, three harnesses), each with a 4-word headline.
 - **Maker comment:** a shorter version of the Show HN comment, plus a thank-you line.
 - **Topics:** Developer Tools, Open Source, Artificial Intelligence.
@@ -207,8 +188,8 @@ Install line is a placeholder: use SHIP-9's exact command.
 
 | Community | Angle | Check first |
 |---|---|---|
-| r/ClaudeAI | "Built a live view of what Claude Code actually does in a session." V1 plus the text | The weekly self-promotion rule or flair |
-| r/ChatGPTCoding | "See what Codex and Claude Code did: a local, open-source viewer." V4 | Self-promotion rules |
+| r/ClaudeAI | "Built a live view of what Claude Code actually does in a session." the 30 s cut plus the text | The weekly self-promotion rule or flair |
+| r/ChatGPTCoding | "See what Codex and Claude Code did: a local, open-source viewer." the side-by-side cut | Self-promotion rules |
 | r/opensource | The open source, local, no-telemetry design | Must be OSS: it is |
 | r/SideProject | The builders' story | None special |
 | r/webdev | Only on **Showoff Saturday** | Its Saturday-only rule |
@@ -217,11 +198,11 @@ Install line is a placeholder: use SHIP-9's exact command.
 Skip r/programming: launch posts are usually removed there. Every post answers comments for the first two hours. Never cross-post the same text, never ask for upvotes, and never use alternate accounts.
 
 **dev.to (D+2)** carries two articles.
-1. "Why we built Drishya: understanding the agent's work while it happens." This is the story, with V3 embedded.
+1. "Why we built Drishya: understanding the agent's work while it happens." This is the story, with the film embedded.
 2. "Reading three coding-agent journals live, read-only, with a zero-dependency Node daemon." A technical piece on tailing and folding, the redaction-first store, loopback security and the speed numbers. It is the one most likely to be shared.
 
-**YouTube.** Upload V3 on D0 and V1 as a Short. Titles:
-- *Drishya: see what your coding agent did, live (full walkthrough)*
+**YouTube.** Upload the film on D0 and the 30 s cut as a Short. Titles:
+- *Drishya: see what your coding agent did, live*
 - *Your agent changed 14 files. Here's what it did.*
 
 The descriptions carry chapters, the install line, the GitHub link and a privacy line.
@@ -250,12 +231,12 @@ Original rule:
 
 | When | What |
 |---|---|
-| D-2 | The company pages are live; the repository is public (PUBLIC-1); the README carries V1 as a GIF and the install line works from a clean machine |
-| D0 08:30 ET | Show HN; GitHub public; the LinkedIn company post with V2; Yash's and Harsh's posts within 30 minutes; the X thread; YouTube V3 and V1 |
+| D-2 | The company pages are live; the repository is public (PUBLIC-1); the README carries the 30 s cut as a GIF and the install line works from a clean machine |
+| D0 08:30 ET | Show HN; GitHub public; the LinkedIn company post with the film; Yash's and Harsh's posts within 30 minutes; the X thread; YouTube: the film and the Short |
 | D0 +1 to 3 h | Builders answer HN and LinkedIn comments; reshare each other's posts with their own line |
 | D+1 00:01 PT | Product Hunt; LinkedIn and X posts pointing to it; newsletters submitted |
 | D+2 | Reddit, one community every few hours; the two dev.to articles |
-| D+3 to D+14 | One feature short (V5–V10) every two days on LinkedIn and X; replies to every issue and comment |
+| D+3 to D+14 | One feature cut every two days on LinkedIn and X; replies to every issue and comment |
 | D+7 | A "week one" post: what people asked for, what we fixed, real numbers (stars, installs) only if they are flattering *and* true |
 
 Don't launch HN and Product Hunt on the same day: both need the builders in the comments.
@@ -300,7 +281,7 @@ Don't launch HN and Product Hunt on the same day: both need the builders in the 
 - **For Yash and Harsh:**
   1. ~~D0: 18 or 24 Nov.~~ **18 Nov** (Yash, 15 Nov).
   2. Who posts Show HN (proposed: Yash).
-  3. The voice of V2: one builder or both.
+  3. ~~The voice of the film.~~ Decided: no narration and no AI voice (section 3). Only whether Yash adds the optional 15 s intro.
   4. Final wording of each post.
   5. Whether to buy Premium now or at D-2.
 - **Left for 16 and 17 Nov:** recording (section 4's shot list) and the edit. VIDEO-1 is that work; SHIP-11 is publishing section 5 on section 6's schedule.
