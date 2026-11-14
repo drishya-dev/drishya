@@ -52,7 +52,7 @@ git add -A; git commit -qm "throwaway repo for Antigravity cases"
 | # | Case | Prompt | What you do |
 |---|---|---|---|
 | 1 | Browser subagent, screenshots, recording | Open index.html in the browser, take a screenshot, click "Add one" three times and confirm the counter shows 3. | Nothing; let it finish. |
-| 2 | MCP call | Use the everything MCP server: call its echo tool with "drishya test", then its add tool with 2 and 3. | Allow the tool if asked. |
+| 2 | MCP call | Use the everything MCP server: call its echo tool with "drishya-ag5-mcp", then get-sum with 2 and 3, then get-tiny-image. Use actual MCP calls; do not simulate them in a shell. | Allow the tool if asked. |
 | 3 | Plan and plan review | Plan adding a "Reset" button to index.html. Wait for my review before writing code. | Leave one comment on the plan, then approve it. |
 | 4 | Question | Before changing anything, ask me which colour the Reset button should be, offering three choices. | Answer it. Then start a second conversation with the same prompt and skip or dismiss the question. |
 | 5 | Command approval, approved and denied | Run `npm test`, then run `git clean -n`. | Approve the first, deny the second. |
@@ -69,3 +69,7 @@ connection to it (for example Chrome Remote Desktop). The other cases run unatte
 Tell Codex (or Fable) the cases are recorded and roughly when. Codex finds them with `pnpm check:real -- antigravity`
 in a scratch home, maps each, adds synthetic reproductions and `check:real` cases, and lists any case that could not
 be produced, with the reason. Delete `ag-cases` whenever you like; the recorded sessions stay in Antigravity.
+
+## 14 November: current MCP tool names
+
+The official Everything feature list names `echo`, `get-sum` (not the old `add`) and `get-tiny-image`. Source: https://github.com/modelcontextprotocol/servers/blob/main/src/everything/docs/features.md . Use the client's actual supported MCP registration flow, preserving existing servers and permissions; the user may complete required UI/restart actions. Drishya never reads or edits native MCP configuration or credentials. Install test dependencies only in the throwaway workspace when needed.
