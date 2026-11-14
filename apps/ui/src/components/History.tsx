@@ -19,6 +19,8 @@ import {operationOutcome} from '../lib/operation-outcome.ts';
 import { reasoningGap } from '../lib/reasoning-gap.ts';
 import './reasoning-gap.css';
 import { ToolInput } from './ToolInput.tsx';
+import { LineClamp } from '../lib/line-clamp.tsx';
+import { CardBody } from './CardBody.tsx';
 import { QuestionCard } from './QuestionCard.tsx';
 import { isQuestionTool } from '../lib/ask-question.ts';
 import { ToolOutput } from './ToolOutput.tsx';
@@ -1111,9 +1113,9 @@ const OpCard = memo(function OpCard({ so, op, index }: { so: SceneOp; op: Operat
         )}
       </header>
       {op.declined && <DeclinedLine declined={op.declined} />}
-      {!expanded && <div className="op-body">
+      {!expanded && <CardBody>
         {imageMaterial??<><OpPreview op={op} resolving={resolving} onSource={measureSource}/>{op.images?.length&&op.detail.kind!=='read'?<OpImages images={op.images} compact/>:null}</>}
-      </div>}
+      </CardBody>}
       {expanded&&<ExpandedOperation op={op} image={imageMaterial}/>}
       {!expanded && op.artifactIds.some((id) => id.endsWith('_input')) && <div className="material-context">Shortened · Expand to read all of it</div>}
       <EvidenceNote op={op} />
@@ -1290,9 +1292,9 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
       return (
         <div className="mcp">
           {(typeof document==='undefined'||document.documentElement.dataset.uiVersion!=='modern')&&<div className="mcp-tool">{d.tool}</div>}
-          <ToolInput value={d.input}/>
+          <ToolInput value={d.input} compact/>
           <ResultArea state={op.status} resolving={resolving}>
-            <div className="mcp-result"><StoredToolResult op={op}/></div>
+            <LineClamp lines={3} className="mcp-result"><StoredToolResult op={op}/></LineClamp>
           </ResultArea>
         </div>
       );
@@ -1311,8 +1313,8 @@ function OpPreview({ op, resolving, onSource }: { op: Operation; resolving: bool
     default:
       if (isQuestionTool(op.tool)) return <QuestionCard op={op}/>;
       return <>
-        <ToolInput value={d.input}/>
-        <ResultArea state={op.status} resolving={resolving}><div className="mcp-result"><StoredToolResult op={op}/></div></ResultArea>
+        <ToolInput value={d.input} compact/>
+        <ResultArea state={op.status} resolving={resolving}><LineClamp lines={3} className="mcp-result"><StoredToolResult op={op}/></LineClamp></ResultArea>
       </>;
   }
 }
