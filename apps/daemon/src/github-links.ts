@@ -22,7 +22,7 @@ export function parseGithubUrl(value: string): { owner: string; repo: string; ki
   return { owner: m[1]!, repo: m[2]!, kind: m[3] === 'pull' ? 'pull' : 'issue', number: Number(m[4]) };
 }
 
-const defaultRun: GhRun = (args, signal, maxBuffer = 256 * 1024) => new Promise((yes, no) => {
+export const defaultGhRun: GhRun = (args, signal, maxBuffer = 256 * 1024) => new Promise((yes, no) => {
   execFile('gh', args, { signal, timeout: 15_000, maxBuffer, windowsHide: true, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } }, (error, stdout, stderr) => {
     if (error) { const e = error as NodeJS.ErrnoException & { stderr?: string }; e.stderr = String(stderr).slice(0, 400); no(e); } else yes(stdout);
   });
@@ -38,7 +38,7 @@ export class GithubLinks {
   private available: boolean | undefined;
   private app: App;
   private run: GhRun;
-  constructor(app: App, run: GhRun = defaultRun) { this.app = app; this.run = run; }
+  constructor(app: App, run: GhRun = defaultGhRun) { this.app = app; this.run = run; }
 
   get enabled(): boolean {
     const row = this.app.store.db.prepare('SELECT value FROM meta WHERE key=?').get(META_KEY) as { value: string } | undefined;

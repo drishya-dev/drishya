@@ -51,7 +51,7 @@ export async function main() {
       const running = await startServer({
         port: values.port ? Number(values.port) : undefined,
         // For scripted runs (tests, previews). Normal launches get a fresh random token.
-        token: process.env.DRISHYA_TOKEN || undefined,
+        token: launchToken(process.env.DRISHYA_TOKEN),
         devOrigins: values.dev ? ['http://127.0.0.1:5173', 'http://localhost:5173'] : [],
       });
       // CONTENT-21: looks across the project's journals, so only the real daemon does it, not every test server.
@@ -200,6 +200,16 @@ function writeOut(path: string, value: unknown) {
   mkdirSync(dirname(resolve(path)), { recursive: true });
   writeFileSync(path, JSON.stringify(value));
   console.log(`Wrote ${path}`);
+}
+
+/**
+ * SEC-3: a token chosen through the environment ends up in the link that is opened with `cmd /c start` (Windows),
+ * `open` or `xdg-open`, so it may hold only URL-safe characters, and it must be long enough to be a secret.
+ */
+export function launchToken(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (!/^[A-Za-z0-9_-]{16,128}$/.test(value)) throw new Error('DRISHYA_TOKEN must be 16-128 characters from A-Z a-z 0-9 _ -');
+  return value;
 }
 
 function openBrowser(url: string) {

@@ -11,7 +11,9 @@ export * from './image.ts';
 // or patches that name a protected file make their output protected. p2 data may hold such content.
 // p4: added PyPI, GitLab, Docker Hub, DigitalOcean, SendGrid, Twilio (contextual), Shopify,
 // Azure storage AccountKey, Databricks, Linear, Notion and Discord bot token rules; older stores scrub on open.
-export const PRIVACY_POLICY_VERSION = 'p4';
+// p5: a string that is a JSON document (a tool argument recorded as JSON text inside JSON) is redacted value by value, because
+// an escaped newline glued to a token defeated every word-boundary rule. p4 data may hold such tokens.
+export const PRIVACY_POLICY_VERSION = 'p5';
 
 /** Longest single string kept verbatim; beyond this the tail is cut with a marker. */
 export const MAX_STRING_BYTES = 4 * 1024 * 1024;
@@ -192,7 +194,44 @@ function replaceAssignments(text: string, keywords: RegExp, replace: (match: str
   return parts.join('');
 }
 
+/**
+ * SEC-3 (p5). Some harnesses record a tool argument as JSON text inside a JSON string (Antigravity's MCP `Arguments`, a
+ * Codex `output` envelope). Inside that text a newline is the two characters `\n`, so a token that follows one is glued to the
+ * letter `n` and every word-boundary rule (`\bAKIA…`, `\bghp_…`, `\bsk-…`) misses it. A string that is a JSON document is
+ * therefore redacted value by value, as the harness's own tools would read it, and written back as JSON.
+ */
+const NESTED_JSON_LIMIT = 4 * 1024 * 1024;
+function redactNested(input: string, plain: RedactResult, depth: number): RedactResult {
+  if (depth > 8 || input.length < 8 || input.length > NESTED_JSON_LIMIT || !input.includes('\\')) return plain;
+  const start = input.search(/\S/);
+  if (start < 0 || (input[start] !== '{' && input[start] !== '[')) return plain;
+  let parsed: unknown;
+  try { parsed = JSON.parse(input); } catch { return plain; }
+  if (!parsed || typeof parsed !== 'object') return plain;
+  const hits = new Map<string, number>();
+  const walk = (v: unknown): unknown => {
+    if (typeof v === 'string') {
+      const r = redactNestedAware(v, depth + 1);
+      for (const h of r.hits) hits.set(h.rule, (hits.get(h.rule) ?? 0) + h.count);
+      return r.text;
+    }
+    if (Array.isArray(v)) return v.map(walk);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [redactText(k).text, walk(x)]));
+    return v;
+  };
+  const cleaned = walk(parsed);
+  if (!hits.size) return plain;
+  const final = redactPlain(JSON.stringify(cleaned));
+  for (const h of final.hits) hits.set(h.rule, (hits.get(h.rule) ?? 0) + h.count);
+  return { text: final.text, hits: [...hits].map(([rule, count]) => ({ rule, count })) };
+}
+const redactNestedAware = (input: string, depth: number) => redactNested(input, redactPlain(input), depth);
+
 export function redactText(input: string): RedactResult {
+  return redactNested(input, redactPlain(input), 0);
+}
+
+function redactPlain(input: string): RedactResult {
   let text = input;
   const hits = new Map<string, number>();
   for (const rule of RULES) {
