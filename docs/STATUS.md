@@ -31,7 +31,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| UI-41d | @yash + Antigravity | `ag-builder/ui-41d-mode-switch` | 2026-11-14 | Work to Conversation keeps reading place: modeAnchor and switching layout effects in `apps/ui/src/components/History.tsx`, Work -> Conversation anchor mapping and restore, `tests/browser/conversation-switch.spec.ts`, `docs/review/ui-41d-mode-switch.md`, TASKS/STATUS. |
 | UI-50 | @yash + Antigravity | `ag-builder/ui-50-text-formatting` | 2026-11-14 | Text formatting handled the same everywhere: markdown renderer and prose/card styling in `apps/ui/src/components/` and `apps/ui/src/modern/`, horizontal scroll / line-structure for literal outputs in action/shell cards, `docs/review/ui-50-formatting.md`, renderer unit tests, browser spec for prose/card/shell tables, TASKS/STATUS. |
 | UI-49 | @yash + Antigravity | `ag-builder/ui-49-narrow-chrome` | 2026-11-14 | Narrow windows: chrome and layout CSS in `apps/ui/src/modern/` (`reading-edges.css`, `surroundings.css`, `layout.css`, etc.), reading edge / clearance logic in `apps/ui/src/lib/reading-edges.ts` or History components if needed, new `tests/browser/narrow-reading-overlap.spec.ts`, `docs/review/ui-49-narrow-chrome.md`, TASKS/STATUS. |
 | LIVE-7 | @yash + Claude Sonnet 5.5 | `claude/great-cannon-da4770` | 2026-11-14 | Whole task. Daemon live path (tail, watch/debounce, SSE batching, projection), the page's live merge/render scheduling, a developer-switch latency instrument (local only, no telemetry), `docs/review/live-7-latency.md`, a guarding unit/bench, TASKS/STATUS. No pixel or motion change; PERF-3's paging decision and UI/CSS owned by other claims are untouched. |
@@ -95,6 +94,16 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - Measured a full visit (load, hover, scroll, resize) at 1440 and 2000, 4x CPU throttle, three runs each, native 240 Hz and a 60 Hz model: `scripts/site-trace.ts`. Fixed the causes: the dots now draw in a worker, the laptop's app boots in idle time and no longer reloads on resize (the tour is CSS sticky, not a pin), the first-load work is split into small tasks with the intro starting after the first paint, the map is held to 60 frames a second, and the body's reveal animation no longer keeps the page one animated layer. At 1440: first-3.5 s frames over 33 ms 24 to 5, longest scroll frame 2142 to 363 ms, layout shift 0.462 to 0.014. Frames of 30 scroll positions match the old build; there are no browser specs for `apps/site`.
 - Not done: the tour's replay steps are the product's own render cost (`apps/ui`), so scroll frames over 33 ms barely move. **Dots decision left to Yash** (clean grid vs current, frames in `docs/images/site-3-dots-*`); a 60 fps cap on GSAP/Lenis is offered, not applied. Record: `docs/review/site-3-smoothness.md`. PR for Fable's review; not merged.
+
+### Yash with Antigravity — 14 Nov: UI-41d Switching from Work to Conversation keeps the reading place too
+
+- Fixed mode-switch anchor mapping and restoration when switching from Work to Conversation mode in `apps/ui/src/components/History.tsx`.
+- Handled folded operations runs by implementing the nearest visible element resolution chain across `slot` and `leadSlot` for `ops`, `prose`, and `turn`.
+- Fixed unmounted target resolution to direct virtual list allocation to `lead` rather than a zero-height folded placeholder.
+- Persisted restored anchor to `readingAnchor.current` and memory upon successful restore.
+- Verified on real Claude Code (`rec_dac6d1d1` 3.7 MB, `rec_7baa719e` 390 KB) and Codex (`rec_45333698` 5.4 MB) sessions at 1440 px and 600 px at scroll fractions 0.15, 0.50, and 0.80 (all 100% matched Work -> Conv -> Work).
+- Updated `tests/browser/conversation-switch.spec.ts` with top, bottom, and 600 px switch tests; all 7 tests passed in 52.7s on Edge.
+- Documentation: `docs/review/ui-41d-mode-switch.md`, `docs/TASKS.md` ticked and synced. PR #485 for review.
 
 ### Yash with Claude Sonnet 5.5 (started on Opus 5.5) — 13 Nov: UI-43 composer model menu
 
