@@ -28,23 +28,26 @@ export function latestOnly(): (key: string) => () => boolean {
 }
 
 /** Refresh during sustained capture, with one request in flight and one trailing refresh.
- * A trailing debounce can starve forever when notices arrive faster than its delay.
- * Keep the delay above session-switch latency: a refresh that starts while openRecording is
- * still fetching supersedes it, and the returning session loses its restored reader. */
+ * The first notice after a quiet spell refreshes at once (LIVE-7: a trailing debounce added its whole
+ * delay to every step the agent took); notices within `delay` of the last refresh's start collapse into
+ * one more run at the end of that window. A trailing debounce alone can also starve forever when notices
+ * arrive faster than its delay. reloadProjection waits for an open of the same session to finish, so a
+ * refresh that fires early cannot supersede it and lose the returning session's restored reader. */
 export function liveRefresh(refresh: () => Promise<void>, failed: (error: unknown) => void, delay = 150) {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let running = false, dirty = false, closed = false;
+  let lastStart = -Infinity;
   const run = async () => {
     timer = undefined;
     if (closed || running) return;
-    dirty = false; running = true;
+    dirty = false; running = true; lastStart = Date.now();
     try { await refresh(); } catch (error) { if (!closed) failed(error); }
     finally { running = false; if (dirty && !closed) schedule(); }
   };
   const schedule = () => {
     if (closed) return;
     dirty = true;
-    if (timer === undefined && !running) timer = setTimeout(() => void run(), delay);
+    if (timer === undefined && !running) timer = setTimeout(() => void run(), Math.max(0, lastStart + delay - Date.now()));
   };
   return { schedule, close() { closed = true; if (timer !== undefined) clearTimeout(timer); } };
 }

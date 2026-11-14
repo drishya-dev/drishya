@@ -78,6 +78,12 @@ export class BlobStore {
   private searches = new Map<string, BlobSearchState>();
   readonly dir: string;
   private madeDirs = new Set<string>();
+  /**
+   * Blobs this process has seen stored. A live session's projection is rebuilt on every update and puts the
+   * same derived blobs again; asking the filesystem each time cost about a quarter of a rebuild (LIVE-7).
+   * Forgotten when a blob is removed; bounded, so a long run cannot grow it without limit.
+   */
+  private known = new Set<string>();
   constructor(dir: string) {
     this.dir = dir;
     mkdirSync(dir, { recursive: true });
@@ -114,7 +120,11 @@ export class BlobStore {
   put(text: string): { sha: string; bytes: number } {
     const buf = Buffer.from(text, 'utf8');
     const sha = createHash('sha256').update(buf).digest('hex');
-    if (!this.exists(sha)) this.save(sha, buf);
+    if (!this.known.has(sha)) {
+      if (!this.exists(sha)) this.save(sha, buf);
+      if (this.known.size >= 200_000) this.known.clear();
+      this.known.add(sha);
+    }
     return { sha, bytes: buf.length };
   }
   get(sha: string): string | undefined {
@@ -296,6 +306,7 @@ export class BlobStore {
 
   delete(sha: string) {
     this.lineIndexes.delete(sha);
+    this.known.delete(sha);
     if (/^[0-9a-f]{64}$/.test(sha)) this.remove(sha);
   }
 }

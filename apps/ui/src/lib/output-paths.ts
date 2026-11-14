@@ -1,9 +1,19 @@
 import {prosePath,type ProsePath} from './prose-path.ts';
 
 export interface OutputPath extends ProsePath {start:number;end:number}
+/** The answer is pure in (text, root, limit) and a live session asks the same lines on every update, so recent answers are kept (LIVE-7). Callers only read them. */
+const cache=new Map<string,OutputPath[]>();
+const CACHE_LIMIT=4000;
 /** Diagnostic locations, not commands or arbitrary source expressions. Never probes disk. */
 export function outputPaths(text:string,root?:string,limit=8):OutputPath[]{
  if(text.length>4096)return [];
+ const key=`${limit}\u0000${root??''}\u0000${text}`,known=cache.get(key);
+ if(known)return known;
+ const found=scanOutputPaths(text,root,limit);
+ if(cache.size>=CACHE_LIMIT)cache.delete(cache.keys().next().value!);
+ cache.set(key,found);return found;
+}
+function scanOutputPaths(text:string,root:string|undefined,limit:number):OutputPath[]{
  const hits:OutputPath[]=[];
  const add=(raw:string,start:number,line?:number)=>{
   const ref=prosePath(raw,root);if(!ref||hits.length>=Math.min(64,limit))return;

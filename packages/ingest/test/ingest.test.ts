@@ -488,13 +488,13 @@ describe('capture health', () => {
 // B1 (audit A06): live ticks coalesce — at most one read in flight plus one pending wake-up per
 // recording — and each live turn does bounded work, so a slow store cannot build a backlog.
 describe('live pacing', () => {
-  it('uses a bounded half-second poll by default without changing explicit intervals', async () => {
+  it('uses a bounded 100 ms poll by default (LIVE-7; was 500 ms) without changing explicit intervals', async () => {
     const file=join(dir,'poll-default.jsonl');
     writeFileSync(file,claudeLine({type:'user',uuid:'poll0',message:{role:'user',content:'synthetic poll check'}}));
     const {recordingId}=await ingest.importSource('claude-code',file);
     const timer=vi.spyOn(globalThis,'setInterval');
     try {
-      ingest.startLive(recordingId);expect(timer).toHaveBeenLastCalledWith(expect.any(Function),500);
+      ingest.startLive(recordingId);expect(timer).toHaveBeenLastCalledWith(expect.any(Function),100);
       await ingest.stopLive(recordingId);
       ingest.startLive(recordingId,1200);expect(timer).toHaveBeenLastCalledWith(expect.any(Function),1200);
       await ingest.stopLive(recordingId);
