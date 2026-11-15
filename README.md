@@ -293,7 +293,7 @@ TypeScript run directly on Node 24 over `node:sqlite` and `node:http`, with a Re
 
 ## Maintainers
 
-Drishya is built and maintained by **Harsh Jain** and **Yash**.
+Drishya is built and maintained by **Harsh Jain** and **Yash Doke**.
 
 Changes follow the two-builder review workflow documented in [AGENTS.md](AGENTS.md).
 
