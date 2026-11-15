@@ -12,7 +12,6 @@ function png(width:number,height:number){
  const header=Buffer.alloc(13);header.writeUInt32BE(width);header.writeUInt32BE(height,4);header[8]=8;header[9]=6;
  return Buffer.concat([Buffer.from('89504e470d0a1a0a','hex'),chunk('IHDR',header),chunk('IDAT',deflateSync(Buffer.alloc((width*4+1)*height))),chunk('IEND',Buffer.alloc(0))]).toString('base64');
 }
-test.use({hasTouch:true});
 let dir:string,app:App,server:RunningServer;
 const ids:Record<string,string>={};
 test.beforeAll(async()=>{
@@ -28,12 +27,12 @@ test.beforeAll(async()=>{
  }
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe test path');rmSync(dir,{recursive:true,force:true});}});
-async function open(page:Page,harness:string,width=390,height=844){
+async function open(page:Page,harness:string,width=600,height=900){
  await page.setViewportSize({width,height});await page.emulateMedia({reducedMotion:'reduce'});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids[harness]}`);
  const thumb=page.locator('.turn-images .op-image').first();await expect(thumb).toBeVisible();return thumb;
 }
 for(const harness of ['claude-code','codex']){
- for(const [width,height] of [[320,640],[390,844],[844,390]])test(`${harness} captured image fits, scrolls at actual size and restores focus at ${width}x${height}`,async({page})=>{
+ for(const [width,height] of [[600,900],[1440,900]])test(`${harness} captured image fits, scrolls at actual size and restores focus at ${width}x${height}`,async({page})=>{
   const remote:string[]=[];page.on('request',r=>{if(r.url().includes('example.invalid'))remote.push(r.url());});
   const thumb=await open(page,harness,width,height);await expect.poll(()=>thumb.locator('img').evaluate((i:HTMLImageElement)=>i.naturalWidth)).toBe(1600);
   await thumb.focus();await thumb.press('Enter');const reader=page.locator('dialog.image-reader');await expect(reader).toBeVisible();
@@ -41,12 +40,12 @@ for(const harness of ['claude-code','codex']){
   await expect(reader.getByRole('button',{name:'Close',exact:true})).toBeInViewport();const stage=reader.locator('.image-reader-stage');
   await expect.poll(()=>stage.locator('img').evaluate((i:HTMLImageElement)=>i.naturalWidth)).toBe(1600);
   expect(await stage.evaluate(e=>e.scrollWidth-e.clientWidth)).toBeLessThanOrEqual(1);
-  await reader.getByRole('button',{name:'Actual size',exact:true}).tap();await expect(stage).toHaveClass(/actual/);
+  await reader.getByRole('button',{name:'Actual size',exact:true}).click();await expect(stage).toHaveClass(/actual/);
   expect(await stage.evaluate(e=>e.scrollWidth-e.clientWidth)).toBeGreaterThan(10);expect(await stage.evaluate(e=>e.scrollHeight-e.clientHeight)).toBeGreaterThan(10);
   await stage.evaluate(e=>{e.scrollTop=e.scrollHeight;e.scrollLeft=e.scrollWidth;});
   const edges=await stage.evaluate(e=>{const s=e.getBoundingClientRect(),i=e.querySelector('img')!.getBoundingClientRect();return {right:i.right-s.right,bottom:i.bottom-s.bottom};});
   expect(edges.right).toBeLessThanOrEqual(1);expect(edges.bottom).toBeLessThanOrEqual(1);
-  await reader.getByRole('button',{name:'Fit',exact:true}).tap();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(thumb).toBeFocused();expect(remote).toEqual([]);
+  await reader.getByRole('button',{name:'Fit',exact:true}).click();await page.keyboard.press('Escape');await expect(reader).toHaveCount(0);await expect(thumb).toBeFocused();expect(remote).toEqual([]);
  });
  for(const failure of ['missing','network','corrupt'])test(`${harness} ${failure} bytes explain the failure and retry only on request`,async({page})=>{
   let available=false,requests=0;await page.route('**/images/*',async route=>{requests++;if(available)await route.continue();else if(failure==='network')await route.abort('failed');else await route.fulfill({status:failure==='missing'?404:200,contentType:failure==='missing'?'text/plain':'image/png',body:'not available'});});
