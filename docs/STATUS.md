@@ -34,7 +34,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 |---|---|---|---|---|
 | TEST-4 | @harsh + Codex | `codex/test-4-conversation-shortcut` | 2026-11-15 | Isolate saved mode for the Conversation shortcut case in `tests/browser/conversation-view.spec.ts`; reproduce, preserve focus and Next failure assertions, and verify with the preceding persistence case. TASKS/STATUS. |
 | TEST-5 | @harsh + Codex | `codex/test-5-site-build` | 2026-11-15 | Browser gate preparation only: root `package.json` and `scripts/test-browser.ts` if needed, TASKS/STATUS, and fresh-worktree verification of the existing site spec. |
-| TEST-6 | @harsh + Codex | `codex/test-6-pending-input-state` | 2026-11-15 | Only the pending-input response case in `tests/browser/fresh-workspace.spec.ts`, plus TASKS/STATUS. Verify against SHIP-5 wording on supported desktop widths and retain request assertions. MOTION-4 uses other cases in this file. |
 | NATIVE-5a | @harsh + Codex | `codex/native-5a-codex-screen-frames` | 2026-11-15 | Typed browser-computer MCP input and own-result images inside `packages/adapter-codex/`, matching `packages/projection/` behavior and tests, `scripts/real-cases/computer-frames.ts`, and TASKS/STATUS. Keep source relationships, existing observation schema, and redaction/byte limits. Scratch browser recording already exists. |
 | LAND-19 | @harsh + Codex | `codex/land-19-intro-dismissal` | 2026-11-15 | Early intro dismissal in `apps/landing/public/intro-boot.js`, the held-module regression in `tests/browser/landing-opening.spec.ts`, TASKS/STATUS. Keep the existing timeout fallback and current marketing site. |
 | SEC-4 | @yash + Claude Sonnet 5.5 | `claude/sec-4-pentest` | 2026-11-15 | Penetration pass on the current main build: `docs/review/sec-4-pentest.md`, `tests/security/` (one regression test per fixed finding), `scripts/pentest/` (hostile page, rebinding, fuzzer, hostile repository and journal), and fixes in `apps/daemon/src/` only where a finding needs one; TASKS/STATUS. Re-run on the frozen SHIP-9 candidate stays open in the report. |
@@ -61,6 +60,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 15 Nov: TEST-6 pending-input fixture
+
+- Updated the pending-input journey to expect the shipped state and check 1440 and 600 px, preserving the answer and no-prompt assertions. Edge, one worker, retries disabled: original failed on the old wording; repaired case passed. Synthetic fixture only; no real sessions checked.
+
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
