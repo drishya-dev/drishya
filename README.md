@@ -291,6 +291,12 @@ corepack pnpm test:browser    # browser suite
 
 TypeScript run directly on Node 24 over `node:sqlite` and `node:http`, with a React 19 and Vite front end. [docs/CODEBASE.md](docs/CODEBASE.md) maps the packages; read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
+## Maintainers
+
+Drishya is built and maintained by **Harsh Jain** and **Yash**.
+
+Changes follow the two-builder review workflow documented in [AGENTS.md](AGENTS.md).
+
 ## License
 
 [Apache License 2.0](LICENSE). Agent names and logos belong to their owners and are shown only to say which agents Drishya works with.
