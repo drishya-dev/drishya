@@ -1,4 +1,5 @@
-# STATUS — where we are
+# STATUS — where we a| VIDEO-1 | @yash + Claude Sonnet 5.5 | `claude/video-1-film-b5b0f0` | 2026-11-15 | The launch film and its cuts per market-1-plan sections 2 to 4 and 7: demo repo at `C:demo`, real sessions, scratch-home capture, Remotion project. All files in gitignored `.local/launch-video/`; docs notes only in the repository. No product code. |
+re
 
 **For *what* we are building, start at [`VISION.md`](VISION.md) and the [precedence map](README.md). This file is *where we are*.**
 
@@ -31,9 +32,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| VIDEO-1 | @yash + Claude Sonnet 5.5 | `claude/video-1-film-b5b0f0` | 2026-11-15 | The launch film and its cuts per market-1-plan sections 2 to 4 and 7: demo repo at `C:demo`, real sessions, scratch-home capture, Remotion project. All files in gitignored `.local/launch-video/`; docs notes only in the repository. No product code. |
 | TEST-4 | @harsh + Codex | `codex/test-4-conversation-shortcut` | 2026-11-15 | Isolate saved mode for the Conversation shortcut case in `tests/browser/conversation-view.spec.ts`; reproduce, preserve focus and Next failure assertions, and verify with the preceding persistence case. TASKS/STATUS. |
 | LAND-19 | @harsh + Codex | `codex/land-19-intro-dismissal` | 2026-11-15 | Early intro dismissal in `apps/landing/public/intro-boot.js`, the held-module regression in `tests/browser/landing-opening.spec.ts`, TASKS/STATUS. Keep the existing timeout fallback and current marketing site. |
+| SEC-4 | @yash + Claude Sonnet 5.5 | `claude/sec-4-pentest` | 2026-11-15 | Penetration pass on the current main build: `docs/review/sec-4-pentest.md`, `tests/security/` (one regression test per fixed finding), `scripts/pentest/` (hostile page, rebinding, fuzzer, hostile repository and journal), and fixes in `apps/daemon/src/` only where a finding needs one; TASKS/STATUS. Re-run on the frozen SHIP-9 candidate stays open in the report. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
@@ -57,12 +58,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
-
-### Yash with Claude Sonnet 5.5 — 15 Nov: SEC-4, penetration pass on the candidate
-
-- [Report](review/sec-4-pentest.md): hostile-page (Edge + Firefox, real Playwright, 3 origin pairs), real DNS rebinding (self-hosted DoH, with a `--control` run proving the harness would catch a regression), the network from WSL2 and every interface, another local user's view (process list, store permissions), a hostile repository (Git config and `.git`-file redirects) and Semgrep (292 rules, 3 low-confidence matches, all accepted) — all against the packed, installed candidate in a scratch home, never the dev server. A seeded fuzzer (`scripts/pentest/fuzz.ts`, no external tool needed) stood in for OWASP ZAP, and Semgrep's rule packs for CodeQL — neither release asset could be fetched at a workable speed in this sandboxed session (GitHub release assets throttled to single-digit KB/s per connection, tried Windows-native, WSL2, and an 8–32-way parallel ranged download each; CodeQL reached ~90% over an hour before stalling).
-- Eight findings fixed, each with a regression test in `tests/security/12-pentest.test.ts` and a mutation entry (11/11 CAUGHT): cookie tossing could sign a person out from another port; five inputs that reached 500 (malformed escapes, an empty combined recording id, a deeply nested history body, a NUL in a search, an unknown stored result); the browser launcher carried the long-lived token in `argv` (now a one-time code) — SEC-3's own deferred item; and the high-severity one, **a hostile repository's `.git` file redirecting to an unrelated real repository's `.git` directory** exposed that repository's commits and working-tree content through Git review/History/Compare/Graph (`workspace.ts`'s `verifyOwnGitDir()`, mirroring the existing FILES-11 worktree-backlink proof).
-- `pnpm test:security`: 673 passed, 2 skipped (Windows). `pnpm typecheck`: clean. Not run: Linux, macOS, a second physical device, a second local account — see the report's §9.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
