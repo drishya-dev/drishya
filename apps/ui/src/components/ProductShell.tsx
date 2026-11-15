@@ -1,3 +1,4 @@
+import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
 import { READING_SHORTCUTS } from './ReadingKeys.tsx';
 import { DOCUMENT_SIZES, type DocumentSize } from '../lib/document-limit.ts';
 import { installScrollbarActivity } from '../lib/scrollbar-activity.ts';
@@ -16,25 +17,13 @@ import { useNotify, setNotifications } from '../lib/notifications.ts';
 const modelessReaders: HTMLDialogElement[] = [];
 const typing = (target: EventTarget | null) => target instanceof Element && !!target.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], .cm-editor');
 
-export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl, windowId, resetWindow, floating=false, headerExtra, headerActions, heading }: { title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode; windowId?:string; resetWindow?:()=>void;floating?:boolean;headerExtra?:ReactNode;headerActions?:ReactNode;heading?:ReactNode }) {
+export function ReadingDialog({ title, close, children, className = '', modeless = false, style, headerIcon, resizeControl, windowId, resetWindow, floating=false, headerExtra, headerActions, heading, closing }: { closing?:boolean; title: string; close: () => void; children: ReactNode; className?: string; modeless?: boolean; style?: CSSProperties; headerIcon?: ReactNode; resizeControl?: ReactNode; windowId?:string; resetWindow?:()=>void;floating?:boolean;headerExtra?:ReactNode;headerActions?:ReactNode;heading?:ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const transition=useRef<Animation|undefined>(undefined),exiting=useRef(false),latestClose=useRef(close);
+  const transition=useRef<ReturnType<typeof surfaceMotion>|undefined>(undefined),latestClose=useRef(close);
   latestClose.current=close;
-  const requestClose=()=>{
-    const dialog=ref.current,state=useApp.getState();
-    const animate=dialog&&!className.includes('workspace-navigation')&&document.documentElement.dataset.uiVersion==='modern'&&document.documentElement.hasAttribute('data-ui-press')&&state.motion&&!state.lowResource&&!matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if(!animate){transition.current?.cancel();latestClose.current();return;}
-    if(exiting.current)return;
-    exiting.current=true;dialog.dataset.readerExiting='';
-    // Snapshot the in-flight entrance before cancelling it; never jump back to a preset start.
-    const computed=getComputedStyle(dialog),opacity=computed.opacity,transform=computed.transform;
-    transition.current?.cancel();
-    const easing=getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim()||'cubic-bezier(.23,1,.32,1)';
-    // MOTION-1: a reading window beside the work (modeless) leaves faster than a modal.
-    const animation=dialog.animate([{opacity,transform},{opacity:0,transform:'translateY(4px) scale(.98)'}],{duration:modeless?120:140,easing,fill:'forwards'});
-    transition.current=animation;
-    void animation.finished.then(()=>{if(dialog.isConnected)latestClose.current();},()=>{});
-  };
+  const requestClose=()=>{if(className.includes('workspace-navigation')){latestClose.current();return;}if(transition.current)transition.current.close(()=>latestClose.current());else latestClose.current();};
+  useLayoutEffect(()=>{if(closing)requestClose();else if(transition.current?.closing)transition.current.open();},[closing,title]);
+  useEffect(()=>{const reopen=()=>{if(transition.current?.closing)transition.current.open();};if(windowId==='File reader')globalThis.window.addEventListener('drishya-preview-file',reopen);return()=>{if(windowId==='File reader')globalThis.window.removeEventListener('drishya-preview-file',reopen);};},[windowId]);
   const window=useReadingWindow(ref,windowId);
   useEvidenceScroll(ref, `dialog/${className}`);
   const titleId = useId();
@@ -44,13 +33,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     if (modeless) dialog.show(); else dialog.showModal();
     // A dialog takes focus on its first control; one built around an input says so.
     dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
-    const state = useApp.getState();
-    // Pointer-only feedback for an occasional modal. Keyboard reading/navigation is immediate.
-    // MOTION-1: modeless reading windows (Git graph, file readers) open often, so theirs is shorter and smaller than a modal's.
-    const animate = !className.includes('workspace-navigation') && document.documentElement.hasAttribute('data-ui-press') && state.motion && !state.lowResource && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.23,1,.32,1)';
-    const arrival = animate ? dialog.animate([{ opacity: 0, transform: modeless ? 'translateY(4px) scale(.99)' : 'translateY(6px) scale(.98)' }, { opacity: 1, transform: 'translateY(0) scale(1)' }], { duration: modeless ? 160 : 200, easing }) : undefined;
-    transition.current=arrival;
+    if(!className.includes('workspace-navigation')){transition.current=surfaceMotion(dialog,modeless?'panel':'dialog');transition.current.open(true);}
+    const unwatch=watchSurfaceMotion(()=>transition.current?.finishImmediately());
     // Menus preventDefault their own Escape first, so the order is menu, then newest reader.
     const escape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || modelessReaders.at(-1) !== dialog) return;
@@ -60,7 +44,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     if (modeless) { modelessReaders.push(dialog); document.addEventListener('keydown', escape); }
     return () => {
       if (modeless) { document.removeEventListener('keydown', escape); const at = modelessReaders.indexOf(dialog); if (at >= 0) modelessReaders.splice(at, 1); }
-      transition.current?.cancel();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true });
+      unwatch();transition.current?.dispose();dialog.close(); if (previous?.isConnected) previous.focus({ preventScroll: true });
     };
   }, [modeless]);
   return createPortal(<dialog ref={ref} style={{...style,...window.style}} className={`product-dialog ${className}${modeless&&!floating ? " map-reader" : ""}${window.enabled?' adjustable-reading-window':''}`} aria-label={heading?title:undefined} aria-labelledby={heading?undefined:titleId} onCancel={(e) => { e.preventDefault(); e.stopPropagation(); if(e.target===e.currentTarget)requestClose(); }} onKeyDown={e => { if (e.key === "Escape" && !e.defaultPrevented && (e.target as Element).closest("dialog")===e.currentTarget) { document.documentElement.removeAttribute('data-ui-press'); e.stopPropagation(); if(modeless){e.preventDefault();requestClose();} } }}>
