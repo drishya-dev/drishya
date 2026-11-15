@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | TEST-4 | @harsh + Codex | `codex/test-4-conversation-shortcut` | 2026-11-15 | Isolate saved mode for the Conversation shortcut case in `tests/browser/conversation-view.spec.ts`; reproduce, preserve focus and Next failure assertions, and verify with the preceding persistence case. TASKS/STATUS. |
-| LAND-19 | @harsh + Codex | `codex/land-19-intro-dismissal` | 2026-11-15 | Early intro dismissal in `apps/landing/public/intro-boot.js`, the held-module regression in `tests/browser/landing-opening.spec.ts`, TASKS/STATUS. Keep the existing timeout fallback and current marketing site. |
 | SEC-4 | @yash + Claude Sonnet 5.5 | `claude/sec-4-pentest` | 2026-11-15 | Penetration pass on the current main build: `docs/review/sec-4-pentest.md`, `tests/security/` (one regression test per fixed finding), `scripts/pentest/` (hostile page, rebinding, fuzzer, hostile repository and journal), and fixes in `apps/daemon/src/` only where a finding needs one; TASKS/STATUS. Re-run on the frozen SHIP-9 candidate stays open in the report. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
@@ -58,6 +57,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 15 Nov: LAND-19 remembers an early landing dismissal
+
+- In the legacy landing preview, Escape during the pending intro records the existing tab-session marker. The automatic timeout still reveals the page after a failed module load and leaves the next visit eligible for the intro.
+- With the built main module held, the baseline reopened on return from `/#session` at 600 and 1440 px. Both cases pass with the fix. All 33 legacy landing browser checks pass in Chromium at one worker, with five motion unit checks. These checks exercise the preview's bootstrap and generated pages.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
