@@ -1,6 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {lstat,open,realpath} from 'node:fs/promises';
-import {realpathSync} from 'node:fs';
+import {constants,realpathSync} from 'node:fs';
 import {dirname,join,parse,resolve} from 'node:path';
 import {homedir} from 'node:os';
 import {sanitize} from '@drishya/privacy';
@@ -36,13 +36,13 @@ async function directory(path:string) {
 /** Read only bounded Git identity markers, never configuration or credentials. */
 async function marker(path:string):Promise<string> {
   const before=await lstat(path,{bigint:true});
-  if(!before.isFile()||before.isSymbolicLink()||before.size>4096n)throw new CheckoutIdentityError('Repository identity is unavailable.');
-  const handle=await open(path,'r');
+  if(!before.isFile()||before.ino===0n||before.size>4096n)throw new CheckoutIdentityError('Repository identity is unavailable.');
+  const handle=await open(path,constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
   try {
     const opened=await handle.stat({bigint:true});
-    if(opened.ino!==before.ino||opened.dev!==before.dev)throw new CheckoutIdentityError('Repository identity changed.');
+    if(!opened.isFile()||opened.size>4096n||opened.ino!==before.ino||opened.dev!==before.dev)throw new CheckoutIdentityError('Repository identity changed.');
     const buffer=Buffer.alloc(4097),{bytesRead}=await handle.read(buffer,0,buffer.length,0),after=await lstat(path,{bigint:true});
-    if(bytesRead>4096||after.isSymbolicLink()||after.ino!==opened.ino||after.dev!==opened.dev||after.mtimeNs!==opened.mtimeNs||after.size!==opened.size)throw new CheckoutIdentityError('Repository identity changed.');
+    if(BigInt(bytesRead)!==opened.size||!after.isFile()||after.ino!==opened.ino||after.dev!==opened.dev||after.mtimeNs!==opened.mtimeNs||after.size!==opened.size)throw new CheckoutIdentityError('Repository identity changed.');
     return buffer.subarray(0,bytesRead).toString('utf8');
   } finally {await handle.close();}
 }

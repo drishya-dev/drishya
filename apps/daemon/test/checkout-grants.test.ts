@@ -1,3 +1,4 @@
+import {constants} from 'node:fs';
 import {mkdtemp,mkdir,writeFile,rename,rm,symlink,realpath,open} from 'node:fs/promises';
 import {join} from 'node:path';
 import {tmpdir} from 'node:os';
@@ -8,6 +9,11 @@ import {checkoutIdentity,checkoutGrantKey} from '../src/checkout-grants.ts';
 import {WorkspaceAccess} from '../src/workspace.ts';
 import {nativeReadiness} from '../src/native-readiness.ts';
 import {startServer} from '../src/server.ts';
+
+vi.mock('node:fs/promises',async(importOriginal)=>{
+  const fs=await importOriginal<typeof import('node:fs/promises')>();
+  return {...fs,open:vi.fn(fs.open)};
+});
 
 const cleanups:(()=>Promise<unknown>)[]=[];
 afterEach(async()=>{for(const cleanup of cleanups.splice(0).reverse())await cleanup();});
@@ -20,6 +26,17 @@ async function fixture() {
   const id=(await app.ingest.importSource('claude-code',journal)).recordingId;
   return {dir,root,home,app,id,access:new WorkspaceAccess(app)};
 }
+it('opens a regular checkout marker with read-only platform protections',async()=>{
+  const f=await fixture(),git=join(f.root,'.git'),head=join(git,'HEAD');
+  await mkdir(git);
+  await writeFile(head,'ref: refs/heads/main\n');
+  vi.mocked(open).mockClear();
+
+  expect(await checkoutIdentity(f.root)).toMatchObject({repository:{kind:'git'}});
+  expect(open).toHaveBeenCalledWith(join(await realpath(git),'HEAD'),
+    constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+});
+
 it('restores only explicit remembered grants after a new App and clears them on revoke',async()=>{
   const f=await fixture();await f.access.approve(f.id);
   expect((await new WorkspaceAccess(f.app).restoreStatus(f.id)).approved).toBe(false);
