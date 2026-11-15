@@ -37,7 +37,7 @@ Drishya needs **Node.js 24** (`>=24 <25`). Run a Node 24 release that still rece
 ## What is out of scope
 
 - **A program already running as your operating-system account.** It can already read your journals, repositories, browser profile and Drishya's store directly.
-- **Exposing the port yourself**: a reverse proxy, a tunnel, a forwarded port (VS Code, SSH, WSL or Docker), or `--host` on a non-loopback address. Drishya refuses a non-loopback bind and a foreign `Host`, and warns against these in the README. See *Privacy and control*.
+- **Exposing the port yourself**: a reverse proxy, a tunnel, a forwarded port (VS Code, SSH, WSL or Docker), or `--host` on a non-loopback address. Drishya refuses a non-loopback bind and a foreign `Host`, and warns against these in the README. See *Privacy* in the README.
 - **A compromised browser, Node.js, Git, `gh` or operating system**, and the agents themselves (what Claude Code and Codex do is their own sandbox's job).
 - **Secrets the harness cut off before writing them** or that no redaction rule describes. Redaction is best effort; please tell us about a missing *pattern* (that is a useful report) but it is not a vulnerability by itself.
 - Findings that need the victim to paste attacker-controlled text into a terminal or to disable protections, social engineering, and automated scanner output with no demonstrated impact.
