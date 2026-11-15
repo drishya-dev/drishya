@@ -200,6 +200,15 @@ npm install -g @drishya-dev/cli
 drishya serve
 ```
 
+To try a release candidate before publication, use the tarball supplied for that candidate:
+
+```bash
+npm install -g --offline --ignore-scripts ./drishya-dev-cli-0.1.0.tgz
+drishya serve
+```
+
+Run these commands in the folder containing the tarball. On Windows, open a new terminal if it cannot find the command after installation. The [release notes](docs/release-notes-0.1.0.md) list the candidate's current verification status.
+
 </details>
 
 <details>
@@ -209,9 +218,10 @@ drishya serve
 1. `serve` prints a link and opens it. The link carries a random token, new on every launch, that keeps other websites out. If the browser does not open, copy the link from the terminal.
 2. **Home** lists the sessions Drishya found. A session is imported when you first open it.
 3. To let Drishya read a repository's current files, choose **Enable workspace reading** in the Files rail. It asks once per checkout and never writes to it.
-4. Stop with Ctrl+C. The default port is 7878; use `--port` if it is taken.
+4. To send a prompt, open a Claude Code or Codex session with its native CLI installed and signed in. Expand **Ask your agent…**, enter a prompt, and choose **Send prompt**. When prompted, confirm the session is idle in other clients before choosing **Confirm and send**.
+5. Stop with Ctrl+C. Use `--port` if the default port (7878) is taken.
 
-Rebuild the UI (`corepack pnpm ui:build`) after every update.
+If you run from a checkout, rebuild the UI (`corepack pnpm ui:build`) after updating the source.
 
 </details>
 
