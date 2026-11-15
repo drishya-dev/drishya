@@ -1367,7 +1367,7 @@ export class Store {
 
   /** Hits keep captured native turn numbers; otherwise count person prompts, excluding harness notices. */
   search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
-    const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
+    const safe = query.replace(/["*^:()\u0000-\u001f]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
     // Read prompt metadata once, not once per hit. Large bodies use their stored prefix:
     // every recognised harness wrapper is a leading shape, before any clipping.
@@ -1415,7 +1415,7 @@ export class Store {
   /** One worker-side FTS query, never an unbounded list of recording IDs. */
   searchLibrary(query: LibrarySearchQuery): LibrarySearchPage {
     if(query.q.length>200)throw new Error('Library search is limited to 200 characters');
-    const safe = query.q.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
+    const safe = query.q.replace(/["*^:()\u0000-\u001f]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
     if (!safe) return {items:[]};
     const count=Math.max(1,Math.min(50,Math.trunc(query.count??50)));
     const where=['search MATCH ?', 'search.rowid < ?'];

@@ -68,6 +68,9 @@ export interface ServerOptions {
   watchRoots?: WatchRoot[];
 }
 
+/** The fields of a history page request (packages/scene HistoryQuery); anything else in the body is ignored. */
+const HISTORY_FIELDS = ['start', 'count', 'step', 'promptStep', 'since', 'previousSince', 'selectedOperationId', 'observationId', 'anchorPassageId', 'tailFirst', 'pinnedPassageIds', 'filter', 'loadingOk'] as const;
+
 /** At most this many open change streams (one per viewer tab). */
 const MAX_STREAMS = 64;
 
@@ -180,8 +183,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const authed = (req: IncomingMessage): boolean => {
     const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
     if (bearer && safeEqual(bearer, token)) return true;
-    const sid = sessionOf(req);
-    return !!sid && sessionValid(sid);
+    // SEC-4: cookies have no port, so a page on another port of this host can add a second `drishya_session`
+    // that browsers send ahead of the real one. Any valid one signs the request in; a bad one cannot lock the person out.
+    return sessionsOf(req).some(sessionValid);
   };
 
   const inFlight = new Set<Promise<void>>();
@@ -213,8 +217,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (!authed(req)) throw new HttpError(401, 'not signed in to this Drishya launch — open the link printed by `drishya serve`');
       // Sign-out. A cross-site form cannot send DELETE, and Origin is already checked above.
       if (url.pathname === '/v1/session' && req.method === 'DELETE') {
-        const sid = sessionOf(req);
-        if (sid) sessions.delete(sid);
+        for (const sid of sessionsOf(req)) sessions.delete(sid);
         res.setHeader('set-cookie', 'drishya_session=; Max-Age=0; HttpOnly; SameSite=Strict; Path=/');
         return json(res, { ok: true });
       }
@@ -337,6 +340,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     }
 
     if (a === 'recordings' && id) {
+      // SEC-4: a combined view is `a+b`; an empty part (`+`, `a+`) names no recording and used to reach code that assumed one.
+      if (id.split('+').some((part) => !part)) throw new HttpError(404, 'no such recording');
       // Checkout keys are read contexts only. In particular they never reach controller,
       // journal import/delete/export, or mutation of the captured session's metadata.
       if (id.includes('~')) {
@@ -429,7 +434,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         if (body.pinnedPassageIds !== undefined && (!Array.isArray(body.pinnedPassageIds) || body.pinnedPassageIds.length > 3 || body.pinnedPassageIds.some((pin: unknown) => typeof pin !== 'string' || pin.length > 512))) throw new HttpError(400, 'invalid passage pins');
         if (body.filter !== undefined && (!body.filter || typeof body.filter !== 'object' || Array.isArray(body.filter))) throw new HttpError(400, 'invalid filter');
         if (body.filter) for (const [key, value] of Object.entries(body.filter)) if (!['agentId', 'kind', 'tool', 'server'].includes(key) || typeof value !== 'string' || value.length > 512) throw new HttpError(400, 'invalid filter');
-        return historyJson(res, await app.history.pageBytes(app.readingId(id), body));
+        if (body.loadingOk !== undefined && typeof body.loadingOk !== 'boolean') throw new HttpError(400, 'invalid loadingOk');
+        // SEC-4: only the validated fields go to the worker. The whole body used to be cloned into it, and a body nested a few
+        // thousand levels deep overflowed the stack inside postMessage (500).
+        const query = Object.fromEntries(HISTORY_FIELDS.filter((field) => body[field] !== undefined).map((field) => [field, body[field]]));
+        return historyJson(res, await app.history.pageBytes(app.readingId(id), query));
       }
       if(sub==='finding-members'&&m==='GET') {
         for(const part of id.split('+'))app.recording(part);
@@ -565,7 +574,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
           for (const key of id.split('+')) app.recording(key);
           const query = url.searchParams.get('find') ?? '', continuation = url.searchParams.get('cursor') ?? undefined;
           if (!query || query.length > 200 || /[\r\n]/.test(query) || (continuation && !/^[a-f0-9-]{36}$/.test(continuation))) throw new HttpError(400, 'Invalid stored search.');
-          const result = await app.history.artifactFind(app.readingId(id), subId, query, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), continuation);
+          let result;
+          try { result = await app.history.artifactFind(app.readingId(id), subId, query, intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER), continuation); }
+          catch (error) { if (error instanceof HistoryLoading || error instanceof HttpError) throw error; throw new HttpError(404, 'Stored result not found.'); } // SEC-4: an unknown artifact is a 404, not a 500
           return json(res, result ?? { matches: [], totalLines: 0, scannedThrough: 0, skippedLines: 0, available: false });
         }
         const start = intParam(url, 'start', 0, 0, Number.MAX_SAFE_INTEGER);
@@ -596,8 +607,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         } else await app.ingest.stopLive(firstId);
         return json(res, { live: app.ingest.isLive(firstId) });
       }
-      if (sub === 'sync' && m === 'POST') return json(res, await app.ingest.sync(firstId));
+      if (sub === 'sync' && m === 'POST') { app.recording(firstId); return json(res, await app.ingest.sync(firstId)); } // SEC-4: an unknown id is a 404, not a 500
       if (sub === 'export' && m === 'GET') {
+        for (const key of id.split('+')) app.recording(key); // SEC-4: an unknown or empty part is a 404, not a 500
         const bundle = await app.exportBundle(id);
         res.setHeader('content-disposition', `attachment; filename="drishya-${firstId}.json"`);
         return json(res, bundle);
@@ -777,13 +789,18 @@ function serveStatic(uiDir: string, pathname: string, res: ServerResponse) {
  */
 export function errorBody(e: unknown): { status: number; body: { error: string; loading?: true } } {
   if (e instanceof HistoryLoading) return { status: 202, body: { error: 'loading', loading: true } };
+  // SEC-4: a malformed percent-escape (`/%`, `/%zz`) makes decodeURIComponent throw. That is the caller's mistake, not a server fault.
+  if (e instanceof URIError) return { status: 400, body: { error: 'malformed URL' } };
   const status = e instanceof HttpError ? e.status : 500;
   const message = e instanceof Error ? e.message : 'error';
   return { status, body: { error: redactText(message).text.slice(0, 2000) } };
 }
 
-function sessionOf(req: IncomingMessage): string | undefined {
-  return /(?:^|;\s*)drishya_session=([a-f0-9]+)/.exec(req.headers.cookie ?? '')?.[1];
+/** Every `drishya_session` value the request carries (at most 8, so a cookie flood costs nothing). */
+function sessionsOf(req: IncomingMessage): string[] {
+  const found: string[] = [];
+  for (const m of (req.headers.cookie ?? '').matchAll(/(?:^|;\s*)drishya_session=([a-f0-9]+)/g)) if (found.length < 8) found.push(m[1]!);
+  return found;
 }
 
 /** An integer query parameter, clamped to [min, max]; anything non-numeric is a 400, never NaN. */
