@@ -32,7 +32,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| TEST-4 | @harsh + Codex | `codex/test-4-conversation-shortcut` | 2026-11-15 | Isolate saved mode for the Conversation shortcut case in `tests/browser/conversation-view.spec.ts`; reproduce, preserve focus and Next failure assertions, and verify with the preceding persistence case. TASKS/STATUS. |
 | LAND-19 | @harsh + Codex | `codex/land-19-intro-dismissal` | 2026-11-15 | Early intro dismissal in `apps/landing/public/intro-boot.js`, the held-module regression in `tests/browser/landing-opening.spec.ts`, TASKS/STATUS. Keep the existing timeout fallback and current marketing site. |
 | SEC-4 | @yash + Claude Sonnet 5.5 | `claude/sec-4-pentest` | 2026-11-15 | Penetration pass on the current main build: `docs/review/sec-4-pentest.md`, `tests/security/` (one regression test per fixed finding), `scripts/pentest/` (hostile page, rebinding, fuzzer, hostile repository and journal), and fixes in `apps/daemon/src/` only where a finding needs one; TASKS/STATUS. Re-run on the frozen SHIP-9 candidate stays open in the report. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
@@ -58,6 +57,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Harsh with Codex — 15 Nov: TEST-4 Conversation shortcut isolation
+
+- PR #503 restores a controlled Conversation snapshot, then chooses and verifies Work and History focus before V; the Next failure assertion remains. The old assertion failed under the held snapshot; retries-disabled runs passed the shortcut alone (1), the persistence pair (2), and the full spec (6). UI rebuilt in a separate worktree with its own frozen install.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
