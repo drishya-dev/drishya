@@ -1,257 +1,200 @@
 <p align="center">
-  <img src="apps/ui/public/brand/drishya-192.png" alt="Drishya logo" width="80" height="80">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/mark-on-dark.svg">
+    <img src="docs/readme/mark-on-light.svg" alt="Drishya" width="64">
+  </picture>
 </p>
 
-# Drishya
+<h1 align="center">Drishya</h1>
 
-**See what your coding agents did. Understand what changed.**
+<p align="center"><b>दृश्य</b> &nbsp;·&nbsp; <i>that which is seen</i></p>
 
-Drishya is a local live view and replay for **Claude Code and Codex**. It connects the source an agent read, the commands it ran, the output it received and the diffs it wrote to your repository, so you can understand the work while it happens or catch up afterward.
+<p align="center">
+  <b>See what your coding agent is doing, and review it like an engineer.</b>
+</p>
 
-Built for developers who delegate multi-file work to agents and need to review the result, learn the codebase, or pick up where a session left off.
+<p align="center">
+  <a href="#install">Install</a> &nbsp;·&nbsp;
+  <a href="#what-it-does">What it does</a> &nbsp;·&nbsp;
+  <a href="#privacy-and-control">Privacy</a> &nbsp;·&nbsp;
+  <a href="SECURITY.md">Security</a>
+</p>
 
-**दृश्य** — *“that which is seen.”*
+<p align="center">
+  <img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue">
+  <img alt="Node.js 24" src="https://img.shields.io/badge/node-24-339933">
+</p>
 
-[Quick start](#quick-start) · [Features](#features) · [Usage](#usage) · [Privacy](#privacy-and-control) · [Development](#development) · [Documentation](#documentation)
+<p align="center">
+  <img src="docs/readme/live-view.png" alt="Drishya showing a Claude Code session: the prompt, then each file the agent read and each search it ran as the real content, with the repository's Files tree on the left and the tools used on the right." width="100%">
+</p>
 
-![Drishya showing captured source, a test result and an edit in the synthetic demo](docs/images/readme-demo.png)
+<p align="center"><sub>A synthetic session shipped with the repository. Every screenshot here is invented content.</sub></p>
 
-*The built-in synthetic demo. No private session data is shown.*
+Drishya is a local app that plays back, live or afterwards, what a coding agent did in your repository: the files it read, the searches and commands it ran, the output it got, the test that failed, the diff it wrote. It shows the captured material itself, not a summary, and puts the tools to review the change next to it. It supports **Claude Code**, **Codex** and **Antigravity**, and it runs entirely on your machine.
 
-> **Status: working local product candidate, under active development.** Run from a developer checkout today; there is no published `npx drishya` installation. Product finishing, physical/platform testing and human acceptance remain in progress. See the [current work list](docs/TASKS.md).
+## The problem
 
-## Why Drishya?
+An agent reads thirty files, runs ten commands, watches a test fail, edits two lines, and replies "Done". The change is yours to ship. The work behind it is a terminal scrollback you did not read, so you either trust it or spend twenty minutes reconstructing what happened.
 
-An agent can spend twenty minutes reading files, trying commands and changing code. The final diff shows the result; the context is scattered across the session.
+Drishya keeps that work visible while it happens, and keeps the engineering tools in the same window.
 
-Drishya brings that captured material together. Follow a file from its read to its edit, inspect the output behind a test result, or return to the prompt that started a stretch of work. You can watch live or look away and come back to a readable history.
-
-The goal is simple: **understand both the agent's changes and the codebase they belong to.**
-
-## Features
-
-| What you want to do | What Drishya provides |
+| If this is your day | What Drishya does |
 |---|---|
-| **Follow work as it happens** | Import or watch local Claude Code and Codex sessions. New captured work accumulates while you scroll back to read. |
-| **Read the evidence** | Inspect captured source excerpts, patches, command output, searches and tool results. Available images, plans, questions and sub-agent activity retain their recorded context. |
-| **Find your place in the repository** | Explore the repository map and Files rail, open a quick file peek, or use Workspace for deeper reading and local drafts. Current files and historical evidence are distinguished. |
-| **Review a change** | Follow file history, compare available captured states and inspect current Git changes with explicit workspace access. Captured history and today's Git state stay separate. |
-| **Catch up after a run** | Search captured work, navigate prompts, revisit saved moments and inspect recorded failures and test outcomes. Optional sequence replay adds playback and scrubbing. |
-| **Keep agents identifiable** | Read multiple imported sessions in a combined chronology, with captured agent identities and supported parent/child relationships. Unresolved ownership stays explicit. |
-| **Continue when you choose** | An opt-in composer can resume a selected native session through supported harness protocols, with explicit consent and conservative permissions. |
-| **Keep the core local** | Store recordings on your machine, use the synthetic demo without a model account, and export sanitized replay bundles for deliberate sharing. Zero telemetry. |
+| **You vibe-code and do not read every line.** Code lands that nobody has read. | Watch each step as it happens: searches, file reads, commands, failures, edits. You see the real content, so even a change you never read leaves a trail you can follow. |
+| **You cannot see what the agent explored.** It looked at dozens of files; you get one sentence. | Every step in order, with the output it got back, so you can see what it looked at before it decided. |
+| **You cannot reason alongside it.** To judge its plan you need what it saw. | Open the file it is reading beside its work, with that file's earlier changes. Answer its questions in place, and send the next prompt to a Claude Code or Codex session. |
+| **Review is scattered** across the terminal, an editor, a Git client and GitHub. | Workspace, Changes, the Git graph and search live in one window, next to the agent's work. |
+| **Every agent keeps its own history,** and old sessions are hard to review. | Claude Code, Codex and Antigravity sessions on one Home. Replay any of them, read it as Work or as Conversation, and search it. |
+| **Your code should not leave your machine** to be understood. | Local only. No telemetry. Secrets are redacted before anything is stored. |
 
-Availability depends on what the harness actually records. Missing bytes, encrypted reasoning, capture gaps and unknown outcomes remain visible; Drishya does not invent the missing content.
+## What it does
 
-## Quick start
+**Live view and replay.** Open a session and steps appear as the agent takes them, each shaped for what it is: a read shows the source, a command shows its output, a test run shows its cases, an edit shows the diff. Earlier work settles back but stays readable. Open a finished session and replay it at your own pace, or switch between **Work** (the actions) and **Conversation** (the prompts and replies). Large sessions open from the latest work first and finish loading in the background.
 
-### Requirements
+**Read along.** The Files tree marks what the agent touched. Open any file beside the agent's work and see every captured action on it (reads, searches, edits) with the diff of each edit, and compare any of those steps with the file on disk.
 
-- **Node.js 24.x** — the workspace requires `>=24 <25`.
-- **pnpm 10.34.5** — pinned in [`package.json`](package.json). If pnpm is unavailable, replace `pnpm` in the commands below with `npx pnpm@10.34.5`.
-- **Git** and access to this repository.
-- A **desktop browser** and a window at least **600 px wide**. Phone and touch layouts are outside the supported scope.
-- Local **Claude Code or Codex journals** to inspect your own work. Neither harness nor a model API key is needed for the synthetic demo.
+**Ask and steer.** For Claude Code and Codex, the composer can send the next prompt to a session you choose. It needs your consent for that checkout first. Drishya runs your own installed `claude` or `codex` to resume the session, can interrupt a turn it started, and shows the agent's questions and approval requests so you can answer them in place. It never attaches to a terminal that is already running, and the agent's own sandbox and approval rules stay in charge.
 
-Windows is the current reference environment. Broader Windows hardware, macOS and Linux acceptance remain release checks; this is not a claim of platform-wide certification.
+**Review like an engineer.**
 
-### Install and launch
+- **Workspace** is a full reading view for the code: up to eight file tabs, find in file, and local drafts that stay in memory (Drishya never writes to your repository).
+- **Changes** compares two sides: uncommitted changes, what this session changed, one branch against another, or a pull request against its base. Files changed on both sides come first, since those are where a merge can conflict. Each file shows which sessions and agents edited it. Mark files reviewed, leave notes, and save a redacted handoff of what you reviewed. It is read-only: no fetch, checkout or merge.
+- **Git graph** shows branches, tags and commits, and links a commit to the session that made it where the record shows it.
+- **Search** covers the session you are reading, the files Drishya has indexed, and your other imported sessions.
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/readme/file-reader.png" alt="A file opened beside the agent's work, listing the three actions on it: an edit, a search and a read, with next and previous change."></td>
+    <td width="50%"><img src="docs/readme/changes.png" alt="The Changes window comparing a session's branch with main, showing one changed file and its diff with the agent that edited it."></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>A file with every action on it</sub></td>
+    <td align="center"><sub>Changes, with the agent behind each file</sub></td>
+  </tr>
+</table>
+
+Drishya shows what a harness recorded and says so when it recorded nothing. Where an agent's reasoning was not written to its journal, the interface reads "Reasoning not recorded" instead of guessing.
+
+## Supported agents
+
+| | Live view | Replay | Send a prompt from Drishya |
+|---|:---:|:---:|:---:|
+| **Claude Code** | Yes | Yes | Yes |
+| **Codex** | Yes | Yes | Yes |
+| **Antigravity** | Not in this release | Yes | No |
+
+Drishya finds sessions where each agent already writes them, and only reads them.
+
+- **Claude Code:** `~/.claude/projects`
+- **Codex:** `~/.codex/sessions`
+- **Antigravity:** the transcripts under `~/.gemini/antigravity`. Antigravity support is the newest and has had the least real-world use. It is read-only: Drishya never starts or steers an Antigravity session.
+
+Each location can be overridden with `DRISHYA_CLAUDE_HOME`, `DRISHYA_CODEX_HOME` (or `CODEX_HOME`) and `DRISHYA_ANTIGRAVITY_HOME`. Agent journals are not a documented, stable format, so a harness update can outrun Drishya; unknown records are shown as unknown rather than guessed.
+
+## Install
+
+**Requirements**
+
+- **Node.js 24** (`>=24 <25`). Drishya uses Node's built-in SQLite and has no runtime dependencies.
+- A desktop browser, at least 600 px wide.
+- `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
+- To send prompts: the `claude` or `codex` command already installed and signed in.
+
+Drishya is built and tested on Windows 11. It is plain Node with no native add-ons and should run on Linux and macOS, but those have not been verified yet.
+
+### From source
+
+This works today.
 
 ```bash
 git clone https://github.com/drishya-dev/drishya.git
 cd drishya
-pnpm install --frozen-lockfile
-pnpm ui:build
-pnpm serve
+corepack pnpm install --frozen-lockfile
+corepack pnpm ui:build
+corepack pnpm serve
 ```
 
-The launcher starts the local app on **`127.0.0.1:7878`** and opens your browser. If it does not open, use the **`Open:` authentication link printed in your terminal**. A normal launch creates a fresh token; reopening the bare address is not a substitute for that link.
+`corepack` ships with Node and fetches the pnpm version this repository pins. Rebuild the UI (`corepack pnpm ui:build`) after every update.
 
-You should see the session library, including discovered local sessions. Choose **Import** to read a recorded session or **Watch live** to follow its journal. Discovery does not automatically import every session.
+### From npm (at launch)
 
-Stop the server with **Ctrl+C**. Imported recordings remain in the local store for your next launch.
-
-### Try the demo first
-
-After launching, open [the synthetic demo](http://127.0.0.1:7878/?demo). It uses the built-in Claude Code/Codex checkout example, with no private journal import or model call. It demonstrates recorded work; it does not start a real agent.
-
-For the captured edit, open [the demo at step 26](http://127.0.0.1:7878/?demo&at=26). Add `&motion=0` to disable motion. These links assume the default port and a running local app.
-
-## Usage
-
-### Watch now, read later
-
-1. Open a discovered session with **Watch live**.
-2. Follow the captured reads, edits and tool results in history. Open an action to read its material.
-3. Scroll back when something needs attention. Capture continues independently of your reading position.
-4. Use **Back to latest** or the Follow control to return to incoming work.
-
-Watching means Drishya is tailing a journal. It does not, by itself, prove the agent is still running. Sequence replay is a separate, optional way to inspect recorded work.
-
-### Import a journal from another location
-
-The session library is the easiest entry point. For journals outside the discovered locations, run this from the checkout, replacing the quoted path with your actual file:
+The package is not published yet. When it is, it will be:
 
 ```bash
-pnpm drishya import "/path/to/session.jsonl"
-pnpm drishya list
+npm install -g @drishya-dev/cli
+drishya serve
 ```
 
-The importer detects the harness and reports the recording ID, added observations and capture gaps. Add `--live` to keep following the selected journal until Ctrl+C. Native source journals are opened read-only.
+### First run
 
-### Export a recording
+1. `serve` prints a link and opens it in your browser. If the browser does not open, copy the link from the terminal. It carries a random token, new on every launch, that keeps other websites from reading your sessions.
+2. **Home** lists the sessions Drishya finds for your agents. Open one. A session is imported when you first open it.
+3. Open a recent session to follow it live, or an older one to replay it. In the Files rail, choose **Enable workspace reading** to let Drishya read the repository's current files. It asks once per checkout and never writes to it.
+4. No sessions yet? Open `http://127.0.0.1:7878/?demo` for a synthetic sample that needs no agent.
 
-Use the recording ID from `pnpm drishya list` in place of `RECORDING_ID`:
+Stop it with Ctrl+C. The default port is 7878; use `--port` if it is taken. A restart prints a new link.
 
-```bash
-pnpm drishya export RECORDING_ID --out replay.json
-```
+<details>
+<summary><b>Command line</b></summary>
 
-This writes a sanitized replay bundle. **Review it before sharing:** secret-pattern detection is best effort, and source code, paths or other sensitive context can still matter. Offline replay bundles are read-only.
+<br>
 
-### Useful commands
+With the npm install use `drishya <command>`. From a checkout use `corepack pnpm drishya <command>`.
 
-Run these from the repository root:
-
-| Command | Purpose |
+| Command | What it does |
 |---|---|
-| `pnpm serve --no-open` | Start the app and print its launch link without opening a browser. |
-| `pnpm serve --port 7879` | Use a different local port. |
-| `pnpm drishya` | Show CLI usage and available options. |
-| `pnpm drishya sources` | List discovered Claude Code and Codex sessions. This prints local session metadata and paths. |
-| `pnpm drishya list` | List imported recordings and their IDs. |
-| `pnpm drishya storage` | Inspect local disk usage against the advisory storage budget. |
-| `pnpm drishya forget RECORDING_ID` | Remove that imported recording and unshared stored blobs; the original harness journal remains intact. |
+| `serve [--port 7878] [--no-open]` | Start the app. |
+| `sources [--json]` | List the sessions found on this machine. |
+| `import <path>` | Import one session journal; the agent is detected for you. |
+| `import --latest [claude-code\|codex]` | Import the most recent session. |
+| `list` | List imported recordings. |
+| `export <recording> --out <file>` | Write a sanitized replay bundle. |
+| `forget <recording>` | Remove a recording from the local store. |
+| `storage` | Show how much disk the store uses against a 10 GiB advisory budget. Nothing is deleted automatically. |
+
+</details>
+
+### Uninstall
+
+Drishya changes nothing outside its own data directory, so removing it is three steps.
+
+1. Stop it (Ctrl+C).
+2. Delete its data directory: `~/.drishya` (`%USERPROFILE%\.drishya` on Windows), or the folder `DRISHYA_HOME` points to. It holds the database, stored content and indexes.
+3. Remove the program: delete your checkout, or `npm uninstall -g @drishya-dev/cli`.
+
+To remove one session and keep the rest, use `drishya forget <recording>`. Your agents' journals and your repositories are never modified by Drishya, so there is nothing to restore. Display preferences kept by the page in your browser can be cleared with the site data for `127.0.0.1:7878`.
 
 ## Privacy and control
 
-Drishya is a local tool. This is exactly what it does with your data.
+Drishya sits next to your repositories and your agents' journals, so what it does with them is stated plainly here. The code behind each statement is covered by the security suite (`pnpm test:security`).
 
-**What it reads**
+- **It reads** your agents' journals (locations above), read-only, and the repositories you grant. A repository's files are read only after you choose **Enable workspace reading** for it, and its Git data through fixed `git` commands with no shell. The only time an agent's journal is written is when you resume that session from Drishya's composer: your own `claude` or `codex` then writes it, as it always does.
+- **It stores** redacted copies of what it imports, under `~/.drishya` (or `DRISHYA_HOME`): a SQLite database, content files and search indexes. It writes nothing to your repositories or your agents' folders. `drishya storage` shows the size and `drishya forget` removes a recording.
+- **It sends nothing.** There is no telemetry, analytics, crash reporting or update check, and no opt-out because there is nothing to opt out of. The page loads no fonts, scripts or images from other hosts. The security suite records every network connection the server makes while it walks every screen, and the packaged build is checked the same way at start-up: all of them stay on loopback.
+- **It listens on `127.0.0.1` only,** by default on port 7878. It refuses to bind anything else, and it checks the `Host` and `Origin` of every request. The launch link carries a random token that is exchanged for an `HttpOnly`, `SameSite=Strict` cookie.
+- **Secrets are redacted before they are stored,** not afterwards: private keys, common provider tokens, JWTs, bearer tokens, URL credentials and high-entropy assignments, and the contents of protected files such as `.env` and key files. Redaction is best effort, not a guarantee. If you find a pattern it misses, that is a useful report.
+- **Two things are opt-in.** The optional GitHub integration (Settings) runs your own signed-in `gh` to show pull request details and to compare a pull request; while it is off, `gh` is never run. Sending a prompt runs your own `claude` or `codex`, which talk to their own services as they always do.
 
-- **Agent journals**, read-only: Claude Code's (`~/.claude`) and Codex's (`~/.codex`, or `CODEX_HOME`) session files. Discovery lists them by metadata and path; nothing is imported until you choose **Import** or **Watch live**. Drishya never edits a journal or a harness configuration.
-- **Your repositories**, only after you grant a checkout access. Files and Git state are read through `git` with fixed arguments and no shell. Drishya does not write your project files; Workspace drafts stay in Drishya until you download them or hand them to an agent yourself.
+> [!WARNING]
+> **Do not expose Drishya's port to a network.** Do not put it behind a reverse proxy or a tunnel, and do not forward it (VS Code, SSH, WSL or Docker port forwarding). Drishya is built to be reached only from your own machine: it binds to loopback and refuses requests for any other host name. Forwarding or proxying the port works against that design, and anyone who obtains the launch link could read your sessions and, if you have enabled prompting, send prompts to your agents. Drishya cannot detect this, and a report that depends on it is out of scope.
 
-**What it stores**
+To report a vulnerability, follow [SECURITY.md](SECURITY.md) and use GitHub's private report rather than a public issue. Known limits and what has been tested are in the [threat model](docs/review/sec-3-threat-model.md).
 
-- **On disk**, in `~/.drishya` (`%USERPROFILE%\.drishya` on Windows; set `DRISHYA_HOME` to move it): a SQLite database of imported recordings, a blob store, previews and a search index. Secrets that match a known pattern are scrubbed *before* anything is written. On Linux and macOS the folder is created private to your account (mode 0700, files 0600). Remove a recording with `pnpm drishya forget RECORDING_ID`, or delete the folder.
-- **In your browser**: a session cookie (`drishya_session`, HttpOnly, SameSite=Strict) and a few interface preferences in `localStorage` under the `drishya` prefix. No service worker, cache storage or IndexedDB. The launch token and session are not written to disk.
-
-**What it sends**
-
-- **Nothing, by default.** No telemetry, no analytics, no update check, no crash reports, and the page loads no font, script or image from another host. A link or image address inside captured content is shown as text and is never fetched.
-- **Opt-in only:** GitHub pull request and issue cards are answered by *your own* signed-in `gh` command, for `github.com` pull-request and issue URLs only, after you turn them on in Settings. Drishya holds no GitHub token of its own. If you resume a native session from the composer, *that* agent talks to its provider under its own settings, exactly as if you had started it yourself.
-- **Exports** are files you save; nothing uploads them. Review one before you share it, because pattern-based redaction is best effort.
-
-**What it listens on**
-
-- **One port, on the loopback address only** (`127.0.0.1:7878` by default; `--port` changes it, and `--host` accepts only `127.0.0.1`, `localhost` or `::1`). Every request needs the per-launch token or the session cookie, and the daemon refuses a request whose `Host` or `Origin` is not its own, which blocks other websites and DNS rebinding.
-- **Do not put that port on a network.** Do not run Drishya behind a reverse proxy or tunnel, and do not forward the port (VS Code *Ports*, SSH `-L`/`-R`, Dev Containers, WSL or Docker publishing, ngrok-style services). Anyone who reaches the port *and* holds your launch link can read everything Drishya has captured, and a proxy that rewrites `Host` defeats the protection above. If you need another machine, open the session there instead.
-- The launch link (`Open:` in the terminal) contains the token. Treat it like a password: do not paste it into an issue, chat or an agent's prompt.
-
-**How the product keeps its own promises**
-
-- **Independent observation.** Passive viewing never modifies harness files. Repository and Git inspection need explicit access.
-- **Explicit native control.** Continuing a session requires workspace consent and an acknowledgement that other clients are idle. Submission, interruption and exact approval or question replies use the harness's supported protocols; unsupported requests fail visibly. Offline bundles cannot control an agent.
-- **Faithful evidence.** Captured text, derived results and current workspace state have distinct provenance. Exposed reasoning summaries appear only when the harness recorded them; encrypted or signature-only material cannot reveal private reasoning. See [tested summary settings and shell-specific guidance](docs/review/data-8-reasoning-persistence.md).
-
-The security checks behind these statements are `pnpm test:security` ([threat model](docs/review/sec-3-threat-model.md)). To report a problem, read [SECURITY.md](SECURITY.md).
-
-For the full boundaries, read the [engineering plan](docs/review/03-engineering-plan.md) and [connected-workspace contract](docs/review/26-connected-workspace.md).
-
-## Troubleshooting
-
-| Problem | What to check |
-|---|---|
-| Node or package installation fails | Check `node --version` is 24.x and `pnpm --version` is 10.34.5. Install from the repo root with the committed lockfile. |
-| The app cannot authenticate after a restart | Reopen the new `Open:` link printed by `pnpm serve`. The old launch credential may have expired. |
-| The page or UI assets are missing | Run `pnpm ui:build` before `pnpm serve`. |
-| Port 7878 is already in use | Run `pnpm serve --port 7879` and use its printed link. Use that port for demo links too. |
-| No sessions appear | Create a session in a supported harness, or import a known journal by its full path. The demo works without local sessions. |
-| Reasoning, an image or a result is unavailable | Check whether the native recording contains readable text or bytes. Display settings cannot recover material the harness did not record. |
-
-If you find a bug, [open an issue](https://github.com/drishya-dev/drishya/issues) with reproduction steps, runtime versions and a synthetic example when possible. Keep real journals, private source, authentication links and secrets out of issue reports.
-
-## Development
-
-For hot reload, install dependencies as above, then run these in **two terminals**:
+## Develop
 
 ```bash
-# Terminal 1: local daemon
-pnpm dev
+corepack pnpm install --frozen-lockfile
+corepack pnpm ui:dev            # the UI with hot reload
+corepack pnpm dev               # the daemon, in development mode
+corepack pnpm check             # typecheck and unit tests
+corepack pnpm test:security     # the security suite
+corepack pnpm test:browser      # builds the UI and runs the browser suite
+corepack pnpm package:verify    # builds the npm package, checks its contents, installs it offline
 ```
 
-```bash
-# Terminal 2: Vite UI
-pnpm ui:dev
-```
-
-Open the **`Dev UI:` link printed by the daemon**, which includes authentication for the UI on `127.0.0.1:5173`. The Vite server proxies API requests to the daemon on port 7878.
-
-### Checks
-
-| Command | What it checks |
-|---|---|
-| `pnpm check:affected` | Typechecks, related unit tests and browser specs for changed files. |
-| `pnpm check` | Full typechecking and unit tests. |
-| `pnpm test:browser` | Rebuilds the UI, then runs parallel and timing-sensitive browser journeys. Requires Playwright Chromium or a configured installed browser. |
-| `pnpm check:real -- --list` | Lists real-session acceptance cases; imports use a scratch Drishya home. |
-| `pnpm package:verify` | Builds and verifies an isolated offline package, including synthetic import and restart. This does not publish it. |
-| `pnpm demo:bundle` | Regenerates the synthetic demo from committed fixtures. |
-
-Browser setup: `pnpm exec playwright install chromium`. To use installed Chrome instead, set `DRISHYA_BROWSER_CHANNEL=chrome` in your shell before running browser checks. See [AGENTS.md](AGENTS.md) for the appropriate verification tier and real-session acceptance requirements.
-
-### How it fits together
-
-```mermaid
-flowchart LR
-    A[Local Claude Code and Codex journals] --> B[Read-only adapters]
-    B --> C[Redaction before storage]
-    C --> D[Local SQLite and artifact store]
-    D --> E[Projections and history pages]
-    E --> F[Live view, repository map and readers]
-```
-
-The daemon uses **TypeScript on Node 24**, built-in SQLite, HTTP and Server-Sent Events, with **zero runtime dependencies**. The browser uses **React 19, Vite and Zustand**, with CodeMirror for explicit draft editing. Captured text renders in the DOM; the GPU draws the repository map.
-
-| Location | Responsibility |
-|---|---|
-| [`apps/daemon/`](apps/daemon/) | Local server, CLI, authenticated APIs and controller integration. |
-| [`apps/ui/`](apps/ui/) | Session library, visualization, readers and Workspace. |
-| [`packages/`](packages/) | Harness adapters, capture, privacy, storage, projection, scene and indexing. |
-| [`fixtures/synthetic/`](fixtures/synthetic/) | Shareable example sessions and a sample repository. |
-| [`tests/browser/`](tests/browser/) | Integrated browser journeys. |
-| [`docs/`](docs/) | Product direction, architecture, evidence and delivery state. |
-
-See the [codebase guide](docs/CODEBASE.md) for data flow, package boundaries and adding a harness.
-
-## Roadmap and current limits
-
-Claude Code and Codex are the supported integrations today. Current work focuses on product finishing, interaction quality and release acceptance. Additional harnesses and broader visualization ideas remain tracked work, not shipped promises.
-
-Physical lower-resource machines, macOS/Linux journeys, assistive technology and human comprehension checks remain release gates. Signed-in native journeys are tracked separately from synthetic protocol tests. Existing performance measurements apply to their named machines and workloads.
-
-The maintained roadmap is [`docs/TASKS.md`](docs/TASKS.md); [`docs/STATUS.md`](docs/STATUS.md) records progress and decisions. No public launch date is promised here.
-
-## Contributing
-
-Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md). Before implementation, check the maintained task list and existing claims with `node scripts/claims.ts`, then claim the whole item in `docs/STATUS.md`. Major changes use a short-lived branch and the other builder's review; schema changes require both builders' agreement.
-
-Only synthetic or genuinely redacted fixtures belong in the repository. Never commit a real session recording. Preserve the core boundaries: local observation, redaction before persistence, honest provenance and a reader's control over their position.
-
-## Documentation
-
-| Start here | What it covers |
-|---|---|
-| [Documentation map](docs/README.md) | Where to look and which document wins when older guidance differs. |
-| [Vision](docs/VISION.md) | The product's visual direction, motion and craft standard. |
-| [Product direction](docs/PRODUCT_DIRECTION.md) | Who Drishya serves and the workflows it aims to make useful. |
-| [Codebase guide](docs/CODEBASE.md) | The implementation, packages and data flow. |
-| [Engineering plan](docs/review/03-engineering-plan.md) | Capture, historical artifacts, privacy and architecture. |
-| [Implementation roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Performance, packaging and execution gates. |
-| [Tasks and acceptance](docs/TASKS.md) | The single current work list. |
-| [Status and decisions](docs/STATUS.md) | Progress, ownership and recorded decisions. |
+The backend is TypeScript run directly on Node 24 over `node:sqlite` and `node:http`, with a React 19 and Vite front end; there is no build step for the daemon. [docs/CODEBASE.md](docs/CODEBASE.md) maps the packages and how to add an agent. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 
-Drishya is licensed under [Apache-2.0](LICENSE).
+Drishya is released under the [Apache License 2.0](LICENSE).
