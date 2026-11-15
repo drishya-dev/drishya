@@ -136,3 +136,19 @@ The two Windows packaging assertions exercise selection of the installed Git and
 A private shape-only scan of the same genuine Codex recording confirmed three completed computer calls with recorded arguments and two images directly nested in the corresponding child results. Wrapper copies exist separately. The child results establish frame ownership. The typed completion contract lacks fields for those arguments and image candidates. NATIVE-5a is claimed to preserve this evidence through the existing privacy pipeline. Both builders must agree on extending the observation format. The existing genuine browser recording is sufficient to check this path after implementation.
 
 The local integration checkout at `85b2fa5e` combines MOTION-4 and the source changes from #503, #504, #506 and #507. The checkout uses its own frozen install. Its independent Edge run with two parallel workers and zero retries passed typecheck and 33 focused browser cases, including all nine paired-motion tests. The integration checkout is for local verification. Draft #403 remains open for the outstanding browser, packaging and real Codex Screen acceptance.
+
+### Takeover and final targeted verification — 15 November
+
+Yash moved MOTION-4 from Harsh to Claude Sonnet 5.5 on 15 November so it can merge before the 18 November release. Main `147b21d8` merged cleanly into the branch (no conflicts; OWNERSHIP.md, README, STATUS and TASKS only). Fresh frozen install; both typechecks, `ui:build` and the synthetic website build (`corepack pnpm --filter drishya-site build`) passed. `apps/ui/test` reported 667 passed, 1 skipped, 130 files (two reruns). The first run showed one failure in the Antigravity passive-question unit; it did not repeat in three further runs, so it is a cold-transform flake, not this branch.
+
+Browser, Edge, two parallel workers, UI rebuilt first: `paired-surface-motion`, `connected-workspace`, `fresh-workspace`, `structured-data` and `toolbox-window` ran 120 tests: 115 passed, 5 failed. All nine paired-surface tests, the connected-workspace and structured-data cases passed. The five failures were rerun alone on a freshly built clean `origin/main` worktree with its own install:
+
+| Failure | Branch | Clean main | Class |
+| --- | --- | --- | --- |
+| `fresh-workspace` Modern composer keeps its target and state visible (received 2131.7 where < 1 expected) | fails | same value | Baseline |
+| `fresh-workspace` tool cards retain visible results (`data-state` expected focused, received empty) | fails | same assertion | Baseline |
+| `fresh-workspace` real pending-input shape ("Answer requested" expected, "Needs an answer" shown) | fails | same text | Baseline; fixture is [#507](https://github.com/drishya-dev/drishya/pull/507) |
+| `toolbox-window` tall foreground Toolbox above the open composer (Tools click blocked at 600 px) | fails | fails | Baseline, as recorded before |
+| `toolbox-window` modern Toolbox expands in place (focus assertion) | failed in the batch, then 5 of 6 passed | 2 of 6 failed | Flake on both |
+
+No failure was caused by this branch. The serial pass selected none of these specs. Not re-run: the full gate (builder's instruction: targeted specs only), `package:verify`, and the earlier whole-suite baseline failures documented above, which belong to other PRs. The genuine Codex Screen capture remains unmet: Codex Screen motion is fixture-checked only, and frame association for Codex computer calls is NATIVE-5a work.
