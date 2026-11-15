@@ -47,3 +47,10 @@ body:
     attributes:
       label: Steps to reproduce
       description: As exact as you can make them.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How we can verify it
+      description: Describe what should be true after the change, and any specific cases or constraints.
+    validations:
+      required: true

@@ -44,7 +44,7 @@ Drishya needs **Node.js 24** (`>=24 <25`). Run a Node 24 release that still rece
 
 ## Known and accepted
 
-These are written down so you do not need to rediscover them: the session cookie has no port scope, so another web server on `127.0.0.1` that you visit in the same browser receives it (SEC-6 in `docs/TASKS.md`; a replaying server must itself be a program on your machine); the launch link, which contains the token in its fragment, is printed in your terminal and is visible in the process list of the browser launcher. Details are in the threat model, §5 and §7.
+These are written down so you do not need to rediscover them: the session cookie has no port scope, so another web server on `127.0.0.1` that you visit in the same browser receives it (SEC-6 in [Product Work History](docs/PRODUCT_WORK_HISTORY.md); a replaying server must itself be a program on your machine); the launch link, which contains the token in its fragment, is printed in your terminal and is visible in the process list of the browser launcher. Details are in the threat model, §5 and §7.
 
 ## Safe harbour
 

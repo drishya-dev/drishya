@@ -4,15 +4,15 @@
 
 ## Why
 
-<!-- The problem it solves, or the decision it implements. Link the STATUS.md item or issue. -->
+<!-- The problem it solves, or the decision it implements. Link the issue if there is one. -->
 
 ## How to check it
 
 <!-- What the reviewer should run, open or look at. For UI work: which frame, interaction or state. -->
 
-## Claim
+## Acceptance evidence
 
-- [ ] **Claimed first.** TASKS ID(s): `____`. The claim row was pushed to `main` before the first commit, and this PR is one ID (about 5 commits / 15 files at most; otherwise agreed in the claim). See [`AGENTS.md`](../AGENTS.md#how-we-work--two-builders-one-repo).
+<!-- Link the issue when available. List the acceptance criteria, the relevant checks and their outcomes, and any remaining blockers. -->
 
 ## Checklist
 
@@ -26,4 +26,4 @@ The non-negotiables from [`AGENTS.md`](../AGENTS.md#non-negotiable-constraints).
 - [ ] **No telemetry** added, in any form
 - [ ] **UI only:** passes the freeze, truth and ten-minute tests in [`VISION.md`](../docs/VISION.md#8-the-standard), and still works with motion off and the map off
 - [ ] **Schema:** touches the event schema? → labelled `schema` and agreed by both builders
-- [ ] [`docs/STATUS.md`](../docs/STATUS.md) updated — last session, and the decisions log if anything was settled
+- [ ] Durable decisions or experiment findings are recorded in the relevant docs when applicable.

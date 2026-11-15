@@ -1,6 +1,6 @@
 # Drishya documentation — map and precedence
 
-**Current product work:**[TASKS.md](TASKS.md) is the single maintained checkbox list for UI, themes, Workspace editing, features, native integration and release acceptance. It supersedes active next-task wording in older numbered reviews. STATUS records sessions; CONTINUITY hands them off; architecture/security/vision authority remains unchanged.
+**Current product work.** See [GitHub Issues](https://github.com/drishya-dev/drishya/issues). [Product Work History](PRODUCT_WORK_HISTORY.md) preserves the detailed task entries, findings, and prior experiments.
 
 **19 October finishing candidate:** [107](review/107-investigation-finishing.md) records joined investigation, exact observation references, saved evidence/selected packets, explicit encrypted draft snapshots and the bounded local interface pass. Signed-in native, physical/platform and human acceptance remain in TASKS; this adds no capture schema or direct file-write capability.
 
@@ -110,7 +110,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 | **The code as built / verified** | 1. [`review/06-baseline-audit.md`](review/06-baseline-audit.md) for 30 Sep findings · 2. [`CODEBASE.md`](CODEBASE.md) | Audit distinguishes reproduced results, source findings and unverified gates. Plans are not implementation claims |
 | **Product, need, positioning, scope** | 1. [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) · 2. [`review/01-product-review.md`](review/01-product-review.md) · 3. [`BLUEPRINT.md`](BLUEPRINT.md) Part I | Accumulating live history, backend-first base, content-shaped presentation and evidence-linked utility; no unsupported first/uncopyable claims |
 | **Facts** — harness formats, competitors, sources | 1. [`review/04-research-ledger.md`](review/04-research-ledger.md) · 2. [`reference/01-evidence-pack.md`](reference/01-evidence-pack.md) | Ledger is newer and corrects the evidence pack on HTTP hooks, Codex hooks and competitor content |
-| **Where we are / what is next / decisions** | [`STATUS.md`](STATUS.md) | State only. The decisions log is append-only |
+| **Current work and decisions** | [GitHub Issues](https://github.com/drishya-dev/drishya/issues) and [Contributor decisions](decisions/README.md) | Use the work history for earlier experiments |
 | **Rules for agents** | [`../AGENTS.md`](../AGENTS.md) | Loaded by Codex directly and by Claude Code via `CLAUDE.md` |
 
 ---
@@ -131,7 +131,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 [17: stored source navigation](review/17-source-navigation.md) adds bounded line/match navigation and stable historical readers during live append. CONTINUITY/STATUS carry current acceptance; CODEBASE describes descriptor-keyed cache invalidation. Larger workspace capabilities remain staged.
 
-**Latest source-reading amendment:** [16](review/16-captured-range-reader.md) records direct exact-range opening, full-width reading, provenance and bounded page find. CONTINUITY/STATUS carry the shared handoff for both builders; DEVELOPER_WORKSPACE separates implemented slices from proposed W1–W6 capabilities.
+**Latest source-reading amendment:** [16](review/16-captured-range-reader.md) records direct exact-range opening, full-width reading, provenance and bounded page find. That change was recorded in the private development handoff; DEVELOPER_WORKSPACE separates implemented slices from proposed W1–W6 capabilities.
 
 **Current product delivery:** [PRODUCT_DELIVERY](PRODUCT_DELIVERY.md) supersedes older base-UI/prototype-only descriptions for implemented workspace behavior, P2-B evidence comparison and local run/package instructions. The 30 September audit remains historical; current evidence comes from STATUS, CODEBASE and the B4/P1 delivery records. VISION governs creative intent. Further UI changes belong in the integrated app.
 
@@ -139,7 +139,7 @@ When two documents disagree, the one higher in its row wins. When a document her
 
 ## Reading order
 
-**New chat / model switch / compaction** — [`CONTINUITY.md`](CONTINUITY.md) → [`STATUS.md`](STATUS.md) → [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) → [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md). Read VISION before any UI work and CODEBASE before code. This is the durable handoff; chat memory is not required.
+**Start a contribution.** Read [AGENTS.md](../AGENTS.md), follow the linked issue and PR, and check [Product Work History](PRODUCT_WORK_HISTORY.md) for earlier findings.
 
 **Before UI work** — [`VISION.md`](VISION.md) → [`prototype/`](prototype/) → [`reference/04-continuous-canvas.md`](reference/04-continuous-canvas.md) → [`review/02-experience-spec.md`](review/02-experience-spec.md).
 
@@ -154,12 +154,11 @@ When two documents disagree, the one higher in its row wins. When a document her
 | Path | Contents |
 |---|---|
 | [`VISION.md`](VISION.md) | Creative direction and the builder's own words |
-| [`CONTINUITY.md`](CONTINUITY.md) | Short restart guide for the next model/chat |
 | [`PRODUCT_DIRECTION.md`](PRODUCT_DIRECTION.md) | Current product thesis, users, differentiation, detailed visual interaction and pilot criteria |
 | [`IMPLEMENTATION_ROADMAP.md`](IMPLEMENTATION_ROADMAP.md) | Ordered backend/base-UI gates, resource targets, session integrations and distribution |
 | [`review/06-baseline-audit.md`](review/06-baseline-audit.md) | Executed baseline, real read-only sample, source findings and reproduction commands |
 | [`BLUEPRINT.md`](BLUEPRINT.md) | The original end-to-end blueprint (v1.2). Still the fullest single account; partly superseded as mapped above |
-| [`STATUS.md`](STATUS.md) | Position, queue, decisions log |
+| [`PRODUCT_WORK_HISTORY.md`](PRODUCT_WORK_HISTORY.md) | Detailed historical task entries and findings |
 | [`review/09-p1-content-origins.md`](review/09-p1-content-origins.md) | Prototype source audit, first P1 presentation slice, evidence and remaining choreography |
 | [`review/10-p1-design-directions.md`](review/10-p1-design-directions.md) | Fresh Studio/Relay/Atlas prototypes, recommendation, persistent essentials, integrated safeguards and next design task |
 | [`CODEBASE.md`](CODEBASE.md) | The code as built: pipeline, packages, identity, privacy, API, tests |

@@ -22,7 +22,7 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 - peek and Workspace are two modes;
 - the 3D map is aesthetic.
 
-The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then details. Work from it; don't invent a parallel queue. **Claim an item first** (a docs-only commit on `main`, see *Claiming and state* below) and only then do the work; an agent's first action in a session is `node scripts/claims.ts`, then its claim.
+Use [GitHub Issues](https://github.com/drishya-dev/drishya/issues) for current work. Check related issues, pull requests, and [Product Work History](docs/PRODUCT_WORK_HISTORY.md) before starting so earlier experiments and overlapping work are visible.
 
 ---
 
@@ -32,9 +32,7 @@ The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then 
 |---|---|---|
 | [`docs/VISION.md`](docs/VISION.md) | **Creative direction** — the builder's own words and how the product must look, move and feel | Before *any* UI, graphics, motion or layout work |
 | [`docs/README.md`](docs/README.md) | **Precedence map** — which document wins on which topic | Whenever two docs seem to disagree |
-| [`docs/TASKS.md`](docs/TASKS.md) | **Single current product checklist** — tick completed scope and add new feedback here; do not create competing active queues | At session start and whenever work lands |
-| [`docs/STATUS.md`](docs/STATUS.md) | Where we are, what is next, who did what, decisions log | At the start of every session |
-| [`docs/CONTINUITY.md`](docs/CONTINUITY.md) | Compact handoff: latest builder direction, baseline findings and next bounded task | After a model/chat switch or compaction |
+| [`docs/PRODUCT_WORK_HISTORY.md`](docs/PRODUCT_WORK_HISTORY.md) | Dated task entries, experiments, findings, and prior decisions | Before proposing work that may have been tried before |
 | [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) | Current product scope, live-history behavior, content-shaped presentation and validation hypotheses | Before product or experience decisions |
 | [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | Backend-first execution gates, integrated base UI, performance and deployment | Before choosing implementation work |
 | [`docs/CODEBASE.md`](docs/CODEBASE.md) | The code as built: packages, data flow, identity, privacy, API, tests, how to add a harness | Before changing any code |
@@ -80,7 +78,7 @@ The demo and the synthetic fixtures have one shape. Real sessions bring cases th
 
 Builder decision, 28 October (Yash; Harsh to confirm). This is the main rule for every agent, Codex and Claude alike. It replaces "slice", "foundation" and "ready for review with leftovers".
 
-1. **A claim is a whole TASKS item, and you finish it.** Do not ship parts and leave the item open for "the rest". If an item is too large, split it in TASKS first (new IDs, each one whole), claim one, and finish it before the next. Open a PR as ready only when the item's *Accept* list is met, or each unmet line is blocked by something outside the task and the PR says exactly what (a decision, a person's signed-in session). "Could do, did not" is not a blocker: do it. Draft PRs exist only for visibility.
+1. **Review against the agreed acceptance criteria.** A substantive change must have a bounded scope and a way to verify it. Use a draft PR while work is in progress. When you request review, record the checks and any acceptance criteria blocked by an external dependency.
 2. **The demo is not a test.** The demo bundle and synthetic fixtures are regression guards; they never count as acceptance. Acceptance is on real local sessions of both harnesses: find sessions that contain each case (count them; id prefixes and sizes only), import them into a scratch Drishya home, and check the counts and the screen at 600 and 1440 px. **If no real session contains the case, make one.** Run the real harness (Claude Code, Codex) until it records the case (plan mode, a question, a literal `git commit -- path`, a browser call, an image-only prompt, a sub-agent) on a throwaway repository, then check that genuine capture. This is how CONTENT-4b's plan mode and GIT-2's commit link were verified. Say in the PR which cases, which session prefixes and what could not be run (a harness or account you do not have).
 3. **Checks come in three tiers; the full gate runs once per finished task or batch, never per slice.**
    - *While working:* typecheck of the touched projects, units of the touched packages, the named specs for the area. Seconds to minutes; run them as often as you like.
@@ -120,30 +118,20 @@ Rationale and rejected alternatives: [engineering plan §1](docs/review/03-engin
 
 ---
 
-## How we work — two builders, one repo
+## How we work
 
-The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). There is **no ownership split**: both builders work anywhere and review each other.
+1. **Start from an issue for substantive work.** Describe the problem, scope, and acceptance criteria. Check related issues, PRs and prior experiments. Coordinate overlapping changes in the issue. Small documentation fixes can go straight to a PR.
+2. **Open a focused PR into `main`.** Link the issue when one exists. Explain what changed and record how you verified each acceptance criterion. Use a draft for work in progress. Keep unrelated changes in separate PRs.
+3. **Review before merge.** A maintainer checks the linked scope, evidence and relevant project constraints. Record any external blocker in the PR. Squash-merge with a title in the form `area: what changed`. CODEOWNERS routes review.
+4. **Record durable decisions.** Keep the rationale in the relevant architecture or contributor docs, link it from the issue or PR, and add experiment findings to Product Work History when they can prevent repeated work.
 
-**Branches and pull requests**
-- `main` always works. Never push broken code to it.
-- Make documentation and other small, low-risk changes directly on `main` after checking them. Use a short-lived branch for major changes: `<handle>/<topic>` — e.g. `yash/canvas-lift`, `harsh/claude-adapter`.
-- Open a PR into `main` for major branch work. **The other builder reviews it** before merge — this is how we check each other's work.
-- Squash-merge. The PR title becomes the commit: `area: what changed` (e.g. `canvas: lift surfaces from map origins`). The repo allows squash merges only and deletes branches on merge.
-- `CODEOWNERS` requests review from the other builder automatically. The PR template's checklist is the non-negotiables — tick it honestly.
-- Label issues and PRs by area: `area: capture`, `area: canvas`, `area: map`, `area: privacy`. Anything touching the event schema gets `schema`; anything awaiting a recorded decision gets `decision`.
-
-**Claiming and state**
-- **Claim first, then work. No exceptions.** The very first action on any item is a docs-only commit on `main` that adds your row to the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md), keyed by the [`docs/TASKS.md`](docs/TASKS.md) ID, and pushes it. Run `node scripts/claims.ts` before choosing: never start an item it shows as `CLAIMED`, and never touch files another row lists. If the work has no TASKS ID yet, add the item to TASKS first, then claim it. Agents (Claude, Codex or any other): this applies to you at the start of every session; state the ID you claimed in your first message to the builder.
-- **No silent batches.** Work nobody was told about is not ready to review. Open a **draft PR after your first commit** so the other builder can see it, and keep it to **one whole TASKS ID**; if finishing it needs more than about 5 commits or 15 files, say so in the claim's *Files* column and agree it before you go on (see *Definition of done*: split the item in TASKS, do not ship a part). A pull request for unclaimed work, or a long series of commits pushed without any claim, is sent back to be claimed and split, whatever its quality.
-- **Delete your row in the PR that finishes the work,** tick the item in [`docs/TASKS.md`](docs/TASKS.md) and run `node scripts/sync-tasks.ts`. A claim with no commit for 3 days is stale; anyone may take it after asking.
-- **Update `docs/STATUS.md` when you finish**, not when you start. Overwrite your "Last session" block.
-- **Settled decisions go in the decisions log, with the reason.** This is what stops four agents re-litigating the same argument next week.
+Label PRs by area. Changes to the event schema use `schema`. Use `decision` for work awaiting a recorded decision.
 
 **Rules of the codebase**
 - **UI work uses the installed design skills.** Apply `emil-design-eng` for interface composition and polish, and the relevant animation/review skill when changing motion. Preserve this repo's evidence/creative doctrine when generic skill guidance conflicts. Commit each coherent, verified increment separately so the builders can backtrack; do not combine unrelated UI tasks into one commit. Builder direction, 12 October.
 - **The event schema changes only by agreement between both builders.** It is the seam between capture and rendering.
 - **Golden tests from the first composer commit.**
-- **No new feature while a performance gate is red, unless the builder explicitly narrows the supported range and records the decision.** Current status: the builder resumed B4 and reference-machine long-session probes now pass their measured gates. Physical low-resource/lower-core and platform acceptance remain release checks. Preserve the paged projection/data-source boundary; do not claim broad release or unmeasured workload readiness. See `docs/review/08-b4-history-reader.md`, [`docs/STATUS.md`](docs/STATUS.md) and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §7.
+- **No new feature while a performance gate is red unless a maintainer records a narrower supported range.** Physical low-resource, lower-core and platform acceptance remain release checks. Preserve the paged projection and data-source boundary. See the [history reader record](docs/review/08-b4-history-reader.md) and [implementation roadmap](docs/IMPLEMENTATION_ROADMAP.md) §7.
 - **Never share `node_modules` between checkouts or worktrees** (no junction, symlink or copy); each runs its own `corepack pnpm install --frozen-lockfile`. Shared links made `@drishya/*` resolve to another tree and broke verification, 27 October.
 - **Fixtures decouple the work.** If rendering is blocked on capture, the fixture corpus is too small — grow it. Only synthetic or redacted fixtures are committed; `.gitignore` refuses `*.jsonl` outside `fixtures/redacted/`.
 
@@ -155,7 +143,7 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 
 **Chat history is not project memory.** It does not survive a folder rename, a desktop-app account switch, or the 30-day retention sweep of `~/.claude/projects/`. **This repository does.**
 
-If something learned in a session would be expensive to lose — a decision, a design insight, a gotcha — **write it into `docs/` before the session ends.** Creative direction goes in `docs/VISION.md`; decisions in `docs/STATUS.md`; architecture in the engineering plan. The next agent, on either builder's machine, reads them in minutes and is fully caught up.
+If something learned in a session would be expensive to lose — a decision, a design insight, a gotcha — **write it into `docs/` before the session ends.** Creative direction goes in `docs/VISION.md`; decisions in `docs/decisions/`; architecture in the engineering plan. The next agent, on either builder's machine, reads them in minutes and is fully caught up.
 
 `scripts/Rename-Project.ps1` (Windows) and `scripts/rename-project.sh` (macOS/Linux) migrate Claude Code session history if the project folder is ever moved.
 

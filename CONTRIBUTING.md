@@ -10,10 +10,9 @@ Drishya is early: the design is settled enough to build, and the application is 
 
 ## How work flows
 
-- Branch from `main` as `<handle>/<topic>`, open a pull request, and ask for review. Squash-merge.
-- The pull request template is the checklist. Every item traces to a constraint in `AGENTS.md`.
-- Changes to the event schema need agreement from both maintainers, because it is the seam between capture and rendering.
-- Claim larger work in [`docs/STATUS.md`](docs/STATUS.md) first, so two people never build the same thing.
+1. Check [open issues](https://github.com/drishya-dev/drishya/issues), related PRs, and [Product Work History](docs/PRODUCT_WORK_HISTORY.md). For substantive work, use an issue to agree on the problem, scope, and what reviewers should be able to verify.
+2. Branch from `main` as `<handle>/<topic>`. Open a focused PR and link the issue when one exists. A draft PR can share work in progress.
+3. In the PR, state what changed, how you checked the acceptance criteria, and which checks are pending. A maintainer reviews before squash merge. Changes to the event schema require approval from both maintainers.
 
 ## Never commit a real recording
 
