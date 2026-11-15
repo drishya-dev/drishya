@@ -13,8 +13,19 @@ describe('import extraction', () => {
     expect(jsImports(src)).toEqual(['./a', '../b.ts', './c', './d', 'e']);
   });
 
+  it('ignores block and standalone line comments when reading imports', () => {
+    const src = [
+      '/* import privateFile from "./ignored"; */',
+      'import /* type information */ thing from "./thing";',
+      '  // import anotherFile from "./also-ignored";',
+      '',
+      'export { thing } from "./public";',
+    ].join('\n');
+    expect(jsImports(src)).toEqual(['./thing', './public']);
+  });
+
   it('finds python imports, relative and absolute', () => {
-    expect(pythonImports('from .models import User\nfrom . import utils, db\nimport os, app.core\n')).toEqual(['.models', '.utils', '.db', 'os', 'app.core']);
+    expect(pythonImports('from .models import User\nfrom . import utils, db\nfrom ..shared.models import Product\nfrom .. import services as svc\nimport os, app.core\n')).toEqual(['.models', '.utils', '.db', '..shared.models', '..services', 'os', 'app.core']);
   });
 
   it('resolves with explicit rules and never invents a target', () => {
@@ -37,6 +48,29 @@ describe('graph', () => {
     expect(g.stats.unresolved).toBe(0);
     expect(g.edges).toContainEqual(expect.objectContaining({ from: 'src/checkout/index.ts', to: 'src/checkout/guard.ts', basis: 'deterministic-rule' }));
     expect(g.nodes.every((n) => n.x >= 0 && n.x <= 1 && n.y >= 0 && n.y <= 1)).toBe(true);
+  });
+
+  it('resolves commented jsconfig aliases with a small source-file limit', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'drishya-index-alias-'));
+    try {
+      const config = join(root, 'jsconfig.json');
+      const jsonc = [
+        '{',
+        '  /* Workspace alias */',
+        '  "compilerOptions": {',
+        '    // Keep source imports short.',
+        '    "paths": { "@/*": ["./src/*"], },',
+        '  },',
+        '}',
+      ].join('\n');
+      mkdirSync(join(root, 'src'));
+      writeFileSync(join(root, 'src', 'main.ts'), "import '@/hero';");
+      writeFileSync(join(root, 'src', 'hero.ts'), 'export {};');
+      writeFileSync(config, jsonc);
+      const graph = await buildGraph(root, { maxFileBytes: 32 });
+      expect(graph.nodes.some(({ path }) => path === 'jsconfig.json')).toBe(false);
+      expect(graph.edges).toContainEqual(expect.objectContaining({ from: 'src/main.ts', to: 'src/hero.ts' }));
+    } finally { rmSync(root, { recursive: true, force: true }); }
   });
 
   it('lays out deterministically', async () => {
