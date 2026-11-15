@@ -18,7 +18,7 @@ The narrower rule wins where paths overlap. “Curate” means publish the revie
 | `scripts/claims.ts`, `scripts/sync-tasks.ts` | Archive in local ZIP | Verify the backup and replace the contributor instructions before removing the scripts from the public tree. |
 | `docs/README.md`, `docs/CODEBASE.md`, `docs/VISION.md`, `docs/CI_POLICY.md`, `docs/DEVELOPER_WORKSPACE.md`, `docs/release-checklist.md` | Curate | Keep the current developer guidance. Replace archival links with curated material and remove private evidence and obsolete instructions. Verify the remaining command and link targets. |
 | `docs/reference/02-motion-catalog.md`, `03-event-schema.md`, `04-continuous-canvas.md` in the same directory | Curate | Keep durable contracts and reconcile them with the current code and desktop support. Use the [draft decisions](../decisions/README.md) as the short contributor entry point. |
-| `docs/TASKS.md`, `docs/STATUS.md`, `docs/CONTINUITY.md` | Archive originals in local ZIP | Carry dated experiments, findings and rationale into Product Work History. Use GitHub Issues for the public work list. |
+| `docs/TASKS.md`, `docs/STATUS.md`, `docs/CONTINUITY.md` | Archive originals in local ZIP | Keep the full detailed contents of `TASKS.md` as Product Work History. Remove the priority list at the top. Use GitHub Issues for active work. |
 | `docs/reference/01-evidence-pack.md` | Archive | Review for material that can support contributor decisions without exposing private evidence. |
 | `docs/BLUEPRINT.md`, `docs/Vantage_Base_Prompt.md`, `docs/IMPLEMENTATION_ROADMAP.md`, `docs/PRODUCT_DELIVERY.md`, `docs/PRODUCT_DIRECTION.md` | Archive | Carry forward current rationale as short decisions. The older task proposal also names `PROJECT_MASTER_DESCRIPTION.md`, which is absent from this tree. |
 | `docs/review/**`, `docs/superpowers/**`, `docs/prototype/**` | Curate useful experiments | Keep reviewed experiments or summarize them in Product Work History with the finding and reason an approach was dropped. Archive the original drafts and private evidence. |
@@ -32,7 +32,7 @@ The claim workflow currently appears in AGENTS, CONTRIBUTING and the PR template
 
 Create a local ZIP for Harsh containing the original task list, status and continuity docs, claim scripts, and their tracking-related files. Verify that it opens, contains every intended file, and matches the originals before removing the live tracking files from the release tree. The ZIP stays local and out of Git. The claim system was used during private development to prevent overlapping edits.
 
-Create a public **Product Work History** that contributors and agents can search by feature, task ID, date, or experiment. Preserve what was tried, what was found, and why approaches were kept or dropped. Omit priority rankings, claim rows, active checklists, private remarks and identifying evidence. Link useful reviewed experiments from the history so future contributors can check earlier work before repeating it.
+Rename the public copy of `TASKS.md` to **Product Work History**. Remove only the priority and tracking list at the top. Carry over every detailed task entry below it, including its ID, dated logs, experiments, findings, and reasons for keeping or dropping an approach. Contributors and agents can search those records before repeating an experiment. Apply the publication privacy review to the retained material and keep the original complete file in the local ZIP.
 
 ## Public contributor workflow
 
