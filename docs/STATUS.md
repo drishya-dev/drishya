@@ -62,6 +62,12 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 ## Last session
 
+### Harsh with Codex — 15 Nov: SHIP-9 release preparation
+
+- Draft PR #508 sets the packed CLI version to 0.1.0, adds the local tarball install and first connected prompt to the README, and drafts the release notes. The package name follows the current SEC-5 checklist and packager (`@drishya-dev/cli`).
+- Preparation build `4cb76259` was clean on Windows x64 and Node 24.11.1. The frozen offline install, production build, packed CLI verifier, and a separate offline npm install into a scratch prefix passed. The installed Windows command showed its help. The verifier exercised synthetic Claude Code and Codex imports, the demo, authenticated API access, persistence after restart and the loopback-only network check.
+- Keep SHIP-9 open while the gate and SEC-4 work finish. Once the release commit is selected, build from that exact commit, run the full gate and SEC-5 checklist, and follow the README on a second clean Windows machine through a live session. Update the platform coverage in the release notes from that evidence.
+
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
 - `README.md` rewritten for launch: the problem and six answers (from [market-1-plan](review/market-1-plan.md)), a feature tour limited to what is on `main`, supported agents stated honestly (Antigravity read-only, no live following in this release), install from source (primary, run in a scratch home) with the npm command marked as available at launch, first run, uninstall and data location, *Privacy and control* (reads, stores, sends nothing, listens on loopback, the reverse-proxy and port-forwarding warning) and develop. Images are synthetic only, in `docs/readme/`.

@@ -11,4 +11,4 @@ Drishya runs locally and shows what a coding agent read, ran, and changed alongs
 
 The CLI package is `@drishya-dev/cli` and requires Node.js 24. It opens a desktop browser and supports window widths of 600 px and above. Session data stays on your machine and the server listens on loopback. The [README](../README.md) covers installation, first run, privacy, and uninstall.
 
-**Platform verification.** The draft package is being checked on Windows 11. The second-machine Windows walkthrough, frozen-candidate gate and SEC-5 signoff, and Linux and macOS candidate checks are pending.
+**Platform verification.** The preparation tarball built and installed offline on Windows 11 x64 with Node.js 24.11.1. The second-machine Windows walkthrough, frozen-candidate gate and SEC-5 signoff, and Linux and macOS candidate checks are pending.
