@@ -50,11 +50,22 @@ export function intentFor(tool: string, args: Args): ToolIntent {
 export function recordedExitCode(content: string): number | undefined {
   // Find the explicit labels without restarting a whitespace scan at each blank line.
   const labels = /^[^\S\r\n\u2028\u2029]*exit (?:code|status)/gim;
-  const value = /\s*:\s*(-?\d+)[^\S\r\n\u2028\u2029]*$/my;
+  const skipSpace = (start: number) => {
+    while (start < content.length && /\s/.test(content[start]!)) start++;
+    return start;
+  };
+  const lineBreak = '\r\n\u2028\u2029';
   for (const label of content.matchAll(labels)) {
-    value.lastIndex = label.index + label[0].length;
-    const match = value.exec(content);
-    if (match) return Number(match[1]);
+    const colon = skipSpace(label.index + label[0].length);
+    if (content[colon] !== ':') continue;
+    const start = skipSpace(colon + 1);
+    const digits = content[start] === '-' ? start + 1 : start;
+    let end = digits;
+    while (end < content.length && content[end]! >= '0' && content[end]! <= '9') end++;
+    if (end === digits) continue;
+    let tail = end;
+    while (tail < content.length && !lineBreak.includes(content[tail]!) && /\s/.test(content[tail]!)) tail++;
+    if (tail === content.length || lineBreak.includes(content[tail]!)) return Number(content.slice(start, end));
   }
   return undefined;
 }
