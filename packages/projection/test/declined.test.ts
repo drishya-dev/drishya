@@ -21,6 +21,18 @@ describe('declinedFrom', () => {
     expect(declinedFrom(`Output mentions: ${PERSON}`)).toBeUndefined();
     expect(declinedFrom(undefined)).toBeUndefined();
   });
+
+  it('preserves multiline reason text and requires the recorded trailer', () => {
+    const refusal = AUTO.slice(0, AUTO.indexOf(' Reason:'));
+    const body = 'Workspace scope.\r\nOpen the recorded checkout first.';
+    const long = 'Review the recorded checkout. '.repeat(9).trim();
+    const trailer = '.\r\nIf you have other tasks, continue on those.';
+    expect(declinedFrom(`${refusal}\nReason:\t[ ${body} ]${trailer}`)).toEqual({ by: 'auto-mode', reason: body });
+    expect(declinedFrom(`${refusal} Reason: ${long}${trailer}`)).toEqual({ by: 'auto-mode', reason: long.slice(0, 200) });
+    expect(declinedFrom(`${refusal} Reason: [ ]${trailer}`)).toEqual({ by: 'auto-mode' });
+    expect(declinedFrom(`${refusal} Reason: ${body}`)).toEqual({ by: 'auto-mode' });
+    expect(declinedFrom(`${refusal} OtherReason: ${body}${trailer}`)).toEqual({ by: 'auto-mode' });
+  });
 });
 
 let dir: string, store: Store, ingest: Ingestor;

@@ -5,6 +5,24 @@ import { expect, it } from 'vitest';
 import { asOfProjection, isBlobText } from '@drishya/contracts';
 import { Ingestor } from '../../ingest/src/index.ts';
 import { Store } from '../../store/src/index.ts';
+import { parseApplyPatch } from '../src/patch.ts';
+
+it('keeps named patch entries and omits blank file and move labels', () => {
+  const patch = [
+    '*** Begin Patch',
+    '*** Add File:   ',
+    '*** Update File: src/example file.ts ',
+    '*** Move to:    ',
+    '@@',
+    '-before',
+    '+after',
+    '*** End Patch',
+  ].join('\r\n');
+
+  expect(parseApplyPatch(patch)).toEqual([
+    { path: 'src/example file.ts', op: 'update', hunks: [{ oldStart: 0, oldLines: 1, newStart: 0, newLines: 1, lines: ['-before', '+after'] }] },
+  ]);
+});
 
 it('reads complete sealed structured diff lines in History and replay', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'drishya-structured-patch-'));

@@ -63,6 +63,29 @@ describe('shell classification (derived)', () => {
     ['cat a.ts | grep x', 'shell'],
   ])('%s → %s', (cmd, kind) => expect(classifyShell(cmd).kind).toBe(kind));
 
+  it('keeps operators inside quoted search patterns and file names', () => {
+    expect(classifyShell("cd 'my project' && rg -n 'open|close' src")).toEqual({ kind: 'search', query: 'open|close', path: 'src' });
+    expect(classifyShell('cat "notes; final.md"')).toEqual({ kind: 'read', path: 'notes; final.md' });
+    expect(classifyShell('cat "C:\\My Work\\notes.md"')).toEqual({ kind: 'read', path: 'C:\\My Work\\notes.md' });
+    expect(classifyShell('cat "notes; final.md" | head -n 2')).toEqual({ kind: 'shell' });
+  });
+
+  it('does not attribute compound command output to its first read or multiline search', () => {
+    expect(classifyShell('Get-Content README.md\r\n# Report status next.\r\nWrite-Output Ready')).toEqual({ kind: 'shell' });
+    expect(classifyShell('rg -n total src\nWrite-Output Ready')).toEqual({ kind: 'shell' });
+    expect(classifyShell('cat "work notes.md"; echo Ready')).toEqual({ kind: 'shell' });
+    expect(classifyShell('cat "work notes.md" && echo Ready')).toEqual({ kind: 'shell' });
+    expect(classifyShell('cd src && cat "work notes.md"')).toEqual({ kind: 'read', path: 'work notes.md' });
+    expect(classifyShell('cat README.md\n# Finished | ready to review')).toEqual({ kind: 'read', path: 'README.md' });
+    expect(classifyShell('Get-Content README.md\npnpm vitest run')).toEqual({ kind: 'test' });
+  });
+
+  it('does not infer file paths from shell input bodies or ambiguously doubled quotes', () => {
+    expect(classifyShell("cat <<'NOTE'\nA work note\nNOTE")).toEqual({ kind: 'shell' });
+    expect(classifyShell("cat @'\nA work note\n'@")).toEqual({ kind: 'shell' });
+    expect(classifyShell("rg 'today''s note' src")).toEqual({ kind: 'shell' });
+  });
+
   it('reads the range from sed', () => {
     expect(classifyShell("sed -n '10,40p' src/a.ts")).toEqual({ kind: 'read', path: 'src/a.ts', start: 10, end: 40 });
   });
@@ -116,6 +139,45 @@ describe('test output parsing (derived)', () => {
     expect(isTestCommand("rg -n 'palette|mocha|tokyo' themes.css")).toBe(false);
     expect(isTestCommand('text(await tools.exec_command({cmd:"rg -n \'palette|mocha|tokyo\' themes.css"}));')).toBe(false);
     expect(isTestCommand('printf "first; npm test\\npytest"')).toBe(false);
+  });
+
+  it('only closes a shell heredoc at its complete delimiter line', () => {
+    const command = ["cat <<'NOTE' > README.md", 'NOTE is the title of this page.', 'npm test', 'NOTE'].join('\n');
+    expect(isTestCommand(command)).toBe(false);
+    expect(isTestCommand(command + '\npnpm vitest run')).toBe(true);
+  });
+
+  it('skips multiple input bodies and recognises a runner after a PowerShell here-string', () => {
+    const heredocs = ["cat <<'FIRST' <<-'SECOND'", 'project notes', 'FIRST', '\tpnpm vitest run', '\tSECOND'].join('\n');
+    expect(isTestCommand(heredocs)).toBe(false);
+    const hereString = ["Set-Content README.md @'", 'npm test', "'@"].join('\r\n');
+    expect(isTestCommand(hereString)).toBe(false);
+    expect(isTestCommand(hereString + '; npm test')).toBe(true);
+  });
+
+  it('ignores input markers within multiline quoted arguments and standalone comments', () => {
+    const quoted = ["printf '%s' 'A Markdown example:", 'cat <<EXAMPLE', "end of sample'", 'npm test'].join('\n');
+    const commented = ["# Example input: cat <<NOTE with 'quoted text", 'npm test'].join('\r\n');
+    expect(isTestCommand(quoted)).toBe(true);
+    expect(isTestCommand(commented)).toBe(true);
+  });
+
+  it('ignores heredoc examples in inline comments and keeps literal hashes in arguments', () => {
+    const commented = ['echo Ready # Example input: cat <<NOTE', 'npm test'].join('\n');
+    expect(isTestCommand(commented)).toBe(true);
+
+    for (const path of ['notes#2.md', 'my\\ #2.md']) {
+      const heredoc = ['cat ' + path + ' <<NOTE', 'npm test', 'NOTE'].join('\n');
+      expect(isTestCommand(heredoc)).toBe(false);
+    }
+  });
+
+  it('recognises complete hyphenated heredoc delimiters before a real test command', () => {
+    for (const delimiter of ['WORK-NOTES', "'WORK-NOTES'", '"WORK-NOTES"']) {
+      const doc = ['cat <<' + delimiter, 'npm test', 'WORK-NOTES'].join('\n');
+      expect(isTestCommand(doc)).toBe(false);
+      expect(isTestCommand(doc + '\npnpm vitest run')).toBe(true);
+    }
   });
 
   it('parses quiet pytest output', () => {
