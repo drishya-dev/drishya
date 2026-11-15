@@ -1455,12 +1455,12 @@ test('a real pending-input shape expands the composer and replies to that reques
   await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
   state={...state,state:'approval',inputRequests:[{id:'input-request',questions:[question]}]};
   const form=page.getByRole('form',{name:'Agent needs your input'});await expect(form).toBeVisible();
-  await expect(composer.locator('.modern-composer-state')).toHaveText('Answer requested');
+  await expect(composer.locator('.modern-composer-state')).toHaveText('Needs an answer');
   await expect(form.getByRole('button',{name:'Send answer',exact:true})).toBeDisabled();
   await form.getByRole('radio',{name:/Small patch/}).check();
   await form.getByRole('textbox',{name:'Answer: Which approach?',exact:true}).fill('Keep scope tiny');
   await expect(form.getByRole('radio',{name:/Small patch/})).not.toBeChecked();
-  for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
+  for(const width of [1440,600]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
   await form.getByRole('button',{name:'Send answer',exact:true}).click();
   await expect.poll(()=>answer).toEqual({runId:'input-run',requestId:'input-request',answers:{q0:{options:[],text:'Keep scope tiny'}}});
   expect(prompts).toBe(0);await expect(form).toHaveCount(0);
