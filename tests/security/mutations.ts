@@ -45,6 +45,8 @@ export const MUTATIONS: Mutation[] = [
   { name: 'pentest: a launch code signs in once', edits: [rm(S, '    launchCodes.delete(code);')], tests: ['12-pentest'] },
   { name: 'pentest: the browser is opened with a code, not the token', edits: [{ file: 'apps/daemon/src/commands.ts', find: 'openBrowser(running.openUrl());', replace: 'openBrowser(running.launchUrl);' }], tests: ['12-pentest'] },
   { name: 'pentest: a launch code expires', edits: [{ file: S, find: 'return expires !== undefined && expires > now();', replace: 'return expires !== undefined;' }], tests: ['12-pentest'] },
+  { name: 'pentest: a redirected .git is rejected (history/compare/graph)', edits: [rm(G, "await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.")], tests: ['12-pentest'] },
+  { name: 'pentest: a redirected .git is rejected (snapshot)', edits: [rm(G, "await verifyOwnGitDir(root); // SEC-4: for the Snapshot surface — the toplevel check above does not see where Git keeps history, only the work tree.")], tests: ['12-pentest'] },
   // 3. file access
   { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'] },
   { name: 'files: workspace grant required', edits: [rm(W, "if (!root || !rec.workspaceRoot || await realpath(rec.workspaceRoot) !== root) throw new HttpError(403, 'approve this session workspace first');")], tests: ['03-file-access'] },

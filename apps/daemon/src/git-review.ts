@@ -6,7 +6,7 @@ import { redactText } from '@drishya/privacy';
 import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
 import {GitHistoryCache,gitHistory,gitCommit,gitRefGeneration,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
-import type { WorkspaceAccess } from './workspace.ts';
+import { verifyOwnGitDir, type WorkspaceAccess } from './workspace.ts';
 
 import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
 import type {HistoryService} from './history.ts';
@@ -125,6 +125,7 @@ export class GitReview {
       const signal=AbortSignal.timeout(30_000);
       const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
       if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
+      await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.
       const result=await inspect(git,root);
       if(!this.grants.has(id)||await this.workspace.root(id)!==root)throw new HttpError(403,'Git reading access changed. Approve this workspace again.');
       return result;
@@ -215,6 +216,7 @@ export class GitReview {
     let overrides: string[] = [];
     const git: GitReader = (root, args) => this.read(root, [...overrides, ...args], signal);
     if (await realpath(resolve((await git(root, ['rev-parse', '--show-toplevel'])).trim())) !== root) throw new HttpError(403, 'The selected workspace must be the repository root.');
+    await verifyOwnGitDir(root); // SEC-4: for the Snapshot surface — the toplevel check above does not see where Git keeps history, only the work tree.
     // Status/diff may invoke clean/process filters. Disable each configured driver
     // for this invocation only; do not change the repository's configuration.
     const configKeys = await git(root, ['config', '--list', '--name-only']);
