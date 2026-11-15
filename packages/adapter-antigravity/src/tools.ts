@@ -48,8 +48,15 @@ export function intentFor(tool: string, args: Args): ToolIntent {
 
 /** Only an explicit status is evidence of a process exit. */
 export function recordedExitCode(content: string): number | undefined {
-  const match = content.match(/(?:^|\n)\s*(?:exit code|exit status)\s*:\s*(-?\d+)\s*(?:\r?$)/im);
-  return match ? Number(match[1]) : undefined;
+  // Find the explicit labels without restarting a whitespace scan at each blank line.
+  const labels = /^[^\S\r\n\u2028\u2029]*exit (?:code|status)/gim;
+  const value = /\s*:\s*(-?\d+)[^\S\r\n\u2028\u2029]*$/my;
+  for (const label of content.matchAll(labels)) {
+    value.lastIndex = label.index + label[0].length;
+    const match = value.exec(content);
+    if (match) return Number(match[1]);
+  }
+  return undefined;
 }
 
 export function outcomeFor(tool: string, args: Args, content: string): ToolOutcome {
