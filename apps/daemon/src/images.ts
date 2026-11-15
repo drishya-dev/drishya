@@ -1,7 +1,7 @@
 // CONTENT-1 (D7): image bytes a recording captured inline, served by content hash. History pages carry
 // only the hash; the browser fetches an image when its card is on screen. The type sent is the one
 // the bytes carry, never the journal's claim.
-import { sniffImage } from '@drishya/privacy';
+import { sniffImage, tooManyPixels } from '@drishya/privacy';
 import type { Store } from '@drishya/store';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +11,7 @@ export function readImage(store: Store, recordingIds: string[], sha: string): { 
   if (!data) return undefined;
   const body = Buffer.from(data, 'base64');
   const sniff = sniffImage(body.subarray(0, 65_536));
-  return sniff ? { mime: sniff.mime, body } : undefined;
+  return sniff && !tooManyPixels(sniff) ? { mime: sniff.mime, body } : undefined;
 }
 
 /**

@@ -1,11 +1,13 @@
 import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, win32 } from 'node:path';
 
 /** Only known native installation locations; no shell shims or recursive disk search. */
 export function executable(name: string, options: { env?: NodeJS.ProcessEnv; platform?: string; arch?: string } = {}): string | undefined {
   const env = options.env ?? process.env, platform = options.platform ?? process.platform, arch = options.arch ?? process.arch;
   const windows = platform === 'win32';
-  const dirs = (env.PATH ?? '').split(windows ? ';' : ':').map(dir => dir.replace(/^"|"$/g, '')).filter(Boolean);
+  // SEC-3: only absolute PATH entries. A relative one ("." or "bin") would resolve against whatever directory
+  // Drishya was started in, which can be a repository that ships its own `claude` or `codex`.
+  const dirs = (env.PATH ?? '').split(windows ? ';' : ':').map(dir => dir.replace(/^"|"$/g, '')).filter(dir => dir && (isAbsolute(dir) || win32.isAbsolute(dir)));
   const isFile = (path: string) => { try { return statSync(path).isFile(); } catch { return false; } };
   for (const dir of dirs) { const path = join(dir, name + (windows ? '.exe' : '')); if (isFile(path)) return path; }
   if (!windows || !['codex', 'claude'].includes(name)) return;

@@ -2,17 +2,10 @@ import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
 import { useEffect,useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Operation, OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
+import { omittedDimensions, omittedReason } from '../lib/omitted-image.ts';
 import './op-images.css';
 
 const size = (bytes?: number) => bytes === undefined ? '' : bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-const WHY: Record<string, string> = {
-  'referenced-file': 'a referenced conversation image whose bytes could not be captured',
-  'too-large': 'larger than the 4 MB kept per image',
-  'recording-budget': 'past the 256 MB of images kept per session',
-  protected: 'from a protected file',
-  unrecognised: 'not a recognised image type',
-  remote: 'a remote reference; never fetched automatically',
-};
 
 /**
  * CONTENT-1: images an action returned, as the agent received them. Thumbnails load only when on
@@ -30,7 +23,7 @@ export function OpImages({ images, compact = false }: { images: OperationImage[]
       const label = `Image${img.width && img.height ? ` · ${img.width}×${img.height}` : ''}${img.bytes ? ` · ${size(img.bytes)}` : ''}`;
       return src
         ? <ImageThumbnail key={`${i}:${src}`} src={src} image={img} label={label} onOpen={() => setOpen(img)} />
-        : <div key={i} className="op-image-missing" title={label}>Image {img.omitted ? `not kept: ${WHY[img.omitted] ?? img.omitted}` : 'not available here'}{img.bytes ? ` · ${size(img.bytes)}` : ''}</div>;
+        : <div key={i} className="op-image-missing" title={label}>Image {img.omitted ? `not kept: ${omittedReason(img)}` : 'not available here'}{omittedDimensions(img)}{img.bytes ? ` · ${size(img.bytes)}` : ''}</div>;
     })}
     {compact && images.length > 3 && <span className="op-images-more">+{images.length - 3} more</span>}
     {open && url(open) && <ImageReader src={url(open)!} image={open} onClose={() => setOpen(undefined)} />}

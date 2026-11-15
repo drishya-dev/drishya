@@ -4,6 +4,7 @@ import type {QueueInputChunk, QueuePage, QueueReceipt} from '@drishya/contracts'
 import {useApp} from '../state.ts';
 import {ReadingDialog} from './ProductShell.tsx';
 import {OriginalToggle} from './OriginalToggle.tsx';
+import { omittedDimensions, omittedReason } from '../lib/omitted-image.ts';
 import './queued-inputs.css';
 
 const labels = {recorded: 'Queue receipt recorded', unknown: 'Queue changed · item outcome unknown', removed: 'Removed from queue', delivered: 'Delivered · matching prompt in History'};
@@ -128,7 +129,7 @@ export function QueuedInputs({standalone = false}: {standalone?: boolean}) {
           </>}
           {selected.images?.map((image, index) => image.sha && source.imageUrl
             ? <img key={image.sha + index} alt={`Queued input image ${index + 1}`} src={source.imageUrl(owner, image.sha)} style={{display: 'block', maxWidth: '100%', maxHeight: '65dvh', objectFit: 'contain', margin: '12px auto'}} />
-            : <p key={index} className="muted small">Image bytes not kept{image.omitted ? `: ${image.omitted}` : ''}.</p>)}
+            : <p key={index} className="muted small">Image bytes not kept{image.omitted ? `: ${omittedReason(image)}` : ''}{omittedDimensions(image)}.</p>)}
         </section>}
         </div>
         {busy && <p className="muted small" role="status">Reading input…</p>}

@@ -17,8 +17,36 @@ import type {GithubLinks} from './github-links.ts';
 import type {GitGithubSquashMatch} from './git-types.ts';
 const digest = (text: string) => createHash('sha256').update(text).digest('hex');
 
-/** Fixed argv without a shell; snapshot also overrides configured content filters. */
-export function readGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
+/** Commands that read only Git's object store and refs. They never look at working-tree files, so no content filter can run. */
+const OBJECT_ONLY = new Set(['log', 'show', 'cat-file', 'rev-parse', 'for-each-ref', 'merge-base', 'symbolic-ref', 'rev-list', 'show-ref', 'ls-tree', 'config']);
+
+function subcommandOf(args: string[]): string {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '-c') { i++; continue; }
+    if (!args[i]!.startsWith('-')) return args[i]!;
+  }
+  return '';
+}
+
+/**
+ * `-c` overrides that switch off every content filter a repository's own configuration defines. A clean or
+ * process filter is a program, and `git status` or `git diff` runs it on working-tree files to compare them
+ * with the index. The configured names are read on every call, because a repository can change underneath us.
+ */
+async function filterOverrides(root: string, signal?: AbortSignal): Promise<string[]> {
+  const keys = await runGit(root, ['config', '--list', '--name-only'], signal);
+  const drivers = [...new Set(keys.split(/\r?\n/).filter(key => /^filter\..+\.(clean|smudge|process|required)$/i.test(key)).map(key => key.replace(/\.[^.]+$/, '')))];
+  if (drivers.length > 64) throw new HttpError(422, 'Too many configured Git filters for bounded read-only inspection.');
+  return drivers.flatMap(driver => ['-c', `${driver}.clean=`, '-c', `${driver}.smudge=`, '-c', `${driver}.process=`, '-c', `${driver}.required=false`]);
+}
+
+/** Fixed argv without a shell. Any command that can touch working-tree files runs with the repository's content filters switched off (SEC-3). */
+export async function readGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
+  const overrides = OBJECT_ONLY.has(subcommandOf(args)) ? [] : await filterOverrides(root, signal);
+  return runGit(root, [...overrides, ...args], signal);
+}
+
+function runGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1' };
   // Ambient override variables must not redirect this reader to a different worktree/config.
   for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|COMMON_DIR|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|SHALLOW_FILE|REPLACE_REF_BASE|GRAFT_FILE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
@@ -196,7 +224,7 @@ export class GitReview {
     const head = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
     const branchRef = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
     const branch = redactText(branchRef).text;
-    const raw = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=none']);
+    const raw = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=dirty']);
     const entries = parseStatus(raw); const allowed = entries.filter(f => safe(f.path) && (!f.previousPath || safe(f.previousPath)));
     const pageStart = allowed.length ? Math.min(start, Math.floor((allowed.length - 1) / 50) * 50) : 0;
     const candidates = allowed.slice(pageStart, pageStart + 50);
@@ -238,7 +266,7 @@ export class GitReview {
       const failure = results.find(result => result.status === 'rejected');
       if (failure?.status === 'rejected') throw failure.reason;
     }
-    const end = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=none']);
+    const end = await git(root, ['status', '--porcelain=v1', '-z', '--untracked-files=all', '--ignore-submodules=dirty']);
     const endHead = await git(root, ['rev-parse', '--verify', 'HEAD']).then(s => s.trim()).catch(() => 'unborn');
     const endBranch = (await git(root, ['symbolic-ref', '--short', '-q', 'HEAD']).catch(() => 'detached')).trim();
     if (end !== raw || head !== endHead || branchRef !== endBranch || startIndex !== await indexMarker() || startMarkers !== await fileMarkers(root, paths)) throw changed();

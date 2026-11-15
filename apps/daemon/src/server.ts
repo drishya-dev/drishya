@@ -68,6 +68,9 @@ export interface ServerOptions {
   watchRoots?: WatchRoot[];
 }
 
+/** At most this many open change streams (one per viewer tab). */
+const MAX_STREAMS = 64;
+
 /** A subscriber this far behind is disconnected; on reconnect it resyncs from revisions (B1b). */
 const MAX_SSE_BUFFER = 1024 * 1024;
 
@@ -267,6 +270,8 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       });
     }
     if (a === 'changes' && m === 'GET') {
+      // SEC-3: a viewer is one tab; a signed-in script could otherwise hold open streams without bound.
+      if (clients.size >= MAX_STREAMS) throw new HttpError(429, 'too many open change streams');
       res.writeHead(200, { 'content-type': 'text/event-stream', 'cache-control': 'no-store', connection: 'keep-alive' });
       res.write(': connected\n\n');
       // Every (re)connect starts with the current revisions, so a viewer that missed notices
@@ -649,13 +654,14 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         res.end(image.body);
         return;
       }
-      // CONTENT-1: an image this recording captured inline, by content hash. Immutable, so cacheable.
+      // CONTENT-1: an image this recording captured inline, by content hash. The bytes never change, but they are the person's screenshots, so the browser must not keep them
+      // on disk after the session (SEC-3 item 9): no-store, like every other response that carries captured content.
       if (sub === 'images' && subId && m === 'GET') {
         const ids = app.readingId(id).split('+');
         for (const key of ids) app.recording(key);
         const image = readImage(app.store, ids, subId);
         if (!image) throw new HttpError(404, 'No captured image with that hash in this recording.');
-        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'private, max-age=31536000, immutable', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' });
+        res.writeHead(200, { 'content-type': image.mime, 'content-length': image.body.length, 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', 'content-disposition': 'inline' });
         res.end(image.body);
         return;
       }

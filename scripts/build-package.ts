@@ -36,6 +36,11 @@ writeFileSync(resolve(out, 'package.json'), JSON.stringify({
   version: workspace.version ?? '0.1.0-alpha.0',
   description: 'Local, read-only live view and replay for coding agents',
   license: 'Apache-2.0',
+  repository: { type: 'git', url: 'git+https://github.com/drishya-dev/drishya.git' },
+  homepage: 'https://github.com/drishya-dev/drishya#readme',
+  bugs: { url: 'https://github.com/drishya-dev/drishya/issues' },
+  // SEC-5: provenance links the tarball to the workflow run that built it; `npm publish` must run from CI with id-token.
+  publishConfig: { access: 'public', provenance: true },
   type: 'module',
   engines: { node: '>=24 <25' },
   bin: { drishya: './apps/daemon/src/cli.mjs' },

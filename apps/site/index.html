@@ -1,10 +1,12 @@
 <!doctype html>
-<html lang="en" data-motion="full">
+<html lang="en" data-motion="full" data-type="software">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Drishya · Live replay for Claude Code and Codex sessions</title>
+  <title>Drishya · See your coding agent work</title>
   <meta name="description" content="Drishya shows what your coding agent read, ran, saw fail and changed: the real files, output and diffs, on a map of your own repository. Free, open source, runs on your machine." />
+  <meta name="page-type" content="software" />
+  <meta name="site-kind" content="software" />
   <meta name="theme-color" content="#0a0b0d" />
   <link rel="icon" href="/mark.svg" type="image/svg+xml" />
   <link rel="preload" href="/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
@@ -59,12 +61,12 @@
         <div class="hero-mark" data-logo="hero" aria-hidden="true"></div>
         <p class="wordmark" aria-hidden="true">drishya<span lang="hi">दृश्य</span></p>
         <h1 id="hero-title">See the work behind the change.</h1>
-        <p class="hero-lead">Drishya replays what your coding agent read, ran, changed and learned—on a map of your repository.</p>
+        <p class="hero-lead">Follow your coding agent live. Read its files, inspect its changes and return to any step, all beside your repository.</p>
         <div class="hero-actions">
-          <a class="button primary button--snail" href="#tour">See the replay</a>
+          <a class="button primary button--snail" href="#tour">Watch the walkthrough</a>
           <a class="button ghost button--snail" href="#install">Install Drishya</a>
         </div>
-        <p class="hero-facts">Local · open source · no telemetry</p>
+        <p class="hero-facts">Claude Code · Codex · Antigravity</p>
       </div>
     </section>
 
@@ -72,8 +74,8 @@
       <div class="why-pin">
         <div class="wrap why-grid">
           <div>
-          <h2 id="why-title" data-split>When the terminal scrolls away, the evidence shouldn't.</h2>
-          <p class="why-text" data-words>An agent's summary is the last frame. Drishya keeps the reads, output and edits that made it true.</p>
+          <h2 id="why-title" data-split>The answer is only part of the work.</h2>
+          <p class="why-text" data-words>See the files it read, the command that failed and the edit that followed. The recorded material stays beside the conversation.</p>
           <p class="why-answer" data-words>Follow the work while it happens, then replay any step when you need to understand the change.</p>
           <div class="why-beats" aria-label="What Drishya keeps">
             <div><strong>Read</strong><span>Files and context</span></div>
@@ -92,8 +94,8 @@
         <div class="tour-progress" data-tour-progress aria-label="Replay progress"><span></span><span></span><span></span><span></span><span></span><span></span></div>
         <div class="wrap tour-grid">
           <ol class="tour-steps" data-tour-steps>
-            <li><span class="step-tag">Claude Code · CLI</span><h3>In the CLI, each action is one line</h3><p>The source it read, the failing output and the diff scroll past and are gone.</p></li>
-            <li><span class="step-tag">Desktop app</span><h3>In the app, the tools fold into a list</h3><p>A chat with the answer. What the agent read and ran sits in collapsed rows you open one at a time.</p></li>
+            <li><span class="step-tag">Claude Code · CLI</span><h3>In the CLI, each action is one line</h3><p>Reads, commands and edits share a terminal stream. Understanding a change means finding the right step again.</p></li>
+            <li><span class="step-tag">Desktop app</span><h3>In the app, the tools fold into a list</h3><p>The conversation leads. Tool details sit inside the chat, while your files and Git review live elsewhere.</p></li>
             <li><span class="step-tag">Drishya</span><h3>In Drishya, you see the work itself</h3><p>The same session. Each action arrives in order with its real output, on a map of your repository.</p></li>
             <li><span class="step-tag">Drishya</span><h3>Sub-agents keep their own work</h3><p>The Explore sub-agent's reads stay with that agent, so you can tell who did what.</p></li>
             <li><span class="step-tag">Drishya</span><h3>The failing test, then the fix</h3><p>The test output in full, the edit that answered it, and the run that passed.</p></li>
@@ -111,8 +113,8 @@
     <section id="features" class="features" data-chapter="features" aria-labelledby="features-title">
       <div class="features-pin">
         <div class="wrap feature-heading">
-          <h2 id="features-title">Five ways to stay with the work.</h2>
-          <p>One replay, viewed through the parts of a repository that matter when an agent is moving fast.</p>
+          <h2 id="features-title">Your code. The agent’s work. Together.</h2>
+          <p>Read a file, inspect a diff or follow a branch without losing the session that put it in context.</p>
           <div class="feature-lenses" aria-hidden="true"><span>Repository</span><span>Workspace</span><span>Git</span><span>Tools</span><span>Control</span></div>
         </div>
         <div class="wrap features-grid">
@@ -120,13 +122,24 @@
             <li><span class="step-tag">Repository</span><h3>Your files beside the agent's work</h3><p>Open files from your tree into a reader beside the session, one tab each, while the agent's work stays in view. Files the agent added or edited are marked.</p></li>
             <li><span class="step-tag">Repository</span><h3>Every action on a file, and each earlier edit</h3><p>Every read and edit the agent made to a file. Choose an earlier edit to read exactly that change, and the test runs that followed it.</p></li>
             <li><span class="step-tag">Workspace</span><h3>The current code, in a real editor</h3><p>Open any file in Workspace with your tree and tabs, and edit it a step away from the agent's work.</p></li>
-            <li><span class="step-tag">Git</span><h3>This session, a branch, or a pull request</h3><p>What this session changed, any branch against main, or an open pull request, each chosen from a list. Every file names the agent that edited it.</p></li>
+            <li><span class="step-tag">Git</span><h3>This session, a branch, or a pull request</h3><p>Review this session’s changes, compare branches or inspect a pull request. Recorded agent activity stays linked where evidence is available.</p></li>
             <li><span class="step-tag">Git</span><h3>Every branch, and where the agents' work landed</h3><p>Every local branch and commit as a graph, read-only, beside the session. Choose one branch to read only its own commits.</p></li>
             <li><span class="step-tag">Tools</span><h3>Step through every use of one tool</h3><p>Pick a tool and step through each time it was used. The rest of the session dims around it.</p></li>
             <li><span class="step-tag">Control</span><h3>Every prompt, and what it led to</h3><p>The prompt rail keeps each prompt. Hover one to see what it asked, how many actions followed and what failed, then jump there.</p></li>
-            <li><span class="step-tag">Control</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Opt-in, per repository, and only what you submit.</p></li>
+            <li><span class="step-tag">Control</span><h3>Prompt the agent from Drishya</h3><p>Send the next prompt to the same session without leaving the work. Available for connected Claude Code and Codex sessions, with your checkout’s permissions. Antigravity stays read-only.</p></li>
           </ol>
           <div class="feat-stage"><div class="feat-window" data-feat-window><div class="feat-camera" data-feat-camera></div><div class="feat-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 1.5L10 19z"/></svg></div><span class="feat-ripple"></span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="workflow" class="workflow" aria-labelledby="workflow-title">
+      <div class="wrap">
+        <div class="workflow-heading"><h2 id="workflow-title">Stay with the work.<br>Keep your own pace.</h2><p>Watch what arrives, read what matters and pick up where you left off. Work and Conversation are two views of the same recorded session.</p></div>
+        <div class="workflow-details">
+          <article><h3>Follow live. Return later.</h3><p>New actions arrive as the harness records them. Scroll back to read, then follow live again. Replay keeps earlier work available.</p><a href="#tour">Explore the walkthrough <span aria-hidden="true">↗</span></a></article>
+          <article><h3>Find the step you need.</h3><p>Search the session, jump between prompts and inspect a tool’s uses. Captured plans and questions stay with the work they belong to.</p><a href="#features">Explore the developer tools <span aria-hidden="true">↗</span></a></article>
+          <article><h3>Three harnesses. One place.</h3><p>Read Claude Code, Codex and Antigravity sessions locally. Connect supported Claude Code or Codex sessions to continue the conversation.</p><a href="#privacy">See what stays local <span aria-hidden="true">↗</span></a></article>
         </div>
       </div>
     </section>
@@ -139,13 +152,13 @@
         <table class="compare-table">
           <thead><tr><th></th><th>Without Drishya</th><th>With Drishya</th></tr></thead>
           <tbody>
-            <tr data-compare-row="files" data-proof="files" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Files the agent read</th><td>A one-line note in the CLI or app</td><td>The exact lines it saw</td></tr>
-            <tr data-compare-row="output" data-proof="output" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Test and command output</th><td>Collapsed or scrolled away</td><td>The full output, kept</td></tr>
-            <tr data-compare-row="edits" data-proof="edits" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Edits</th><td>A count of lines changed</td><td>The diff as written, before later edits</td></tr>
+            <tr data-compare-row="files" data-proof="files" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Files the agent read</th><td>A tool result inside the conversation</td><td>Captured source beside the work</td></tr>
+            <tr data-compare-row="output" data-proof="output" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Test and command output</th><td>Output inside the tool’s result</td><td>Captured output, kept with its action</td></tr>
+            <tr data-compare-row="edits" data-proof="edits" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Edits</th><td>A diff inside the conversation</td><td>The diff as written, before later edits</td></tr>
             <tr data-compare-row="location" data-proof="location" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Where the work happened</th><td>Paths in text, a separate editor to look</td><td>Marked in your file tree and on the map</td></tr>
-            <tr data-compare-row="branches" data-proof="branches" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Branches and pull requests</th><td>A separate Git client, no link to the agent</td><td>Changes and the Git graph, with the agent behind each file</td></tr>
-            <tr data-compare-row="subagents" data-proof="subagents" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Sub-agents and MCP tools</th><td>Mixed into one stream</td><td>Each kept with its own work and counted</td></tr>
-            <tr data-compare-row="replay" data-proof="replay" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Later</th><td>Scroll back through the chat, if it is still there</td><td>Replay any session, live or finished</td></tr>
+            <tr data-compare-row="branches" data-proof="branches" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Branches and pull requests</th><td>A Git view alongside the agent interface</td><td>Changes and the graph, linked to recorded agent activity</td></tr>
+            <tr data-compare-row="subagents" data-proof="subagents" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Sub-agents and MCP tools</th><td>Separate views, depending on the harness</td><td>Each kept with its own work and counted</td></tr>
+            <tr data-compare-row="replay" data-proof="replay" tabindex="0" aria-controls="compare-proof" aria-expanded="false"><th>Later</th><td>Navigate the original conversation</td><td>Replay any session, live or finished</td></tr>
           </tbody>
         </table>
       <div id="compare-proof" class="compare-proof" data-compare-proof aria-live="polite" aria-hidden="true">
@@ -184,15 +197,15 @@
     <section id="privacy" class="privacy" data-chapter="privacy" aria-labelledby="privacy-title">
       <div class="wrap">
         <h2 id="privacy-title" data-split>Local, private, no telemetry</h2>
-        <p class="section-lead privacy-lead">The session stays on your machine. Drishya reads the harness, removes secrets, and gives you a replay without sending telemetry anywhere.</p>
+        <p class="section-lead privacy-lead">The session stays on your machine. Drishya reads the harness, redacts recognised secrets, and gives you a replay without sending telemetry anywhere.</p>
         <div class="privacy-pipeline" aria-label="How Drishya keeps sessions local">
           <div class="privacy-node"><span>Harness journal</span><h3>Read</h3><p>Session files open read-only.</p></div>
           <div class="privacy-connector" aria-hidden="true">→</div>
-          <div class="privacy-node"><span>Before storage</span><h3>Redact</h3><p>Keys and tokens are removed first.</p></div>
+          <div class="privacy-node"><span>Before storage</span><h3>Redact</h3><p>Recognised secrets are redacted first.</p></div>
           <div class="privacy-connector" aria-hidden="true">→</div>
           <div class="privacy-node"><span>On your machine</span><h3>Keep local</h3><p>Evidence is copied into your store.</p></div>
           <div class="privacy-connector" aria-hidden="true">→</div>
-          <div class="privacy-node"><span>In the replay</span><h3>Replay</h3><p>You decide when it acts.</p></div>
+          <div class="privacy-node"><span>In the replay</span><h3>Replay</h3><p>Read the recorded material.</p></div>
         </div>
       </div>
     </section>
@@ -201,13 +214,13 @@
       <div class="wrap close-inner">
         <div class="close-mark" data-logo="close" aria-hidden="true"></div>
         <h2 id="close-title" data-split>Keep the work. Understand the change.</h2>
-        <p class="section-lead">Free and open source under Apache-2.0. Built for developers who work with Claude Code and Codex.</p>
+        <p class="section-lead">Free and open source under Apache-2.0. Built for developers working with Claude Code, Codex and Antigravity.</p>
         <div class="hero-actions">
           <a class="button primary button--snail" href="#install">Install Drishya</a>
           <a class="button ghost star button--snail" data-star-link href="#"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.5 2.3 4.7 5.2.8-3.8 3.7.9 5.2L10 14.4l-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z"/></svg>Star on GitHub</a>
         </div>
         <nav class="close-links" aria-label="Project">
-          <a data-repo-link href="#">Source code</a><a data-link="docs" href="#">Documentation</a><a data-link="discussions" href="#">Discussions</a><a data-link="changelog" href="#">Changelog</a><a data-link="issues" href="#">Report an issue</a>
+          <a data-repo-link href="#">Source code</a><a data-link="docs" href="#">Documentation</a><a data-link="changelog" href="#">Changelog</a><a data-link="issues" href="#">Report an issue</a>
         </nav>
       </div>
     </section>
@@ -220,7 +233,7 @@
       <nav aria-label="Footer">
         <a href="#install">Install</a><a href="#privacy">Privacy</a><a data-link="docs" href="#">Docs</a><a data-link="changelog" href="#">Changelog</a><a data-repo-link href="#">GitHub</a>
       </nav>
-      <p class="legal">The sessions shown on this page are examples. Claude Code and Codex are trademarks of their owners.</p>
+      <p class="legal">The sessions shown on this page are examples. Claude Code, Codex and Antigravity belong to their respective owners.</p>
     </div>
   </footer>
 

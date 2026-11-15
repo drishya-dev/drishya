@@ -3,6 +3,7 @@ import { useEffect,useLayoutEffect, useMemo, useRef, useState, type CSSPropertie
 import { screenRun, type ScreenRun, type ScreenStep } from '@drishya/scene';
 import type { OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
+import { omittedReason } from '../lib/omitted-image.ts';
 import './screen-view.css';
 
 const MAX_PLAY_GAP_MS = 2500, MIN_PLAY_GAP_MS = 600;
@@ -48,7 +49,6 @@ export function ScreenHost() {
 
 const SIZE_UNITS = ['B', 'KB', 'MB'];
 const bytesLabel = (bytes?: number) => { if (bytes === undefined) return ''; let n = bytes, i = 0; while (n >= 1024 && i < 2) { n /= 1024; i++; } return `${i ? n.toFixed(1) : n} ${SIZE_UNITS[i]}`; };
-const WHY: Record<string, string> = { 'too-large': 'larger than the 4 MB kept per image', 'recording-budget': 'past the 256 MB of images kept per session', protected: 'from a protected file', unrecognised: 'not a recognised image type', remote: 'a remote reference, never fetched' };
 const clip = (value: string, n: number) => value.length > n ? `${value.slice(0, n)}…` : value;
 
 function describe(step: ScreenStep): string {
@@ -200,7 +200,7 @@ export function ScreenView({ opId, onClose,intent }: { opId?: string; onClose: (
     <div className="screen-body">
     <div className="screen-stage">
       {url && image ? <Frame key={url} url={url} image={image} ratio={ratio} step={shown} previous={decodedFrame.current?.url!==url&&sameShape(decodedFrame.current?.image,image)?decodedFrame.current?.url:undefined} onReady={()=>{decodedFrame.current={url,image};}}/>
-        : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${WHY[image.omitted] ?? image.omitted}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame recorded yet'}</div>}
+        : <div className="screen-missing" role="status" style={ratio}>{image ? `Image not retained${image.omitted ? `: ${omittedReason(image)}` : ''}${image.width && image.height ? ` · recorded ${image.width}×${image.height}` : ''}${image.bytes ? ` · ${bytesLabel(image.bytes)}` : ''}` : 'No frame recorded yet'}</div>}
     </div>
     <section ref={trailEl} className="screen-trail" aria-label="How the agent reached this screen">
       <h3>To reach this screen</h3>
