@@ -71,6 +71,10 @@ export interface ServerOptions {
 /** The fields of a history page request (packages/scene HistoryQuery); anything else in the body is ignored. */
 const HISTORY_FIELDS = ['start', 'count', 'step', 'promptStep', 'since', 'previousSince', 'selectedOperationId', 'observationId', 'anchorPassageId', 'tailFirst', 'pinnedPassageIds', 'filter', 'loadingOk'] as const;
 
+/** SEC-4: the browser-opening link carries a code that works once, for two minutes; a few may be outstanding. */
+const LAUNCH_CODE_MS = 2 * 60 * 1000;
+const MAX_LAUNCH_CODES = 8;
+
 /** At most this many open change streams (one per viewer tab). */
 const MAX_STREAMS = 64;
 
@@ -94,7 +98,13 @@ export function writeEvent(res: ServerResponse, data: string, maxBuffered = MAX_
 export interface RunningServer {
   url: string;
   token: string;
+  /** The long-lived link, printed for the person's terminal. Never pass it to another program: it would sit in that program's command line. */
   launchUrl: string;
+  /**
+   * SEC-4: a link for opening the browser, which other local users can read in the process list (`xdg-open <url>`).
+   * It carries a one-time code that signs in exactly once and expires in two minutes, never the token.
+   */
+  openUrl(): string;
   app: App;
   server: Server;
   close(): Promise<void>;
@@ -141,6 +151,21 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const maxAgeMs = opts.sessionMaxAgeMs ?? 7 * 24 * 60 * 60 * 1000;
   const maxSessions = opts.maxSessions ?? 32;
   const sessions = new Map<string, { created: number; lastSeen: number }>();
+  const launchCodes = new Map<string, number>();
+  const issueLaunchCode = (): string => {
+    const t = now();
+    for (const [code, expires] of launchCodes) if (expires <= t) launchCodes.delete(code);
+    while (launchCodes.size >= MAX_LAUNCH_CODES) launchCodes.delete(launchCodes.keys().next().value!);
+    const code = randomBytes(24).toString('hex');
+    launchCodes.set(code, t + LAUNCH_CODE_MS);
+    return code;
+  };
+  /** A code signs in once: it is removed whether or not it was still fresh. */
+  const consumeLaunchCode = (code: string): boolean => {
+    const expires = launchCodes.get(code);
+    launchCodes.delete(code);
+    return expires !== undefined && expires > now();
+  };
   const sessionValid = (sid: string): boolean => {
     const s = sessions.get(sid);
     if (!s) return false;
@@ -202,7 +227,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (url.pathname === '/v1/health') return json(res, { ok: true, version: VERSION });
       if (url.pathname === '/v1/session' && req.method === 'POST') {
         const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
-        if (!bearer || !safeEqual(bearer, token)) throw new HttpError(401, 'invalid launch token');
+        if (!bearer || !(safeEqual(bearer, token) || consumeLaunchCode(bearer))) throw new HttpError(401, 'invalid launch token');
         const t = now();
         for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
         while (sessions.size >= maxSessions) {
@@ -743,6 +768,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     token,
     // The token travels in the fragment, which browsers never send to a server or a log.
     launchUrl: `${url}/#token=${token}`,
+    openUrl: () => `${url}/#token=${issueLaunchCode()}`,
     app,
     server,
     close: async () => {

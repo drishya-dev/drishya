@@ -42,6 +42,9 @@ export const MUTATIONS: Mutation[] = [
   { name: 'pentest: only the history fields reach the worker', edits: [{ file: S, find: 'pageBytes(app.readingId(id), query)', replace: 'pageBytes(app.readingId(id), body as never)' }], tests: ['12-pentest'] },
   { name: 'pentest: control characters in a search are word breaks', edits: [{ file: 'packages/store/src/index.ts', find: String.raw`.replace(/["*^:()\u0000-\u001f]/g, ' ')`, replace: String.raw`.replace(/["*^:()]/g, ' ')` }, { file: 'packages/store/src/index.ts', find: String.raw`.replace(/["*^:()\u0000-\u001f]/g, ' ')`, replace: String.raw`.replace(/["*^:()]/g, ' ')` }], tests: ['12-pentest'] },
   { name: 'pentest: an unknown stored result is a 404', edits: [{ file: S, find: "throw new HttpError(404, 'Stored result not found.'); } // SEC-4", replace: "throw error; } // SEC-4" }], tests: ['12-pentest'] },
+  { name: 'pentest: a launch code signs in once', edits: [rm(S, '    launchCodes.delete(code);')], tests: ['12-pentest'] },
+  { name: 'pentest: the browser is opened with a code, not the token', edits: [{ file: 'apps/daemon/src/commands.ts', find: 'openBrowser(running.openUrl());', replace: 'openBrowser(running.launchUrl);' }], tests: ['12-pentest'] },
+  { name: 'pentest: a launch code expires', edits: [{ file: S, find: 'return expires !== undefined && expires > now();', replace: 'return expires !== undefined;' }], tests: ['12-pentest'] },
   // 3. file access
   { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'] },
   { name: 'files: workspace grant required', edits: [rm(W, "if (!root || !rec.workspaceRoot || await realpath(rec.workspaceRoot) !== root) throw new HttpError(403, 'approve this session workspace first');")], tests: ['03-file-access'] },
