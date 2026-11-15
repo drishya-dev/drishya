@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | SEC-4 | @yash + Claude Sonnet 5.5 | `claude/sec-4-pentest` | 2026-11-15 | Penetration pass on the current main build: `docs/review/sec-4-pentest.md`, `tests/security/` (one regression test per fixed finding), `scripts/pentest/` (hostile page, rebinding, fuzzer, hostile repository and journal), and fixes in `apps/daemon/src/` only where a finding needs one; TASKS/STATUS. Re-run on the frozen SHIP-9 candidate stays open in the report. |
-| README-1 | @yash + Claude Sonnet 5.5 | `claude/readme-1-a66ead` | 2026-11-15 | `README.md` (rewritten from scratch), new images under `docs/readme/` if needed; `docs/TASKS.md`, `docs/STATUS.md` bookkeeping only. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
 | HARNESS-AG-research | @yash + Claude Opus 5.5 | `claude/silly-antonelli-2e1068` | 2026-11-13 | Research only, docs-only PR: new `docs/review/antigravity-harness.md`, ledger entries in `docs/review/04-research-ledger.md`, a new HARNESS-AG item set in `docs/TASKS.md` (and its sync output), this row. No product code; Fable reviews. |
@@ -57,6 +56,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
+
+- `README.md` rewritten for launch: the problem and six answers (from [market-1-plan](review/market-1-plan.md)), a feature tour limited to what is on `main`, supported agents stated honestly (Antigravity read-only, no live following in this release), install from source (primary, run in a scratch home) with the npm command marked as available at launch, first run, uninstall and data location, *Privacy and control* (reads, stores, sends nothing, listens on loopback, the reverse-proxy and port-forwarding warning) and develop. Images are synthetic only, in `docs/readme/`.
+- Checked: install, `ui:build`, `serve`, `sources`, `import`, `list`, `export`, `forget`, `storage` and `?demo` in scratch homes on ports other than 7878 and 5180; the packed tarball installs and serves from a scratch prefix; `pnpm test:security` 631 passed; every relative link and image resolves; layout rendered at 1000 and 600 px in light and dark. Not verified: `npx` from the tarball printed nothing here (not claimed), Linux and macOS, the `npm install -g` command before publishing.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: SEC-5, supply chain and release hygiene
 
