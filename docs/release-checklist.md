@@ -84,7 +84,7 @@ The tools are single portable binaries (gitleaks from `gitleaks/gitleaks` releas
 - [ ] The npm trusted publisher for `@drishya-dev/cli` is set (repository `drishya-dev/drishya`, workflow `release.yml`, environment `npm-release`).
 - [ ] Run `release.yml` first **without** `publish` and read its log; then, a builder starts it with `publish` ticked. Never run `npm publish` from a laptop: it carries no provenance.
 - [ ] After publishing: `npm view @drishya-dev/cli dist.attestations` shows a provenance attestation, and `npm audit signatures` in a scratch project that installs the package passes.
-- [ ] The README's *Privacy and control* section still matches the code: re-read it against `tests/security/06-outbound-traffic.test.ts` and the list of opt-ins.
+- [ ] The README's *Privacy* section still matches the code: re-read it against `tests/security/06-outbound-traffic.test.ts` and the list of opt-ins.
 
 ## 6. Record
 
