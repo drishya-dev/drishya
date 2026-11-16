@@ -187,6 +187,15 @@ Rebuilt by Yash with Claude, 8 November. Drishya is agent visualization: it pres
   - **If lane 2 blocks lane 1 or the release:** Fable takes the blocking item over (Yash, 12 Nov: "if its blocking then override"), says so in STATUS and finishes it whole.
   - **Then, in one line (revised 14 Nov, see below):** SITE-2 (the landing site's product images, after every UI item) → SEC-3 (threat model and `pnpm test:security`, on the finished product) → UI-49, UI-50, EMBED-1, EMBED-2a/2b → SHIP-9 with SEC-5's package checks → SEC-4 → REPO-1 → SEC-5's history scan → PUBLIC-1 → SHIP-16 and MAC-1 → SHIP-10 → VIDEO-1 → SHIP-11.
   - **Open for Yash:** whether panels sit at the window's edges on ultrawide and 4K-at-100 % screens (today the stage centres beyond 2560 px; see UI-37).
+  - **Order from 16 Nov (Yash; supersedes every order below):**
+    1. **Finish the product:** MOTION-4b (the remaining paired open/close motion and the 600 px Tools/Attach overlap), then TEST-7 #510 (its 600 px case waits on MOTION-4b). Harsh's TEST-4/5/6 and LAND-19 are merged.
+    2. **REPO-1**, which now includes PUBLIC-1's content audit (Yash, 16 Nov: done in one place so nothing is lost). The TASKS priority list goes; every detailed entry and its log stays as Product Work History so contributors can search earlier work; the main open tasks stay visible to contributors (a short roadmap and GitHub Issues). Logo and brand files go in their proper public places.
+    3. **SHIP-16:** CI on Windows, Linux and macOS, which may surface problems before the final test.
+    4. **The final whole test:** the full gate on the frozen candidate, plus SEC-4's remaining checks against the installer that will ship.
+    5. **SHIP-9:** package the release candidate (last on the product side).
+    6. **README-3.**
+    7. **The website, FEEDBACK-1 and the repository again** (a second pass once the product and README are final).
+    8. **MARKET-1, then the posts (SHIP-11):** the whole content plan again, with every post's final text per platform, not samples. VIDEO-1 follows the plan.
   - **Order from 14 Nov (Yash):**
     1. UI-46 (tool-card content) merges.
     2. Then **UI-36b** and **SITE-3**, two Sonnet sessions in parallel.
