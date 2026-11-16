@@ -269,7 +269,8 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
         };
       }
       if(saving){
-        if(!packet)return;
+        // The window stays mounted while it animates away, so closing it during a slow check must also stop the download.
+        if(!packet||!useApp.getState().compareOpen)return;
         const url=URL.createObjectURL(new Blob([packet],{type:'text/markdown'}));
         const link=document.createElement('a');link.href=url;link.download='drishya-review.md';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
         return;

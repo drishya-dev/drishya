@@ -48,9 +48,11 @@ export function GitHistory() {
       id={id}
       close={() => {
         setOpen(false);
-        requestAnimationFrame(() =>
-          document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({ preventScroll: true })
-        );
+        // Not when the graph was opened again before this frame: that would pull focus out of the new modal.
+        requestAnimationFrame(() => {
+          if (document.querySelector('dialog.git-atlas[open]')) return;
+          document.querySelector<HTMLButtonElement>('button.git-open[aria-label="Git"]')?.focus({ preventScroll: true });
+        });
       }}
     />
   ) : null;

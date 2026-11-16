@@ -45,8 +45,10 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
       const inner = document.querySelector('.history-inner')!;
       const cs = getComputedStyle(inner);
       const content = { left: inner.getBoundingClientRect().left + parseFloat(cs.paddingLeft), right: inner.getBoundingClientRect().right - parseFloat(cs.paddingRight) };
-      const sample = document.createElement('span'); sample.textContent = '0'.repeat(75); // UI-39 part 7: lines of 75ch (was 100ch) sample.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${getComputedStyle(p).font}`;
-      document.body.append(sample); const hundred = sample.getBoundingClientRect().width; sample.remove();
+      // UI-39 part 7: lines of 75ch (was 100ch). Measure 75ch with a probe paragraph inside the same prose block, so it takes the paragraph's own
+      // font, spacing and `ch` unit; the zero-width digit string it replaces came out narrower than the real measure wherever the font differs (Linux).
+      const sample = document.createElement('p'); sample.setAttribute('aria-hidden', 'true'); sample.style.cssText = 'position:absolute;visibility:hidden;margin:0;padding:0;width:75ch;max-width:none';
+      proseEl.append(sample); const hundred = sample.getBoundingClientRect().width; sample.remove();
       const marks = document.querySelector('.history-prompt-marks')?.getBoundingClientRect();
       return { prose: box(proseEl), p: box(p), content, hundred, marksLeft: marks?.left ?? Infinity, doc: document.documentElement.scrollWidth };
     });

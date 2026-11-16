@@ -4,6 +4,9 @@ import {resolve,join,sep} from 'node:path';
 import {test,expect,type Page,type Locator} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+// A just-opened session is still following the latest: late history pages and the catch-up scroll can land after the page looks ready
+// and clear an expansion made in that gap (slow runners, 600 px). Click only once the history has held still for three reads.
+const expandSteady=async(card:Locator)=>{const b=card.locator('.op-expand');await b.hover();let last='',same=0;await expect.poll(async()=>{const now=JSON.stringify([await b.boundingBox(),await card.page().locator('.history').evaluate(h=>[h.scrollTop,h.scrollHeight])]);same=now===last?same+1:0;last=now;return same>=3;},{intervals:[200],timeout:8000}).toBe(true);await b.click();};
 // UI-46: tool cards show their content cleanly. Commands and output keep their real line breaks and wrap at sensible places,
 // a collapsed preview ends on a whole line (never half of one), arguments are key/value rows that wrap, nothing overflows its card
 // sideways, and copying yields the original text.
@@ -151,7 +154,7 @@ for(const width of [1440,600]){
    const row=el.locator('.ln.add',{hasText:'Why it matters'}).first();await expect(row).toBeVisible();
    const copied=await row.locator('.ln-tx').evaluate(c=>{const s=getSelection()!,r=document.createRange();r.selectNodeContents(c);s.removeAllRanges();s.addRange(r);return s.toString();});
    expect(copied).toBe(MARKDOWN[2]);
-   await el.locator('.op-expand').click();await expect(el).toHaveClass(/expanded/);
+   await expandSteady(el);await expect(el).toHaveClass(/expanded/);
    expect(await overflowing(el)).toEqual([]);
    await expect(el.locator('.op-expanded')).toContainText('Last line of the file.');
    await el.locator('.op-expand').click();

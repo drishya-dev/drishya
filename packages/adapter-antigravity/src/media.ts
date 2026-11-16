@@ -32,8 +32,7 @@ export async function captureMedia(root: string, id: string, value: unknown): Pr
     }
     const candidate = mediaPath(root, id, uri);
     if (!candidate) { result.images.push({ kind: 'captured-image', omitted: 'protected' }); reference.reason = 'Not a permitted local conversation image.'; continue; }
-    let path: string;
-    try { path = await readablePath(root, candidate, 'media', id); }
+    try { await readablePath(root, candidate, 'media', id); }
     catch (error) {
       const missing = (error as NodeJS.ErrnoException).code === 'ENOENT';
       result.images.push({ kind: 'captured-image', omitted: missing ? 'referenced-file' : 'protected' });
@@ -41,7 +40,7 @@ export async function captureMedia(root: string, id: string, value: unknown): Pr
       continue;
     }
     let handle;
-    try { handle = await openObservation(root, path, 'media', id); }
+    try { handle = await openObservation(root, candidate, 'media', id); }
     catch { result.images.push({ kind: 'captured-image', omitted: 'referenced-file' }); reference.reason = 'The referenced image could not be opened read-only.'; continue; }
     try {
       const before = await handle.stat();

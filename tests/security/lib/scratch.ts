@@ -6,7 +6,7 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { request, type IncomingHttpHeaders } from 'node:http';
 import { tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { dirname, join, relative } from 'node:path';
 import { App } from '../../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer, type ServerOptions } from '../../../apps/daemon/src/server.ts';
 import { createAntigravityAdapter } from '../../../packages/adapter-antigravity/src/index.ts';
@@ -85,11 +85,12 @@ export function restoreHome() {
 
 /** A temporary directory that the test may delete, and nothing else. */
 export function tempDir(prefix = 'drishya-sec-'): string {
-  return realpathSync(mkdtempSync(join(tmpdir(), prefix)));
+  return realpathSync.native(mkdtempSync(join(tmpdir(), prefix)));
 }
 
 export function removeTemp(dir: string) {
-  if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('refusing to delete outside the temp directory');
+  // tempDir returns a canonical path even when the OS temp directory is an alias.
+  if (relative(realpathSync.native(tmpdir()), dirname(dir)) !== '') throw new Error('refusing to delete outside the temp directory');
   rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
 

@@ -212,10 +212,17 @@ export function launchToken(value: string | undefined): string | undefined {
   return value;
 }
 
-function openBrowser(url: string) {
-  const [cmd, args] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', url.replace(/&/g, '^&')]] : process.platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+/**
+ * Opens the link in the default browser, best effort. SHIP-16: where the opener is missing (`xdg-open` on a Linux server, a container
+ * or a minimal WSL install) `spawn` does not throw: it emits an asynchronous 'error' event, and a child process with no 'error'
+ * listener turns that into an uncaught exception that killed `drishya serve` right after it printed its link. Printing the link is enough.
+ */
+export function openBrowser(url: string, launch: typeof spawn = spawn, platform: string = process.platform) {
+  const [cmd, args] = platform === 'win32' ? ['cmd', ['/c', 'start', '""', url.replace(/&/g, '^&')]] : platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
   try {
-    spawn(cmd, args as string[], { stdio: 'ignore', detached: true }).unref();
+    const child = launch(cmd, args as string[], { stdio: 'ignore', detached: true });
+    child.on('error', () => { /* no opener installed: the printed link is enough */ });
+    child.unref();
   } catch {
     // printing the link is enough
   }

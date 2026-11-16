@@ -4,6 +4,9 @@ import {resolve,join,sep} from 'node:path';
 import {test,expect,type Page,type Locator} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
 import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+// A just-opened session is still following the latest: late history pages and the catch-up scroll can land after the page looks ready
+// and clear an expansion made in that gap (slow runners, 600 px). Click only once the history has held still for three reads.
+const expandSteady=async(card:Locator)=>{const b=card.locator('.op-expand');await b.hover();let last='',same=0;await expect.poll(async()=>{const now=JSON.stringify([await b.boundingBox(),await card.page().locator('.history').evaluate(h=>[h.scrollTop,h.scrollHeight])]);same=now===last?same+1:0;last=now;return same>=3;},{intervals:[200],timeout:8000}).toBe(true);await b.click();};
 // UI-44: Edit and Write cards show whole lines. A long line wraps inside the card, as a Read does, instead of
 // running out of it behind a sideways scrollbar. The gutter keeps one number per source line, the sign and the
 // added/removed background span the wrapped height, and copying yields the source line with no inserted newline.
@@ -56,7 +59,7 @@ for(const width of [1440,600]){
    const copied=await row.locator('.ln-tx').evaluate(el=>{const s=getSelection()!;const r=document.createRange();r.selectNodeContents(el);s.removeAllRanges();s.addRange(r);return s.toString();});
    expect(copied).toBe(kind==='write'?longLine:longLine.replace('sentence','edited'));
    // After Expand the same holds.
-   await card.locator('.op-expand').click();
+   await expandSteady(card);
    await expect(card).toHaveClass(/expanded/);
    await expect(card.locator('.diff-scroll').first()).toBeVisible();
    await card.scrollIntoViewIfNeeded();await frame(page,`${kind}-expanded-${width}`);

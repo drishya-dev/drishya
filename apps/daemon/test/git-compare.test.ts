@@ -32,7 +32,7 @@ beforeAll(()=>{
   git('switch','--orphan','unrelated');write('z.ts','z\n');commit('Unrelated root');
   git('switch','main');
 });
-afterAll(()=>{if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe fixture path');rmSync(dir,{recursive:true,force:true});}});
+afterAll(()=>{if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe fixture path');rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100});}});
 
 it('lists branches, remote-tracking branches and tags with the default base and the current branch',async()=>{
   const refs=await gitCompareRefs(read);
@@ -149,6 +149,7 @@ it('summarises which agents wrote a path from captured edits only',()=>{
   ]);
 });
 
+// Comparing both sides makes several dozen real Git calls, which can exceed 5 s on a hosted Windows runner.
 it('gives every file the same content fingerprint in the list and in its patch, per side, so reviewed marks can key on it',async()=>{
   const list=await gitCompare(read,{base:'refs/heads/main',head:'refs/heads/topic'}),query={base:'refs/heads/main',head:'refs/heads/topic'};
   const shared=list.files.find(file=>file.path==='b.ts')!;
@@ -162,4 +163,4 @@ it('gives every file the same content fingerprint in the list and in its patch, 
   const other=await gitCompare(read,{base:'refs/tags/v1',head:'refs/heads/topic'});
   expect(other.files.find(file=>file.path==='b.ts')?.fingerprint).toBe(shared.fingerprint);
   expect((await gitCompare(read,query)).files.find(file=>file.path==='b.ts')?.fingerprint).toBe(shared.fingerprint);
-});
+},20_000);

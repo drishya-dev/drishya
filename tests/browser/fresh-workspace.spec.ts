@@ -34,7 +34,7 @@ async function pauseSurfaceAtCreation(surface:Locator) {
   });
 }
 async function pasteDraft(editor:Locator,text:string) {
-  await editor.focus();await editor.press('Control+a');
+  await editor.focus();await editor.press('ControlOrMeta+a');
   await editor.evaluate((node,text)=>{const data=new DataTransfer();data.setData('text/plain',text);node.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},text);
 }
 
@@ -244,6 +244,8 @@ test('Home dense sessions remain reachable through virtualization and responsive
   for(let index=0;index<160&&seen.size<160;index++) {
     for(const title of await rows.locator('strong').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('title')!)))seen.add(title);
     await list.evaluate(node=>{node.scrollTop+=Math.max(100,node.clientHeight*.8);});
+    // Let the virtual list paint the rows for this position before reading them (two frames), or a slow runner skips some.
+    await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
     await page.waitForTimeout(25);
   }
   expect(seen.size,'No session should be skipped when more virtual rows are loaded').toBe(160);
@@ -1054,7 +1056,7 @@ test('Workspace large draft comparison retains complete text, editing state and 
   const editor=document.getByRole('textbox',{name:'Local draft for src/cart/comparison.ts',exact:true});
   const draft=Array.from({length:1500},(_,i)=>`export const draftLine${i+1} = ${i+1};`).join('\n');
   await pasteDraft(editor,draft);
-  await editor.press('Control+Home');await editor.press('Shift+End');
+  await editor.press('ControlOrMeta+Home');await editor.press('Shift+End');
   const selection=await page.evaluate(()=>getSelection()?.toString());
   // Let CodeMirror finish its queued keyboard-selection measurement before setting the reading position.
   await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
@@ -1078,10 +1080,10 @@ test('Workspace large draft comparison retains complete text, editing state and 
   await expect.poll(()=>scroller.evaluate(node=>node.scrollTop)).toBe(250);
   const downloaded=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await downloaded).path())!,'utf8')).toBe(draft);
-  await editor.press('Control+z');
+  await editor.press('ControlOrMeta+z');
   const undone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await undone).path())!,'utf8')).toBe(readFileSync(join(root,'src/cart/comparison.ts'),'utf8'));
-  await editor.press('Control+y');
+  await editor.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');
   const redone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await redone).path())!,'utf8')).toBe(draft);
   expect(readFileSync(join(root,'src/cart/comparison.ts'),'utf8')).not.toContain('draftLine');
@@ -1104,12 +1106,12 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     await expect(editor).toBeVisible();expect(await editor.evaluate(node=>{const style=getComputedStyle(node);return [style.fontSize,style.lineHeight];})).toEqual(readingType);
     await expect(editor).toBeFocused();await expect(file.locator('.cm-lineNumbers')).toBeVisible();
     await expect(file.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
-    await editor.press('Control+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
+    await editor.press('ControlOrMeta+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
     const download=async()=>{const pending=page.waitForEvent('download');await file.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Download draft',exact:true}).click();return readFileSync((await (await pending).path())!,'utf8');};
     expect(await download()).toBe(original+'// added'+eol+'next');
-    await editor.press('Control+Home');await editor.press('Tab');
+    await editor.press('ControlOrMeta+Home');await editor.press('Tab');
     expect(await download()).toBe((path.endsWith('endings.ts')?'    ':'  ')+original+'// added'+eol+'next');
-    await editor.press('Control+z');expect(await download()).toBe(original+'// added'+eol+'next');
+    await editor.press('ControlOrMeta+z');expect(await download()).toBe(original+'// added'+eol+'next');
     await editor.fill('x'.repeat(256*1024+1));
     await expect(file.getByRole('alert')).toContainText('This change was not applied');
     expect(await download()).toBe(original+'// added'+eol+'next');
@@ -1605,7 +1607,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   const toggle=page.getByRole('switch',{name:'Import paths',exact:true});if(await toggle.getAttribute('aria-checked')==='true')await toggle.click();
   await page.getByRole('button',{name:'Back to work',exact:true}).click();await page.getByRole('button',{name:'Explore repository map',exact:true}).click();await expect(changes).toHaveAttribute('aria-pressed','true');
   await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path);await page.locator('.map-matches').getByRole('button',{name:path,exact:true}).click();if(await toggle.getAttribute('aria-checked')!=='true')await toggle.click();
-  for(const width of [1440,390]){await page.setViewportSize({width,height:900});await expect(connections).toBeVisible();for(const control of await page.locator('.map-tools button:visible').all())expect(await control.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);const tools=(await page.locator('.map-tools').boundingBox())!,reader=(await connections.boundingBox())!;for(const control of await page.getByRole('navigation',{name:'Workspace views'}).locator('button:visible').all()){const b=(await control.boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(b.y+b.height);}if(width===390)expect(reader.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(reader.x+reader.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-investigation-${width}.png`)});}
+  for(const width of [1440,390]){await page.setViewportSize({width,height:900});await expect(connections).toBeVisible();expect(await page.locator('.map-tools button:visible').evaluateAll(nodes=>nodes.every(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}))).toBe(true);const tools=(await page.locator('.map-tools').boundingBox())!,reader=(await connections.boundingBox())!;for(const control of await page.getByRole('navigation',{name:'Workspace views'}).locator('button:visible').all()){const b=(await control.boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(b.y+b.height);}if(width===390)expect(reader.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(reader.x+reader.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-investigation-${width}.png`)});}
 });
 
 

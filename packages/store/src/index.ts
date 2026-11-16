@@ -90,7 +90,7 @@ export class BlobStore {
   private known = new Set<string>();
   constructor(dir: string) {
     this.dir = dir;
-    mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
   private pathOf(sha: string) {
     return join(this.dir, sha.slice(0, 2), sha);
@@ -109,7 +109,7 @@ export class BlobStore {
   /** Atomic: written to a temp name and renamed, so a reference never points at half a file. */
   protected save(sha: string, buf: Buffer): void {
     const p = this.pathOf(sha), folder = dirname(p);
-    if (!this.madeDirs.has(folder)) { mkdirSync(folder, { recursive: true }); this.madeDirs.add(folder); }
+    if (!this.madeDirs.has(folder)) { mkdirSync(folder, { recursive: true, mode: 0o700 }); this.madeDirs.add(folder); }
     const tmp = `${p}.${randomUUID()}.tmp`;
     writeFileSync(tmp, buf, { mode: 0o600 });
     renameSync(tmp, p);
@@ -385,7 +385,17 @@ export class Store {
     if (!opts.memory && !opts.readOnly && process.platform !== 'win32') {
       try { chmodSync(dataDir, 0o700); } catch { /* not ours to change (a shared or read-only mount): leave it */ }
     }
-    this.db = new DatabaseSync(opts.memory ? ':memory:' : join(dataDir, 'drishya.db'), { readOnly: opts.readOnly });
+    const dbFile = join(dataDir, 'drishya.db');
+    // SHIP-16: the folder's 0700 is the real guard, but a data folder that is copied, restored or moved (a backup, `cp -r`, a
+    // shared mount) loses it, and SQLite makes the database and its -wal and -shm files under the process umask (0644 on Linux).
+    // Create the database 0600 first (SQLite gives its -wal and -shm the same bits) and tighten one that already exists.
+    if (!opts.memory && !opts.readOnly && process.platform !== 'win32') {
+      try { writeFileSync(dbFile, '', { flag: 'a', mode: 0o600 }); } catch { /* read-only mount: SQLite reports it */ }
+      for (const suffix of ['', '-wal', '-shm']) {
+        try { chmodSync(dbFile + suffix, 0o600); } catch { /* absent, or not ours to change */ }
+      }
+    }
+    this.db = new DatabaseSync(opts.memory ? ':memory:' : dbFile, { readOnly: opts.readOnly });
     this.blobs = new BlobStore(join(dataDir, 'blobs'));
     this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000; PRAGMA temp_store = FILE; PRAGMA cache_size = -8192;');
     if (!opts.readOnly) {

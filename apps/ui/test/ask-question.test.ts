@@ -201,4 +201,5 @@ it('keeps native Antigravity questions passive beside the merged live question c
     expect(skipped).toContain('Question skipped');
     expect(skipped).not.toContain('(chosen)');
   } finally {useApp.setState(previous);}
-});
+// SHIP-16: this one test imports the card, the store and React's server renderer cold; on a busy or small CI runner that alone can pass the default 5 s.
+}, 60_000);

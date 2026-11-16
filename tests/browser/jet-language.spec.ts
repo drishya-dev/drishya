@@ -170,8 +170,8 @@ test('surfaces nested in a panel keep a fill and lose their outline; a field sho
   expect(rest.border, 'no outline at rest').toBe('rgba(0, 0, 0, 0)');
   expect(rest.fill, 'it keeps a fill').not.toBe('rgba(0, 0, 0, 0)');
   await search.locator('input').first().focus();
+  await expect.poll(async () => (await look()).border, { message: 'its outline returns with focus' }).not.toBe('rgba(0, 0, 0, 0)');
   const focused = await look();
-  expect(focused.border, 'its outline returns with focus').not.toBe('rgba(0, 0, 0, 0)');
   expect(focused.width).toBe(rest.width);
   expect(focused.box, 'the field does not move').toBe(rest.box);
 });

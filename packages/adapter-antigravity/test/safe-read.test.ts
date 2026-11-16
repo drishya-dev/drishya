@@ -20,6 +20,19 @@ const roots: string[] = [];
 afterEach(async () => { interception.beforeOpen = undefined; interception.reads = 0;
   for (const root of roots.splice(0)) { if (!resolve(root).startsWith(resolve(tmpdir()) + sep)) throw Error('Unsafe scratch cleanup'); await rm(root, { recursive: true, force: true }); }
 });
+it('reads allow-listed artifact and image bytes through a configured root alias', async () => {
+  const scratch = await mkdtemp(join(tmpdir(), 'ag-root-alias-')); roots.push(scratch);
+  const native = join(scratch, 'native'), alias = join(scratch, 'alias');
+  const conversation = join(native, 'brain', 'one'), uploads = join(conversation, '.user_uploaded');
+  await mkdir(uploads, { recursive: true });
+  await symlink(native, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6GAAAAABJRU5ErkJggg==';
+  await writeFile(join(conversation, 'task.md'), 'Synthetic task');
+  await writeFile(join(uploads, 'shot.png'), Buffer.from(png, 'base64'));
+  expect(await readArtifactVersions(alias, 'one', ['task.md'])).toMatchObject([{ text: 'Synthetic task' }]);
+  expect((await captureMedia(alias, 'one', ['.user_uploaded/shot.png'])).images).toMatchObject([{ data: png }]);
+});
+
 for (const kind of ['media', 'artifact']) it(`refuses a directory swap between validation and ${kind} open before reading bytes`, async () => {
   const root = await mkdtemp(join(tmpdir(), 'ag-swap-')); roots.push(root);
   const conversation = join(root, 'brain', 'one'), outside = join(root, 'outside');

@@ -69,7 +69,6 @@ test('whole material zoom stays continuous while the result changes its allocati
 });
 
 test('scrolling a result keeps live follow while scrolling history holds the reader', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto(server.launchUrl);
   await page.locator('.mh-session-open').filter({hasText:'Free orders reach checkout'}).click();
@@ -82,6 +81,10 @@ test('scrolling a result keeps live follow while scrolling history holds the rea
   const latest = page.getByRole('button', { name: /Back to latest/ });
   if (await latest.isVisible()) await latest.click();
   await expect(latest).toHaveCount(0);
+  // The collapsed preview ends on whole lines. Hover reading reveals the scrollable result.
+  await card.locator('.op-head .op-title').hover();
+  await expect(card).toHaveAttribute('data-hover-reading', 'focused');
+  await expect.poll(() => card.evaluate(el => el.getAnimations().filter(animation => animation.playState === 'running').length)).toBe(0);
   const body = card.locator('.result-content');
   await expect.poll(() => body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
   const r = (await body.boundingBox())!;

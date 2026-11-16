@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { appendFile, mkdtemp, mkdir, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { appendFile, mkdtemp, mkdir, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { homedir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
@@ -64,14 +64,14 @@ describe('summary index', () => {
     const row = (step_index: number) => JSON.stringify({ step_index, type: 'USER_INPUT', source: 'USER_EXPLICIT', content: 'Synthetic', created_at: '2026-11-13T10:00:00Z' });
     await writeFile(full, row(1) + '\n'); await writeFile(old, row(5) + '\n');
     const adapter = createAntigravityAdapter([root]);
-    expect(await adapter.readPath(full)).toBe(old);
+    expect(await adapter.readPath(full)).toBe(await realpath(old));
     await appendFile(full, row(7));
-    expect(await adapter.readPath(full)).toBe(old);
+    expect(await adapter.readPath(full)).toBe(await realpath(old));
     await appendFile(full, '\n');
-    expect(await adapter.readPath(full)).toBe(full);
-    expect(await adapter.readPath(full)).toBe(full);
+    expect(await adapter.readPath(full)).toBe(await realpath(full));
+    expect(await adapter.readPath(full)).toBe(await realpath(full));
     await writeFile(full, row(0) + '\n');
-    expect(await adapter.readPath(full)).toBe(old);
+    expect(await adapter.readPath(full)).toBe(await realpath(old));
   });
   it('reports an encrypted-only conversation even when no brain directory exists', async () => {
     const root = await temp(); await mkdir(join(root, 'conversations'));
@@ -112,7 +112,7 @@ describe('summary index', () => {
     expect((await adapter.discover())[0]!.path).toBe(join(logs, 'transcript.jsonl'));
     await writeFile(join(logs, 'transcript_full.jsonl'), row(0) + row(1) + row(2));
     expect((await adapter.discover())[0]!.path).toBe(join(logs, 'transcript.jsonl'));
-    expect(await adapter.readPath(join(logs, 'transcript.jsonl'))).toBe(join(logs, 'transcript_full.jsonl'));
+    expect(await adapter.readPath(join(logs, 'transcript.jsonl'))).toBe(await realpath(join(logs, 'transcript_full.jsonl')));
   });
   it('returns an empty map for a missing index and reports an invalid database', async () => {
     const root = await temp(); expect((await summaries(root)).size).toBe(0);

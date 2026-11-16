@@ -185,7 +185,7 @@ No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
 - `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
 - To send prompts: `claude` or `codex` installed and signed in.
 
-Built and tested on Windows 11. It is plain Node with no native add-ons, but Linux and macOS have not been verified yet.
+Built and tested on Windows 11. It is plain Node with no native add-ons. A clean Linux run (Ubuntu 26.04 under WSL2, Node 24) passes the type checks, the unit and security tests and the installed package; some browser-suite cases still differ on Linux. macOS has not been verified yet.
 
 </details>
 
