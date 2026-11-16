@@ -99,6 +99,8 @@ Local Windows at `5ae46f3` passed all 1,805 unit tests with 2 skips using 4 work
 
 On each runner, package verification installed a tarball offline, imported synthetic Claude Code and Codex recordings, checked the demo and authenticated API, checked that the server's two network attempts stayed on loopback, and restarted with the imported state intact.
 
+The [combined checks-only run 43876172369](https://github.com/drishya-dev/drishya/actions/runs/43876172369) also passed at `91ff9724`, including the browser and source-audit changes. Windows passed 1,814 units (1 skipped), 678 standalone security checks (6 skipped) and 679 packaged security checks (5 skipped). Ubuntu and macOS each passed 1,811 units (4 skipped), 683 standalone security checks (1 skipped) and all 684 packaged security checks. Each runner passed typechecking, both builds, offline install, restart and demo drift. The combined Windows units also passed locally with four workers.
+
 ### Platform wording for SHIP-9
 
 The Windows, Ubuntu and macOS hosted checks and synthetic package installs passed at `d4071b6`. Windows was also checked locally. An earlier WSL2 Ubuntu run checked the installed package against synthetic recordings. Genuine session import and a live turn on WSL2, and the hands-on physical Mac run, still need to be verified on the final candidate.
