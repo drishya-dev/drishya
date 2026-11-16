@@ -94,7 +94,7 @@ The pipeline's initial nonzero result was solely the stale demo-tag diff; browse
 
 ## Review follow-up: 22 October
 
-Yash's [five-run real comparison](https://github.com/drishya-dev/drishya/pull/188#issuecomment-6343075472) covered private 166/347 MB sources, not 564 MB (unavailable). Both API p95 ranges fail; 166 MB visible update fails; two of five 347 MB candidate RSS samples exceed 512 MiB. IDs/order, zero gaps and idempotent rescan pass. His locally corrected selector is now committed in this candidate; it retains viewport/revision/two-frame checks and adds prompt-only coverage. No reference journals requested or copied.
+Yash's five-run real comparison (#188) covered private 166/347 MB sources, not 564 MB (unavailable). Both API p95 ranges fail; 166 MB visible update fails; two of five 347 MB candidate RSS samples exceed 512 MiB. IDs/order, zero gaps and idempotent rescan pass. His locally corrected selector is now committed in this candidate; it retains viewport/revision/two-frame checks and adds prompt-only coverage. No reference journals requested or copied.
 
 ### Component isolation on integrated main e85cffd
 
