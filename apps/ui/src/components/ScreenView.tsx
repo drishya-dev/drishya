@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
+import { useEffect,useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { screenRun, type ScreenRun, type ScreenStep } from '@drishya/scene';
 import type { OperationImage } from '@drishya/contracts';
 import { useApp } from '../state.ts';
@@ -43,7 +44,7 @@ export function ScreenEntry({ menuOpen }: { menuOpen: boolean }) {
 /** Mounted once in the viewer so the strip and the session menu open the same reader. */
 export function ScreenHost() {
   const open = useApp(s => s.screenView);
-  return open ? <ScreenView opId={open.opId} onClose={() => useApp.setState({ screenView: undefined })}/> : null;
+  return open ? <ScreenView intent={open} opId={open.opId} onClose={() => useApp.setState({ screenView: undefined })}/> : null;
 }
 
 const SIZE_UNITS = ['B', 'KB', 'MB'];
@@ -101,11 +102,14 @@ function useImageUrl() {
   return (image?: OperationImage) => image?.sha && source?.imageUrl && recordingId ? source.imageUrl(recordingId, image.sha) : undefined;
 }
 
-export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => void }) {
+export function ScreenView({ opId, onClose,intent }: { opId?: string; onClose: () => void;intent?:unknown }) {
   const { run, error } = useScreenRun(true);
   const imageUrl = useImageUrl();
   const decodedFrame = useRef<{url:string;image:OperationImage}|undefined>(undefined);
   const dialog = useRef<HTMLDialogElement>(null);
+  const transition=useRef<ReturnType<typeof surfaceMotion>|undefined>(undefined);
+  const requestClose=()=>{transition.current?.close(()=>dialog.current?.close());};
+  useLayoutEffect(()=>{if(transition.current?.closing){if(!dialog.current?.open)dialog.current?.showModal();transition.current.open();}},[intent]);
   const live = useApp(s => s.recording?.live === true);
   const steps = run?.steps ?? [];
   const [choice, setChoice] = useState<number>();
@@ -123,7 +127,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   const shown = steps[shownIndex];
   const go = (next: number) => { setPinned(true); setChoice(Math.max(0, Math.min(last, next))); };
 
-  useEffect(() => { dialog.current?.showModal(); }, []);
+  useEffect(() => {const node=dialog.current!;node.showModal();transition.current=surfaceMotion(node,'dialog',undefined,true);transition.current.open(true);const unwatch=watchSurfaceMotion(()=>transition.current?.finishImmediately());return()=>{unwatch();transition.current?.dispose();};}, []);
   // Playback follows captured timestamps with long gaps capped; it never reveals a step the run does not yet hold.
   useEffect(() => {
     if (!playing) return;
@@ -162,8 +166,8 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   }, []);
 
   if (!shown || !step) {
-    return <dialog ref={dialog} className="screen-view" aria-label="Screen view" onClose={onClose}>
-      <div className="screen-bar"><span>Screen</span><button type="button" onClick={() => dialog.current?.close()}>Close</button></div>
+    return <dialog ref={dialog} className="screen-view" aria-label="Screen view" onClose={()=>{if(!dialog.current?.open)onClose();}} onCancel={event=>{event.preventDefault();event.stopPropagation();requestClose();}}>
+      <div className="screen-bar"><span>Screen</span><button type="button" onClick={requestClose}>Close</button></div>
       <p className="screen-empty" role="status">{error ? `The screen run could not be loaded: ${error}` : run ? 'No computer-use steps were recorded in this session.' : 'Loading screen steps…'}</p>
     </dialog>;
   }
@@ -181,8 +185,8 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
   if (shown.image) for (let i = shownIndex - 1; i >= 0; i--) if (steps[i]!.image && sameTab(steps[i]!)) { after = i; break; }
   const reached = steps.slice(after + 1, shownIndex + 1).filter(sameTab);
   const earlier = Math.max(0, reached.length - 12), trail = reached.slice(earlier), since = steps.indexOf(reached[0] ?? shown);
-  return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={onClose}
-    onClick={event => { if (event.target === dialog.current) dialog.current.close(); }}>
+  return <dialog ref={dialog} className={`screen-view${full ? ' full' : ''}`} aria-label="Screen view" onClose={()=>{if(!dialog.current?.open)onClose();}} onCancel={event=>{event.preventDefault();event.stopPropagation();requestClose();}}
+    onClick={event => { if (event.target === dialog.current) requestClose(); }}>
     <div className="screen-bar">
       <span className="screen-title">Screen</span>
       <span className="screen-count" aria-live="polite">Step {shownIndex + 1} of {steps.length}{run?.truncated ? ` · newest ${steps.length} of ${run.total}` : ''}{follow ? ' · following live' : ''}</span>
@@ -191,7 +195,7 @@ export function ScreenView({ opId, onClose }: { opId?: string; onClose: () => vo
       <button type="button" aria-pressed={playing} disabled={shownIndex >= last && !playing} onClick={() => { if (!playing && shownIndex >= last) return; setPlaying(p => !p); }}>{playing ? 'Pause' : 'Play'}</button>
       <button type="button" aria-label="Next step" disabled={shownIndex >= last} onClick={() => go(shownIndex + 1)}>›</button>
       <button type="button" aria-pressed={full} title="Full window (F)" onClick={() => setFull(v => !v)}>{full ? 'Window' : 'Full window'}</button>
-      <button type="button" onClick={() => dialog.current?.close()}>Close</button>
+      <button type="button" onClick={requestClose}>Close</button>
     </div>
     <div className="screen-body">
     <div className="screen-stage">
