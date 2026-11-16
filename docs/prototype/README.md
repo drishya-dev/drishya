@@ -16,7 +16,7 @@ One self-contained file with no dependencies and no network calls. Serve `docs/`
 python -m http.server 5178 --bind 127.0.0.1 --directory docs
 ```
 
-Then open <http://127.0.0.1:5178/prototype/index.html>. In the Claude desktop app, the `docs-static` entry in `.claude/launch.json` does the same thing. Opening the file straight from disk also works in most browsers.
+Then open <http://127.0.0.1:5178/prototype/index.html>. Opening the file straight from disk also works in most browsers.
 
 ## The story it tells
 

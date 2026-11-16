@@ -53,7 +53,7 @@ npm-debug.log*
 yarn-error.log*
 
 # ── Tooling / editor / OS ─────────────────────────────────────────────────
-.claude/settings.local.json
+.claude/
 .vscode/*
 !.vscode/extensions.json
 .idea/

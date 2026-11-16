@@ -36,7 +36,7 @@ const FORBIDDEN_PATHS: { kind: string; test: RegExp }[] = [
   { kind: 'database or store file', test: /\.(?:db|db-wal|db-shm|sqlite3?)$/ },
   { kind: 'local scratch folder', test: /(?:^|\/)\.local\// },
   { kind: 'journal outside the synthetic fixtures', test: /\.(?:jsonl|ndjson)$/ },
-  { kind: 'Claude/Codex folder content', test: /(?:^|\/)\.(?:claude|codex)\/(?!worktrees\/?$)(?!(?:settings|launch)\.json$)/ },
+  { kind: 'Claude/Codex folder content', test: /(?:^|\/)\.(?:claude|codex)\/(?!worktrees\/?$)(?!settings\.json$)/ },
   { kind: 'screenshot or capture', test: /(?:^|\/)(?:screenshots?|test-results|playwright-report)\//i },
 ];
 const JOURNAL_OK = [/^fixtures\/synthetic\//, /^fixtures\/redacted\//];
