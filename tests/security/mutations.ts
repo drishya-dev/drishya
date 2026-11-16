@@ -11,7 +11,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface Edit { file: string; find: string; replace: string }
-interface Mutation { name: string; edits: Edit[]; tests: string[] }
+// `windowsOnly` names why the defence cannot be exercised elsewhere; on other systems the entry is skipped, not counted as missed.
+interface Mutation { name: string; edits: Edit[]; tests: string[]; windowsOnly?: string }
 
 const S = 'apps/daemon/src/server.ts';
 const W = 'apps/daemon/src/workspace.ts';
@@ -50,7 +51,7 @@ export const MUTATIONS: Mutation[] = [
   // SHIP-16: found by the first Linux run (14-ship16-store-modes)
   { name: 'ship-16: the database is created owner-only', edits: [{ file: 'packages/store/src/index.ts', find: "try { writeFileSync(dbFile, '', { flag: 'a', mode: 0o600 }); }", replace: "try { void 0; }" }, { file: 'packages/store/src/index.ts', find: "for (const suffix of ['', '-wal', '-shm']) {", replace: 'for (const suffix of []) {' }], tests: ['14-ship16-store-modes'] },
   // 3. file access
-  { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'] },
+  { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'], windowsOnly: 'SHIP-16: POSIX normalize() clamps `..` at the root and a backslash is an ordinary character, so no request path can reach this check from outside the directory; Windows treats both as separators' },
   { name: 'files: workspace grant required', edits: [rm(W, "if (!root || !rec.workspaceRoot || await realpath(rec.workspaceRoot) !== root) throw new HttpError(403, 'approve this session workspace first');")], tests: ['03-file-access'] },
   {
     name: 'files: path containment (`..`, protected names, root check and index membership together)',
@@ -96,9 +97,10 @@ const restore = () => { for (const [file, bytes] of originals) writeFileSync(joi
 process.on('exit', restore);
 process.on('SIGINT', () => { restore(); process.exit(130); });
 
-let notCaught = 0;
+let notCaught = 0, skipped = 0;
 const rows: string[] = [];
 for (const mutation of selected) {
+  if (mutation.windowsOnly && process.platform !== 'win32') { skipped++; console.log(`SKIPPED   ${mutation.name}  (${mutation.windowsOnly})`); continue; }
   for (const edit of mutation.edits) {
     if (!originals.has(edit.file)) originals.set(edit.file, readFileSync(join(root, edit.file)));
     const text = readFileSync(join(root, edit.file), 'utf8');
@@ -115,5 +117,5 @@ for (const mutation of selected) {
   rows.push(`${caught ? 'CAUGHT  ' : 'MISSED  '} ${mutation.name}  [${mutation.tests.join(', ')}]  failing tests: ${failed}`);
   console.log(rows.at(-1));
 }
-console.log(`\n${selected.length - notCaught}/${selected.length} defences have a test that fails when they are removed`);
+console.log(`\n${selected.length - skipped - notCaught}/${selected.length - skipped} defences have a test that fails when they are removed${skipped ? ` (${skipped} skipped: not reachable on ${process.platform})` : ''}`);
 process.exit(notCaught ? 1 : 0);
