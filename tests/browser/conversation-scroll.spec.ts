@@ -17,11 +17,16 @@ test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) 
 // up through many pages must not flash "Loading session…", leave rows missing, or move what the reader is looking at.
 const open = async (page: Page) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET'
+    ? route.fulfill({ json: { version: 1, sessions: [] } })
+    : route.continue());
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
   await page.getByRole('group', { name: 'Read the session as' }).getByRole('button', { name: 'Conversation' }).click();
   await expect(page.locator('.history .run-line').first()).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(async () => (await inView(page)).messages).toContain('699b');
 };
 
 /** What is in the history's viewport: loading slots, and each prompt and message by its number. */
@@ -42,11 +47,18 @@ const settled = async (page: Page) => {
   await expect.poll(async () => { const s = await inView(page); return s.loading + s.empty === 0 && s.prompts.length + s.messages.length > 0; }, { timeout: 15000 }).toBe(true);
 };
 
+async function detachFollow(page: Page) {
+  const history = page.locator('.history');
+  await history.hover({ position: { x: 8, y: 450 } });
+  await page.mouse.wheel(0, -100);
+  await expect(page.getByRole('switch', { name: 'Automatically follow new work' })).toHaveAttribute('aria-checked', 'false');
+}
+
 test('scrolling up fast through many pages: a loading slot is brief, no row is missing, nothing moves once it settles', async ({ page }) => {
   await open(page);
   const history = page.locator('.history');
-  await page.waitForTimeout(1500); // the newest page has rendered and measured, as when a reader starts scrolling
-  await history.hover();
+  await detachFollow(page);
+  await settled(page);
   await page.evaluate(() => {
     (window as unknown as { frames: { loading: number }[] }).frames = [];
     const sample = () => {
@@ -83,10 +95,12 @@ test('scrolling up fast through many pages: a loading slot is brief, no row is m
 test('jumping around the scrollbar always settles on loaded rows', async ({ page }) => {
   await open(page);
   const history = page.locator('.history');
-  await history.hover();
-  await page.mouse.wheel(0, -100); // a reader's first scroll lets Follow go; a script setting scrollTop does not
+  await detachFollow(page);
   for (const fraction of [0.9, 0.4, 0.75, 0.1, 0.55, 0.3, 0.95, 0.02]) {
-    await history.evaluate((el, f) => { el.scrollTop = Math.floor((el.scrollHeight - el.clientHeight) * f); }, fraction);
+    await history.evaluate((el, f) => {
+      el.scrollTop = Math.floor((el.scrollHeight - el.clientHeight) * f);
+      return new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    }, fraction);
     await settled(page);
     const view = await inView(page);
     expect(view.prompts.length + view.messages.length, `content at ${fraction}`).toBeGreaterThan(0);
