@@ -6,7 +6,7 @@ const timingSensitive = /(b2-live|conversation-scroll|hover-fit|live-sync|manual
 
 export default defineConfig({
   testDir: './tests/browser',
-  // SHIP-16: ready stand-in `claude` and `codex` on PATH (Linux and macOS), so the composer does not depend on the machine's installs.
+  // SHIP-16: ready stand-in `claude` and `codex` on PATH so the composer does not depend on the machine's installs.
   globalSetup: './tests/browser/global-setup.ts',
   timeout: 90_000,
   expect: { timeout: 10_000 },
