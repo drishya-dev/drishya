@@ -2,6 +2,7 @@ import {execFile} from 'node:child_process';
 import {createHash} from 'node:crypto';
 import {redactText} from '@drishya/privacy';
 import {HttpError} from './app.ts';
+import {executable} from './native-executable.ts';
 import {safeGitPath,gitDiffFlags} from './git-paths.ts';
 import {compareBranch} from './git-branches.ts';
 import type {GitReference,GitHistoryPage,GitCommitDetail,GitCommit,GitFile,GitOmission} from './git-types.ts';
@@ -195,9 +196,10 @@ function filesRecordFromMap(files:Map<string,string>):Record<string,string>|null
 }
 async function computePatchIds(input:string):Promise<Map<string,string>> {
   const out=new Map<string,string>();
-  if(!input.trim())return out;
+  const bin = input.trim() && executable('git');
+  if(!bin)return out;
   const stdout=await new Promise<string>(resolve=>{
-    const child=execFile('git',['patch-id','--stable'],{timeout:10_000,maxBuffer:2*1024*1024,encoding:'utf8',windowsHide:true},(error,data)=>resolve(error?'':data));
+    const child=execFile(bin,['patch-id','--stable'],{timeout:10_000,maxBuffer:2*1024*1024,encoding:'utf8',windowsHide:true},(error,data)=>resolve(error?'':data));
     child.stdin?.end(input);
   });
   for(const line of stdout.split(/\r?\n/)){
@@ -207,9 +209,10 @@ async function computePatchIds(input:string):Promise<Map<string,string>> {
   return out;
 }
 async function computeSinglePatchId(diff:string):Promise<string> {
-  if(!diff.trim())return '';
+  const bin = diff.trim() && executable('git');
+  if(!bin)return '';
   const stdout=await new Promise<string>(resolve=>{
-    const child=execFile('git',['patch-id','--stable'],{timeout:10_000,maxBuffer:512*1024,encoding:'utf8',windowsHide:true},(error,data)=>resolve(error?'':data));
+    const child=execFile(bin,['patch-id','--stable'],{timeout:10_000,maxBuffer:512*1024,encoding:'utf8',windowsHide:true},(error,data)=>resolve(error?'':data));
     child.stdin?.end(diff);
   });
   const first=stdout.trim().split(/\s+/)[0]??'';

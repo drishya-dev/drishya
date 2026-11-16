@@ -15,12 +15,7 @@ import { rawCall, removeTemp, startScratch, tempDir, type Scratch } from './lib/
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.name === 'node_modules' || e.name === 'dist' || e.name === '.git' ? [] : e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 
-describe('1. git and gh are started by bare name with the repository as the working directory', () => {
-  // Finding: not exploitable. On Windows an executable named `git.exe` in the working directory is NOT
-  // preferred over PATH by Node 24's child_process (checked here with a copy of node.exe standing in for
-  // an attacker's program: it would print a Node version instead of "git version"). The engine range
-  // (>=24 <25) is pinned in package.json. This test fails if a future runtime starts preferring the
-  // working directory, and then the remedy is to resolve the absolute path once at start.
+describe('1. Git and GitHub CLI use absolute PATH executables', () => {
   let dir: string, plant: string, here: string;
   beforeAll(() => {
     dir = tempDir();

@@ -156,7 +156,7 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     if (!root) {
       for (const candidate of configured) {
         try {
-          const canonical = realpathSync(candidate);
+          const canonical = realpathSync.native(candidate);
           if (within(canonical, absolute)) {
             root = candidate;
             sourceRoot = canonical;
