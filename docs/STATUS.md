@@ -32,7 +32,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
-| SHIP-16 | @yash + Claude Sonnet 5.5 | `claude/ship-16-ci` | 2026-11-16 | `.github/workflows/ci.yml` and what CI needs (platform fixes in product and tests found by the WSL2 Linux run), `docs/CI_POLICY.md`, the SHIP-16 and SEC-4b notes in TASKS, the README Requirements line. Not REPO-1's files (issue and PR templates, AGENTS/CONTRIBUTING). |
+| SHIP-16 | @yash + Claude Sonnet 5.5 | `claude/ship-16-ci` | 2026-11-16 | `.github/workflows/ci.yml` and what CI needs (platform fixes in product and tests found by the WSL2 Linux run), `docs/CI_POLICY.md`, the SHIP-16 and SEC-4b notes in TASKS, the README Requirements line. Not REPO-1's files (issue and PR templates, AGENTS/CONTRIBUTING). PR open 16 Nov; the row stays until the hosted run on the public repo closes SHIP-16 and SHIP-16c. |
 | NATIVE-5a | @harsh + Codex | `codex/native-5a-codex-screen-frames` | 2026-11-15 | Typed browser-computer MCP input and own-result images inside `packages/adapter-codex/`, matching computer-frame tests and `scripts/real-cases/computer-frames.ts`, and TASKS/STATUS. SEC-4 temporarily owns its specifically listed replay source and test files. Resume changes in those files after that handoff is integrated. Keep source relationships, existing observation schema, and redaction/byte limits. Scratch browser recording already exists. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
@@ -57,6 +57,14 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — 16 Nov: SHIP-16, three-system CI and the first real Linux run (open for the hosted run)
+
+- `ci.yml` now has the push, pull-request and dispatch triggers with a Windows, Ubuntu and macOS matrix on Node 24; while the repository is private every job is skipped unless dispatched, so no minutes are spent, and once it is public the same file runs on every push with no edit ([CI policy](CI_POLICY.md)).
+- WSL2 Ubuntu 26.04, Node 24.22.3, own clone and install: typecheck, 1796 units (4 skipped, Windows-only cases among them), 680 security tests and `package:verify` pass; the packed tarball installed with `npm install -g` into a scratch prefix serves on loopback only, the UI loads and the store is owner-only. Counts and the full browser list: [ship-16-linux-run.md](review/ship-16-linux-run.md).
+- Fixed, each with a test: `drishya serve` crashed without `xdg-open`; store files were 0644/0755 under a 0700 folder; the browser suite assumed the developer's CLIs (stand-ins for Linux and macOS); a Vitest case timed out cold; the mutation runner misread Linux colour output; the committed demo bundle was stale (p4 against p5) on every system.
+- **Not done, so SHIP-16 stays open:** the hosted run on the public repo, 12 Linux browser cases plus 2 timing cases (SHIP-16c), a Windows stand-in for the native CLIs, a real Linux session and live turn (none in the WSL home), macOS entirely (MAC-1).
+- Watch out for: Linux Chromium needs `libnspr4`, `libnss3` and `libasound2`; `playwright install --with-deps` provides them where `sudo` works.
 
 ### Yash with Claude Sonnet 5.5 — 16 Nov: MOTION-4b, the remaining surfaces
 
