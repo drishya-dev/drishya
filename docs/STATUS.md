@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | TEST-5 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-5-site-build` | 2026-11-15 | Browser gate preparation only: root `package.json` and `scripts/test-browser.ts` if needed, TASKS/STATUS, and fresh-worktree verification of the existing site spec. |
-| TEST-6 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-6-pending-input-state` | 2026-11-15 | Only the pending-input response case in `tests/browser/fresh-workspace.spec.ts`, plus TASKS/STATUS. Verify against SHIP-5 wording on supported desktop widths and retain request assertions. MOTION-4 uses other cases in this file. |
 | TEST-7 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-7-desktop-fixtures` | 2026-11-15 | Only `tests/browser/composer-typography.spec.ts` and `tests/browser/image-reader-acceptance.spec.ts`, plus TASKS/STATUS. Shift the legacy phone fixtures to supported desktop widths and input. |
 | MOTION-4b | @yash + Claude Sonnet 5.5 | `claude/cranky-jepsen-672055` | 2026-11-16 | Paired open/close motion for every remaining surface: `apps/ui/src/lib/surface-motion.ts`, `dismiss-menus.ts`, `modern/motion.css`, and the Home, palette, LinkCard, History/reader disclosure, Toolbox menu and `op-evidence` components and their CSS; the 600 px Tools/Attach overlap in the Toolbox CSS; `tests/browser/paired-surface-motion.spec.ts` (new cases) and `toolbox-window.spec.ts`; the MOTION-4 doc, TASKS/STATUS. Not the Harsh-owned specs. |
 | NATIVE-5a | @harsh + Codex | `codex/native-5a-codex-screen-frames` | 2026-11-15 | Typed browser-computer MCP input and own-result images inside `packages/adapter-codex/`, matching computer-frame tests and `scripts/real-cases/computer-frames.ts`, and TASKS/STATUS. SEC-4 temporarily owns its specifically listed replay source and test files. Resume changes in those files after that handoff is integrated. Keep source relationships, existing observation schema, and redaction/byte limits. Scratch browser recording already exists. |
@@ -70,6 +69,10 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ### Harsh with Codex — 15 Nov: TEST-4 Conversation shortcut isolation
 
 - PR #503 restores a controlled Conversation snapshot, then chooses and verifies Work and History focus before V; the Next failure assertion remains. The old assertion failed under the held snapshot; retries-disabled runs passed the shortcut alone (1), the persistence pair (2), and the full spec (6). UI rebuilt in a separate worktree with its own frozen install.
+### Harsh with Codex — 15 Nov: TEST-6 pending-input fixture
+
+- Updated the pending-input journey to expect the shipped state and check 1440 and 600 px, preserving the answer and no-prompt assertions. Edge, one worker, retries disabled: original failed on the old wording; repaired case passed. Synthetic fixture only; no real sessions checked.
+
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
