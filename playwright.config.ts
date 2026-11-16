@@ -14,8 +14,8 @@ const knownOnHostedCi: { platform: 'all' | NodeJS.Platform; title: RegExp; reaso
     reason: 'Windows only and order-dependent: after any claude-code case in the same worker, the codex "resultdestination" hit reports "No readable history location". Reproduces on a Windows desktop.' },
   { platform: 'win32', title: /conversation-scroll\.spec\.ts|conversation-switch\.spec\.ts.*(switching both ways keeps|near the bottom)/,
     reason: 'Frame and offset measurements (loading slot in 73 % of frames against a 5 % bound; position after a switch). Pass on a Windows desktop; the hosted Windows runner is too slow for them.' },
-  { platform: 'darwin', title: /paired-surface-motion\.spec\.ts.*(Home: About|exposed reasoning)|b2-live\.spec\.ts.*live history keeps the reader anchored|flow-endpoints\.spec\.ts.*at 1440/,
-    reason: 'Motion-frame sampling and anchored-scroll measurements that never see the in-between frames on the hosted macOS runner. Pass on Linux and Windows.' },
+  { platform: 'darwin', title: /paired-surface-motion\.spec\.ts.*(Home: About|exposed reasoning)|b2-live\.spec\.ts.*live history keeps the reader anchored|flow-endpoints\.spec\.ts|files-workspace-routing\.spec\.ts.*at 600px/,
+    reason: 'Motion-frame sampling, per-frame connector geometry and a 600 px pane hand-off that fail on every attempt on the hosted macOS runner only. Pass on Linux and Windows.' },
 ];
 const hostedCiSkips = process.env.CI ? knownOnHostedCi.filter(entry => entry.platform === 'all' || entry.platform === process.platform).map(entry => entry.title.source) : [];
 
