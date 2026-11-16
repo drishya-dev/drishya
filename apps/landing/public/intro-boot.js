@@ -2,12 +2,13 @@
   const root = document.documentElement;
   try {
     const query = new URLSearchParams(location.search);
+    const introKey = 'drishya.landing.intro.v1';
     const mode = sessionStorage.getItem('drishya.landing.motion.v1');
     const navigation = performance.getEntriesByType('navigation')[0];
     if (location.pathname !== '/' || location.hash || query.has('moment') || query.get('motion') === '0' ||
       document.hidden || innerWidth < 600 || innerHeight < 650 || navigation?.type === 'back_forward' ||
       matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData ||
-      mode === 'off' || mode === 'reduced' || sessionStorage.getItem('drishya.landing.intro.v1')) return;
+      mode === 'off' || mode === 'reduced' || sessionStorage.getItem(introKey)) return;
 
     const guard = new AbortController();
     const timer = setTimeout(failOpen, 2400);
@@ -23,7 +24,15 @@
     const options = {signal: guard.signal};
     window.__drishyaIntroBootCancel = release;
     addEventListener('keydown', event => {
-      if (event.key === 'Escape' || event.key === 'Tab') failOpen();
+      if (event.key !== 'Escape' && event.key !== 'Tab') return;
+      if (event.key === 'Escape') {
+        try {
+          sessionStorage.setItem(introKey, '1');
+        } catch {
+          // Reveal the page even if storage rejects a write.
+        }
+      }
+      failOpen();
     }, options);
     addEventListener('pointerdown', failOpen, options);
     addEventListener('pagehide', failOpen, options);
