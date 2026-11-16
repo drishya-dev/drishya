@@ -16,6 +16,7 @@ export default defineConfig({
     browserName: 'chromium',
     channel: process.env.DRISHYA_BROWSER_CHANNEL || undefined,
     headless: true,
+    trace: process.env.CI ? 'retain-on-failure' : 'off',
   },
   projects: [
     // The serial pass starts a second Playwright process. Keep the parallel failure artifacts available for CI upload.
