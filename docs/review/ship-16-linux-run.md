@@ -74,3 +74,29 @@ The macOS job is the Linux job on the other POSIX system. What Linux changed tha
 - No Claude Code or Codex is installed in the WSL home, so there is no real session in the Linux home to import and no live turn to send. The packaged install imported the synthetic Claude Code and Codex fixtures (`package:verify`). "Import a real session and run one live turn" stays open.
 - No hosted run: the repository is private and the policy forbids dispatch. The workflow was not executed by GitHub; it was read through carefully and its steps were run by hand in WSL.
 - No macOS machine.
+
+## Hosted and local follow-up, 16 November 2026
+
+[Hosted run 43821623488](https://github.com/drishya-dev/drishya/actions/runs/43821623488) checked PR #512 at `8bb2e476`. The Ubuntu job passed typechecking, 1,801 unit tests (4 skipped), the UI and site builds, the security suite (679 passed, 1 skipped), installed-package verification including 680 security tests, and the demo drift check. Windows passed typechecking and recorded 1,792 unit passes, 11 failures and 2 skips. macOS passed typechecking and recorded 1,790 unit passes, 11 failures and 4 skips. Both stopped at the unit step with the same Antigravity failures, before builds, security, package verification and demo drift.
+
+On Windows 11 with Node 24.11.1, setting the test process's `TEMP` and `TMP` to a disposable directory junction reproduced the same 11 failures. Windows short temp paths and macOS's `/var` alias both expose the same mismatch between configured and canonical paths. Artifact and image reads sent a resolved path back through the allow-list for the configured root. Transcript scans used a resolved cache key, while persisted checkpoints used the configured key. The follow-up `6f8efe89` passes all 71 targeted adapter and checkpoint tests under the junction, including read-only refusal cases. Rerun the hosted platform checks against the integrated candidate.
+
+## Finish the genuine acceptance on WSL2 and a physical Mac
+
+The follow-up host had a stopped Docker Desktop WSL2 distribution only. Use the builder's Ubuntu WSL2 distribution and a Linux browser through WSLg. For MAC-1 use a physical Mac, its own desktop browser and the [macOS acceptance packet](mac-1-acceptance.md).
+
+1. In a clean checkout on the platform's native filesystem, follow the README Quick start with Node 24 and an independent frozen install. Record the OS, Node version and candidate commit. On Mac record the chip and volume case sensitivity as well. Run `corepack pnpm package:verify` for the synthetic package check.
+2. Install the final candidate's exact tarball in an isolated prefix. With its absolute path in `candidate`, run:
+
+   ```sh
+   scratch="$(mktemp -d)"
+   npm install --global --prefix "$scratch/install" "$candidate" --ignore-scripts --offline --no-audit --no-fund
+   export DRISHYA_HOME="$scratch/drishya-home"
+   drishya="$scratch/install/bin/drishya"
+   mkdir "$scratch/repo"
+   git -C "$scratch/repo" init
+   ```
+
+3. From the disposable repository, use a supported signed-in Claude Code or Codex CLI installed on that platform to make a genuine turn. End the first turn and close that client. From the same platform and under the same user, run `"$drishya" import --latest claude-code` or `"$drishya" import --latest codex`, matching the harness just used.
+4. Run `"$drishya" serve` with the same scratch home and open the printed launch link in the local desktop browser. Open the imported recording, grant workspace and native session consent for the disposable checkout, submit one explicit prompt through Drishya, and verify the new native turn appears live. On Mac complete the packet's Files, Workspace and volume checks at 600 and 1440 px. Keep the launch link and journal content local.
+5. Record the tarball SHA-256, imported recording and turn counts, session ID prefixes, and the live/width outcomes. For the release notes, distinguish this hands-on evidence from hosted checks and synthetic package import. Repeat those checks on the final candidate if the earlier tarball or commit differs.
