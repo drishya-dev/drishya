@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { request } from 'node:http';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { describeRoutes, extractRoutes, type Route } from './lib/routes.ts';
 import { startScratch, rawCall, type Reply, type Scratch } from './lib/scratch.ts';
 
@@ -293,8 +293,15 @@ describe('session-bound change streams', () => {
       return stream;
     };
     try {
+      if (reason === 'idle expiry') vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
       const first = await t.signIn();
       const revoked = await connect({ cookie: first });
+      if (reason === 'idle expiry') {
+        clock += 50;
+        await vi.advanceTimersByTimeAsync(25_000);
+        const heartbeat = await revoked.read();
+        expect(Buffer.from(heartbeat.value!).toString()).toBe(': beat\n\n');
+      }
       if (reason === 'age expiry') {
         clock += 90;
         expect((await t.call('/v1/config', { headers: { cookie: first } })).status).toBe(200);
@@ -322,7 +329,7 @@ describe('session-bound change streams', () => {
       }
     } finally {
       abort.abort();
-      await t.close();
+      try { await t.close(); } finally { vi.useRealTimers(); }
     }
   });
 });
