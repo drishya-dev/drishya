@@ -1,6 +1,6 @@
 # Release security checklist
 
-Run at **every release**, on a clean checkout of the exact commit being released, by a builder (an agent may run the commands and fill the table; a builder signs it). Copy the table at the end into `docs/review/release-<version>-security.md` (counts, versions and verdicts only: never a secret, a found value or journal content). SEC-5 is a **gate** for [PUBLIC-1](TASKS.md) and [SHIP-9](TASKS.md): neither is done until this list has been run once end to end and signed.
+Run at **every release**, on a clean checkout of the exact commit being released, by a builder (an agent may run the commands and fill the table; a builder signs it). Copy the table at the end into `docs/review/release-<version>-security.md` (counts, versions and verdicts only: never a secret, a found value or journal content). SEC-5 is a **gate** for [PUBLIC-1 and SHIP-9](PRODUCT_WORK_HISTORY.md): neither is done until this list has been run once end to end and signed.
 
 Never publish from an agent (REL-4). Never rewrite or force-push history except as REPO-1 decides.
 

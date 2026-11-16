@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/mark-on-dark.svg">
-    <img src="docs/readme/mark-on-light.svg" alt="Drishya" width="72">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/mark-on-dark.svg">
+    <img src="assets/brand/mark-on-light.svg" alt="Drishya" width="72">
   </picture>
 </p>
 
@@ -295,8 +295,8 @@ TypeScript run directly on Node 24 over `node:sqlite` and `node:http`, with a Re
 
 Drishya is built and maintained by **Harsh Jain** and **Yash Doke**.
 
-Changes follow the two-builder review workflow documented in [AGENTS.md](AGENTS.md).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), the [roadmap](ROADMAP.md) and the [open issues](https://github.com/drishya-dev/drishya/issues). The [Code of Conduct](CODE_OF_CONDUCT.md) applies, the [changelog](CHANGELOG.md) records releases, and [AGENTS.md](AGENTS.md) holds the rules for coding agents working in this repository.
 
 ## License
 
-[Apache License 2.0](LICENSE). Agent names and logos belong to their owners and are shown only to say which agents Drishya works with.
+The code is licensed under the [Apache License 2.0](LICENSE). The **Drishya name and logo are not licensed for other products** (see [TRADEMARKS.md](TRADEMARKS.md); brand files are in [assets/brand](assets/brand/README.md)). Agent names and logos belong to their owners and are shown only to say which agents Drishya works with.

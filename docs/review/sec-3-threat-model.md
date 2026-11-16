@@ -37,7 +37,7 @@ Out of scope for release 1, said plainly: a program running as the same operatin
 
 ## 4. Defences and their tests
 
-Numbers follow the Do-list in `docs/TASKS.md` (SEC-3). A file is `tests/security/<name>.test.ts`.
+Numbers follow the Do-list in the [SEC-3 entry](../PRODUCT_WORK_HISTORY.md#sec-3). A file is `tests/security/<name>.test.ts`.
 
 ### 1 · Network exposure (`01-network`)
 Loopback only, one listener, no wildcard or IPv6 any-address; the listening address is read back from the operating system. The machine's LAN address refuses a connection. `--host` with a non-loopback value is refused with a message; `localhost`, `127.0.0.1` and `::1` are accepted. *Defences:* bind-host allow-list; no wildcard listen.

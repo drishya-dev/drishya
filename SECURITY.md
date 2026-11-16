@@ -11,6 +11,8 @@ Drishya runs on your machine, next to your repositories and your agents' journal
 
 Include what you did, what you expected, what happened, the Drishya version (the installed package version, or the commit you built), your operating system and Node version. A short proof of concept helps; **do not attach real journals, real source or real credentials** (use invented content, like the test suite does).
 
+The same private route takes [Code of Conduct](CODE_OF_CONDUCT.md) reports: put "Code of Conduct" in the title.
+
 What to expect: an acknowledgement within a few days, a fix or a written explanation after we have reproduced it, and credit in the release notes if you want it. Drishya is built by two people, so please allow time; we will tell you if a fix needs longer.
 
 ## Supported versions
@@ -44,7 +46,7 @@ Drishya needs **Node.js 24** (`>=24 <25`). Run a Node 24 release that still rece
 
 ## Known and accepted
 
-These are written down so you do not need to rediscover them: the session cookie has no port scope, so another web server on `127.0.0.1` that you visit in the same browser receives it (SEC-6 in `docs/TASKS.md`; a replaying server must itself be a program on your machine); the launch link, which contains the token in its fragment, is printed in your terminal and is visible in the process list of the browser launcher. Details are in the threat model, §5 and §7.
+These are written down so you do not need to rediscover them: the session cookie has no port scope, so another web server on `127.0.0.1` that you visit in the same browser receives it (SEC-6 in [Product Work History](docs/PRODUCT_WORK_HISTORY.md); a replaying server must itself be a program on your machine); the launch link, which contains the token in its fragment, is printed in your terminal and is visible in the process list of the browser launcher. Details are in the threat model, §5 and §7.
 
 ## Safe harbour
 

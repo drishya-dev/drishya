@@ -1,0 +1,57 @@
+name: Harness integration
+description: Ask for, or offer to build, support for another coding agent
+labels: ["harness integration"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Drishya reads each agent's own session recordings, read-only. See [how adapters work](https://github.com/drishya-dev/drishya/blob/main/docs/CODEBASE.md#adapters--how-to-add-a-harness) first.
+
+        **Never attach a real session recording.** Transcripts contain source code, paths and possibly secrets. Describe the format, or attach a short synthetic example you made by hand.
+  - type: input
+    id: harness
+    attributes:
+      label: Agent or harness
+      description: Name, version, and a link to its repository or documentation.
+    validations:
+      required: true
+  - type: dropdown
+    id: relationship
+    attributes:
+      label: Your relationship to it
+      options:
+        - I use it
+        - I maintain it, or work on it
+        - I want to build the Drishya adapter
+        - Just curious
+    validations:
+      required: true
+  - type: textarea
+    id: where
+    attributes:
+      label: Where it records sessions
+      description: The folder or database, the file format, whether it is written while the agent runs, and whether the format is documented or stable. Say what you do not know.
+    validations:
+      required: true
+  - type: textarea
+    id: records
+    attributes:
+      label: What it records
+      description: Prompts, replies, file reads, commands and their output, edits and diffs, images, plans, questions and approvals, sub-agents, token use. Say which are missing.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundaries
+      description: See AGENTS.md.
+      options:
+        - label: Reading is passive: Drishya opens the recordings read-only and never edits the agent's files or configuration
+        - label: Any control (sending a prompt, answering an approval) would be a separate, opt-in step through a supported protocol
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: How we can verify it
+      description: A way to produce a real session of the case on a throwaway repository, and what Drishya should show for it.
+    validations:
+      required: true

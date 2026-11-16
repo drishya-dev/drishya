@@ -1,6 +1,6 @@
 # SEC-1 dependency verification
 
-[PR #365](https://github.com/drishya-dev/drishya/pull/365) was opened as a regular implementation PR at `71ea655` before testing. The fixture generator follow-up is included in the verified revision `3f2204c`. The existing React plugin 6.1.1 accepts Vite 8 and stayed on that version. The root dev dependency selects the same Vite for Vitest and the UI. The lockfile needs no overrides.
+PR #365 was opened as a regular implementation PR at `71ea655` before testing. The fixture generator follow-up is included in the verified revision `3f2204c`. The existing React plugin 6.1.1 accepts Vite 8 and stayed on that version. The root dev dependency selects the same Vite for Vitest and the UI. The lockfile needs no overrides.
 
 ## Advisory coverage
 

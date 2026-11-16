@@ -1,6 +1,6 @@
 import { useId } from 'react';
 
-// One ribbon of the six-ribbon woven mark (docs/Logo.svg); the other five are this one turned by 60 degrees.
+// One ribbon of the six-ribbon woven mark (assets/brand/mark-on-dark.svg); the other five are this one turned by 60 degrees.
 const ribbon = 'M 55 -116 C 26 -151 3 -187 -33 -160 C -72 -128 -117 -78 -117 -30 C -117 20 -76 66 -20 84 C 8 93 34 85 53 63 C 36 70 15 72 -5 67 C -58 58 -91 14 -91 -30 C -91 -73 -52 -112 -18 -140 C -1 -154 18 -145 55 -116 Z';
 
 /** Builder-supplied mark, drawn as SVG in the current ink so it is sharp at every size and has no backing of its own.
