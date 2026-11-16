@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { bundleSource } from '../../ui/src/api.ts';
 import { App } from '../src/app.ts';
 
 // Audit A03: a combined export must mask every workspace root in the selection, not only the
@@ -73,6 +74,35 @@ describe('combined export', () => {
       expect(out).not.toContain(root.replace(/\\/g, '/'));
     }
     expect(out).toContain('<workspace>');
+  });
+
+  it('masks nested captured keys, preserves colliding entries, and reopens the bundle', async () => {
+    const recordingId = ids[0]!;
+    const source = app.store.getSources(recordingId)[0]!;
+    const forward = ALPHA.replace(/\\/g, '/');
+    app.store.appendObservations(recordingId, source.id, source.cursor, [{
+      id: 'synthetic-export-mcp', recordingId, kind: 'tool.call', agentId: 'agent:main',
+      source: { adapterId: 'claude-code', adapterVersion: 'test', sourceId: source.id, generation: 0, byteOffset: 100001, part: 0 },
+      payload: {
+        callId: 'keys', tool: 'mcp__audit__inspect',
+        input: { nested: {
+          [ALPHA]: '/local/value-a', [forward]: '/local/value-b',
+          '<workspace>': 'already masked', '<workspace> (2)': 'existing suffix',
+        } },
+      },
+      observedAt: '2026-10-29T00:00:01Z', privacyPolicyVersion: 'p3', redactions: [], availability: 'complete',
+    }]);
+    const bundle = await app.exportBundle(recordingId);
+    const serialized = JSON.stringify(bundle);
+    expect(serialized).not.toContain(JSON.stringify(ALPHA).slice(1, -1));
+    expect(serialized).not.toContain(forward);
+
+    const replay = bundleSource(JSON.parse(serialized));
+    const operation = (await replay.projection(bundle.recording.id)).operations.find((op) => op.tool === 'mcp__audit__inspect');
+    expect(operation?.detail).toMatchObject({ kind: 'other', input: { nested: {
+      '<workspace>': 'already masked', '<workspace> (2)': 'existing suffix',
+      '<workspace> (3)': '/local/value-a', '<workspace> (4)': '/local/value-b',
+    } } });
   });
 
   it('describes the whole selection, not just the first recording', async () => {
