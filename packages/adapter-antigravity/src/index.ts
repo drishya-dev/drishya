@@ -1,5 +1,5 @@
 import { readdir, stat } from 'node:fs/promises';
-import type { Dirent } from 'node:fs';
+import { realpathSync, type Dirent } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
@@ -110,7 +110,7 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
 }
 
 interface Scan { lastStep: number; title?: string; pathCounts: Map<string, number> }
-interface Inspection { signature: string; size: number; result: Scan; cursor: SourceCursor; restored?: boolean }
+interface Inspection { path?: string; signature: string; size: number; result: Scan; cursor: SourceCursor; restored?: boolean }
 function chooseSummary(id: string, captured: Summary | undefined, inspection: Scan): Summary {
   const workspaces = [...(captured?.workspaces ?? [])];
   workspaces.sort((a, b) => [...inspection.pathCounts].reduce((sum, [path, count]) => sum + (within(b, path) ? count : 0) - (within(a, path) ? count : 0), 0));
@@ -143,49 +143,72 @@ async function scan(path: string, previous?: Inspection): Promise<{ result: Scan
 export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { diagnostics(): { code: string; message: string }[]; identity(path: string): string; readPath(path: string): Promise<string> } {
   const metadata = new Map<string, Summary>();
   const selected = new Map<string, string>();
-  const physicalSources = new Map<string, string>();
+  const inspectionSources = new Map<string, string>();
   const inspections = new Map<string, Inspection>();
   const summaryCache = new Map<string, { at: number; values: Map<string, Summary> }>();
   let diagnostics: { code: string; message: string }[] = [];
   function locate(path: string) {
     const absolute = resolve(path);
-    const root = roots.find(root => within(resolve(root), absolute));
-    if (!root) throw new Error('Antigravity source is outside configured roots');
-    const parts = relative(root, absolute).split(/[\\/]/);
+    const configured = roots.map(root => resolve(root));
+    let root = configured.find(root => within(root, absolute));
+    let sourceRoot = root;
+    // Older discovery returned the physical path even when the configured root was an alias.
+    if (!root) {
+      for (const candidate of configured) {
+        try {
+          const canonical = realpathSync(candidate);
+          if (within(canonical, absolute)) {
+            root = candidate;
+            sourceRoot = canonical;
+            break;
+          }
+        } catch { /* A configured root may be absent. */ }
+      }
+    }
+    if (!root || !sourceRoot) throw new Error('Antigravity source is outside configured roots');
+    const parts = relative(sourceRoot, absolute).split(/[\\/]/);
     if (parts[0] !== 'brain' || !conversationId(parts[1] ?? '') || parts.length !== 5 || parts[2] !== '.system_generated' || parts[3] !== 'logs' || !/^transcript(?:_full)?\.jsonl$/.test(parts[4]!)) throw new Error('Invalid Antigravity transcript path');
-    return { root: resolve(root), id: parts[1]! };
+    return { root, id: parts[1]! };
   }
-  async function inspect(path: string): Promise<Scan> {
+  async function inspect(source: string, path: string): Promise<Scan> {
     const info = await stat(path), signature = `${info.size}:${info.mtimeMs}`;
-    let cached = inspections.get(path);
+    let cached = inspections.get(source);
+    if (cached?.path !== undefined && cached.path !== path) {
+      inspections.delete(source);
+      cached = undefined;
+    }
     if (cached?.restored) {
       // Persisted metadata is a hint, never authority over the native file. A bounded
       // prefix check rejects a same-size/same-time replacement before trusting it.
       const fingerprint = await fingerprintOf(path);
       if (info.size === cached.size && fingerprint !== cached.cursor.fingerprint || info.size > cached.size && Number(cached.cursor.fingerprint.split(':')[1]) < 1024) {
-        inspections.delete(path); cached = undefined;
-      } else cached.restored = false;
+        inspections.delete(source); cached = undefined;
+      } else {
+        cached.path = path;
+        cached.restored = false;
+      }
     }
     if (cached?.signature === signature) return cached.result;
     // Appended receipts need only the unread suffix. Rewrites/truncations restart the
     // inspection; readJsonl also checks the prefix identity before trusting the cursor.
     const next = await scan(path, cached && info.size > cached.size ? cached : undefined);
-    inspections.set(path, { signature, size: info.size, ...next }); return next.result;
+    inspections.set(source, { path, signature, size: info.size, ...next }); return next.result;
   }
-  async function choose(root: string, id: string): Promise<string | undefined> {
+  async function choose(root: string, id: string) {
     const paths = [];
     for (const file of ['transcript_full.jsonl', 'transcript.jsonl']) {
       try {
-        const path = await readablePath(root, join(root, 'brain', id, '.system_generated', 'logs', file), 'transcript', id);
-        paths.push({ path, last: (await inspect(path)).lastStep });
+        const source = join(root, 'brain', id, '.system_generated', 'logs', file);
+        const path = await readablePath(root, source, 'transcript', id);
+        paths.push({ source, path, scan: await inspect(source, path) });
       } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
     }
-    paths.sort((a, b) => b.last - a.last);
-    const chosen = paths[0]?.path;
-    if (chosen) physicalSources.set(id, chosen);
+    paths.sort((a, b) => b.scan.lastStep - a.scan.lastStep);
+    const chosen = paths[0];
+    if (chosen) inspectionSources.set(id, chosen.source);
     return chosen;
   }
-  async function refreshSummary(root: string, id: string, physical: string) {
+  async function refreshSummary(root: string, id: string, scan: Scan) {
     let cached = summaryCache.get(root);
     if (!cached || Date.now() - cached.at >= 5000) {
       let values: Map<string, Summary>;
@@ -196,7 +219,7 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
       }
       cached = { at: Date.now(), values }; summaryCache.set(root, cached);
     }
-    metadata.set(id, chooseSummary(id, cached.values.get(id) ?? metadata.get(id), await inspect(physical)));
+    metadata.set(id, chooseSummary(id, cached.values.get(id) ?? metadata.get(id), scan));
   }
   return {
     descriptor,
@@ -243,7 +266,7 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
       });
       return { version: 1, conversation: id, files };
     },
-    async readPath(path) { const { root, id } = locate(path); return await choose(root, id) ?? path; },
+    async readPath(path) { const { root, id } = locate(path); return (await choose(root, id))?.path ?? path; },
     async discover() {
       diagnostics = [];
       const sources: DiscoveredSource[] = [], seen = new Set<string>();
@@ -268,8 +291,8 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
         for (const id of ids) {
           if (!conversationId(id) || seen.has(id)) continue;
           try {
-            const physical = await choose(root, id);
-            if (!physical) {
+            const chosen = await choose(root, id);
+            if (!chosen) {
               if (nativeFiles.has(`${id}.pb`)) encrypted.set(id, encrypted.get(id) ?? roots.indexOf(configured));
               else {
                 let artifact = false;
@@ -283,10 +306,10 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
             }
             seen.add(id);
             encrypted.delete(id); artifactOnly.delete(id); missingTranscript.delete(id);
-            const summary = chooseSummary(id, index.get(id), await inspect(physical));
+            const summary = chooseSummary(id, index.get(id), chosen.scan);
             metadata.set(id, summary);
-            const key = selected.get(id) ?? physical; selected.set(id, key);
-            const info = await stat(physical);
+            const key = selected.get(id) ?? chosen.source; selected.set(id, key);
+            const info = await stat(chosen.path);
             sources.push({ adapterId: descriptor.id, harness: descriptor.harness, path: key, bytes: info.size, modifiedAt: info.mtime.toISOString(), sessionId: id, cwd: summary.workspaces[0], title: summary.title, parentSessionId: summary.parentSessionId, agentName: summary.agentName === undefined ? undefined : sanitize(summary.agentName).value, companions: [] });
           } catch { diagnostics.push({ code: 'read-failed', message: `Antigravity conversation ${id.slice(0, 8)} could not be read safely.` }); }
         }
@@ -301,14 +324,14 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
     },
     async sourceSet(main) {
       const { root, id } = locate(main);
-      const physical = await choose(root, id);
-      if (!physical) throw new Error('The Antigravity transcript is unavailable. Captured history remains readable.');
-      await refreshSummary(root, id, physical);
+      const chosen = await choose(root, id);
+      if (!chosen) throw new Error('The Antigravity transcript is unavailable. Captured history remains readable.');
+      await refreshSummary(root, id, chosen.scan);
       return { main, companions: [] };
     },
     createParser(ctx) {
       const { root, id } = locate(ctx.sourcePath);
-      return liveParser(createParser(ctx, metadata.get(id)), ctx, root, id, () => metadata.get(id), () => { const physical = physicalSources.get(id); return physical ? inspections.get(physical)?.result.lastStep : undefined; });
+      return liveParser(createParser(ctx, metadata.get(id)), ctx, root, id, () => metadata.get(id), () => { const source = inspectionSources.get(id); return source ? inspections.get(source)?.result.lastStep : undefined; });
     },
     sniff(head) { return head.some(value => { const row = object(value); return Number.isSafeInteger(row.step_index) && typeof row.source === 'string' && typeof row.type === 'string' && Array.isArray(row.tool_calls); }); },
   };

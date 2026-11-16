@@ -1,4 +1,4 @@
-import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -46,6 +46,24 @@ it('passes the persisted inspection state through privacy before SQLite', async 
   const result = await ingest.importSource('antigravity', journal);
   expect(JSON.stringify(store.getSources(result.recordingId)[0]!.cursor.adapterCheckpoint)).not.toContain(canary);
   expect(JSON.stringify(store.getSources(result.recordingId)[0]!.cursor.adapterCheckpoint)).toContain('REDACTED');
+});
+
+it('preserves stored transcript identity and checkpoints through a configured root alias', async () => {
+  const native = join(root, 'native');
+  const transcript = join(native, 'brain', 'test', '.system_generated', 'logs', 'transcript.jsonl');
+  mkdirSync(join(transcript, '..'), { recursive: true });
+  writeFileSync(transcript, line(0));
+  const alias = join(root, 'alias');
+  symlinkSync(native, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const canonical = realpathSync(transcript);
+  const adapter = createAntigravityAdapter([alias]);
+  await ingest.close();
+  ingest = new Ingestor(store, [adapter]);
+  const result = await ingest.importSource('antigravity', canonical);
+  expect(adapter.identity(canonical)).toBe('test');
+  expect(store.getSources(result.recordingId)[0]!.cursor.adapterCheckpoint).toMatchObject({
+    conversation: 'test', files: [{ name: 'transcript.jsonl' }],
+  });
 });
 
 it('does not trust a malformed checkpoint or one from another conversation', async () => {
