@@ -61,13 +61,20 @@ async function placeInMiddle(page: Page, kind: 'turn' | 'prose' | 'ops') {
 // First: a recording that has never been opened has no saved reading place for the daemon to restore, so Follow is on.
 test('a reader who is following the latest stays on the latest when switching', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET'
+    ? route.fulfill({ json: { version: 1, sessions: [] } })
+    : route.continue());
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
   await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
-  await page.waitForTimeout(1500);
+  const follow = page.getByRole('switch', { name: 'Automatically follow new work' });
+  const lastGap = () => page.locator('.history').evaluate(el => el.scrollHeight - el.clientHeight - el.scrollTop);
+  await expect(follow).toHaveAttribute('aria-checked', 'true');
+  await expect.poll(lastGap, { timeout: 8000 }).toBeLessThan(40);
   for (const target of ['Conversation', 'Work'] as const) {
     await mode(page, target).click();
-    await expect.poll(() => page.locator('.history').evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop), { timeout: 8000 }).toBeLessThan(40);
+    await expect(follow).toHaveAttribute('aria-checked', 'true');
+    await expect.poll(lastGap, { timeout: 8000 }).toBeLessThan(40);
   }
 });
 
