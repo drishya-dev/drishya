@@ -554,10 +554,14 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     if (!el || follow && !atDestination || navigating.current&&!committedLayout) return;
     // Native scrolling can precede its scroll event. Never restore an older anchor
     // over that still-unreported user delta while a measurement commits.
-    // Switching Work and Conversation reflows everything at once; the browser clamping the scroll to the new, shorter document
-    // is not the reader scrolling, so it must not become the new anchor (UI-41c).
-    if(!switching.current&&committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
-      rememberReading();return;
+    if (!switching.current && committedLayout && !programmatic.current && Math.abs(el.scrollTop - lastScrollTop.current) > .5) {
+      // A shorter virtual layout can clamp the scroll to the new bottom, including after a mode switch.
+      const maxScrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
+      const clampedByLayout = lastScrollTop.current > maxScrollTop + .5 && Math.abs(el.scrollTop - maxScrollTop) <= .5;
+      if (!clampedByLayout) {
+        rememberReading();
+        return;
+      }
     }
     // At the document start, late allocation changes must preserve the boundary,
     // rather than pull the reader down to an old first-passage pixel offset.

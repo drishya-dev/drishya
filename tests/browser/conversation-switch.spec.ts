@@ -217,7 +217,9 @@ test.describe('the place survives a reader at any scroll position', () => {
       await expect(page.locator('.history .passage-slot').first()).toBeVisible();
       await page.waitForTimeout(1500);
       const history = page.locator('.history');
-      await history.hover(); await page.mouse.wheel(0, -200); // the reader's first scroll lets Follow go
+      // Scroll the history gutter so an action under the pointer cannot consume the wheel locally.
+      await history.hover({position: {x: 8, y: 450}}); await page.mouse.wheel(0, -200);
+      await expect(page.getByRole('switch', {name: 'Automatically follow new work'})).toHaveAttribute('aria-checked', 'false');
       await history.evaluate((el, f) => { el.scrollTop = Math.floor((el.scrollHeight - el.clientHeight) * f); }, fraction);
       await page.waitForTimeout(1500);
       // Go on to a place deep inside a tall run's cards: what a wheel leaves behind as often as not.
