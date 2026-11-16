@@ -11,6 +11,8 @@ Drishya runs on your machine, next to your repositories and your agents' journal
 
 Include what you did, what you expected, what happened, the Drishya version (the installed package version, or the commit you built), your operating system and Node version. A short proof of concept helps; **do not attach real journals, real source or real credentials** (use invented content, like the test suite does).
 
+The same private route takes [Code of Conduct](CODE_OF_CONDUCT.md) reports: put "Code of Conduct" in the title.
+
 What to expect: an acknowledgement within a few days, a fix or a written explanation after we have reproduced it, and credit in the release notes if you want it. Drishya is built by two people, so please allow time; we will tell you if a fix needs longer.
 
 ## Supported versions

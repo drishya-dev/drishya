@@ -1,6 +1,8 @@
 # Contributor decisions
 
-These draft decisions summarize the product and engineering rules that contributors need when changing Drishya. The implementation and contracts supply the details.
+These decisions summarize the product and engineering rules that contributors need when changing Drishya. The implementation and contracts supply the details.
+
+The [decisions log](log.md) holds every individual decision with its reason, newest first. Read the matching entry before changing an area, and add a new entry (do not edit an old one) when you change a decision.
 
 ## Local capture and explicit control
 

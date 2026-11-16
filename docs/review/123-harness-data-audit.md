@@ -65,7 +65,7 @@ The adapter ignores `item_completed`, `token_count` and several others on purpos
 
 ## 3. What this means for the plan
 
-1. **Most of the "what is it doing" story is available without a model.** Typed commands with exit codes and durations, file changes, images viewed, web queries, questions, plans/todos, sub-agent identities, tokens, context fill, cost, lines added/removed, checkpoints and turn durations are all recorded. Drishya uses perhaps half of it. Adapter work (DATA tasks in [TASKS](../TASKS.md)) comes before more visual invention.
+1. **Most of the "what is it doing" story is available without a model.** Typed commands with exit codes and durations, file changes, images viewed, web queries, questions, plans/todos, sub-agent identities, tokens, context fill, cost, lines added/removed, checkpoints and turn durations are all recorded. Drishya uses perhaps half of it. Adapter work (DATA tasks in [TASKS](../PRODUCT_WORK_HISTORY.md)) comes before more visual invention.
 2. **The "why" is mostly missing.** Fill it only with clearly labelled, opt-in, evidence-cited derived text (EXPLAIN tasks). This is both honest and the hackathon's load-bearing model use.
 3. **Schema.** Several items need new event kinds or payload fields (usage, checkpoints, image view, question, plan). The event schema changes only by agreement between both builders; propose them as one batch.
 4. **Version drift.** Codex shapes changed within this sample (`item_completed` items vs `response_item`). Every new field needs a redacted fixture and a capability declaration; unknown records stay "metadata-only", never guessed.

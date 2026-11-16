@@ -1,7 +1,7 @@
 # Release 1 — review and scope (8 to 18 November)
 
 Yash with Claude (Opus), 8 November. This decides what ships in the first packaged version and what waits. It answers Yash's questions directly: will a developer keep Drishya open as a second window, does it feel good, does the visualization create the pull we wanted, and how useful are Files, Workspace and Git. Inputs:
-- the two COMP-1 reports by ChatGPT ([developer adoption](comp-1-developer-product-review.md) and [presentation](comp-1-premium-ui-review.md), PR #367);
+- the two COMP-1 reports by ChatGPT ([developer adoption](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#comp-1-developer-product-review) and [presentation](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#comp-1-premium-ui-review), PR #367);
 - my AUDIT-1 and finishing-pass walks of the running app (5 to 7 November);
 - Yash's notes of 8 November.
 
@@ -62,7 +62,7 @@ So Release 1 keeps the visualization at full strength and makes it calmer under 
 
 ## 3. The Release 1 list
 
-See [TASKS P0](../TASKS.md). It replaced this section on 8 November after Yash's correction.
+See the [Product Work History](../PRODUCT_WORK_HISTORY.md). It replaced this section on 8 November after Yash's correction.
 
 ## 4. Release-candidate review prompt (SHIP-10)
 
