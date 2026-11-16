@@ -47,6 +47,8 @@ export const MUTATIONS: Mutation[] = [
   { name: 'pentest: a launch code expires', edits: [{ file: S, find: 'return expires !== undefined && expires > now();', replace: 'return expires !== undefined;' }], tests: ['12-pentest'] },
   { name: 'pentest: a redirected .git is rejected (history/compare/graph)', edits: [rm(G, "await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.")], tests: ['12-pentest'] },
   { name: 'pentest: a redirected .git is rejected (snapshot)', edits: [rm(G, "await verifyOwnGitDir(root); // SEC-4: for the Snapshot surface — the toplevel check above does not see where Git keeps history, only the work tree.")], tests: ['12-pentest'] },
+  // SHIP-16: found by the first Linux run (14-ship16-store-modes)
+  { name: 'ship-16: the database is created owner-only', edits: [{ file: 'packages/store/src/index.ts', find: "try { writeFileSync(dbFile, '', { flag: 'a', mode: 0o600 }); }", replace: "try { void 0; }" }, { file: 'packages/store/src/index.ts', find: "for (const suffix of ['', '-wal', '-shm']) {", replace: 'for (const suffix of []) {' }], tests: ['14-ship16-store-modes'] },
   // 3. file access
   { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'] },
   { name: 'files: workspace grant required', edits: [rm(W, "if (!root || !rec.workspaceRoot || await realpath(rec.workspaceRoot) !== root) throw new HttpError(403, 'approve this session workspace first');")], tests: ['03-file-access'] },
