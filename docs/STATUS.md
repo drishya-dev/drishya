@@ -32,6 +32,8 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
+| TEST-4 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-4-conversation-shortcut` | 2026-11-15 | Isolate saved mode for the Conversation shortcut case in `tests/browser/conversation-view.spec.ts`; reproduce, preserve focus and Next failure assertions, and verify with the preceding persistence case. TASKS/STATUS. |
+| TEST-6 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-6-pending-input-state` | 2026-11-15 | Only the pending-input response case in `tests/browser/fresh-workspace.spec.ts`, plus TASKS/STATUS. Verify against SHIP-5 wording on supported desktop widths and retain request assertions. MOTION-4 uses other cases in this file. |
 | TEST-5 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-5-site-build` | 2026-11-15 | Browser gate preparation only: root `package.json` and `scripts/test-browser.ts` if needed, TASKS/STATUS, and fresh-worktree verification of the existing site spec. |
 | TEST-7 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-7-desktop-fixtures` | 2026-11-15 | Only `tests/browser/composer-typography.spec.ts` and `tests/browser/image-reader-acceptance.spec.ts`, plus TASKS/STATUS. Shift the legacy phone fixtures to supported desktop widths and input. |
 | MOTION-4b | @yash + Claude Sonnet 5.5 | `claude/cranky-jepsen-672055` | 2026-11-16 | Paired open/close motion for every remaining surface: `apps/ui/src/lib/surface-motion.ts`, `dismiss-menus.ts`, `modern/motion.css`, and the Home, palette, LinkCard, History/reader disclosure, Toolbox menu and `op-evidence` components and their CSS; the 600 px Tools/Attach overlap in the Toolbox CSS; `tests/browser/paired-surface-motion.spec.ts` (new cases) and `toolbox-window.spec.ts`; the MOTION-4 doc, TASKS/STATUS. Not the Harsh-owned specs. |
@@ -65,6 +67,9 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - Main merged cleanly into draft #403, which is taken out of draft. Typechecks, UI and site builds, 667 UI units and 115 of 120 targeted Edge specs pass, including all nine paired-surface tests. The five failures were checked on clean main: four baseline (fresh-workspace composer geometry, tool-card focus, pending-input wording [#507], Toolbox above the open composer) and one flake on both. Nothing is caused by this branch. Unmet: genuine Codex Screen capture (frame association is NATIVE-5a). Record: [motion-4-paired-surfaces](review/motion-4-paired-surfaces.md). Opus reviews and merges.
 
+### Harsh with Codex — 15 Nov: TEST-5 browser gate builds the site
+
+- The root browser command builds the synthetic site before the existing parallel and serial Playwright passes. In a fresh worktree with its own frozen install, site dist was absent and the pre-fix filtered site case failed with an HTTP response error; after the change, all 8 site cases passed on Edge with two configured workers and retries disabled. A filtered non-site manual-scroll case passed in the serial project through the same command. Full gate not run.
 ### Harsh with Codex — 15 Nov: LAND-19 remembers an early landing dismissal
 
 - In the legacy landing preview, Escape during the pending intro records the existing tab-session marker. The automatic timeout still reveals the page after a failed module load and leaves the next visit eligible for the intro.
