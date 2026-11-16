@@ -15,7 +15,7 @@ test.beforeAll(async()=>{
  app=new App(join(dir,'data'));id=(await app.ingest.importSource('codex',journal)).recordingId;server=await startServer({app,port:0});
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});});
-async function append(page:Page,editor:Locator,text:string){await editor.focus();await editor.press('Control+End');await page.keyboard.insertText(text);}
+async function append(page:Page,editor:Locator,text:string){await editor.focus();await editor.press('ControlOrMeta+End');await page.keyboard.insertText(text);}
 for(const [path,eol] of cases)test(`both panes retain ${JSON.stringify(eol)} draft changes, selection and undo for ${path}`,async({page})=>{
  await page.setViewportSize({width:1440,height:960});await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
@@ -23,12 +23,12 @@ for(const [path,eol] of cases)test(`both panes retain ${JSON.stringify(eol)} dra
  const find=page.getByRole('textbox',{name:'Find repository files',exact:true}),row=page.locator(`[data-spine-path="${path}"]`);await find.fill(path);await row.click();const first=desk.locator('.desk-pane').nth(0);
  await first.getByRole('button',{name:'Edit file',exact:true}).click();const a=first.getByRole('textbox',{name:`Local draft for ${path}`,exact:true});await expect(a).toContainText('original');await append(page,a,'// first draft');await a.evaluate(el=>el.setAttribute('data-editor-identity','first'));
  const layout=desk.getByLabel('Workspace layout actions',{exact:true});await layout.press('Enter');await desk.getByRole('button',{name:'Split view',exact:true}).press('Enter');const second=desk.locator('.desk-pane').nth(1);await second.focus();const showFiles=second.getByRole('button',{name:'Show files',exact:true});if(await showFiles.isVisible())await showFiles.click();await row.click();const b=second.getByRole('textbox',{name:`Local draft for ${path}`,exact:true});await expect(b).toContainText('first draft');
- await b.focus();await b.press('Control+Home');await b.press('Shift+End');const selection=await page.evaluate(()=>getSelection()?.toString());expect(selection).toContain('original');
+ await b.focus();await b.press('ControlOrMeta+Home');await b.press('Shift+End');const selection=await page.evaluate(()=>getSelection()?.toString());expect(selection).toContain('original');
  await append(page,a,'\n// newer first-pane work');await expect(b).toContainText('newer first-pane work');await expect(a).toBeFocused();await expect(a).toHaveAttribute('data-editor-identity','first');
  await b.focus();expect(await page.evaluate(()=>getSelection()?.toString())).toBe(selection);
  await append(page,b,'\n// second-pane addition');await expect(a).toContainText('second-pane addition');await expect(a).toContainText('newer first-pane work');
  // A remote synchronization is not an undo step, and local undo retains the other pane's work.
- await b.press('Control+z');await expect(a).not.toContainText('second-pane addition');await expect(b).toContainText('newer first-pane work');await b.press('Control+y');await expect(a).toContainText('second-pane addition');
+ await b.press('ControlOrMeta+z');await expect(a).not.toContainText('second-pane addition');await expect(b).toContainText('newer first-pane work');await b.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');await expect(a).toContainText('second-pane addition');
  await first.getByRole('button',{name:'Compare draft',exact:true}).click();await append(page,b,'\n// while the other editor is hidden');await first.getByRole('button',{name:'Edit draft',exact:true}).click();await expect(a).toContainText('while the other editor is hidden');await expect(a).toHaveAttribute('data-editor-identity','first');
  const download=page.waitForEvent('download');await second.getByLabel(`File actions for ${path}`,{exact:true}).press('Enter');await second.getByRole('button',{name:'Download draft',exact:true}).press('Enter');const saved=await download;
  expect(readFileSync((await saved.path())!,'utf8')).toBe(original(eol)+['// first draft','// newer first-pane work','// second-pane addition','// while the other editor is hidden'].join(eol));
