@@ -33,7 +33,6 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 | TASKS ID | Who | Branch | Since | Files |
 |---|---|---|---|---|
 | TEST-7 | @yash + Claude Sonnet 5.5 (took over from @harsh, 16 Nov) | `codex/test-7-desktop-fixtures` | 2026-11-15 | Only `tests/browser/composer-typography.spec.ts` and `tests/browser/image-reader-acceptance.spec.ts`, plus TASKS/STATUS. Shift the legacy phone fixtures to supported desktop widths and input. |
-| MOTION-4b | @yash + Claude Sonnet 5.5 | `claude/cranky-jepsen-672055` | 2026-11-16 | Paired open/close motion for every remaining surface: `apps/ui/src/lib/surface-motion.ts`, `dismiss-menus.ts`, `modern/motion.css`, and the Home, palette, LinkCard, History/reader disclosure, Toolbox menu and `op-evidence` components and their CSS; the 600 px Tools/Attach overlap in the Toolbox CSS; `tests/browser/paired-surface-motion.spec.ts` (new cases) and `toolbox-window.spec.ts`; the MOTION-4 doc, TASKS/STATUS. Not the Harsh-owned specs. |
 | NATIVE-5a | @harsh + Codex | `codex/native-5a-codex-screen-frames` | 2026-11-15 | Typed browser-computer MCP input and own-result images inside `packages/adapter-codex/`, matching computer-frame tests and `scripts/real-cases/computer-frames.ts`, and TASKS/STATUS. SEC-4 temporarily owns its specifically listed replay source and test files. Resume changes in those files after that handoff is integrated. Keep source relationships, existing observation schema, and redaction/byte limits. Scratch browser recording already exists. |
 | EMBED-2b | @yash + Antigravity | `ag-builder/embed-2b` | 2026-11-14 | Embed view, reference host and integration guide: `apps/ui/src/App.tsx`, `apps/ui/src/components/EmbedShell.tsx`, `apps/ui/src/components/embed.css`, `apps/ui/src/components/Viewer.tsx`, `apps/ui/src/api.ts`, `examples/embed-host/`, `docs/guides/embed.md`, `tests/browser/embed-*.spec.ts`; TASKS/STATUS. No daemon or launcher-appendix edits. |
 | AG-3 | @yash + Codex | `codex/ag-3-live` (final guards in cumulative `codex/ag-5-native-cases`) | 2026-11-14 | Source complete and frozen for integration review: exact child references, pinned side-file reads, versioned late child replay, explicit parallel ambiguity. Review-only reservation: docs/review/antigravity-ag3-live.md. The isolated genuine native-app interruption acceptance remains external and unrun; shared signed-in Antigravity was not force-crashed. Source changes require a new reservation. |
@@ -58,6 +57,11 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 ---
 
 ## Last session
+
+### Yash with Claude Sonnet 5.5 — 16 Nov: MOTION-4b, the remaining surfaces
+
+- Every `<details>` in Modern now opens and closes with motion (history disclosures, step links and notes, Compare, Git graph, Workspace desk, library filters, Toolbox MCP, Agents and Subagents drawers); in-flow reveals (exposed reasoning, notices, pinned source, Net diff, Home About) go through a new `useReveal`; Home's narrow workspace list, the command palette's pointer paths and the hover link cards use the shared tokens. The dock waits up to three frames before recentring so paired drawers keep its motion. The 600 px Tools button no longer sits on the open composer's Attach. Left instant with reasons: native selects and titles, line-clamp and fold toggles, Files rows, palette hand-off. Record: [motion-4-paired-surfaces](review/motion-4-paired-surfaces.md#motion-4b--the-remaining-surfaces-16-november).
+- Checked: both typechecks, 667 UI units, 118 Edge cases with zero failures (paired-surface-motion 15, toolbox-window 11, 21 related specs), and 18 real-session cells (Claude `rec_39af3c94`, Codex `rec_af2cd202`, Home; three palettes; 600 and 1440). Not run: the full gate; link cards and some reveals have no real-session content. Opus reviews and merges.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: MOTION-4 finished (took over from Harsh + Codex)
 

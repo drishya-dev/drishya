@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 
-let directory: string, app: App, server: RunningServer, recording: string, fileRecording: string;
+let directory: string, app: App, server: RunningServer, recording: string, fileRecording: string, linkRecording: string;
 test.beforeAll(async () => {
   directory = mkdtempSync(join(tmpdir(), 'drishya-paired-motion-'));
   app = new App(directory);
@@ -23,6 +23,13 @@ test.beforeAll(async () => {
   const journal = join(directory,'peek.jsonl');
   writeFileSync(journal,[{type:'session_meta',payload:{id:'peek-motion-fixture',cwd:root}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:'Read both files'}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
   fileRecording = (await app.ingest.importSource('codex',journal)).recordingId;
+  const claude = join(directory,'links.jsonl');
+  const base = {timestamp:'2026-11-10T00:00:00Z',sessionId:'paired-links',cwd:root};
+  writeFileSync(claude,[
+    {...base,type:'user',uuid:'u1',message:{role:'user',content:'Show me the links'}},
+    {...base,type:'assistant',uuid:'a1',message:{id:'m1',role:'assistant',content:[{type:'text',text:'Read [the guide](https://example.com/guide) first.'}]}},
+  ].map(row=>JSON.stringify(row)).join(String.fromCharCode(10))+String.fromCharCode(10));
+  linkRecording = (await app.ingest.importSource('claude-code',claude)).recordingId;
   server = await startServer({app, port: 0, token: 'synthetic-paired-motion'});
 });
 test.afterAll(async () => {
@@ -248,4 +255,122 @@ test('a newer on-disk reading wins during the final peek tab exit', async ({page
   await peek.evaluate(element=>element.getAnimations().forEach(animation=>animation.finish()));
   await expect(peek).toHaveAttribute('data-surface-phase','open');
   await expect(peek.getByRole('tab',{name:'second.ts'})).toHaveAttribute('aria-selected','true');
+});
+
+// MOTION-4b: the remaining surfaces. Each group shows an intermediate frame on the way in and on the way out, on the shared clock.
+type Frame = {present: boolean; visible: boolean; opacity: number | null};
+async function frames(page: Page, selector: string, act: () => Promise<unknown>, ms = 420): Promise<Frame[]> {
+  await page.evaluate(sel => {
+    const w = window as unknown as {__frames: Frame[]; __sampling: boolean};
+    w.__frames = []; w.__sampling = true;
+    let element: Element | null = document.querySelector(sel);
+    const tick = () => {
+      // Bind to the first match and keep following that node, so a surface that leaves is not replaced by another match.
+      if (!element) element = document.querySelector(sel);
+      w.__frames.push({present: !!element?.isConnected, visible: !!element?.isConnected && element.checkVisibility(), opacity: element?.isConnected ? Number(getComputedStyle(element).opacity) : null});
+      if (w.__sampling) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, selector);
+  await act();
+  await page.waitForTimeout(ms);
+  return page.evaluate(() => { const w = window as unknown as {__frames: Frame[]; __sampling: boolean}; w.__sampling = false; return w.__frames; });
+}
+const travelled = (list: Frame[]) => list.some(frame => frame.visible && frame.opacity !== null && frame.opacity > .02 && frame.opacity < .98);
+
+test('every pointer-opened disclosure, in the Toolbox too, fades in and out and keeps the dock in place', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await openRecording(page);
+  const drawer = page.locator('.modern-tool-station .md-agents');
+  const summary = drawer.locator(':scope > summary');
+  const opening = await frames(page, '.md-agents > div', () => summary.click());
+  await expect(drawer).toHaveAttribute('open','');
+  expect(travelled(opening)).toBe(true);
+  const closing = await frames(page, '.md-agents > div', () => summary.click());
+  await expect(drawer).not.toHaveAttribute('open','');
+  // The content stays visible while it fades; it is gone for good afterwards.
+  expect(travelled(closing)).toBe(true);
+  expect(closing.at(-1)?.visible).toBe(false);
+  // The keyboard settles at once: no frame between hidden and shown.
+  await summary.focus();
+  const keyboard = await frames(page, '.md-agents > div', () => page.keyboard.press('Enter'), 200);
+  await expect(drawer).toHaveAttribute('open','');
+  expect(travelled(keyboard)).toBe(false);
+});
+
+test('Home: About and the narrow workspace list open and close with motion', async ({page}) => {
+  await page.setViewportSize({width:600,height:900});
+  await page.goto(server.launchUrl);
+  await expect(page.locator('.home')).toBeVisible();
+  const trigger = page.locator('.mh-workspace-trigger');
+  const list = '.mh-workspace-options';
+  const opening = await frames(page, list, () => trigger.click());
+  expect(travelled(opening)).toBe(true);
+  const leaving = await frames(page, list, () => trigger.click());
+  expect(travelled(leaving)).toBe(true);
+  expect(leaving.at(-1)?.visible).toBe(false);
+
+  const about = page.locator('.mh-about');
+  const wasOpen = await about.getAttribute('aria-expanded') === 'true';
+  const toggled = await frames(page, '#home-introduction', () => about.click());
+  const toggledBack = await frames(page, '#home-introduction', () => about.click());
+  expect(travelled(wasOpen ? toggled : toggledBack)).toBe(true);
+  expect(travelled(wasOpen ? toggledBack : toggled)).toBe(true);
+});
+
+test('exposed reasoning unfolds and folds on the menu clock', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await openRecording(page);
+  const label = page.locator('.prose-reasoning .prose-label').first();
+  await expect(label).toBeVisible();
+  const first = await frames(page, '.prose-reasoning > div', () => label.click());
+  const second = await frames(page, '.prose-reasoning > div', () => label.click());
+  expect(travelled(first)).toBe(true);
+  expect(travelled(second)).toBe(true);
+  // One of the two was a close: the content stayed mounted while it faded, then left.
+  const closed = [first, second].find(list => list.at(-1)?.present === false);
+  expect(closed).toBeTruthy();
+});
+
+test('the command palette travels for a pointer open and close, never for the keyboard', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await openRecording(page);
+  await page.mouse.click(720,450);
+  await page.evaluate(() => window.dispatchEvent(new Event('drishya-navigate-workspace')));
+  const palette = page.locator('dialog.workspace-navigation');
+  await expect(palette).toBeVisible();
+  await expect(palette).toHaveAttribute('data-surface-phase', /opening|open/);
+  await page.getByRole('button',{name:'Close Navigate workspace'}).click();
+  await expect(palette).toHaveAttribute('data-surface-phase','closing');
+  await expect(palette).toHaveCount(0);
+  await page.keyboard.press('Control+K');
+  await expect(palette).toBeVisible();
+  expect(await palette.evaluate(element => element.getAnimations().length)).toBe(0);
+  await page.keyboard.press('Escape');
+  await expect(palette).toHaveCount(0);
+});
+
+test('hover link cards enter and leave on the shared menu clock', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await openRecording(page, linkRecording);
+  const link = page.locator('.history a.md-url').first();
+  await expect(link).toBeVisible();
+  const entering = await frames(page, '[role=tooltip].link-card', () => link.hover(), 700);
+  expect(travelled(entering)).toBe(true);
+  const leaving = await frames(page, '[role=tooltip].link-card', () => page.mouse.move(2,400), 700);
+  expect(travelled(leaving)).toBe(true);
+  expect(leaving.at(-1)?.present).toBe(false);
+});
+
+test('the step note popover opens by pointer and folds on a press elsewhere', async ({page}) => {
+  await page.setViewportSize({width:1440,height:900});
+  await openRecording(page);
+  const card = page.locator('article[data-op-id]').first();
+  await card.hover();
+  const info = card.locator('.op-info');
+  await expect(info).toBeVisible();
+  const opening = await frames(page, '.op-evidence:popover-open', () => info.click());
+  expect(travelled(opening)).toBe(true);
+  const closing = await frames(page, '.op-evidence', () => page.mouse.click(5,300));
+  expect(closing.some(frame => frame.visible && frame.opacity !== null && frame.opacity < .98)).toBe(true);
 });
