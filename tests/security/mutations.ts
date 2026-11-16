@@ -107,7 +107,8 @@ for (const mutation of selected) {
   }
   const run = spawnSync('pnpm', ['exec', 'vitest', 'run', '--config', 'vitest.security.config.ts', ...mutation.tests], { cwd: root, encoding: 'utf8', shell: true, timeout: 280_000 });
   restore();
-  const output = `${run.stdout}${run.stderr}`;
+  // SHIP-16: Vitest colours its summary on Linux, which hid the "Tests N failed" line from the match below.
+  const output = `${run.stdout}${run.stderr}`.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '');
   const failed = /Tests\s+(?:(\d+) failed)/.exec(output)?.[1] ?? (run.status === 0 ? '0' : 'file error');
   const caught = run.status !== 0;
   if (!caught) notCaught++;
