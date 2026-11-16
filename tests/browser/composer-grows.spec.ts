@@ -69,7 +69,8 @@ for(const width of [600,1440]) test(`only the composer grows while a long prompt
   expect(await textbox.evaluate(node=>node.scrollHeight>node.clientHeight),'past the maximum the text scrolls inside the box').toBe(true);
 });
 
-// UI-28c: opening and closing the composer moves nothing else; only the composer itself changes.
+// UI-28c keeps the stage still. At 600px MOTION-4b moves the bottom controls clear of the open composer.
+const narrowBottomControls = ['.catalog-toggle', '.history-prompt-marks', '.history-transport'];
 for(const [width,height] of [[600,900],[1440,900],[2560,1440]] as const) test(`collapsing and opening the composer moves nothing else at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height});
   await page.route('**/v1/working-locations',route=>route.request().method()==='GET'?route.fulfill({json:{version:1,sessions:[]}}):route.continue());
@@ -85,7 +86,16 @@ for(const [width,height] of [[600,900],[1440,900],[2560,1440]] as const) test(`c
   for(const open of [true,false,true,false,true,false]){
     await setOpen(open);sizes.add(String(Math.round((await composer.boundingBox())!.height)));
     const after=await snapshot(page);
-    expect(after.rects,`${open?'open':'collapsed'}: the Files panel, Toolbox, rails and controls stay`).toEqual(before.rects);
+    const fixed = (rects: Record<string, string[]>) => Object.fromEntries(Object.entries(rects)
+      .filter(([selector]) => !(open && width === 600 && narrowBottomControls.includes(selector))));
+    expect(fixed(after.rects),`${open?'open':'collapsed'}: fixed surfaces stay`).toEqual(fixed(before.rects));
+    if (open && width === 600) {
+      const tools = page.locator('.catalog-toggle');
+      await expect(tools).toBeInViewport();
+      await tools.click({ trial: true });
+      await composer.getByRole('button', { name: 'Attach', exact: true }).click({ trial: true });
+      expect((await tools.boundingBox())!.y).toBeLessThan(Number(before.rects['.catalog-toggle']![0]!.split(',')[1]));
+    }
     expect(after.scrollTop,`${open?'open':'collapsed'}: the history does not jump`).toBe(before.scrollTop);
     expect(after.scrollHeight,`${open?'open':'collapsed'}: the history is not reflowed`).toBe(before.scrollHeight);
   }
