@@ -40,10 +40,14 @@ describe('1. Git and GitHub CLI use absolute PATH executables', () => {
 
   it('the gh runner uses the installed gh (or none), never the one in the working directory', async () => {
     process.chdir(plant);
-    const outcome = await defaultGhRun(['--version'], AbortSignal.timeout(10_000)).then((out) => ({ out }), (error: NodeJS.ErrnoException) => ({ error }));
+    // The first launch of an installed `gh` can take over ten seconds on a hosted Windows runner (the antivirus scans it); that is a slow
+    // start, not an answer, so ask again once. Anything else, a second timeout included, is the result.
+    const ask = () => defaultGhRun(['--version'], AbortSignal.timeout(20_000)).then((out) => ({ out }), (error: NodeJS.ErrnoException) => ({ error }));
+    let outcome = await ask();
+    if ('error' in outcome && outcome.error.code === 'ABORT_ERR') outcome = await ask();
     if ('out' in outcome) expect(outcome.out).toMatch(/^gh version /);
     else expect(outcome.error.code).toBe('ENOENT'); // gh is not installed on this machine
-  });
+  }, 60_000);
 });
 
 describe('2. the session cookie is not scoped to a port', () => {

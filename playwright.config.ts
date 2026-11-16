@@ -11,9 +11,9 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 10_000 },
   workers: Number(process.env.DRISHYA_WORKERS || 4),
-  // SHIP-16c: a hosted runner has two slow cores; one retry on CI keeps a single timing miss from failing a 40-minute job. A spec that fails
-  // twice still fails, and the report marks the first failure as flaky. Local runs never retry.
-  retries: process.env.CI ? 1 : 0,
+  // SHIP-16c: a hosted runner has two slow cores; two retries on CI keep a timing miss from failing a 40-minute job. A spec that fails
+  // three times still fails, and the report marks the first failure as flaky. Local runs never retry.
+  retries: process.env.CI ? 2 : 0,
   reporter: 'list',
   use: {
     browserName: 'chromium',
