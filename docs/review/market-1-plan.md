@@ -4,6 +4,10 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 
 **Rule (REL-4):** agents draft and design. Only Yash and Harsh publish, post, message or submit anything.
 
+**Update, 16 Nov (Fable):** the final text of every post, plus the pre-release step, is in [SHIP-11's posts](ship-11-posts.md). The pre-release step is a Product Hunt upcoming page and the company pages now, and one LinkedIn teaser from Yash at 19:00 IST on D-1, posted only once the final test is green.
+
+The release order is now REPO-1 → SHIP-16 → the final whole test → SHIP-9 → README-3 → the website and feedback → posts. D0 stays Wed 18 Nov only if all of that is done by the evening of 17 Nov. Otherwise it moves to Tue 24 Nov, and the teaser says "this week" without a date.
+
 ---
 
 ## 1. Audience and message
@@ -28,7 +32,7 @@ Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decide
 2. Live: steps appear as the agent takes them, within about a quarter of a second on ordinary sessions (LIVE-7/7b p95).
 3. Three harnesses in one place: Claude Code and Codex (live, replay, and the composer for sessions Drishya drives), plus Antigravity sessions, read-only.
 4. Developer tools around it: the Files tree and a peek with each file's earlier changes, Workspace, Git review, Compare for branches and PRs, the Git graph, search, and questions answered in place.
-5. Local and private: everything stays on your machine. No telemetry, not even opt-out. It listens on loopback only, and secrets are redacted before anything is stored. A 582-test security suite backs this up.
+5. Local and private: everything stays on your machine. No telemetry, not even opt-out. It listens on loopback only, and secrets are redacted before anything is stored. A 673-test security suite and a penetration pass (8 findings, each fixed with a regression test) back this up.
 6. Fast on huge sessions: a 959 MB session shows its latest work in about a second, the rest loading quietly (PERF-4: first data in 0.76 s, first paint 1.1 to 2 s).
 7. Free and open source (Apache-2.0).
 
