@@ -81,6 +81,28 @@ The macOS job is the Linux job on the other POSIX system. What Linux changed tha
 
 On Windows 11 with Node 24.11.1, setting the test process's `TEMP` and `TMP` to a disposable directory junction reproduced the same 11 failures. Windows short temp paths and macOS's `/var` alias both expose the same mismatch between configured and canonical paths. Artifact and image reads sent a resolved path back through the allow-list for the configured root. Transcript scans used a resolved cache key, while persisted checkpoints used the configured key. The follow-up `6f8efe89` passes all 71 targeted adapter and checkpoint tests under the junction, including read-only refusal cases. Rerun the hosted platform checks against the integrated candidate.
 
+[Checks-only run 43829991607](https://github.com/drishya-dev/drishya/actions/runs/43829991607) at `6f8efe89` cleared the Antigravity failures on all three systems. Ubuntu finished every step. Windows recorded 1,804 unit passes, 2 skips and 1 Git comparison timeout with a teardown error. macOS reached security after the unit and build steps and failed at the scratch cleanup guard when the test temp path had an alias. Follow-up `9a6ff915` adjusts the Git test fixtures, the security scratch path policy and command resolution. On Windows the targeted Git and executable units passed 32 tests, typechecking passed, and the security run under an external temp junction passed 675 tests with 5 skips.
+
+[Checks-only run 43831756087](https://github.com/drishya-dev/drishya/actions/runs/43831756087) at `5ae46f3` passed Ubuntu and macOS, with typechecking, 1,803 unit passes and 4 skips per platform, UI and site builds, 679 standalone security passes and 1 skip, installed-package verification including 680 security tests, and demo drift checks. Windows passed typechecking, both builds and 1,805 unit tests with 2 skips. The Windows security step recorded 673 passes, 6 skips and 1 failed fixture assertion. It assumed that a scratch checkout outside the source tree always has a `..` path relative to the source tree. Commit `d4071b6` also accepts an absolute relative-path result when the checkout and scratch directory use different Windows drives. The targeted security spec passed all 8 cases locally after this change.
+
+Local Windows at `5ae46f3` passed all 1,805 unit tests with 2 skips using 4 workers and the normal temp directory. `package:verify` passed there as well, including the isolated offline tarball install, synthetic Claude and Codex fixture imports, two loopback-only network attempts, authenticated requests, restart and 675 security passes with 5 skips.
+
+### Verified hosted matrix
+
+[Checks-only run 43872924273](https://github.com/drishya-dev/drishya/actions/runs/43872924273) passed at `d4071b6`. The browser jobs were skipped by the checks-only setting.
+
+| Runner | Typecheck | Unit tests | UI and site builds | Standalone security tests | Package verification and packaged security tests | Demo drift |
+| --- | --- | --- | --- | --- | --- | --- |
+| Windows | Pass | 1,805 passed, 2 skipped | Pass | 674 passed, 6 skipped | Pass, 675 passed and 5 skipped | Pass |
+| Ubuntu | Pass | 1,803 passed, 4 skipped | Pass | 679 passed, 1 skipped | Pass, 680 passed | Pass |
+| macOS | Pass | 1,803 passed, 4 skipped | Pass | 679 passed, 1 skipped | Pass, 680 passed | Pass |
+
+On each runner, package verification installed a tarball offline, imported synthetic Claude Code and Codex recordings, checked the demo and authenticated API, checked that the server's two network attempts stayed on loopback, and restarted with the imported state intact.
+
+### Platform wording for SHIP-9
+
+The Windows, Ubuntu and macOS hosted checks and synthetic package installs passed at `d4071b6`. Windows was also checked locally. An earlier WSL2 Ubuntu run checked the installed package against synthetic recordings. Genuine session import and a live turn on WSL2, and the hands-on physical Mac run, still need to be verified on the final candidate.
+
 ## Finish the genuine acceptance on WSL2 and a physical Mac
 
 The follow-up host had a stopped Docker Desktop WSL2 distribution only. Use the builder's Ubuntu WSL2 distribution and a Linux browser through WSLg. For MAC-1 use a physical Mac, its own desktop browser and the [macOS acceptance packet](mac-1-acceptance.md).
