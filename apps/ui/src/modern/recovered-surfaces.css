@@ -114,6 +114,11 @@
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .history-transport {bottom:56px;}
  :root[data-ui-version=modern] .connected-workspace:has(.modern-native-composer) .catalog-toggle {left:14px;right:auto;bottom:56px;}
 }
+/* MOTION-4b: an open composer is a full card down to the bottom edge, so the shared bottom row (Tools, Follow latest) would sit on its
+   Attach and send controls. Lift both clear of the card; the minimized composer keeps the one-row layout above. */
+@media(max-width:820px) {
+ :root[data-ui-version=modern] .connected-workspace:not(.developer-workspace-open):has(.modern-native-composer.open:not(.composer-minimized)) :is(.catalog-toggle,.history-transport) {bottom:calc(var(--composer-gap,0px) + var(--composer-raised-gap,0px) + 8px);}
+}
 :root[data-ui-version=modern] .modern-native-composer #prompt-size-status:not(.sr-only) { padding:2px 15px 4px; }
 :root[data-ui-version=modern] .modern-native-composer.composer-minimized>.queued-input-receipts { display:block!important; }
 

@@ -77,6 +77,7 @@ import { conversationRuns, runFold, runHeights, runMeasureKey } from '../lib/con
 import { runLine } from '../lib/run-ledger.ts';
 import type { RunPresentation } from '../lib/passage-content.ts';
 import { measureReadingEdges, READING_EDGE_FADE } from '../lib/reading-edges.ts';
+import { useReveal } from '../lib/reveal.ts';
 
 /** Navigation targets the readable world clear of top and bottom fixed controls and their reading fade. */
 function readingClearance(history: HTMLElement): { top: number; bottom: number } {
@@ -1125,6 +1126,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const workspaceRoot = useApp(s => s.recording?.workspaceRoot);
   const [open, setOpen] = useDisclosureChoice(`prose/${pr.id}`, pr.role !== 'reasoning' || detail === 'expanded');
   const prose = useRef<HTMLDivElement>(null);
+  const reveal = useReveal<HTMLDivElement>(open && pr.role === 'reasoning');
   useLayoutEffect(() => {
     const root = prose.current;
     if (!root || !arriving || !useApp.getState().motion || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -1136,6 +1138,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
   const label = pr.role === 'reasoning' ? (agent?.harness === 'antigravity' ? 'Thinking recorded by Antigravity' : pr.exposure === 'summary' ? 'Reasoning summary' : 'Thinking') : undefined;
   if (label && detail === 'hidden') return null;
   if (pr.exposure === 'none') return <ReasoningGapLine pr={pr} agent={agent} />;
+  const body = pr.truncated ? <FullProse id={`art_${pr.id}_prose`} preview={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile}/> : <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />;
   return (
     <div ref={prose} data-prose-id={pr.id} data-agent-id={pr.agentId} className={`prose prose-${pr.role}${arriving ? ' arriving' : ''}`} aria-label={`${agentName(agent)} ${label ?? 'said'}`}>
       {label && (
@@ -1144,7 +1147,7 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
           {open ? ' · collapse' : ' · show'}
         </button>
       )}
-      {open && (pr.truncated ? <FullProse id={`art_${pr.id}_prose`} preview={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile}/> : <Markdown text={pr.text} workspaceRoot={workspaceRoot} onPath={openCapturedFile} />)}
+      {label ? reveal.shown && <div ref={reveal.ref}>{body}</div> : open && body}
     </div>
   );
 }
@@ -1152,13 +1155,14 @@ function ProseView({ pr, arriving, agent }: { pr: Prose; arriving: boolean; agen
 /** One quiet line where reasoning happened but its text was never saved. Never filled in. */
 function ReasoningGapLine({ pr, agent }: { pr: Prose; agent?: Agent }) {
   const [why, setWhy] = useState(false);
+  const reveal = useReveal<HTMLParagraphElement>(why);
   const gap = reasoningGap(pr, agent?.harness);
   return (
     <div data-prose-id={pr.id} data-agent-id={pr.agentId} className="prose prose-reasoning reasoning-gap">
       <button className="reasoning-gap-line" onClick={() => setWhy((v) => !v)} aria-expanded={why} title={gap.explain}>
         <span>{gap.line}</span>{gap.count && <small>{gap.count}</small>}<span className="reasoning-gap-info" aria-hidden>ⓘ</span>
       </button>
-      {why && <p className="reasoning-gap-why">{gap.explain}</p>}
+      {reveal.shown && <p ref={reveal.ref} className="reasoning-gap-why">{gap.explain}</p>}
     </div>
   );
 }

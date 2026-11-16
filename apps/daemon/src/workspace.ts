@@ -10,6 +10,29 @@ import { recordedFileRoots, recordedMainRootPrefixes } from './file-roots.ts';
 
 const LINKED_GITDIR = /^gitdir:\s*(.+?)\s*$/m, WORKTREE_ADMIN = /^(.*?)[\\/]\.git[\\/]worktrees[\\/][^\\/]+$/;
 
+/**
+ * SEC-4: Git's own `--show-toplevel` check (used before every Git-review read) accepts a `.git` *file* that
+ * redirects elsewhere, because the work tree it reports is still `root` — only the history and blobs come from
+ * wherever the file points. A hostile repository whose `.git` is `gitdir: <path to an unrelated repository>` passed
+ * that check and showed commits and file content from the other repository. Accept only a plain repository (`.git`
+ * is a directory) or a genuine linked worktree of `root`: Git itself writes a two-way link for one — a forward
+ * pointer here and a `gitdir` backlink in the worktree admin folder — that a `.git` file alone cannot fabricate,
+ * because it would need write access to that other, real repository's `.git/worktrees/`.
+ */
+export async function verifyOwnGitDir(root: string): Promise<void> {
+  const marker = await lstat(join(root, '.git')).catch(() => undefined);
+  if (!marker) throw new HttpError(403, 'No repository there.');
+  if (marker.isDirectory()) return;
+  if (!marker.isFile() || marker.size > 4096) throw new HttpError(403, 'Unexpected .git entry.');
+  const gitdir = LINKED_GITDIR.exec(await readFile(join(root, '.git'), 'utf8').catch(() => ''))?.[1];
+  const admin = gitdir ? WORKTREE_ADMIN.exec(resolve(root, gitdir))?.[0] : undefined;
+  const backlink = admin ? (await readFile(join(admin, 'gitdir'), 'utf8').catch(() => '')).trim() : undefined;
+  const ownGitFile = await realpath(join(root, '.git')).catch(() => '');
+  if (!admin || !backlink || !ownGitFile || await realpath(resolve(admin, backlink)).catch(() => '') !== ownGitFile) {
+    throw new HttpError(403, 'The .git entry does not point to a worktree of this checkout.');
+  }
+}
+
 /** FILES-11: a linked worktree of this same repository inside the approved root (an agent's `.local/wt-*` checkout) is read as a root of
  *  its own. Its `.git` is a one-line pointer back to this repository's `.git/worktrees`; only that pointer is read to decide. Any other
  *  nested checkout, and everything else under an ignored folder, stays refused. */

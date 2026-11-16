@@ -96,8 +96,15 @@ test('Conversation folds each run to its line, opens it in place and remembers t
 
 test('the v key switches, and Next failure opens the run that holds the failure', async ({ page }) => {
   const id = await importSession('conversation-keys');
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET' ? route.fulfill({ json: { version: 1, sessions: [{ id: '@home', entries: [['history/mode', 'conversation']] }] } }) : route.continue());
   await open(page, id);
-  await page.locator('.history').focus();
+  // A previous window can leave Conversation in the daemon's shared memory.
+  await expect(mode(page, 'Conversation')).toHaveAttribute('aria-pressed', 'true');
+  await mode(page, 'Work').click();
+  await expect(mode(page, 'Work')).toHaveAttribute('aria-pressed', 'true');
+  const history = page.locator('.history');
+  await history.focus();
+  await expect(history).toBeFocused();
   await page.keyboard.press('v');
   await expect(mode(page, 'Conversation')).toHaveAttribute('aria-pressed', 'true');
   const lines = page.locator('.history .run-line');

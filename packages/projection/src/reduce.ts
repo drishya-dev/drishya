@@ -38,7 +38,7 @@ import { isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
 import { literalPatch, literalPlan, literalPlanConfirmed, parseMcpName, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks, resolveHunkLines } from './patch.ts';
-import { inWorkspace, relativize, toPosix } from './paths.ts';
+import { inWorkspace, relativize, toPosix, trimTrailingSlashes } from './paths.ts';
 import { classifyShell, parseHitLines, plausibleHitPath, SHELL_RULE } from './shell.ts';
 import { parseTestOutput } from './tests.ts';
 import { TurnAccumulator } from './turns.ts';
@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r45';
+export const REDUCER_VERSION = 'r46';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -194,7 +194,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   // Empty incremental readers may receive their first captured root only on append.
   let branchPrimaryRoot = rootsByRecording.get(recordingId);
   const normalizedRoot = (root: string) => {
-    const path = toPosix(root).replace(/\/+$/, '');
+    const path = trimTrailingSlashes(toPosix(root));
     return /^[a-z]:\//i.test(path) ? path.toLowerCase() : path;
   };
   const insideRoot = (path: string, root: string) => {
@@ -225,7 +225,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     if (!p) return '';
     let q = toPosix(p);
     const base = cwd ?? rootsByRecording.get(currentRecording);
-    if (base && !/^([a-zA-Z]:)?\//.test(q)) q = toPosix(base).replace(/\/+$/, '') + '/' + q.replace(/^\.\//, '');
+    if (base && !/^([a-zA-Z]:)?\//.test(q)) q = trimTrailingSlashes(toPosix(base)) + '/' + q.replace(/^\.\//, '');
     // Resolve dot segments before testing ancestry, preserving URL and UNC identities.
     if (!/^[a-z]+:\/\//i.test(q)) q = (q.startsWith('//') ? '/' : '') + posix.normalize(q);
     if (multipleWorktrees) {
@@ -860,7 +860,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           for (const f of p.files as CheckpointPayload['files']) {
             // Claude records the path relative to its cwd and the real parent folder; join them.
             const name = toPosix(f.path).split('/').pop()!;
-            const path = f.parentDir ? `${toPosix(f.parentDir).replace(/\/+$/, '')}/${name}` : f.path;
+            const path = f.parentDir ? `${trimTrailingSlashes(toPosix(f.parentDir))}/${name}` : f.path;
             if (f.backup) entry.raw.push({ path, at: { backup: f.backup.name, ...(f.backup.version !== undefined ? { version: f.backup.version } : {}), ...(f.backup.time ? { time: f.backup.time } : {}) } });
             else if (f.absent) entry.raw.push({ path, at: { absent: true, ...(typeof p.at === 'string' ? { time: p.at } : {}) } });
           }
@@ -1666,7 +1666,7 @@ function imageReferenceName(reference: string | undefined): string {
   if (/^file:\/\//i.test(path)) {
     try { path = decodeURIComponent(new URL(path).pathname); } catch { /* Keep malformed native text inert. */ }
   }
-  return path.replace(/\/+$/, '').split('/').at(-1) || 'reference';
+  return trimTrailingSlashes(path).split('/').at(-1) || 'reference';
 }
 
 function clip(s: string, n: number): string {

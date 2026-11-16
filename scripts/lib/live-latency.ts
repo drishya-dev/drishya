@@ -1,6 +1,32 @@
 // LIVE-7: pure helpers for the live-latency benchmark and its guard test. No clock reads here: every
 // time is an input, so the same numbers always give the same table.
 
+interface LiveLatencyRunName {
+  label: string;
+  mode: string;
+  harness: string;
+  scenario: string;
+  source?: string;
+  mb?: string;
+  stale?: boolean;
+  resume?: boolean;
+}
+
+/** Keep the report's existing naming scheme, with CLI values confined to one file name. */
+export function liveLatencyResultPath({ label, mode, harness, scenario, source, mb, stale, resume }: LiveLatencyRunName): string {
+  const fields = { label, mode, harness, scenario, ...(source === undefined ? {} : { source }), ...(mb === undefined ? {} : { mb }) };
+  for (const [flag, value] of Object.entries(fields)) {
+    const invalid = flag === 'source' ? /[^a-z0-9_-]/i : /[^a-z0-9._+-]/i;
+    if (!value || value === '.' || value === '..' || value.startsWith('--') || invalid.test(value)) {
+      throw new Error(`--${flag} must be a portable filename component`);
+    }
+  }
+  const name = `${label}-${mode}-${source ? 'real-' + source : harness}-${scenario}${stale ? '-stale' : resume ? '-resume' : ''}${mb ? `-${mb}mb` : ''}.json`;
+  if (/^(?:con|prn|aux|nul|com[0-9]|lpt[0-9])\./i.test(name)) throw new Error('--label produces a reserved filename');
+  if (name.length > 255) throw new Error('Benchmark result filename exceeds 255 characters');
+  return `.local/live7/${name}`;
+}
+
 export type StepKind = 'prompt' | 'reasoning' | 'tool-start' | 'tool-result' | 'prose' | 'plan-or-question' | 'turn-end' | 'subagent-start' | 'other';
 
 export interface StepObservation {

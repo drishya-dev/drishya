@@ -1,3 +1,4 @@
+import {useSurfacePresence} from '../lib/surface-motion.ts';
 import {fileName,fileFolder} from '../lib/file-identity.ts'; import {plural} from '../lib/plural.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
 import {FileReadingActions} from './FileReadingActions.tsx';
@@ -49,6 +50,7 @@ export function DeveloperWorkspace() {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const narrow = useNarrowWorkspace(), foldersHidden = useApp(s => s.foldersHidden);
   const desk = useRef<HTMLElement>(null);
+  const present=useSurfacePresence(open?true:undefined,desk,'panel',id);
   const mode = useApp(s => s.mode), { workspace, approve, controller } = useSessionWorkspace();
   const [files, setFiles] = useWorkspaceState<string[]>('desk/files', []);
   const [primary, setPrimary] = useWorkspaceState('desk/primary', '');
@@ -92,15 +94,16 @@ export function DeveloperWorkspace() {
     return () => window.removeEventListener('drishya-open-workspace-file', choose);
   }, [pane, split, narrow, setFiles, setPrimary, setSecondary]);
   useLayoutEffect(() => {
-    const viewer = desk.current?.closest<HTMLElement>('.viewer'), header = desk.current?.querySelector('header');
-    if (!open || !narrow || !viewer || !header) return;
-    const measure = () => viewer.style.setProperty('--desk-tools-bottom', `${header.getBoundingClientRect().bottom - viewer.getBoundingClientRect().top + 8}px`);
+    const section = desk.current, viewer = section?.closest<HTMLElement>('.viewer'), header = section?.querySelector('header');
+    if (!open || !narrow || !section || !viewer || !header) return;
+    // The reader moves during entry, so reserve from its layout box.
+    const measure = () => viewer.style.setProperty('--desk-tools-bottom', `${section.offsetTop + header.offsetTop + header.offsetHeight + 8}px`);
     const observer = new ResizeObserver(measure); observer.observe(header);
     const crown = viewer.querySelector('.workspace-header'); if (crown) observer.observe(crown);
     measure();
     return () => { observer.disconnect(); viewer.style.removeProperty('--desk-tools-bottom'); };
   }, [open, narrow]);
-  if (!open || mode !== 'history' || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (!present || mode !== 'history' || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const closeTab = (path: string) => {
     const next = files.filter(file => file !== path); setFiles(next); tabs.current = next;
     if (primary === path) setPrimary(next[0] ?? '');

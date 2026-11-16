@@ -7,11 +7,17 @@ export function toPosix(p: string): string {
   return p.replace(/\\/g, '/');
 }
 
+export function trimTrailingSlashes(path: string): string {
+  let end = path.length;
+  while (end > 0 && path[end - 1] === '/') end--;
+  return path.slice(0, end);
+}
+
 export function relativize(path: string, root: string | undefined): string {
   if (!path) return path;
   const p = toPosix(path);
   if (!root) return p.replace(/^\.\//, '');
-  const r = toPosix(root).replace(/\/+$/, '');
+  const r = trimTrailingSlashes(toPosix(root));
   const ci = isWindowsPath(root) || isWindowsPath(path);
   const pc = ci ? p.toLowerCase() : p;
   const rc = ci ? r.toLowerCase() : r;

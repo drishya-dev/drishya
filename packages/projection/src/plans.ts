@@ -142,6 +142,10 @@ export function exitPlanText(input: unknown): string | undefined {
 /** Only Codex's complete explicit marker establishes plan material, not a Markdown heading. */
 export function proposedPlan(o: Observation, text: string): string | undefined {
   if (o.source.adapterId !== 'codex' || o.kind !== 'message.assistant') return;
-  const match = /^\s*<proposed_plan>\s*\n?([\s\S]*?)\n?\s*<\/proposed_plan>\s*$/.exec(text);
-  return match && !/<\/?proposed_plan>/.test(match[1]!) ? match[1]!.trim() : undefined;
+  const opening = '<proposed_plan>', closing = '</proposed_plan>';
+  const message = text.trim();
+  if (!message.startsWith(opening) || !message.endsWith(closing)) return;
+  const body = message.slice(opening.length, -closing.length);
+  if (body.includes(opening) || body.includes(closing)) return;
+  return body.trim();
 }
