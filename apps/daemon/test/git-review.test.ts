@@ -58,11 +58,14 @@ it('reads one at a time, so a second Git surface waits its turn instead of faili
   expect(first.head).toBe(second.head);
   expect(most).toBeLessThanOrEqual(4);
   let release = () => {}; const held = new Promise<void>(done => { release = done; });
-  const blocked = new GitReview(access, async (root, args, signal) => { await held; return readGit(root, args, signal); });
+  // The saturation check needs held requests, not eight more full Git snapshots after release.
+  const stopped = new Error('Synthetic held read stopped');
+  const blocked = new GitReview(access, async () => { await held; throw stopped; });
   await blocked.approve(id);
-  const waiting = Array.from({ length: 8 }, () => blocked.snapshot(id).catch(() => undefined));
-  await expect(blocked.snapshot(id)).rejects.toThrow('already running');
-  release(); await Promise.all(waiting);
+  const waiting = Promise.allSettled(Array.from({ length: 8 }, () => blocked.snapshot(id)));
+  try { await expect(blocked.snapshot(id)).rejects.toThrow('already running'); }
+  finally { release(); }
+  expect(await waiting).toEqual(Array.from({ length: 8 }, () => ({ status: 'rejected', reason: stopped })));
 });
 
 it('parses NUL-delimited rename paths and unusual filenames without whitespace splitting', () => {

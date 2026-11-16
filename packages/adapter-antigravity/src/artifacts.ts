@@ -1,6 +1,6 @@
 import { opendir, realpath } from 'node:fs/promises';
 import { join, relative, resolve } from 'node:path';
-import { artifactName, conversationId, readablePath, readableRoot, openObservation } from './paths.ts';
+import { artifactName, conversationId, readableRoot, openObservation } from './paths.ts';
 
 export interface ArtifactVersion {
   name: string;
@@ -27,8 +27,7 @@ function unavailable(error: unknown): NonNullable<ArtifactVersion['unavailable']
 }
 
 async function bounded(root: string, path: string, id: string, limit: number, name: string) {
-  const safePath = await readablePath(root, path, 'artifact', id, name);
-  const file = await openObservation(root, safePath, 'artifact', id, name);
+  const file = await openObservation(root, path, 'artifact', id, name);
   try {
     const stat = await file.stat();
     if (!stat.isFile()) throw new Error('Antigravity observation input is not a regular file');

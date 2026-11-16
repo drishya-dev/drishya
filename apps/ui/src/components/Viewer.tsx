@@ -80,12 +80,6 @@ function WorkspaceViewer() {
   }
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
-  const sessionWait = useWaitNotice({
-    waiting: !projection,
-    error,
-    quietMessage: 'Loading history…',
-    longMessage: 'Opening a large session with many recorded steps. Reconstructing history; leave the window open.',
-  });
   const historyPage = useApp((s) => s.historyPage);
   const loadHistoryWindow = useApp((s) => s.loadHistoryWindow);
   const graph = useApp((s) => s.graph);
@@ -148,6 +142,14 @@ function WorkspaceViewer() {
     return { scene: compose(projection, { step, since, filter, selectedOperationId: selectedOp }), since };
   }, [historyPage, projection, step, filter, selectedOp, historyMode, recordingId]);
   const scene = composition?.scene;
+  const awaitingEarlierPage = !!historyPage && !!scene && scene.step > step;
+  const sessionWait = useWaitNotice({
+    waiting: !projection || awaitingEarlierPage,
+    error,
+    quietMessage: 'Loading history…',
+    longMessage: awaitingEarlierPage ? 'Still loading the earlier history page…' :
+      'Opening a large session with many recorded steps. Reconstructing history; leave the window open.',
+  });
   useLayoutEffect(() => {
     // Commit only what was actually shown. A re-render or same-step page retains
     // its interval instead of stripping an in-flight arrival's class.
@@ -317,7 +319,6 @@ function WorkspaceViewer() {
   }
   // Keep the viewport and finite arrivals alive across paged forward steps.
   // A backward seek must conceal later evidence until its as-of page arrives.
-  const awaitingEarlierPage = !!historyPage && scene.step > step;
 
 
   return (

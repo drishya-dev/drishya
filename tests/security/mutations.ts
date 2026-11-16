@@ -70,7 +70,7 @@ export const MUTATIONS: Mutation[] = [
   { name: 'exec: Git fsmonitor off', edits: [{ file: G, find: "'-c', 'core.fsmonitor=false', ", replace: '' }], tests: ['00-verify-first'] },
   { name: 'exec: submodule work trees are not scanned', edits: [{ file: G, find: "'--ignore-submodules=dirty'", replace: "'--ignore-submodules=none'" }], tests: ['00-verify-first'] },
   { name: 'exec: the harness is never started through a shell', edits: [{ file: 'apps/daemon/src/controller.ts', find: '{ cwd: root, shell: false, windowsHide: true, stdio: \'pipe\', env: { ...process.env, CLAUDE_CODE_DISABLE', replace: '{ cwd: root, shell: true, windowsHide: true, stdio: \'pipe\', env: { ...process.env, CLAUDE_CODE_DISABLE' }], tests: ['05-command-execution', '10-controller'] },
-  { name: 'exec: relative PATH entries are ignored', edits: [{ file: 'apps/daemon/src/native-executable.ts', find: '.filter(dir => dir && (isAbsolute(dir) || win32.isAbsolute(dir)));', replace: '.filter(Boolean);' }], tests: ['05-command-execution'] },
+  { name: 'exec: relative PATH entries are ignored', edits: [{ file: 'apps/daemon/src/native-executable.ts', find: '.filter(dir => isAbsolute(dir));', replace: '.filter(Boolean);' }], tests: ['05-command-execution'] },
   { name: 'exec: a launch token must be URL-safe', edits: [{ file: 'apps/daemon/src/commands.ts', find: "if (!/^[A-Za-z0-9_-]{16,128}$/.test(value)) throw new Error(", replace: 'if (false) throw new Error(' }], tests: ['05-command-execution'] },
   // 6. outbound traffic
   { name: 'outbound: no network client in the daemon', edits: [{ file: S, find: 'const MAX_STREAMS = 64;', replace: "const MAX_STREAMS = 64; void fetch('http://example.com/ping').catch(() => undefined);" }], tests: ['06-outbound-traffic'] },
