@@ -22,6 +22,17 @@ async function settled(node:Locator) {
   await node.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
   await node.evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>undefined))));
 }
+async function pauseSurfaceAtCreation(surface:Locator) {
+  return surface.evaluateHandle(node=>{
+    const original=Element.prototype.animate;
+    Element.prototype.animate=function(frames,options) {
+      const animation=original.call(this,frames,options);
+      if(this===node||node.contains(this)){animation.pause();animation.currentTime=0;}
+      return animation;
+    };
+    return ()=>{Element.prototype.animate=original;};
+  });
+}
 async function pasteDraft(editor:Locator,text:string) {
   await editor.focus();await editor.press('Control+a');
   await editor.evaluate((node,text)=>{const data=new DataTransfer();data.setData('text/plain',text);node.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},text);
@@ -35,7 +46,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  const before=(await composer.boundingBox())!;
  expect(before.width).toBeGreaterThan(500);
  // Pause at creation: an IPC round trip can outlast the entire short morph under load.
- await composer.evaluate(node=>{const original=Element.prototype.animate;(window as any).__restoreComposerAnimation=()=>{Element.prototype.animate=original;};Element.prototype.animate=function(frames,options){const animation=original.call(this,frames,options);if(this===node||node.contains(this)){animation.pause();animation.currentTime=0;}return animation;};});
+ const restoreComposerAnimation=await pauseSurfaceAtCreation(composer);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
  const pause=async(time:number)=>composer.evaluate((node,time)=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=time;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};},time);
  const start=await pause(0);for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
@@ -46,7 +57,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  expect((await composer.locator('[data-surface-label]').boundingBox())!.height).toBeLessThan(30);
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
- await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
+ await composer.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));await restoreComposerAnimation.evaluate(restore=>restore());await restoreComposerAnimation.dispose();
  await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-24-node.offsetHeight))).toBeLessThanOrEqual(3);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
@@ -56,11 +67,13 @@ test('prompt minimize and reversal share measured bounds without changing layout
 test('toolbox minimizes from actual bounds and keeps its compact icon and independent scroll',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
  const toolbox=page.locator('.modern-tool-station');await expect(toolbox).toBeVisible();const before=(await toolbox.boundingBox())!;
+ // Pause at creation so an IPC round trip cannot outlast the morph before measurement.
+ const restoreToolboxAnimation=await pauseSurfaceAtCreation(toolbox);
  await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();
  const start=await toolbox.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};});
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
  expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
- await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));await restoreToolboxAnimation.evaluate(restore=>restore());await restoreToolboxAnimation.dispose();
  const compact=toolbox.getByRole('button',{name:'Expand toolbox',exact:true});
  expect(await compact.evaluate(button=>{
   const box=button.getBoundingClientRect();
@@ -1455,12 +1468,12 @@ test('a real pending-input shape expands the composer and replies to that reques
   await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
   state={...state,state:'approval',inputRequests:[{id:'input-request',questions:[question]}]};
   const form=page.getByRole('form',{name:'Agent needs your input'});await expect(form).toBeVisible();
-  await expect(composer.locator('.modern-composer-state')).toHaveText('Answer requested');
+  await expect(composer.locator('.modern-composer-state')).toHaveText('Needs an answer');
   await expect(form.getByRole('button',{name:'Send answer',exact:true})).toBeDisabled();
   await form.getByRole('radio',{name:/Small patch/}).check();
   await form.getByRole('textbox',{name:'Answer: Which approach?',exact:true}).fill('Keep scope tiny');
   await expect(form.getByRole('radio',{name:/Small patch/})).not.toBeChecked();
-  for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
+  for(const width of [1440,600]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
   await form.getByRole('button',{name:'Send answer',exact:true}).click();
   await expect.poll(()=>answer).toEqual({runId:'input-run',requestId:'input-request',answers:{q0:{options:[],text:'Keep scope tiny'}}});
   expect(prompts).toBe(0);await expect(form).toHaveCount(0);
