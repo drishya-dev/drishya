@@ -45,9 +45,10 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
       const inner = document.querySelector('.history-inner')!;
       const cs = getComputedStyle(inner);
       const content = { left: inner.getBoundingClientRect().left + parseFloat(cs.paddingLeft), right: inner.getBoundingClientRect().right - parseFloat(cs.paddingRight) };
-      const sample = document.createElement('span');
-      sample.style.cssText = `position:absolute;visibility:hidden;width:75ch;font:${getComputedStyle(p).font}`;
-      document.body.append(sample); const measure = sample.getBoundingClientRect().width; sample.remove();
+      // Measure the same type and inherited layout, including any browser font adjustments.
+      const sample = p.cloneNode(false) as HTMLParagraphElement;
+      sample.style.cssText = 'position:absolute;visibility:hidden;width:75ch;max-width:none';
+      p.after(sample); const measure = sample.getBoundingClientRect().width; sample.remove();
       const marks = document.querySelector('.history-prompt-marks')?.getBoundingClientRect();
       return { prose: box(proseEl), p: box(p), content, measure, marksLeft: marks?.left ?? Infinity, doc: document.documentElement.scrollWidth };
     });
