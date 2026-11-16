@@ -2,7 +2,7 @@
 // captured values cannot become options; the executable cannot come from the repository; Git runs with
 // its extension points off and never touches the network.
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { isAbsolute, join, relative, sep } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { launchToken } from '../../apps/daemon/src/commands.ts';
 import { executable } from '../../apps/daemon/src/native-executable.ts';
@@ -136,7 +136,8 @@ describe('Git never touches the network', () => {
     // `git remote` and `diff-tree` are local reads; the writing forms of `remote` are never used.
     expect(trace2).not.toMatch(/git remote (?:add|update|prune|set-url|set-head|remove|rm|rename)/);
     expect(trace2).not.toMatch(/git-remote-|remote-http|ls-remote|upload-pack|receive-pack|run_command: ssh|credential/i);
-    expect(relative(root, repo).startsWith('..')).toBe(true);
+    const fromCheckout = relative(root, repo);
+    expect(isAbsolute(fromCheckout) || fromCheckout === '..' || fromCheckout.startsWith('..' + sep)).toBe(true);
   });
 
   it('turns prompting and lazy fetching off for every call', () => {
