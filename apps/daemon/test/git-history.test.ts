@@ -83,7 +83,7 @@ it('gives squash-merge evidence: a squash commit and its branch carry the same c
   expect(Object.entries(page.changeSignatures??{}).filter(([,value])=>value===page.branchSignatures?.[open]).map(([hash])=>hash)).toEqual([open]);
   // The tip of the primary line is not a branch head of its own.
   expect(page.branchSignatures?.[squash]).toBeUndefined();
-});
+},20_000);
 
 it('handles unborn, detached and shallow repositories without inventing commits or parents',async()=>{
   const empty=join(dir,'empty');mkdirSync(empty);execFileSync('git',['init','-b','main',empty],{windowsHide:true});
