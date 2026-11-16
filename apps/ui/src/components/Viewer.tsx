@@ -20,6 +20,7 @@ import { BrandMark } from './BrandMark.tsx';
 import { SettingsGlyph } from './SettingsGlyph.tsx';
 import { InterfaceGlyph } from './InterfaceGlyph.tsx';
 import { Fragment, lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'; import { plural } from '../lib/plural.ts';
+import { captureSurfaceIntent, type SurfaceIntent } from '../lib/surface-motion.ts';
 import { useWaitNotice } from '../lib/use-wait-notice.ts';
 import { HistoryWaitCard } from './WaitCard.tsx';
 import type { Operation, Projection } from '@drishya/contracts';
@@ -70,6 +71,13 @@ function WorkspaceViewer() {
   const developerWorkspace = useApp(s => s.developerWorkspace), compareOpen = useApp(s => s.compareOpen);
   // A working window (Workspace or Compare) hides the stage behind it the same way.
   const workingWindow = developerWorkspace || compareOpen;
+  const [changesIntent, setChangesIntent] = useState<SurfaceIntent>();
+  // Capture the actual opener before the lazy chunk resolves. Keep the loaded owner for reversal.
+  const [wasComparing, setWasComparing] = useState(false);
+  if (wasComparing !== compareOpen) {
+    setWasComparing(compareOpen);
+    if (compareOpen) setChangesIntent(captureSurfaceIntent());
+  }
   const projection = useApp((s) => s.projection);
   const error = useApp((s) => s.error);
   const sessionWait = useWaitNotice({
@@ -102,6 +110,13 @@ function WorkspaceViewer() {
   const [reading, setReading] = useState<{ left: number; width: number }>();
   const [followSlot, setFollowSlot] = useState<HTMLElement | null>(null);
   const [catalogOpen, setCatalogOpen] = useState(false);
+  // A viewport change must settle the dock immediately, including when a previous click enabled motion.
+  useEffect(() => {
+    const media = matchMedia('(max-width: 820px)');
+    const reset = () => viewer.current?.removeAttribute('data-catalog-motion');
+    media.addEventListener('change', reset);
+    return () => media.removeEventListener('change', reset);
+  }, []);
   const [mapError, setMapError] = useState<string>();
   const [mapRetry, setMapRetry] = useState(0);
   const [catchupError,setCatchupError]=useState<string>();
@@ -321,7 +336,7 @@ function WorkspaceViewer() {
         <CurrentFileReader />
       </div>
       {experience !== 'legacy' ? <WorkbenchStation scene={scene} projection={projection}><StudioDock scene={scene} /></WorkbenchStation> : <Dock scene={scene} />}
-      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={() => { setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
+      <button className="btn catalog-toggle" aria-expanded={catalogOpen} aria-controls="observed-tools" onClick={event => { viewer.current?.toggleAttribute('data-catalog-motion', event.detail > 0); setCatalogOpen((open) => !open); }}>{catalogOpen ? 'Close tools' : 'Tools'}</button>
       <Transport scene={scene} projection={projection} followSlot={setFollowSlot} />
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
@@ -330,7 +345,7 @@ function WorkspaceViewer() {
       <HistoryNoteHint />
       <DeveloperWorkspace />
       <Suspense fallback={null}>
-        {compareOpen && <CompareWindow />}
+        {changesIntent && <CompareWindow intent={changesIntent} />}
       </Suspense>
       <Briefing projection={projection} />
       <Search projection={projection} />
