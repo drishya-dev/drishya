@@ -12,6 +12,7 @@ export function executable(name: string, options: { env?: NodeJS.ProcessEnv; pla
   for (const dir of dirs) {
     const path = join(dir, name + (windows ? '.exe' : ''));
     if (!isFile(path)) continue;
+    if (windows) return path;
     try { accessSync(path, constants.X_OK); return path; } catch { /* Continue to the next executable. */ }
   }
   if (!windows || !['codex', 'claude'].includes(name)) return;
