@@ -130,11 +130,12 @@ export async function probeGeneration(root: string, opts: IndexOptions = {}): Pr
 /** One extra byte detects growth after fstat without passing a partial file to the parser. */
 async function readImportSource(path: string, maxBytes: number, metadataRoot?: string): Promise<string | undefined> {
   const before = metadataRoot === undefined ? undefined : await lstat(path, { bigint: true });
-  if (before && (!before.isFile() || before.ino === 0n || before.size > BigInt(maxBytes))) return undefined;
+  if (before && (!before.isFile() || before.ino === 0n || before.size > maxBytes
+    || dirname(await realpath(path)) !== metadataRoot)) return undefined;
   const flags = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
   const file = await open(path, flags);
   try {
-    const info = await file.stat({ bigint: true });
+    const info = before ? await file.stat({ bigint: true }) : await file.stat();
     if (!info.isFile() || info.size > maxBytes) return undefined;
     if (before) {
       const parent = dirname(await realpath(path));
