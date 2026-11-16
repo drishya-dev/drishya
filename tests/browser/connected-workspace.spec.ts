@@ -354,9 +354,13 @@ test('composer text drafts survive returning to the same recording without persi
   await input.fill('Keep this local draft');
   await expect(composer.locator('.modern-composer-location')).toContainText('session-repository');
   await expect(composer.locator('.modern-composer-identity')).toHaveAttribute('title',/Recording:/);
-  const field = (await input.boundingBox())!;
-  const add = (await composer.getByRole('button', { name: 'Attach', exact:true }).boundingBox())!;
-  expect(add.y).toBeGreaterThanOrEqual(field.y + field.height);
+  // Measure both edges in one frame while the composer may still be expanding.
+  const gap = await composer.evaluate(el => {
+    const field = el.querySelector('textarea')!.getBoundingClientRect();
+    const add = el.querySelector('[aria-label="Attach"]')!.getBoundingClientRect();
+    return add.top - field.bottom;
+  });
+  expect(gap).toBeGreaterThanOrEqual(0);
   await page.getByRole('button', { name: 'Drishya', exact: true }).click();
   await page.locator('.mh-session-open').filter({hasText:'Connected workspace synthetic session'}).click();await openComposer(page);
   await expect(input).toHaveValue('Keep this local draft');
