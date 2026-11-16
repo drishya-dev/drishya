@@ -112,7 +112,7 @@ Violating any of these is a bug, not a tradeoff.
 
 **Built (draft backend):** TypeScript run directly on Node 24 (type stripping, no backend build; erasable syntax only) · pnpm workspaces · `node:sqlite` (WAL, FTS5) · `node:http` + Server-Sent Events · React 19 · Vite · Zustand · Vitest. The daemon has **zero runtime dependencies**.
 
-**Still to come (frontend and indexer):** PixiJS v8 map · CodeMirror 6 · `web-tree-sitter` import extraction · graphology for bounded working sets · Motion/CSS choreography · Playwright. The deviations from the original proposal (`better-sqlite3`, Fastify, `ws`) and their reasons are in [`docs/CODEBASE.md`](docs/CODEBASE.md#deliberate-deviations-from-the-proposed-stack-see-status-decisions) and the STATUS decisions log.
+**Still to come (frontend and indexer):** PixiJS v8 map · CodeMirror 6 · `web-tree-sitter` import extraction · graphology for bounded working sets · Motion/CSS choreography · Playwright. The deviations from the original proposal (`better-sqlite3`, Fastify, `ws`) and their reasons are in [`docs/CODEBASE.md`](docs/CODEBASE.md#deliberate-deviations-from-the-proposed-stack-see-the-decisions-log) and the STATUS decisions log.
 
 Rationale and rejected alternatives: [engineering plan §1](docs/review/03-engineering-plan.md#1-application-form-and-stack), [blueprint §14](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#blueprint). If you think a choice is wrong, say so — but read the rejection first.
 
