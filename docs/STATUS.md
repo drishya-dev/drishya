@@ -71,6 +71,7 @@ Two builders, shared ownership, mutual review. No fixed track split — take the
 
 - In the legacy landing preview, Escape during the pending intro records the existing tab-session marker. The automatic timeout still reveals the page after a failed module load and leaves the next visit eligible for the intro.
 - With the built main module held, the baseline reopened on return from `/#session` at 600 and 1440 px. Both cases pass with the fix. All 33 legacy landing browser checks pass in Chromium at one worker, with five motion unit checks. These checks exercise the preview's bootstrap and generated pages.
+- Finished by Yash with Claude Sonnet 5.5, 16 Nov (takeover from Harsh + Codex): main merged; on Edge, two workers, retries 0, all 33 landing checks pass (`landing-opening` incl. both new widths, `landing-motion`, `landing`); with `intro-boot.js` reverted to main, both new Escape cases fail, so they test the shipped fix.
 
 ### Yash with Claude Sonnet 5.5 — 15 Nov: README-1, the product README from scratch
 
