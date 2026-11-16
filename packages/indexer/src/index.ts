@@ -5,9 +5,9 @@
 // `web-tree-sitter` replaces the extractor next; the resolver and layout stay.
 
 import { createHash } from 'node:crypto';
-import { constants, existsSync, readFileSync } from 'node:fs';
-import { lstat, open, readdir, stat } from 'node:fs/promises';
-import { extname, join } from 'node:path';
+import { constants, existsSync } from 'node:fs';
+import { lstat, open, readdir, realpath, stat } from 'node:fs/promises';
+import { dirname, extname, join } from 'node:path';
 import type { GraphEdge, GraphNode, RepoGraph } from '@drishya/contracts';
 import { isDeniedPath } from '@drishya/privacy';
 
@@ -45,7 +45,7 @@ interface FileEntry {
 async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntry[]; skipped: number; truncated: boolean; nested: number }> {
   const maxFiles = opts.maxFiles ?? 5000;
   const maxBytes = opts.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
-  const ignore = readGitignore(root);
+  const ignore = await readGitignore(root);
   const files: FileEntry[] = [];
   let skipped = 0;
   let truncated = false;
@@ -100,7 +100,7 @@ async function scan(root: string, opts: IndexOptions): Promise<{ files: FileEntr
 export async function isIndexableFile(root: string, path: string): Promise<boolean> {
   const parts = path.split('/');
   if (path.includes('\\') || parts.some(part => !part || part === '.' || part === '..' || part.includes(':'))) return false;
-  const ignore = readGitignore(root);
+  const ignore = await readGitignore(root);
   let cursor = root;
   for (let index = 0; index < parts.length; index++) {
     const name = parts[index]!, directory = index < parts.length - 1;
@@ -120,7 +120,7 @@ function generationOf(files: FileEntry[]): string {
 }
 
 /**
- * The generation a fresh build would have, from a walk and stat only (no file is opened). Lets a
+ * The generation a fresh build would have, from the ignore rules and a file walk. Lets a
  * cached map say it is out of date without being rebuilt under a reader (B2).
  */
 export async function probeGeneration(root: string, opts: IndexOptions = {}): Promise<string> {
@@ -128,13 +128,21 @@ export async function probeGeneration(root: string, opts: IndexOptions = {}): Pr
 }
 
 /** One extra byte detects growth after fstat without passing a partial file to the parser. */
-async function readImportSource(path: string, maxBytes: number): Promise<string | undefined> {
+async function readImportSource(path: string, maxBytes: number, metadataRoot?: string): Promise<string | undefined> {
+  const before = metadataRoot === undefined ? undefined : await lstat(path, { bigint: true });
+  if (before && (!before.isFile() || before.ino === 0n || before.size > BigInt(maxBytes))) return undefined;
   const flags = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
   const file = await open(path, flags);
   try {
-    const info = await file.stat();
+    const info = await file.stat({ bigint: true });
     if (!info.isFile() || info.size > maxBytes) return undefined;
-    const buffer = Buffer.allocUnsafe(info.size + 1);
+    if (before) {
+      const parent = dirname(await realpath(path));
+      const after = await lstat(path, { bigint: true });
+      if (parent !== metadataRoot || !after.isFile() || before.ino !== info.ino || before.dev !== info.dev
+        || after.ino !== info.ino || after.dev !== info.dev) return undefined;
+    }
+    const buffer = Buffer.allocUnsafe(Number(info.size) + 1);
     let offset = 0;
     while (offset < buffer.length) {
       const { bytesRead } = await file.read(buffer, offset, buffer.length - offset, offset);
@@ -347,13 +355,12 @@ async function readTsPaths(root: string): Promise<Aliases> {
   return [];
 }
 
-function readGitignore(root: string): (rel: string, isDir: boolean) => boolean {
-  let lines: string[] = [];
-  try {
-    lines = readFileSync(join(root, '.gitignore'), 'utf8').split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#') && !l.startsWith('!'));
-  } catch {
-    return () => false;
-  }
+async function readGitignore(root: string): Promise<(rel: string, isDir: boolean) => boolean> {
+  const canonicalRoot = await realpath(root).catch(() => undefined);
+  if (!canonicalRoot) return () => false;
+  const source = await readImportSource(join(canonicalRoot, '.gitignore'), DEFAULT_MAX_FILE_BYTES, canonicalRoot).catch(() => undefined);
+  if (source === undefined) return () => false;
+  const lines = source.split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('#') && !l.startsWith('!'));
   const rules = lines.map((l) => {
     const dirOnly = l.endsWith('/');
     const anchored = l.startsWith('/') || l.replace(/\/$/, '').includes('/');
