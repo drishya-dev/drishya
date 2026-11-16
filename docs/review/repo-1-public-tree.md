@@ -22,7 +22,7 @@ The rule that decided every choice: *the main open tasks stay visible to contrib
 |---|---|
 | `docs/BLUEPRINT.md`, `docs/Vantage_Base_Prompt.md`, `docs/IMPLEMENTATION_ROADMAP.md`, `docs/PRODUCT_DELIVERY.md`, `docs/PRODUCT_DIRECTION.md`, `docs/reference/01-evidence-pack.md` | Removed from the tree; summarised in the review notes; the private archive keeps the originals. |
 | `docs/review/**` (269 notes), `docs/review/finish/**`, `docs/superpowers/**` | Removed from the tree; summarised in the review notes. |
-| `docs/review/ship-11-posts.md`, `docs/review/market-1-plan.md` (arrived from main while this was in review) | Not in the public tree: the launch post texts say themselves that they are private launch material, and the marketing plan is summarised in the review notes. |
+| `docs/review/ship-11-posts.md`, `docs/review/market-1-plan.md` (arrived from main while this was in review) | Private launch material (Yash, 16 Nov): archived, not in the public tree, and not summarised anywhere beyond one line saying a launch plan existed. |
 | `docs/Logo (1).png`, `docs/Logo (2).png`, `docs/images/readme-demo.png`, the two `docs/images/site-3-dots-*.png` | Deleted. An exact-name search of tracked text found no reference (the SITE-3 note that cited the two comparison images is itself archived). |
 | `docs/Logo.png` (5 MB) | Moved to `assets/brand/logo.png`. |
 | `docs/readme/mark-on-dark.svg`, `mark-on-light.svg` | Moved to `assets/brand/`. |

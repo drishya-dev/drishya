@@ -862,7 +862,7 @@ Verdict: worth running. It found real defects our own lint and eye had missed, i
 
 ### market-1-plan
 
-**MARKET-1: the launch plan (videos, posts, platforms, timing, design)** Drafted by Fable, 15 Nov 2026, for Yash and Harsh to agree. Everything is decided here except the video production itself. The videos are recorded and edited on 16 and 17 Nov from the scripts below. The posts are final drafts: change the wording freely, but keep the facts. Every claim must be true of the shipped build. Rule (REL-4): agents draft and design.
+A launch plan existed (MARKET-1). It is private launch material and is not summarised here.
 
 ### read-4-passage-finish
 
