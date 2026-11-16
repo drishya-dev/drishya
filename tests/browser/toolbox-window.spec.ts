@@ -331,6 +331,7 @@ test("UI-32 jump-to-latest pill and Follow switch group without overlap across w
   await checkAligned(page, "1440px history with composer");
 
   await page.setViewportSize({ width: 3840, height: 1440 });
+  await expect(page.locator("html")).toHaveAttribute("data-stage-limited", "");
   const ultrawide = await checkAligned(page, "3840px ultrawide stage");
   expect(ultrawide.follow!.right).toBeLessThan(3840 - 600);
 

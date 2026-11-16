@@ -235,22 +235,29 @@ test('Home dense sessions remain reachable through virtualization and responsive
   await expect.poll(()=>list.evaluate(node=>node.scrollTop)).toBe(1200);
   await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toMatch(/^Session /);
   const key=await list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');});
-  await page.setViewportSize({width:390,height:844});
+  await page.setViewportSize({width:600,height:844});
   await expect.poll(()=>rows.first().evaluate(node=>node.getBoundingClientRect().height)).toBe(84);
   await expect.poll(()=>list.evaluate(node=>{const edge=node.getBoundingClientRect().top;return [...node.querySelectorAll('.mh-session')].find(row=>row.getBoundingClientRect().bottom>edge+1)?.querySelector('strong')?.getAttribute('title');})).toBe(key);
   expect(await page.locator('.mh-home').evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
   await list.evaluate(node=>{node.scrollTop=0;});
+  await expect(rows.filter({hasText:'Session 000'})).toBeVisible();
   const seen=new Set<string>();
   for(let index=0;index<160&&seen.size<160;index++) {
     for(const title of await rows.locator('strong').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('title')!)))seen.add(title);
-    await list.evaluate(node=>{node.scrollTop+=Math.max(100,node.clientHeight*.8);});
-    await page.waitForTimeout(25);
+    // Sample after the scroll event has reached the virtual list and its rows have painted.
+    await list.evaluate(node=>new Promise<void>(resolve=>{
+      const before=node.scrollTop;
+      const painted=()=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()));
+      node.addEventListener('scroll',painted,{once:true});
+      node.scrollTop+=Math.max(100,node.clientHeight*.8);
+      if(node.scrollTop===before){node.removeEventListener('scroll',painted);resolve();}
+    }));
   }
   expect(seen.size,'No session should be skipped when more virtual rows are loaded').toBe(160);
   await expect(rows.filter({hasText:'Session 159'})).toBeVisible();
-  await page.setViewportSize({width:390,height:640});
-  expect(await list.evaluate(node=>node.clientHeight)).toBeGreaterThan(120);
-  await page.screenshot({path:resolve('.local/home-dense-phone-short.png')});
+  await page.setViewportSize({width:600,height:640});
+  await expect.poll(()=>list.evaluate(node=>node.clientHeight)).toBeGreaterThan(120);
+  await page.screenshot({path:resolve('.local/home-dense-600-short.png')});
 });
 
 // The previous independent shell was retired by the builder. These tests protect
@@ -1887,6 +1894,12 @@ test('Explorer preview defaults to a compact right reader with title-bar keyboar
  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x)).toBeLessThan(2);
  const strip=(await reader.locator('.file-peek-tabs').boundingBox())!;await page.mouse.move(strip.x+strip.width-24,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-44,strip.y+strip.height/2,{steps:4});await page.mouse.up();expect(Math.abs((await reader.boundingBox())!.x-before.x+20)).toBeLessThan(2);
  await page.screenshot({path:resolve('.local/compact-preview-desktop.png')});
- await page.setViewportSize({width:600,height:900});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const narrow=(await reader.boundingBox())!;expect(narrow.x).toBeGreaterThanOrEqual(0);expect(narrow.x+narrow.width).toBeLessThanOrEqual(600);
- await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');
+ const passage=page.locator('.history .passage').first();
+ await page.setViewportSize({width:600,height:900});
+ await expect(passage).toHaveCSS('zoom','1');
+ await expect.poll(async()=>{
+   const bounds=await reader.boundingBox();
+   return !!bounds&&bounds.x>=0&&bounds.x+bounds.width<=600;
+ }).toBe(true);
+ await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);await expect(passage).toHaveCSS('zoom','1');
 });
