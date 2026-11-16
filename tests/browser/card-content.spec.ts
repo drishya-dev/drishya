@@ -38,7 +38,12 @@ function journal(){
 }
 
 const card=(page:Page,kind:string,nth=0)=>page.locator(`article.op-${kind}`).nth(nth);
-async function open(page:Page,width:number){await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('article.op').first()).toBeVisible();}
+async function open(page:Page,width:number){
+ // These layout cases share a server. Each starts with no saved card or reading location.
+ await page.route('**/v1/working-locations', route => route.request().method() === 'GET'
+  ? route.fulfill({json:{version:1,sessions:[]}})
+  : route.continue());
+ await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('article.op').first()).toBeVisible();}
 const frame=async(el:Locator,name:string)=>{const out=process.env.DRISHYA_FRAMES;if(out){mkdirSync(out,{recursive:true});await el.screenshot({path:join(out,`${name}.png`)});}};
 const settle=async(page:Page,el:Locator)=>{await el.scrollIntoViewIfNeeded();await page.mouse.move(1,1);await page.waitForTimeout(150);};
 
@@ -101,11 +106,11 @@ for(const width of [1440,600]){
    const body=await el.locator('.op-body').evaluate(b=>({clipped:b.scrollHeight-b.clientHeight,overflowY:getComputedStyle(b).overflowY}));
    expect(body.clipped,'op-body content is clipped').toBeLessThanOrEqual(1);
    // Expand: the whole command, unclamped.
-   await el.locator('.op-expand').click();await expect(el).toHaveClass(/expanded/);
+   await el.getByRole('button',{name:/^Expand .* in history$/}).click();await expect(el).toHaveClass(/expanded/);
    expect(await overflowing(el)).toEqual([]);
    await expect(el.locator('.line-clamp[data-clamped]')).toHaveCount(0);
    await expect(el.locator('.cmd code').first()).toContainText('sync-tasks.ts --check');
-   await el.locator('.op-expand').click();
+   await el.getByRole('button',{name:/^Close .* in history$/}).click();
   });
 
   test('a heredoc keeps its line structure and copies back as written',async({page})=>{
@@ -118,11 +123,11 @@ for(const width of [1440,600]){
    const tops=await el.locator('.cmd .cmd-line').evaluateAll(els=>els.map(e=>Math.round(e.getBoundingClientRect().top)));
    expect(tops).toEqual([...tops].sort((a,b)=>a-b));expect(new Set(tops).size).toBe(tops.length);
    // Expanded, every line is there and selecting the command yields the original text.
-   await el.locator('.op-expand').click();await expect(el).toHaveClass(/expanded/);
+   await el.getByRole('button',{name:/^Expand .* in history$/}).click();await expect(el).toHaveClass(/expanded/);
    await expect(el.locator('.cmd .cmd-line')).toHaveCount(lines.length);
    const copied=await el.locator('.cmd code').first().evaluate(c=>{const s=getSelection()!,r=document.createRange();r.selectNodeContents(c);s.removeAllRanges();s.addRange(r);return s.toString();});
    expect(copied.replace(/\n+$/,'')).toBe(HEREDOC);
-   await el.locator('.op-expand').click();
+   await el.getByRole('button',{name:/^Close .* in history$/}).click();
   });
 
   test('long output wraps at spaces, never ends on half a line, and Expand shows all of it',async({page})=>{
@@ -136,11 +141,11 @@ for(const width of [1440,600]){
    for(const c of await clampsAreWhole(el))expect(c.cut,`clamp ${c.cls} cut a line`).toBe(0);
    const body=await el.locator('.op-body').evaluate(b=>b.scrollHeight-b.clientHeight);
    expect(body,'op-body content is clipped').toBeLessThanOrEqual(1);
-   await el.locator('.op-expand').click();await expect(el).toHaveClass(/expanded/);
+   await el.getByRole('button',{name:/^Expand .* in history$/}).click();await expect(el).toHaveClass(/expanded/);
    expect(await overflowing(el)).toEqual([]);
    await expect(el.locator('.op-expanded')).toContainText('line 39: ok');
    // A selection over the full output yields its lines in order.
-   await el.locator('.op-expand').click();
+   await el.getByRole('button',{name:/^Close .* in history$/}).click();
   });
 
   test('a long Markdown write wraps inside the card, line by line, collapsed and expanded',async({page})=>{
@@ -151,10 +156,10 @@ for(const width of [1440,600]){
    const row=el.locator('.ln.add',{hasText:'Why it matters'}).first();await expect(row).toBeVisible();
    const copied=await row.locator('.ln-tx').evaluate(c=>{const s=getSelection()!,r=document.createRange();r.selectNodeContents(c);s.removeAllRanges();s.addRange(r);return s.toString();});
    expect(copied).toBe(MARKDOWN[2]);
-   await el.locator('.op-expand').click();await expect(el).toHaveClass(/expanded/);
+   await el.getByRole('button',{name:/^Expand .* in history$/}).click();await expect(el).toHaveClass(/expanded/);
    expect(await overflowing(el)).toEqual([]);
    await expect(el.locator('.op-expanded')).toContainText('Last line of the file.');
-   await el.locator('.op-expand').click();
+   await el.getByRole('button',{name:/^Close .* in history$/}).click();
   });
 
   test('a tool call lays its arguments out as key/value rows that wrap, and ends on a whole line',async({page})=>{
@@ -173,11 +178,11 @@ for(const width of [1440,600]){
    const body=await el.locator('.op-body').evaluate(b=>b.scrollHeight-b.clientHeight);
    expect(body,'op-body content is clipped').toBeLessThanOrEqual(1);
    // Expanded, the whole message and the whole result are there.
-   await el.locator('.op-expand').click();await expect(el).toHaveClass(/expanded/);
+   await el.getByRole('button',{name:/^Expand .* in history$/}).click();await expect(el).toHaveClass(/expanded/);
    expect(await overflowing(el)).toEqual([]);
    await expect(el.locator('.op-expanded')).toContainText('at-the-end');
    await expect(el.locator('.op-expanded')).toContainText('message_id: 0df76c1f');
-   await el.locator('.op-expand').click();
+   await el.getByRole('button',{name:/^Close .* in history$/}).click();
   });
  });
 }

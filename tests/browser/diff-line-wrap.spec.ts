@@ -31,7 +31,12 @@ function journal(){
 }
 
 const overflowing=(card:Locator)=>card.evaluate(el=>[...el.querySelectorAll<HTMLElement>('.op-body, .op-body *, .op-expanded, .op-expanded *')].filter(e=>e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).display!=='inline').map(e=>`${e.tagName.toLowerCase()}.${e.className}: ${e.scrollWidth}>${e.clientWidth}`));
-async function open(page:Page,width:number){await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('article.op-edit')).toHaveCount(2);}
+async function open(page:Page,width:number){
+ // These layout cases share a server. Each starts with no saved card or reading location.
+ await page.route('**/v1/working-locations', route => route.request().method() === 'GET'
+  ? route.fulfill({json:{version:1,sessions:[]}})
+  : route.continue());
+ await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('article.op-edit')).toHaveCount(2);}
 const frame=async(page:Page,name:string)=>{const out=process.env.DRISHYA_FRAMES;if(out){mkdirSync(out,{recursive:true});await page.screenshot({path:join(out,`${name}.png`)});}};
 
 for(const width of [1440,600]){
@@ -56,12 +61,12 @@ for(const width of [1440,600]){
    const copied=await row.locator('.ln-tx').evaluate(el=>{const s=getSelection()!;const r=document.createRange();r.selectNodeContents(el);s.removeAllRanges();s.addRange(r);return s.toString();});
    expect(copied).toBe(kind==='write'?longLine:longLine.replace('sentence','edited'));
    // After Expand the same holds.
-   await card.locator('.op-expand').click();
+   await card.getByRole('button',{name:/^Expand .* in history$/}).click();
    await expect(card).toHaveClass(/expanded/);
    await expect(card.locator('.diff-scroll').first()).toBeVisible();
    await card.scrollIntoViewIfNeeded();await frame(page,`${kind}-expanded-${width}`);
    expect.soft(await overflowing(card),`${kind} card, expanded`).toEqual([]);
-   await card.locator('.op-expand').click();await expect(card).not.toHaveClass(/expanded/);
+   await card.getByRole('button',{name:/^Close .* in history$/}).click();await expect(card).not.toHaveClass(/expanded/);
   }
  });
 }
