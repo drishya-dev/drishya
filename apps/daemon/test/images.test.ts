@@ -1,7 +1,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MAX_IMAGE_BYTES } from '@drishya/privacy';
 import { App } from '../src/app.ts';
 import { readImage } from '../src/images.ts';
@@ -51,6 +51,20 @@ it('keeps inline result images once, serves them by hash to their own recording,
   expect(served?.body.equals(Buffer.from(PNG_1x1, 'base64'))).toBe(true);
   expect(readImage(app.store, [recordingId], '0'.repeat(64))).toBeUndefined();
   expect(readImage(app.store, [recordingId], '../x')).toBeUndefined();
+
+  // Old stores may already contain blobs accepted before the dimension check.
+  const badPng = Buffer.from(PNG_1x1, 'base64');
+  badPng.writeUInt32BE(0, 16);
+  const oversizedPng = Buffer.from(PNG_1x1, 'base64');
+  oversizedPng.writeUInt32BE(30_000, 16);
+  oversizedPng.writeUInt32BE(30_000, 20);
+  const lookup = vi.spyOn(app.store.blobs, 'get');
+  try {
+    for (const malformed of [badPng, oversizedPng]) {
+      lookup.mockReturnValueOnce(malformed.toString('base64'));
+      expect(readImage(app.store, [recordingId], read[0]!.sha!)).toBeUndefined();
+    }
+  } finally { lookup.mockRestore(); }
 
   // Slice 2: images you paste into a prompt belong to that prompt, whichever part comes first.
   const pasted = await app.ingest.importSource('claude-code', write('c', [

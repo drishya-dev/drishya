@@ -27,6 +27,35 @@ describe('captured images', () => {
     expect(big).not.toHaveProperty('data');
   });
 
+  it('requires positive dimensions from bytes even when capture metadata supplies a size', () => {
+    const png = Buffer.from(PNG_1x1, 'base64');
+    const zero = Buffer.from(png);
+    zero.writeUInt32BE(0, 16);
+    const wrongChunk = Buffer.from(png);
+    wrongChunk.write('JUNK', 12);
+    const oversized = Buffer.from(png);
+    oversized.writeUInt32BE(30_000, 16);
+    oversized.writeUInt32BE(30_000, 20);
+    for (const invalid of [png.subarray(0, 8), zero, wrongChunk, Buffer.from('ffd8ffe00002ffd9', 'hex')]) {
+      const result = captureImage(invalid.toString('base64'), { width: 1, height: 1 });
+      expect(result).toMatchObject({ omitted: 'unrecognised' });
+      expect(result).not.toHaveProperty('data');
+    }
+    expect(captureImage(oversized.toString('base64'), { width: 1, height: 1 })).toMatchObject({ omitted: 'too-large' });
+  });
+
+  it('finds a JPEG frame inside, but never beyond, the common header budget', () => {
+    const frame = Buffer.from('ffc00011080005000703011100021100031100', 'hex');
+    const jpeg = (length: number) => {
+      const segment = Buffer.alloc(length + 2);
+      segment.writeUInt16BE(0xffe1);
+      segment.writeUInt16BE(length, 2);
+      return Buffer.concat([Buffer.from('ffd8', 'hex'), segment, frame, Buffer.from('ffd9', 'hex')]).toString('base64');
+    };
+    expect(captureImage(jpeg(3_100))).toMatchObject({ mime: 'image/jpeg', width: 7, height: 5, data: expect.any(String) });
+    expect(captureImage(jpeg(65_535))).toMatchObject({ mime: 'image/jpeg', omitted: 'unrecognised' });
+  });
+
   it('sanitize keeps only re-checked images, never inside a protected scope, and never text-redacts their bytes', () => {
     const kept = sanitize({ images: [captureImage(PNG_1x1)] }).value as { images: { data?: string }[] };
     expect(kept.images[0]!.data).toBe(PNG_1x1);

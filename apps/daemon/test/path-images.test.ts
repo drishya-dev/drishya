@@ -46,6 +46,17 @@ it('opens the current file behind a referenced image path only with workspace ap
   await expect(access.image(id, referencedImagePath(app.store, id, `${id}.fake`)!)).rejects.toMatchObject({ status: 415 });
   await expect(access.image(id, referencedImagePath(app.store, id, `${id}.outside`)!)).rejects.toMatchObject({ status: 403 });
   await expect(access.image(id, join(root, 'docs', 'gone.png'))).rejects.toMatchObject({ status: 404 });
+  for (const [width, height, status] of [[0, 1, 415], [30_000, 30_000, 413]]) {
+    const path = join(root, 'docs', `invalid-${width}.png`);
+    const bytes = Buffer.from(PNG_1x1, 'base64');
+    bytes.writeUInt32BE(width!, 16);
+    bytes.writeUInt32BE(height!, 20);
+    writeFileSync(path, bytes);
+    await expect(access.image(id, path)).rejects.toMatchObject({ status });
+    const operation = `synthetic-image-${width}`;
+    await access.approveImage(id, operation, path);
+    await expect(access.recordedImage(id, operation, path)).rejects.toMatchObject({ status });
+  }
   // A link inside the workspace pointing at an image elsewhere is refused, like text reads.
   try { symlinkSync(join(dir, 'outside.png'), join(root, 'docs', 'link.png')); } catch { return; /* no symlink rights on this machine */ }
   await expect(access.image(id, join(root, 'docs', 'link.png'))).rejects.toMatchObject({ status: 403 });
