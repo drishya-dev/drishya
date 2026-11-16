@@ -9,7 +9,7 @@ export function useDismissMenus() {
     const menus = '.workspace-menu, .prompt-menu, .permission-policy, .session-segments, .review-tools, .desk-options';
     const selectors = menus.split(', ').map(selector => `${selector}[open]`).join(', ');
     const actors = new Map<HTMLDetailsElement, ReturnType<typeof surfaceMotion>[]>();
-    const animatedDetails = menus + ', details[data-reading-disclosure]:not(.md-server)';
+    const animatedDetails = menus + ', details';
     const forget = (details: HTMLDetailsElement) => {
       actors.get(details)?.forEach(actor => actor.dispose());
       actors.delete(details);

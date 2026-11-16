@@ -21,7 +21,7 @@ export function ReadingDialog({ title, close, children, className = '', modeless
   const ref = useRef<HTMLDialogElement>(null);
   const transition=useRef<ReturnType<typeof surfaceMotion>|undefined>(undefined),latestClose=useRef(close);
   latestClose.current=close;
-  const requestClose=()=>{if(className.includes('workspace-navigation')){latestClose.current();return;}if(transition.current)transition.current.close(()=>latestClose.current());else latestClose.current();};
+  const requestClose=()=>{if(transition.current)transition.current.close(()=>latestClose.current());else latestClose.current();};
   useLayoutEffect(()=>{if(closing)requestClose();else if(transition.current?.closing)transition.current.open();},[closing,title]);
   useEffect(()=>{const reopen=()=>{if(transition.current?.closing)transition.current.open();};if(windowId==='File reader')globalThis.window.addEventListener('drishya-preview-file',reopen);return()=>{if(windowId==='File reader')globalThis.window.removeEventListener('drishya-preview-file',reopen);};},[windowId]);
   const window=useReadingWindow(ref,windowId);
@@ -33,7 +33,8 @@ export function ReadingDialog({ title, close, children, className = '', modeless
     if (modeless) dialog.show(); else dialog.showModal();
     // A dialog takes focus on its first control; one built around an input says so.
     dialog.querySelector<HTMLElement>('[data-dialog-focus]')?.focus({ preventScroll: true });
-    if(!className.includes('workspace-navigation')){transition.current=surfaceMotion(dialog,modeless?'panel':'dialog');transition.current.open(true);}
+    // MOTION-4b: the command palette pairs too. Ctrl/Cmd K, Enter and Escape are keyboard input, which the shared gate already settles at once; only a pointer open or close travels.
+    transition.current=surfaceMotion(dialog,modeless?'panel':'dialog');transition.current.open(true);
     const unwatch=watchSurfaceMotion(()=>transition.current?.finishImmediately());
     // Menus preventDefault their own Escape first, so the order is menu, then newest reader.
     const escape = (event: KeyboardEvent) => {

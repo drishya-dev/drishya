@@ -1,10 +1,11 @@
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { useApp } from '../state.ts';
 
-export type SurfaceKind = 'menu' | 'panel' | 'dialog';
+/** 'inline' is content a control reveals inside the page flow (an expanded note): the menu clock, a smaller offset. */
+export type SurfaceKind = 'menu' | 'panel' | 'dialog' | 'inline';
 type Origin = { x: number; y: number };
 export type SurfaceIntent = { origin?: Origin; pointer: boolean };
-const timings = {menu: [180, 140], panel: [220, 160], dialog: [240, 180]};
+const timings = {menu: [180, 140], panel: [220, 160], dialog: [240, 180], inline: [180, 140]};
 const motionQuery = '(prefers-reduced-motion: reduce)';
 const defaultEase = 'cubic-bezier(.16,1,.3,1)';
 let pointerOrigin: { node: HTMLElement; point?: Origin } | undefined;
@@ -24,7 +25,7 @@ export function surfaceMotionAllowed() {
 
 export function surfaceDuration(kind: SurfaceKind, closing = false) {
   const fallback = timings[kind][closing ? 1 : 0]!;
-  const token = getComputedStyle(document.documentElement).getPropertyValue(`--motion-${kind}-${closing ? 'exit' : 'enter'}`).trim();
+  const token = getComputedStyle(document.documentElement).getPropertyValue(`--motion-${kind === 'inline' ? 'menu' : kind}-${closing ? 'exit' : 'enter'}`).trim();
   const match = /^(\d*\.?\d+)(ms|s)$/.exec(token);
   const value = match ? Number(match[1]) * (match[2] === 's' ? 1000 : 1) : fallback;
   return value > 0 && value < 300 ? value : fallback;
@@ -66,6 +67,7 @@ export function captureSurfaceIntent(): SurfaceIntent {
 const policy: MotionPolicy = {allowed: surfaceMotionAllowed, duration: surfaceDuration, style: node => getComputedStyle(node), easing: surfaceEasing, origin: triggerOrigin};
 
 function closedFrame(node: HTMLElement, kind: SurfaceKind, origin: Origin | undefined): Keyframe {
+  if (kind === 'inline') return {opacity: 0, translate: '0 -3px', scale: '.995'};
   if (!origin || kind === 'menu') return {opacity: 0, translate: kind === 'menu' ? '0 -2px' : '0 6px', scale: kind === 'menu' ? '.97' : '.98'};
   const rect = node.getBoundingClientRect();
   const limit = (value: number) => Math.round(Math.max(-72, Math.min(72, value * .16)));

@@ -3,6 +3,7 @@ import type { CompactionSummary, ContextReading, Projection } from '@drishya/con
 import type { ContextReport } from '../lib/context-report.ts';
 import { useApp } from '../state.ts';
 import { ArtifactReader } from './ArtifactReader.tsx';
+import { useReveal } from '../lib/reveal.ts';
 import './context-evidence.css';
 
 const Evidence = createContext<{ projection: Projection; step: number; total: number } | undefined>(undefined);
@@ -75,7 +76,8 @@ function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; u
   };
   const button = useRef<HTMLButtonElement>(null);
   const readerId = useId();
-  const reader = useRef<HTMLDivElement>(null);
+  const reveal = useReveal<HTMLDivElement>(open);
+  const reader = reveal.ref;
   const navigation = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const root = reader.current;
@@ -98,7 +100,7 @@ function Summary({ summary, unlinked = false }: { summary?: CompactionSummary; u
   const close = () => { setOpen(false); button.current?.focus({ preventScroll: true }); };
   return <div className="context-summary" onKeyDown={e => { if (e.key === 'Escape' && open) { e.stopPropagation(); close(); } }}>
     <button ref={button} type="button" className="btn ghost" aria-expanded={open} aria-controls={readerId} onClick={() => setOpen(!open)}>{open ? 'Hide summary' : unlinked ? 'Read nearby summary' : 'Read summary'}</button>
-    {open && <div id={readerId} ref={reader} tabIndex={-1} className="context-summary-reader" aria-label="Compaction summary" onClickCapture={event => {
+    {reveal.shown && <div id={readerId} ref={reader} tabIndex={-1} className="context-summary-reader" aria-label="Compaction summary" onClickCapture={event => {
       navigation.current = (event.target as Element).closest<HTMLButtonElement>('.reader-pages button');
     }}><ArtifactReader id={summary.artifactId} kind="output" provenance navigationSlot={`compaction/${summary.id}`} /><button type="button" className="btn ghost" onClick={close}>Close summary</button></div>}
   </div>;

@@ -15,7 +15,7 @@
 .review-net-toggle {display:flex;gap:8px;align-items:center;font:var(--text-2xs)/1.6 var(--mono);color:var(--t2);padding:4px 0;text-align:left;}
 .review-net-toggle>span {color:var(--t3);}
 .review-net-note {margin:4px 0 10px 26px;font:var(--text-2xs)/1.6 var(--sans);color:var(--t3);}
-.review-net>.review-net-note {margin-left:0;}
+.review-net>.review-net-note,.review-net-body>.review-net-note {margin-left:0;}
 .review-net-lines {max-height:55vh;overflow:auto;min-width:0;}
 .review-net-line {display:grid;grid-template-columns:4ch minmax(0,1fr) auto;gap:8px;padding:3px 8px;font:var(--text-2xs)/1.6 var(--mono);}
 .review-net-line.add {background:color-mix(in srgb,var(--pass) 7%,transparent);}
