@@ -107,6 +107,8 @@ for(const width of [1440,600])test(`keeps graph cached across close/reopen and u
     await expect(warmDialog).toHaveAttribute('aria-modal','true');
     await expect(page.locator('#root')).toHaveAttribute('aria-hidden','true');
     await expect(page.locator('.atlas-scrim')).toBeVisible();
+    // A pending background focus restore must leave keyboard focus in the open graph.
+    await page.locator('button.git-open').evaluate(button => (button as HTMLButtonElement).focus());
     await page.keyboard.press('Shift+Tab');
     const inDialog=await page.evaluate(()=>!!document.activeElement?.closest('dialog.git-atlas'));
     expect(inDialog).toBe(true);

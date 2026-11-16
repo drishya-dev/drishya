@@ -97,7 +97,11 @@ function GitHistoryDialog({ id, close }: { id: string; close: () => void }) {
     if (!dialog) return;
     dialog.setAttribute('aria-modal', 'true');
     dialog.tabIndex = -1;
-    if (++atlasModalRoots === 1) document.getElementById('root')?.setAttribute('aria-hidden', 'true');
+    const root = document.getElementById('root');
+    if (++atlasModalRoots === 1 && root) {
+      root.setAttribute('aria-hidden', 'true');
+      root.inert = true;
+    }
     let active = true;
     queueMicrotask(() => {
       if (active && dialog.isConnected && !dialog.contains(document.activeElement))
@@ -114,13 +118,24 @@ function GitHistoryDialog({ id, close }: { id: string; close: () => void }) {
         event.preventDefault(); first.focus({ preventScroll: true });
       }
     };
+    const keepFocus = (event: FocusEvent) => {
+      if (dialog.open && !dialog.inert && event.target instanceof Node && !dialog.contains(event.target)
+        && !document.querySelector('dialog:modal')) {
+        dialog.focus({ preventScroll: true });
+      }
+    };
     dialog.addEventListener('keydown', onKeyDown);
+    document.addEventListener('focusin', keepFocus);
     return () => {
       active = false;
       dialog.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('focusin', keepFocus);
       dialog.removeAttribute('aria-modal');
       dialog.removeAttribute('tabindex');
-      if (--atlasModalRoots === 0) document.getElementById('root')?.removeAttribute('aria-hidden');
+      if (--atlasModalRoots === 0 && root) {
+        root.removeAttribute('aria-hidden');
+        root.inert = false;
+      }
     };
   }, []);
 

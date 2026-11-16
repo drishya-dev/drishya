@@ -242,14 +242,21 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
 
   // The handoff packet: the reviewed patches and their notes, after the repository has been read again. Saving reads it again too.
   const handoff=async(saving=false)=>{
-    if(loading||checking)return;
+    if(loading||checking||!useApp.getState().compareOpen)return;
+    // The reader stays mounted for its exit. Cancel this handoff when the user closes
+    // it or changes its scope, even if the surface is reopened before the read returns.
+    let cancelled=false;
+    const source=useApp.getState().source;
+    const unsubscribe=useApp.subscribe(state=>{
+      if(!state.compareOpen||state.recordingId!==id||state.checkoutId!==checkoutId||state.source!==source)cancelled=true;
+    });
     setChecking(true);setError(undefined);if(!saving)setPacket(undefined);
     try{
       const changedMessage='Repository changed. Inspect the refreshed changes before making a new handoff.';
       let lines:string[],sampledAt:string,omitted:number,patchOf:(item:Row,which:'head'|'base')=>Promise<string>;
       if(preset==='uncommitted'){
         const next=await workspaceApi.gitSnapshot(cid,pageStart);
-        if(!alive.current)return;
+        if(cancelled||!alive.current)return;
         setSnapshot(next);
         if(next.fingerprint!==snapshot?.fingerprint){setPacket(undefined);setError(changedMessage);return;}
         lines=[`Branch: ${next.branch}\nHEAD: ${next.head}`];sampledAt=next.sampledAt;omitted=next.omitted;
@@ -257,7 +264,7 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
       }else{
         if(!sides)return;
         const next=await readComparison(sides);
-        if(!alive.current)return;
+        if(cancelled||!alive.current)return;
         setResult(next);
         if(next.generation!==result?.generation){setPacket(undefined);setError(changedMessage);return;}
         lines=[`Comparing: ${baseName} ← ${headName}\nBase: ${next.base.tip}\nCompared: ${next.head.tip}${next.mergeBase?`\nMerge-base: ${next.mergeBase}`:''}`];sampledAt=next.sampledAt;omitted=next.omitted+next.protectedCount;
@@ -277,14 +284,14 @@ function CompareContent({id,surface,close}:{id:string;surface:React.RefObject<HT
       const files:HandoffFile[]=[];let budget=1024*1024,unsent=0;
       for(const entry of reviewedPatches){
         const text=await patchOf(entry.item,entry.which);
-        if(!alive.current)return;
+        if(cancelled||!alive.current)return;
         if(text.length>budget){unsent++;continue;}
         budget-=text.length;
         files.push({path:entry.item.path,fingerprint:entry.mark.fingerprint,note:entry.mark.note,patch:text,...(entry.item.group==='both'?{side:entry.which==='head'?headName:baseName}:{})});
       }
       setPacket(buildHandoff({sampledAt,lines,omitted,files,unsent}));
-    }catch(e){if(alive.current){setPacket(undefined);setError(`Handoff check failed: ${(e as Error).message}`);}}
-    finally{if(alive.current)setChecking(false);}
+    }catch(e){if(!cancelled&&alive.current){setPacket(undefined);setError(`Handoff check failed: ${(e as Error).message}`);}}
+    finally{unsubscribe();if(alive.current)setChecking(false);}
   };
 
   const jump=(operationId:string)=>{useApp.getState().select(operationId);useApp.setState({compareOpen:false});};
