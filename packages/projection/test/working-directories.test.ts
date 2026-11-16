@@ -4,6 +4,7 @@ import type {Observation} from '@drishya/contracts';
 import {seal} from '@drishya/capture-core';
 import {codexAdapter} from '../../adapter-codex/src/index.ts';
 import {reduce} from '../src/reduce.ts';
+import {relativize} from '../src/paths.ts';
 
 const options={adapters:{codex:codexAdapter.descriptor}};
 const io={get:()=>undefined,put:(text:string)=>({sha:createHash('sha256').update(text).digest('hex'),bytes:text.length})};
@@ -17,6 +18,11 @@ const write=(seq:number,path:string,cwd:string)=>row(seq,'tool.call',{tool:'writ
 const project=(rows:Observation[])=>reduce('r',rows,io,options);
 
 describe('exact recorded working-directory boundaries (FILES-14)',()=>{
+ it('retains relative locations for POSIX and Windows roots with trailing separators',()=>{
+  expect(relativize('/repo/src/a.ts','/repo///')).toBe('src/a.ts');
+  expect(relativize('C:\\Repo\\src\\a.ts','c:/repo///')).toBe('src/a.ts');
+  expect(relativize('/document.md','/')).toBe('document.md');
+ });
  it('separates nested and sibling edits with the same filename from primary files',()=>{
   const nested='C:/repo/.local/wt-docs',sibling='C:/sibling';
   const p=project([meta(0,'C:/repo'),write(1,'docs/TASKS.md','C:/repo'),meta(2,nested),write(3,'docs/TASKS.md',nested),meta(4,sibling),write(5,'docs/TASKS.md',sibling)]);

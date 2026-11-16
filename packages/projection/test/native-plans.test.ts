@@ -126,6 +126,13 @@ describe('explicit Codex proposal', () => {
   expect(asOfProjection(p,1).operations[0]!.detail).toMatchObject({items:[]});
   expect('document' in asOfProjection(p,1).operations[0]!.detail).toBe(false);
  });
+ it('trims the wrapper boundaries while preserving line breaks and indentation inside the plan', () => {
+  const body = '# Review\r\n\r\n  1. Open the file';
+  expect(proposedPlan(codex, `\t<proposed_plan>\r\n\t${body}\r\n</proposed_plan>\u00a0`)).toBe(body);
+  expect(proposedPlan(codex, '<proposed_plan>\n\t</proposed_plan>')).toBe('');
+  expect(proposedPlan(codex, '<proposed_plan> <proposed_plan> text </proposed_plan>')).toBeUndefined();
+  expect(proposedPlan(codex, '<proposed_plan>Review</proposed_plan>\nMore prose')).toBeUndefined();
+ });
  it('leaves headings, quoted/fenced examples, incomplete and repeated wrappers as ordinary prose', () => {
   for (const text of ['# Plan\nRead','```xml\n<proposed_plan>x</proposed_plan>\n```','<proposed_plan>x','<proposed_plan>x</proposed_plan><proposed_plan>y</proposed_plan>']) expect(proposedPlan(codex,text)).toBeUndefined();
   expect(proposedPlan(obs(1,'message.assistant'),'<proposed_plan>x</proposed_plan>')).toBeUndefined();

@@ -10,23 +10,27 @@
 // journal text). `--label before|after` names the output file. Never uses port 7878 (the person's own
 // Drishya) or the person's Drishya home.
 import { randomUUID } from 'node:crypto';
-import { readFileSync, appendFileSync, copyFileSync, existsSync, fstatSync, mkdirSync, mkdtempSync, openSync, closeSync, readSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { readFileSync, appendFileSync, copyFileSync, existsSync, fstatSync, mkdirSync, mkdtempSync, openSync, closeSync, readSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { homedir, tmpdir } from 'node:os';
-import { join, resolve, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { chromium } from '@playwright/test';
 import type { Observation } from '@drishya/contracts';
 import { App } from '../apps/daemon/src/app.ts';
 import { startServer } from '../apps/daemon/src/server.ts';
 import { generateLargeJournal } from './make-large-journal.ts';
-import { firstReach, groupByPaint, stepKind, summarizeSteps, type StepLatency } from './lib/live-latency.ts';
+import { firstReach, groupByPaint, liveLatencyResultPath, stepKind, summarizeSteps, type StepLatency } from './lib/live-latency.ts';
 
 const arg = (name: string, fallback?: string) => { const at = process.argv.indexOf(`--${name}`); return at < 0 ? fallback : process.argv[at + 1]; };
 const mode = arg('mode', 'live')!;
 const harness = arg('harness', 'claude')!;
 const scenario = arg('scenario', 'tools')!;
 const label = arg('label', 'run')!;
+const out = liveLatencyResultPath({
+  label, mode, harness, scenario, source: arg('source'), mb: arg('mb'),
+  stale: process.argv.includes('--stale'), resume: process.argv.includes('--resume'),
+});
 const headed = process.argv.includes('--headed');
 const hidden = process.argv.includes('--hidden-tab');
 const epoch = () => performance.timeOrigin + performance.now();
@@ -100,7 +104,7 @@ function runHarness(cwd: string, token: string, resume = false): Promise<number>
 }
 
 // ── the run ──────────────────────────────────────────────────────────────────────────────────
-mkdirSync('.local/live7', { recursive: true });
+mkdirSync(dirname(out), { recursive: true });
 const dir = mkdtempSync(join(tmpdir(), 'drishya-live7-'));
 const app = new App(join(dir, 'data'));
 const server = await startServer({ app, port: 0, token: 'live7-bench', ...(arg('ui-dir') ? { uiDir: resolve(arg('ui-dir')!) } : {}) });
@@ -137,8 +141,8 @@ try {
   const wrote: { done: Promise<void> } = { done: Promise.resolve() };
 
   if (mode === 'live') {
-    const repo = join(tmpdir(), `drishya-live7-${token.toLowerCase()}`);
-    mkdirSync(repo, { recursive: true });
+    const repo = join(dir, `repo-${token.toLowerCase()}`);
+    mkdirSync(repo);
     writeFileSync(join(repo, 'math.ts'), 'export function add(a: number, b: number) {\n  return a + b;\n}\n');
     writeFileSync(join(repo, 'README.md'), '# live7 throwaway\n');
     const run = (c: string[]) => new Promise<void>(ok => spawn('git', c, { cwd: repo, stdio: 'ignore' }).on('close', () => ok()));
@@ -206,7 +210,7 @@ try {
       } else running = runHarness(repo, token, true);
     } else {
       tail = new Tail(() => roots.flatMap(r => listJsonl(r)).filter(p => !before.has(p)));
-      // Home must show the new session by its own polling; the repo folder name is the unique token.
+      // Home must show the new session by its own polling; the scratch repo path is unique.
       // Home's own list changes shape with the machine's sessions, so this measures when discovery lists the journal (what Home's refresh asks for).
       const listed = async (path: string) => { for (let n = 0; n < 600; n++) { const found = await page.evaluate(async (want) => { const r = await fetch('/v1/sources'); const norm = (v: string) => v.split(String.fromCharCode(92)).join('/').toLowerCase(); return ((await r.json()) as { sources: { path: string }[] }).sources.some((x) => norm(x.path) === norm(want)); }, path); if (found) return epoch(); await sleep(50); } return undefined; };
       const started = epoch();
@@ -370,8 +374,16 @@ try {
   const target = resolve(dir);
   if (target.startsWith(resolve(tmpdir()) + sep)) rmSync(target, { recursive: true, force: true });
 }
-const out = `.local/live7/${label}-${mode}-${arg('source') ? 'real-' + arg('source') : harness}-${scenario}${process.argv.includes('--stale') ? '-stale' : process.argv.includes('--resume') ? '-resume' : ''}${arg('mb') ? `-${arg('mb')}mb` : ''}.json`;
-writeFileSync(out, JSON.stringify(result, null, 1));
+// Replace the named result without writing through an existing directory entry.
+const staged = join(dirname(out), `.live7-${randomUUID()}.tmp`);
+const output = openSync(staged, 'wx', 0o600);
+try {
+  try { writeFileSync(output, JSON.stringify(result, null, 1)); }
+  finally { closeSync(output); }
+  renameSync(staged, out);
+} finally {
+  rmSync(staged, { force: true });
+}
 const all = (result.summary as Record<string, Record<string, { n: number; p50?: number; p95?: number; max?: number }>>)?.all;
 if (result.stale) { console.log(JSON.stringify({ out, ...result }, null, 1)); process.exit(0); }
 console.log(JSON.stringify({ out, harness, scenario, steps: result.steps, unpainted: result.unpainted, homeAppearAfterFirstWriteMs: result.homeAppearAfterFirstWriteMs, clickToViewerMs: result.clickToViewerMs, paintGroups: (result.paintGroups as { count: number; largest: number }), all }, null, 1));

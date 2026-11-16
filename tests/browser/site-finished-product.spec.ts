@@ -1,18 +1,23 @@
 import {createServer, type Server} from 'node:http';
-import {readFileSync, existsSync, statSync} from 'node:fs';
+import {realpathSync} from 'node:fs';
 import {resolve, sep, extname} from 'node:path';
 import {test, expect} from '@playwright/test';
 import {FEATURES} from '../../apps/site/src/footage.ts';
+import {readVerifiedFile} from '../../scripts/lib/read-verified-file.ts';
 
 if(process.env.DRISHYA_SITE_BROWSER==='firefox')test.use({browserName:'firefox',launchOptions:{channel:undefined}});
 let server:Server, base:string;
-const root=resolve('apps/site/dist');
 const mime:Record<string,string>={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2'};
 test.beforeAll(async()=>{
+  const root=realpathSync(resolve('apps/site/dist'));
   server=createServer((req,res)=>{
-    const path=resolve(root,'.'+new URL(req.url??'/', 'http://localhost').pathname.replace(/\/$/,'/index.html'));
-    if(!path.startsWith(root+sep)||!existsSync(path)||!statSync(path).isFile()){res.writeHead(404).end();return;}
-    res.writeHead(200,{'content-type':mime[extname(path)]??'application/octet-stream'}).end(readFileSync(path));
+    let path:string,bytes:Buffer;
+    try {
+      path=resolve(root,'.'+new URL(req.url??'/', 'http://localhost').pathname.replace(/\/$/,'/index.html'));
+      if(!path.startsWith(root+sep)){res.writeHead(404).end();return;}
+      bytes=readVerifiedFile(path);
+    } catch {res.writeHead(404).end();return;}
+    res.writeHead(200,{'content-type':mime[extname(path)]??'application/octet-stream'}).end(bytes);
   });
   await new Promise<void>(r=>server.listen(0,'127.0.0.1',r));
   base=`http://127.0.0.1:${(server.address() as {port:number}).port}`;

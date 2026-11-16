@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Store } from '@drishya/store';
 import { Ingestor, SourceWatch } from '../src/index.ts';
-import { firstReach, groupByPaint, percentile, stepKind, summarizeSteps } from '../../../scripts/lib/live-latency.ts';
+import { firstReach, groupByPaint, liveLatencyResultPath, percentile, stepKind, summarizeSteps } from '../../../scripts/lib/live-latency.ts';
 
 // LIVE-7 guard: the daemon's share of a live step's delay (the journal growing to the commit a viewer
 // is told about) stays small, and capture never waits on whether anything is watching.
@@ -96,6 +96,30 @@ describe('SourceWatch', () => {
 });
 
 describe('latency helpers', () => {
+  const run = { label: 'run', mode: 'live', harness: 'claude', scenario: 'tools' };
+
+  it('keeps the report filenames for ordinary flags', () => {
+    expect(liveLatencyResultPath(run)).toBe('.local/live7/run-live-claude-tools.json');
+    expect(liveLatencyResultPath({ ...run, label: 'before-codex39', mode: 'synthetic', source: 'a12b-34c', scenario: 'plan', mb: '34.5', resume: true }))
+      .toBe('.local/live7/before-codex39-synthetic-real-a12b-34c-plan-resume-34.5mb.json');
+    expect(liveLatencyResultPath({ ...run, stale: true, resume: true })).toBe('.local/live7/run-live-claude-tools-stale.json');
+  });
+
+  it.each([
+    ['label', 'weekly/report'],
+    ['mode', 'live\\sample'],
+    ['harness', 'draft:notes'],
+    ['scenario', ''],
+    ['source', 'sample id'],
+    ['mb', '10\n'],
+  ])('rejects a non-portable --%s in the report filename', (flag, value) => {
+    expect(() => liveLatencyResultPath({ ...run, [flag]: value })).toThrow(flag);
+  });
+
+  it('rejects a Windows device filename', () => {
+    expect(() => liveLatencyResultPath({ ...run, label: 'NUL.sample' })).toThrow('label');
+  });
+
   it('classifies steps and summarises per kind', () => {
     expect(stepKind({ rank: 1, kind: 'tool.call', tool: 'ExitPlanMode' })).toBe('plan-or-question');
     expect(stepKind({ rank: 2, kind: 'tool.call', tool: 'Task' })).toBe('subagent-start');

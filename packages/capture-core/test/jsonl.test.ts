@@ -1,9 +1,15 @@
 import { appendFileSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { open, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { initialCursor, readJsonl } from '../src/jsonl.ts';
 import { observationId, seal } from '../src/index.ts';
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const fs = await importOriginal<typeof import('node:fs/promises')>();
+  return { ...fs, open: vi.fn(fs.open), stat: vi.fn(fs.stat) };
+});
 
 let dir: string;
 let file: string;
@@ -14,6 +20,21 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe('readJsonl', () => {
+  it('uses one open for the file size, fingerprint, and records', async () => {
+    const line = '{"status":"ready"}\n';
+    writeFileSync(file, line);
+    vi.mocked(open).mockClear();
+    vi.mocked(stat).mockClear();
+
+    const result = await readJsonl(file, initialCursor());
+
+    expect(result.records).toEqual([{ type: 'record', offset: 0, bytes: Buffer.byteLength(line), value: { status: 'ready' } }]);
+    expect(result.cursor.offset).toBe(Buffer.byteLength(line));
+    expect(result.size).toBe(result.cursor.offset);
+    expect(open).toHaveBeenCalledTimes(1);
+    expect(stat).not.toHaveBeenCalled();
+  });
+
   it('holds back a partial trailing line until it is complete', async () => {
     writeFileSync(file, '{"a":1}\n{"b":');
     const r1 = await readJsonl(file, initialCursor());

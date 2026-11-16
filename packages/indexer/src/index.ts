@@ -5,13 +5,13 @@
 // `web-tree-sitter` replaces the extractor next; the resolver and layout stay.
 
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
-import { lstat, readdir, readFile, stat } from 'node:fs/promises';
+import { constants, existsSync, readFileSync } from 'node:fs';
+import { lstat, open, readdir, stat } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 import type { GraphEdge, GraphNode, RepoGraph } from '@drishya/contracts';
 import { isDeniedPath } from '@drishya/privacy';
 
-export const INDEXER_VERSION = 'imports-rules-v2';
+export const INDEXER_VERSION = 'imports-rules-v3';
 
 const SKIP_DIRS = new Set([
   'node_modules', '.local', '.git', '.hg', '.svn', 'dist', 'build', 'out', '.next', '.nuxt', '.svelte-kit', '.turbo', '.cache',
@@ -127,12 +127,33 @@ export async function probeGeneration(root: string, opts: IndexOptions = {}): Pr
   return generationOf((await scan(root, opts)).files);
 }
 
+/** One extra byte detects growth after fstat without passing a partial file to the parser. */
+async function readImportSource(path: string, maxBytes: number): Promise<string | undefined> {
+  const flags = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
+  const file = await open(path, flags);
+  try {
+    const info = await file.stat();
+    if (!info.isFile() || info.size > maxBytes) return undefined;
+    const buffer = Buffer.allocUnsafe(info.size + 1);
+    let offset = 0;
+    while (offset < buffer.length) {
+      const { bytesRead } = await file.read(buffer, offset, buffer.length - offset, offset);
+      if (!bytesRead) return buffer.toString('utf8', 0, offset);
+      offset += bytesRead;
+    }
+    return undefined;
+  } finally {
+    await file.close();
+  }
+}
+
 export async function buildGraph(root: string, opts: IndexOptions = {}): Promise<RepoGraph> {
   const t0 = performance.now();
   const { files, skipped, truncated, nested } = await scan(root, opts);
 
   const known = new Set(files.map((f) => f.path));
-  const aliases = readTsPaths(root);
+  const maxBytes = opts.maxFileBytes ?? DEFAULT_MAX_FILE_BYTES;
+  const aliases = await readTsPaths(root);
   const edges: GraphEdge[] = [];
   const unresolved: RepoGraph['unresolved'] = [];
   const lines = new Map<string, number>();
@@ -143,7 +164,7 @@ export async function buildGraph(root: string, opts: IndexOptions = {}): Promise
     if (lang !== 'typescript' && lang !== 'javascript' && lang !== 'python') continue;
     // A protected file (`.env.js`, keys, credentials) stays a node by name only; it is never opened.
     if (isDeniedPath(f.path)) continue;
-    const src = await readFile(join(root, f.path), 'utf8').catch(() => undefined);
+    const src = await readImportSource(join(root, f.path), maxBytes).catch(() => undefined);
     if (src === undefined) continue;
     parsed++;
     lines.set(f.path, src.split('\n').length);
@@ -197,9 +218,25 @@ export function graphFromPaths(paths: string[], now = () => new Date().toISOStri
 
 // ─── extraction ──────────────────────────────────────────────────────────────────────────
 
+/** Remove complete block comments and standalone line comments, as in the import rules. */
+function stripComments(src: string): string {
+  const parts: string[] = [];
+  let cursor = 0;
+  for (;;) {
+    const start = src.indexOf('/*', cursor);
+    if (start === -1) break;
+    const end = src.indexOf('*/', start + 2);
+    if (end === -1) break;
+    parts.push(src.slice(cursor, start));
+    cursor = end + 2;
+  }
+  parts.push(src.slice(cursor));
+  return parts.join('').replace(/^[^\S\r\n\u2028\u2029]*\/\/.*$/gm, '');
+}
+
 export function jsImports(src: string): string[] {
   const out: string[] = [];
-  const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+  const code = stripComments(src);
   const re = /(?:^|[;\s])(?:import|export)\s+(?:type\s+)?(?:[\w*{}\s,$]+\s+from\s+)?["']([^"'\n]+)["']|(?:require|import)\s*\(\s*["']([^"'\n]+)["']\s*\)/gm;
   let m: RegExpExecArray | null;
   while ((m = re.exec(code))) out.push((m[1] ?? m[2])!);
@@ -210,7 +247,7 @@ export function pythonImports(src: string): string[] {
   const out: string[] = [];
   for (const line of src.split('\n')) {
     let m: RegExpExecArray | null;
-    if ((m = /^\s*from\s+(\.*[\w.]*)\s+import\s+([\w\s,*()]+)/.exec(line))) {
+    if ((m = /^\s*from\s+([\w.]+)\s+import\s+([\w\s,*()]+)/.exec(line))) {
       const mod = m[1]!;
       // `from . import x` imports submodule x; `from .a import b` imports from module a.
       if (/^\.+$/.test(mod)) for (const n of m[2]!.replace(/[()]/g, '').split(',')) out.push(mod + n.trim().split(/\s+/)[0]);
@@ -288,12 +325,14 @@ export function resolvePython(spec: string, from: string, known: Set<string>): s
   return 'external';
 }
 
-function readTsPaths(root: string): Aliases {
+async function readTsPaths(root: string): Promise<Aliases> {
   for (const name of ['tsconfig.json', 'jsconfig.json']) {
     const p = join(root, name);
     if (!existsSync(p)) continue;
     try {
-      const raw = readFileSync(p, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '').replace(/,(\s*[}\]])/g, '$1');
+      const src = await readImportSource(p, DEFAULT_MAX_FILE_BYTES);
+      if (src === undefined) return [];
+      const raw = stripComments(src).replace(/,(\s*[}\]])/g, '$1');
       const cfg = JSON.parse(raw);
       const base = String(cfg.compilerOptions?.baseUrl ?? '.').replace(/^\.\/?/, '');
       const paths = cfg.compilerOptions?.paths ?? {};

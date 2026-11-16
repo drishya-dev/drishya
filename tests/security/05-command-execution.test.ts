@@ -42,9 +42,9 @@ describe('every place a program is started', () => {
     for (const file of sources('apps/ui/src')) expect(readFileSync(join(root, file), 'utf8'), file).not.toMatch(/child_process/);
   });
 
-  it('the browser opener runs only the launch link, whose characters are URL-safe', () => {
+  it('the browser opener runs only the one-time launch link (SEC-4), whose characters are URL-safe', () => {
     const source = readFileSync(join(root, 'apps/daemon/src/commands.ts'), 'utf8');
-    expect(source).toContain('openBrowser(running.launchUrl)');
+    expect(source).toContain('openBrowser(running.openUrl())');
     expect(source.match(/openBrowser\(/g)).toHaveLength(2); // the call and the definition
     expect(launchToken(undefined)).toBeUndefined();
     expect(launchToken('abcdefghijklmnopqrstuvwxyz0123456789_-ABCD')).toBeTruthy();
