@@ -18,7 +18,8 @@ export default defineConfig({
     headless: true,
   },
   projects: [
-    { name: 'parallel', testIgnore: timingSensitive },
-    { name: 'serial', testMatch: timingSensitive },
+    // The serial pass starts a second Playwright process. Keep the parallel failure artifacts available for CI upload.
+    { name: 'parallel', testIgnore: timingSensitive, outputDir: './test-results/parallel' },
+    { name: 'serial', testMatch: timingSensitive, outputDir: './test-results/serial' },
   ],
 });
