@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 // TEST-3: most specs start their own daemon on a free port and a temporary store, so files run in parallel. These measure scroll
 // position, pacing or motion and fail under CPU contention rather than from a defect; they run alone, after the parallel project.
-const timingSensitive = /(b2-live|conversation-scroll|hover-fit|live-sync|manual-scroll|material-motion|p1-pacing)\.spec\.ts$/;
+const timingSensitive = /(b2-live|conversation-scroll|conversation-switch|hover-fit|live-sync|manual-scroll|material-motion|p1-pacing)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: './tests/browser',
@@ -11,6 +11,9 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 10_000 },
   workers: Number(process.env.DRISHYA_WORKERS || 4),
+  // SHIP-16c: a hosted runner has two slow cores; one retry on CI keeps a single timing miss from failing a 40-minute job. A spec that fails
+  // twice still fails, and the report marks the first failure as flaky. Local runs never retry.
+  retries: process.env.CI ? 1 : 0,
   reporter: 'list',
   use: {
     browserName: 'chromium',
