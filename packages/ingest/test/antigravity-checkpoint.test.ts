@@ -55,7 +55,7 @@ it('preserves stored transcript identity and checkpoints through a configured ro
   writeFileSync(transcript, line(0));
   const alias = join(root, 'alias');
   symlinkSync(native, alias, process.platform === 'win32' ? 'junction' : 'dir');
-  const canonical = realpathSync(transcript);
+  const canonical = realpathSync.native(transcript);
   const adapter = createAntigravityAdapter([alias]);
   await ingest.close();
   ingest = new Ingestor(store, [adapter]);
