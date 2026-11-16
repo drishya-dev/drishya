@@ -1,4 +1,4 @@
-.queued-input-receipts { position:absolute; left:0; bottom:calc(100% + 8px); z-index:14; }
+.prompt-composer > .queued-input-receipts:not([data-floating]) { position:absolute; left:0; bottom:calc(100% + 8px); z-index:14; }
 .queued-input-receipts[data-floating] { position:fixed; left:auto; right:12px; bottom:92px; z-index:22; }
 .queued-input-trigger { display:inline-flex; align-items:center; gap:6px; height:30px; min-height:30px; padding:0 11px; border:1px solid var(--line-2); border-radius:var(--round-full); background:var(--s1); color:var(--t1); font:var(--weight-medium) var(--text-xs)/1 var(--sans); box-shadow:0 4px 16px #0004; cursor:pointer; white-space:nowrap; }
 .queued-input-trigger:hover { background:var(--s2); border-color:var(--line-3); }
