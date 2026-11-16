@@ -1,12 +1,12 @@
 # Continuous canvas: authoritative visual direction
 
-**Latest correction:** [31](../review/31-independent-replay-reading.md) supersedes automatic replay interruption for hover/scroll/reading: detach the viewport while the explicitly playing clock continues. Explicit transport navigation still holds.
+**Latest correction:** [31](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#31-independent-replay-reading) supersedes automatic replay interruption for hover/scroll/reading: detach the viewport while the explicitly playing clock continues. Explicit transport navigation still holds.
 
-**Latest presentation correction (7 October):** [27 — Continuous materials and density map](../review/27-continuous-materials.md) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
+**Latest presentation correction (7 October):** [27 — Continuous materials and density map](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#27-continuous-materials) permits a finite whole-DOM zoom through its final allocation, spatial-density node groups, an always-visible ordinary prompt and local result scrolling without detaching live follow. It supersedes conflicting earlier presentation details; captured truth, native permissions and publishing-only hosted CI remain unchanged.
 
-**Latest amendment:** [26](../review/26-connected-workspace.md#latest-developer-refinement) adds the ordinary native composer, compact prompt disclosure, folder-first map detail, partial-card connectors and paragraph fades without delayed evidence. Independent capture remains passive; the explicitly authorized controller is separate. Layout reserves full virtual history extent during run replacement.
+**Latest amendment:** [26](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#26-connected-workspace) adds the ordinary native composer, compact prompt disclosure, folder-first map detail, partial-card connectors and paragraph fades without delayed evidence. Independent capture remains passive; the explicitly authorized controller is separate. Layout reserves full virtual history extent during run replacement.
 
-**7 October amendment:** [24](../review/24-prompt-workspace.md) governs prompt-led normal navigation, compact content allocations and resizable reading. By specific builder request, finite measured-origin arrivals can translate/reveal the real DOM surface and its content; no copied/scaled/typewritten source or capture delay. Earlier stationary-text arrival recipes are superseded only for this finite move. The composition and evidence constraints below remain.
+**7 October amendment:** [24](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#24-prompt-workspace) governs prompt-led normal navigation, compact content allocations and resizable reading. By specific builder request, finite measured-origin arrivals can translate/reveal the real DOM surface and its content; no copied/scaled/typewritten source or capture delay. Earlier stationary-text arrival recipes are superseded only for this finite move. The composition and evidence constraints below remain.
 
 21 September 2026 · User-directed revision after the first storyboard
 
@@ -44,7 +44,7 @@ This document governs the spatial composition where it conflicts with the earlie
 
 **Right: tool dock.** Stable, quiet labels for native tools, followed by installed/observed MCP server names. Active tool labels briefly brighten. An MCP server can expand to reveal its tool names, but the entire dock is not an always-open catalog. The active item sends its invocation/output surface toward the work canvas. It stays at its dock position so the user learns where actions come from.
 
-**Bottom: reading position.** In live/normal history, a quiet status and explicit return-to-latest affordance appear when useful. New work continues below while the user reads. An explicitly entered sequence-replay mode offers play/pause, step, speed and timestamp scrubbing; these are not mandatory live controls. Jump-to-edit/failure remains ordinary history navigation. This is the builder's 30 September clarification, detailed in [PRODUCT_DIRECTION](../PRODUCT_DIRECTION.md).
+**Bottom: reading position.** In live/normal history, a quiet status and explicit return-to-latest affordance appear when useful. New work continues below while the user reads. An explicitly entered sequence-replay mode offers play/pause, step, speed and timestamp scrubbing; these are not mandatory live controls. Jump-to-edit/failure remains ordinary history navigation. This is the builder's 30 September clarification, detailed in [PRODUCT_DIRECTION](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#product-direction).
 
 ## 2. Visual grammar: material and typography
 

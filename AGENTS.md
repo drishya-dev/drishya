@@ -2,7 +2,7 @@
 
 **दृश्य** — *"that which is seen."* A local, cross-harness replay and live view for coding agents. It plays an agent's work as real captured content — the source it read, the output it got, the diff it wrote — on a map of the user's own repository, on a timeline they can scrub.
 
-Two builders, both working with coding agents (Claude Code and Codex). **This file is the canonical instruction set for every agent in this repo.** Codex reads it directly; Claude Code loads it through `CLAUDE.md`. Change the rules here, nowhere else.
+Two maintainers and the contributors who join them work with coding agents (Claude Code, Codex and Antigravity). **This file is the canonical instruction set for every agent in this repo.** Codex reads it directly; Claude Code loads it through `CLAUDE.md`. Change the rules here, nowhere else.
 
 ---
 
@@ -22,7 +22,7 @@ Two builders, both working with coding agents (Claude Code and Codex). **This fi
 - peek and Workspace are two modes;
 - the 3D map is aesthetic.
 
-The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then details. Work from it; don't invent a parallel queue. **Claim an item first** (a docs-only commit on `main`, see *Claiming and state* below) and only then do the work; an agent's first action in a session is `node scripts/claims.ts`, then its claim.
+Use [GitHub Issues](https://github.com/drishya-dev/drishya/issues) for current work. Check related issues, pull requests, and [Product Work History](docs/PRODUCT_WORK_HISTORY.md) before starting so earlier experiments and overlapping work are visible.
 
 ---
 
@@ -32,18 +32,16 @@ The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then 
 |---|---|---|
 | [`docs/VISION.md`](docs/VISION.md) | **Creative direction** — the builder's own words and how the product must look, move and feel | Before *any* UI, graphics, motion or layout work |
 | [`docs/README.md`](docs/README.md) | **Precedence map** — which document wins on which topic | Whenever two docs seem to disagree |
-| [`docs/TASKS.md`](docs/TASKS.md) | **Single current product checklist** — tick completed scope and add new feedback here; do not create competing active queues | At session start and whenever work lands |
-| [`docs/STATUS.md`](docs/STATUS.md) | Where we are, what is next, who did what, decisions log | At the start of every session |
-| [`docs/CONTINUITY.md`](docs/CONTINUITY.md) | Compact handoff: latest builder direction, baseline findings and next bounded task | After a model/chat switch or compaction |
-| [`docs/PRODUCT_DIRECTION.md`](docs/PRODUCT_DIRECTION.md) | Current product scope, live-history behavior, content-shaped presentation and validation hypotheses | Before product or experience decisions |
-| [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) | Backend-first execution gates, integrated base UI, performance and deployment | Before choosing implementation work |
+| [`docs/PRODUCT_WORK_HISTORY.md`](docs/PRODUCT_WORK_HISTORY.md) | Dated task entries, experiments, findings, and prior decisions | Before proposing work that may have been tried before |
+| [`ROADMAP.md`](ROADMAP.md) | What is planned: the next release, harnesses being explored | Before choosing what to work on |
+| [`docs/decisions/log.md`](docs/decisions/log.md) | Every standing decision with its reason | Before changing capture, privacy, the schema or the interface's direction |
 | [`docs/CODEBASE.md`](docs/CODEBASE.md) | The code as built: packages, data flow, identity, privacy, API, tests, how to add a harness | Before changing any code |
 | [`docs/review/03-engineering-plan.md`](docs/review/03-engineering-plan.md) | Authoritative architecture: observations, projections, historical artifacts, capture, privacy | Before capture, store, daemon or API work |
 | [`docs/reference/04-continuous-canvas.md`](docs/reference/04-continuous-canvas.md) | The layout and interaction contract, with acceptance criteria | Before canvas, history or playback work |
 | [`docs/reference/03-event-schema.md`](docs/reference/03-event-schema.md) | The event schema — **draft, not frozen** | Any adapter or store work |
 | [`docs/review/04-research-ledger.md`](docs/review/04-research-ledger.md) | Verified facts about harnesses and competitors | Before making any factual claim about a harness |
 
-`docs/BLUEPRINT.md` is the original end-to-end blueprint and is still the fullest single account, but the review and later decisions supersede parts of it — [`docs/README.md`](docs/README.md) maps exactly which. `docs/Vantage_Base_Prompt.md` is the original brief, kept for provenance only.
+The original blueprint, the first brief and the early product and roadmap documents are summarised in the [review notes](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#planning-documents); the decisions log and the documents above supersede them.
 
 ---
 
@@ -51,12 +49,12 @@ The work list is [`docs/TASKS.md`](docs/TASKS.md): a tagged priority list, then 
 
 The builder's defining requirement: **"Visualization is the main."** Not boxes of `model thinking:` / `tool call:` / `output:`. A $1,000 edit, not a $10 one. Full detail in [`docs/VISION.md`](docs/VISION.md).
 
-1. **Quiet at rest, articulate in motion.** At rest the screen is calm and every frame is readable. In motion, every change is precise and meaningful. Nothing loops, pulses or drifts for attention. The latest 8 October builder correction permits a true spatial map with gentle default rotation, holding the camera for 12 seconds after manual movement before resuming; disable automatic rotation for hidden tabs, reduced motion and low resources, and preserve explicit static preferences. See [37](docs/review/37-spatial-map-composer.md), which supersedes the shallow/static direction in 36.
-2. **Motion is spent on relationships and arrivals, never on simulating the reading task.** Content is mounted whole and selectable. Following the builder's 7 October clarification, a finite arrival/reflow may translate and scale the single real DOM material continuously into its final allocation. This is the narrow exception requested in the latest builder correction; never copy captured characters, type text, count up numbers or fake scanning. The later correction in [30](docs/review/30-builder-request-audit.md) also permits the same whole-material zoom for deliberate hover reading; no duplicate captured text. The latest correction removes separately timed SVG plate/glyph arrivals; use one real material transform. See docs/review/28-unified-stage.md.
+1. **Quiet at rest, articulate in motion.** At rest the screen is calm and every frame is readable. In motion, every change is precise and meaningful. Nothing loops, pulses or drifts for attention. The latest 8 October builder correction permits a true spatial map with gentle default rotation, holding the camera for 12 seconds after manual movement before resuming; disable automatic rotation for hidden tabs, reduced motion and low resources, and preserve explicit static preferences. See [37](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#37-spatial-map-composer), which supersedes the shallow/static direction in 36.
+2. **Motion is spent on relationships and arrivals, never on simulating the reading task.** Content is mounted whole and selectable. Following the builder's 7 October clarification, a finite arrival/reflow may translate and scale the single real DOM material continuously into its final allocation. This is the narrow exception requested in the latest builder correction; never copy captured characters, type text, count up numbers or fake scanning. The later correction in [30](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#30-builder-request-audit) also permits the same whole-material zoom for deliberate hover reading; no duplicate captured text. The latest correction removes separately timed SVG plate/glyph arrivals; use one real material transform. See docs/review/28-unified-stage.md.
 3. **Everything has one home.** Files come *from the map*. Tool calls come *from the dock*. Words come *from the agent*. Motion always starts at the true origin.
 4. **The composition:** agents across the top · the living repository map behind everything, interactive · tool actions arriving **left to right** in passages · the agent's prose **beneath, unboxed, directly on the world** · history continuing downward · native tools then MCP servers on the **right** · reading position at the bottom. Live history accumulates while the user scrolls back; transport belongs to optional sequence replay.
 5. **Work accumulates.** Earlier operations settle back and overlap only at their margins, titles and excerpts still readable. Nothing vanishes; selection opens reading space and detaches live follow. Capture/history continue; optional sequence playback holds.
-6. **Clean developer-tool theme, no *labelled* boxes.** Graphite base, flat surfaces with 1 px hairlines, one sans + one mono, GitHub-dark syntax, colour only for meaning (agent identity, pass, fail, edited). No glow pools, grain or serif. The latest explicit builder correction permits bounded masked backdrop blur only at the header/composer edges, with a low-resource fallback; see [30](docs/review/30-builder-request-audit.md). The latest builder correction in [29](docs/review/29-centred-neutral-workspace.md) uses shared neutral action surfaces/borders, coloured type icons and error-only thin red contours; it supersedes earlier per-tool coloured chrome. The 7 October builder correction permits a subtle static CSS charcoal lining texture on the black workspace; see `docs/review/25-black-compact-map.md`. Prose is never boxed. Each action type still has its own content-shaped composition. The latest 7 October correction asks for vivid semantic material/syntax colours, compact preview chrome and a centred fading translucent header (now bounded edge veils under the later correction in 30). See `docs/review/28-unified-stage.md` and `docs/VISION.md` §5.
+6. **Clean developer-tool theme, no *labelled* boxes.** Graphite base, flat surfaces with 1 px hairlines, one sans + one mono, GitHub-dark syntax, colour only for meaning (agent identity, pass, fail, edited). No glow pools, grain or serif. The latest explicit builder correction permits bounded masked backdrop blur only at the header/composer edges, with a low-resource fallback; see [30](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#30-builder-request-audit). The latest builder correction in [29](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#29-centred-neutral-workspace) uses shared neutral action surfaces/borders, coloured type icons and error-only thin red contours; it supersedes earlier per-tool coloured chrome. The 7 October builder correction permits a subtle static CSS charcoal lining texture on the black workspace; see `docs/review/25-black-compact-map.md`. Prose is never boxed. Each action type still has its own content-shaped composition. The latest 7 October correction asks for vivid semantic material/syntax colours, compact preview chrome and a centred fading translucent header (now bounded edge veils under the later correction in 30). See `docs/review/28-unified-stage.md` and `docs/VISION.md` §5.
 7. **The five signature moves:** **Lift** (content unfolds from its map node) · **Emit** (a tool call leaves its dock instrument; MCP servers open like drawers) · **Settle** (prior work eases back) · **Surface** (prose rises beneath the passage with a focus-pull, never typed) · **Resolve** (an outcome lands once and holds).
 8. **Every little thing is crafted** — hovers, selection, copy, focus rings, scrubbing — and every one is reversible and interruptible.
 9. **Three tests before anything ships:** *freeze* (any paused frame is readable, origins clear) · *truth* (no motion implies what the evidence cannot support) · *ten-minute* (still calm after ten minutes of real reading).
@@ -78,9 +76,9 @@ The demo and the synthetic fixtures have one shape. Real sessions bring cases th
 
 ## Definition of done — whole tasks, proven on real sessions
 
-Builder decision, 28 October (Yash; Harsh to confirm). This is the main rule for every agent, Codex and Claude alike. It replaces "slice", "foundation" and "ready for review with leftovers".
+Maintainers' decision, 28 October. This is the main rule for every agent, Codex and Claude alike. It replaces "slice", "foundation" and "ready for review with leftovers".
 
-1. **A claim is a whole TASKS item, and you finish it.** Do not ship parts and leave the item open for "the rest". If an item is too large, split it in TASKS first (new IDs, each one whole), claim one, and finish it before the next. Open a PR as ready only when the item's *Accept* list is met, or each unmet line is blocked by something outside the task and the PR says exactly what (a decision, a person's signed-in session). "Could do, did not" is not a blocker: do it. Draft PRs exist only for visibility.
+1. **Review against the agreed acceptance criteria.** A substantive change must have a bounded scope and a way to verify it. Use a draft PR while work is in progress. When you request review, record the checks and any acceptance criteria blocked by an external dependency.
 2. **The demo is not a test.** The demo bundle and synthetic fixtures are regression guards; they never count as acceptance. Acceptance is on real local sessions of both harnesses: find sessions that contain each case (count them; id prefixes and sizes only), import them into a scratch Drishya home, and check the counts and the screen at 600 and 1440 px. **If no real session contains the case, make one.** Run the real harness (Claude Code, Codex) until it records the case (plan mode, a question, a literal `git commit -- path`, a browser call, an image-only prompt, a sub-agent) on a throwaway repository, then check that genuine capture. This is how CONTENT-4b's plan mode and GIT-2's commit link were verified. Say in the PR which cases, which session prefixes and what could not be run (a harness or account you do not have).
 3. **Checks come in three tiers; the full gate runs once per finished task or batch, never per slice.**
    - *While working:* typecheck of the touched projects, units of the touched packages, the named specs for the area. Seconds to minutes; run them as often as you like.
@@ -114,36 +112,26 @@ Violating any of these is a bug, not a tradeoff.
 
 **Built (draft backend):** TypeScript run directly on Node 24 (type stripping, no backend build; erasable syntax only) · pnpm workspaces · `node:sqlite` (WAL, FTS5) · `node:http` + Server-Sent Events · React 19 · Vite · Zustand · Vitest. The daemon has **zero runtime dependencies**.
 
-**Still to come (frontend and indexer):** PixiJS v8 map · CodeMirror 6 · `web-tree-sitter` import extraction · graphology for bounded working sets · Motion/CSS choreography · Playwright. The deviations from the original proposal (`better-sqlite3`, Fastify, `ws`) and their reasons are in [`docs/CODEBASE.md`](docs/CODEBASE.md#deliberate-deviations-from-the-proposed-stack-see-status-decisions) and the STATUS decisions log.
+**Still to come (frontend and indexer):** PixiJS v8 map · CodeMirror 6 · `web-tree-sitter` import extraction · graphology for bounded working sets · Motion/CSS choreography · Playwright. The deviations from the original proposal (`better-sqlite3`, Fastify, `ws`) and their reasons are in [`docs/CODEBASE.md`](docs/CODEBASE.md#deliberate-deviations-from-the-proposed-stack-see-the-decisions-log) and the STATUS decisions log.
 
-Rationale and rejected alternatives: [engineering plan §1](docs/review/03-engineering-plan.md#1-application-form-and-stack), [blueprint §14](docs/BLUEPRINT.md). If you think a choice is wrong, say so — but read the rejection first.
+Rationale and rejected alternatives: [engineering plan §1](docs/review/03-engineering-plan.md#1-application-form-and-stack), [blueprint §14](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#blueprint). If you think a choice is wrong, say so — but read the rejection first.
 
 ---
 
-## How we work — two builders, one repo
+## How we work
 
-The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). There is **no ownership split**: both builders work anywhere and review each other.
+1. **Start from an issue for substantive work.** Describe the problem, scope, and acceptance criteria. Check related issues, PRs and prior experiments. Coordinate overlapping changes in the issue. Small documentation fixes can go straight to a PR.
+2. **Open a focused PR into `main`.** Link the issue when one exists. Explain what changed and record how you verified each acceptance criterion. Use a draft for work in progress. Keep unrelated changes in separate PRs.
+3. **Review before merge.** A maintainer checks the linked scope, evidence and relevant project constraints. Record any external blocker in the PR. Squash-merge with a title in the form `area: what changed`. CODEOWNERS routes review.
+4. **Record durable decisions.** Keep the rationale in the relevant architecture or contributor docs, link it from the issue or PR, and add experiment findings to Product Work History when they can prevent repeated work.
 
-**Branches and pull requests**
-- `main` always works. Never push broken code to it.
-- Make documentation and other small, low-risk changes directly on `main` after checking them. Use a short-lived branch for major changes: `<handle>/<topic>` — e.g. `yash/canvas-lift`, `harsh/claude-adapter`.
-- Open a PR into `main` for major branch work. **The other builder reviews it** before merge — this is how we check each other's work.
-- Squash-merge. The PR title becomes the commit: `area: what changed` (e.g. `canvas: lift surfaces from map origins`). The repo allows squash merges only and deletes branches on merge.
-- `CODEOWNERS` requests review from the other builder automatically. The PR template's checklist is the non-negotiables — tick it honestly.
-- Label issues and PRs by area: `area: capture`, `area: canvas`, `area: map`, `area: privacy`. Anything touching the event schema gets `schema`; anything awaiting a recorded decision gets `decision`.
-
-**Claiming and state**
-- **Claim first, then work. No exceptions.** The very first action on any item is a docs-only commit on `main` that adds your row to the *Claimed* table in [`docs/STATUS.md`](docs/STATUS.md), keyed by the [`docs/TASKS.md`](docs/TASKS.md) ID, and pushes it. Run `node scripts/claims.ts` before choosing: never start an item it shows as `CLAIMED`, and never touch files another row lists. If the work has no TASKS ID yet, add the item to TASKS first, then claim it. Agents (Claude, Codex or any other): this applies to you at the start of every session; state the ID you claimed in your first message to the builder.
-- **No silent batches.** Work nobody was told about is not ready to review. Open a **draft PR after your first commit** so the other builder can see it, and keep it to **one whole TASKS ID**; if finishing it needs more than about 5 commits or 15 files, say so in the claim's *Files* column and agree it before you go on (see *Definition of done*: split the item in TASKS, do not ship a part). A pull request for unclaimed work, or a long series of commits pushed without any claim, is sent back to be claimed and split, whatever its quality.
-- **Delete your row in the PR that finishes the work,** tick the item in [`docs/TASKS.md`](docs/TASKS.md) and run `node scripts/sync-tasks.ts`. A claim with no commit for 3 days is stale; anyone may take it after asking.
-- **Update `docs/STATUS.md` when you finish**, not when you start. Overwrite your "Last session" block.
-- **Settled decisions go in the decisions log, with the reason.** This is what stops four agents re-litigating the same argument next week.
+Label PRs by area. Changes to the event schema use `schema`. Use `decision` for work awaiting a recorded decision.
 
 **Rules of the codebase**
 - **UI work uses the installed design skills.** Apply `emil-design-eng` for interface composition and polish, and the relevant animation/review skill when changing motion. Preserve this repo's evidence/creative doctrine when generic skill guidance conflicts. Commit each coherent, verified increment separately so the builders can backtrack; do not combine unrelated UI tasks into one commit. Builder direction, 12 October.
 - **The event schema changes only by agreement between both builders.** It is the seam between capture and rendering.
 - **Golden tests from the first composer commit.**
-- **No new feature while a performance gate is red, unless the builder explicitly narrows the supported range and records the decision.** Current status: the builder resumed B4 and reference-machine long-session probes now pass their measured gates. Physical low-resource/lower-core and platform acceptance remain release checks. Preserve the paged projection/data-source boundary; do not claim broad release or unmeasured workload readiness. See `docs/review/08-b4-history-reader.md`, [`docs/STATUS.md`](docs/STATUS.md) and [`docs/IMPLEMENTATION_ROADMAP.md`](docs/IMPLEMENTATION_ROADMAP.md) §7.
+- **No new feature while a performance gate is red unless a maintainer records a narrower supported range.** Physical low-resource, lower-core and platform acceptance remain release checks. Preserve the paged projection and data-source boundary. See the [history reader record](docs/review/08-b4-history-reader.md) and [implementation roadmap summary](docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#implementation-roadmap).
 - **Never share `node_modules` between checkouts or worktrees** (no junction, symlink or copy); each runs its own `corepack pnpm install --frozen-lockfile`. Shared links made `@drishya/*` resolve to another tree and broke verification, 27 October.
 - **Fixtures decouple the work.** If rendering is blocked on capture, the fixture corpus is too small — grow it. Only synthetic or redacted fixtures are committed; `.gitignore` refuses `*.jsonl` outside `fixtures/redacted/`.
 
@@ -155,9 +143,8 @@ The repo is [`drishya-dev/drishya`](https://github.com/drishya-dev/drishya). The
 
 **Chat history is not project memory.** It does not survive a folder rename, a desktop-app account switch, or the 30-day retention sweep of `~/.claude/projects/`. **This repository does.**
 
-If something learned in a session would be expensive to lose — a decision, a design insight, a gotcha — **write it into `docs/` before the session ends.** Creative direction goes in `docs/VISION.md`; decisions in `docs/STATUS.md`; architecture in the engineering plan. The next agent, on either builder's machine, reads them in minutes and is fully caught up.
+If something learned in a session would be expensive to lose — a decision, a design insight, a gotcha — **write it into `docs/` before the session ends.** Creative direction goes in `docs/VISION.md`; decisions in `docs/decisions/log.md`; architecture in the engineering plan. The next agent, on any contributor's machine, reads them in minutes and is fully caught up.
 
-`scripts/Rename-Project.ps1` (Windows) and `scripts/rename-project.sh` (macOS/Linux) migrate Claude Code session history if the project folder is ever moved.
 
 ## Style
 

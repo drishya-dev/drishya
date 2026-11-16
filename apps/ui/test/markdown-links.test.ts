@@ -7,8 +7,8 @@ import {prosePath} from '../src/lib/prose-path.ts';
 const html=(text:string)=>renderToStaticMarkup(createElement(Markdown,{text}));
 
 it('parses a link wrapped in bold or italic instead of showing its source',()=>{
-  const bold=html('Saved in **[92-feature-value.md](/C:/Users/ASUS/Desktop/docs/92-feature-value.md)**.');
-  expect(bold).toContain('<strong><span class="md-link" title="/C:/Users/ASUS/Desktop/docs/92-feature-value.md">92-feature-value.md</span></strong>');
+  const bold=html('Saved in **[92-feature-value.md](/C:/Users/user/Desktop/docs/92-feature-value.md)**.');
+  expect(bold).toContain('<strong><span class="md-link" title="/C:/Users/user/Desktop/docs/92-feature-value.md">92-feature-value.md</span></strong>');
   expect(bold).not.toContain('](');
   const italic=html('See *[notes](C:\\work\\notes.md)* now');
   expect(italic).toContain('<em><span class="md-link"');expect(italic).not.toContain('](');

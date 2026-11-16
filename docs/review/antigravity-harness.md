@@ -1,6 +1,6 @@
 # Antigravity as a third harness (HARNESS-AG research)
 
-Research only, 13 November 2026. No product code. Everything below was measured on this machine from the installed app and its files, opened **read-only** (copies of the conversation databases went to the git-ignored `.local/antigravity-research/`). No conversation content is quoted: only file names, keys, record types, counts and sizes. Public-documentation facts, with links, are in the [research ledger](04-research-ledger.md#antigravity-google-13-november-2026). The build brief is [AG-1 to AG-6 in TASKS](../TASKS.md).
+Research only, 13 November 2026. No product code. Everything below was measured on this machine from the installed app and its files, opened **read-only** (copies of the conversation databases went to the git-ignored `.local/antigravity-research/`). No conversation content is quoted: only file names, keys, record types, counts and sizes. Public-documentation facts, with links, are in the [research ledger](04-research-ledger.md#antigravity-google-13-november-2026). The build brief is [AG-1 to AG-6 in TASKS](../PRODUCT_WORK_HISTORY.md).
 
 ## 1. Verdict
 

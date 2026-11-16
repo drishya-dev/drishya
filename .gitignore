@@ -53,12 +53,12 @@ npm-debug.log*
 yarn-error.log*
 
 # ── Tooling / editor / OS ─────────────────────────────────────────────────
-.claude/settings.local.json
+.claude/
 .vscode/*
 !.vscode/extensions.json
 .idea/
 .DS_Store
 Thumbs.db
 
-# ── Backups left by scripts/Rename-Project.ps1 ────────────────────────────
+# ── Backup files ───────────────────────────────────────────────────────────────────────────────────
 *.bak.*
