@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 // TEST-3: most specs start their own daemon on a free port and a temporary store, so files run in parallel. These measure scroll
 // position, pacing or motion and fail under CPU contention rather than from a defect; they run alone, after the parallel project.
-const timingSensitive = /(b2-live|conversation-scroll|conversation-switch|hover-fit|live-sync|manual-scroll|material-motion|p1-pacing)\.spec\.ts$/;
+const timingSensitive = /(b2-live|conversation-scroll|conversation-switch|hover-fit|live-sync|manual-scroll|material-motion|p1-pacing|paired-surface-motion|security-injected)\.spec\.ts$/;
 
 export default defineConfig({
   testDir: './tests/browser',
