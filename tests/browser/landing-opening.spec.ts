@@ -56,6 +56,37 @@ test('opening interruption, direct links and repeat visits remain static and usa
   await context.close();
 });
 
+for(const width of [600,1440]){
+  test(`Escape before the main module dismisses the intro on repeat visits at ${width}px`,async({page})=>{
+    await page.setViewportSize({width,height:900});
+    const mainModule=/\/assets\/site-[^/]+\.js$/;
+    const {promise:moduleGate,resolve:releaseModule}=Promise.withResolvers<void>();
+    await page.route(mainModule,async route=>{
+      await moduleGate;
+      await route.continue();
+    });
+    const root=page.locator('html');
+    const opening=page.locator('[data-opening-overlay]');
+    try {
+      await page.goto(site.url,{waitUntil:'commit'});
+      await expect(root).toHaveAttribute('data-intro','pending');
+      await expect(page.locator('.site-header')).toBeHidden();
+      await page.keyboard.press('Escape');
+      await expect(root).toHaveAttribute('data-intro','skip');
+      await expect(page.locator('.site-header')).toBeVisible();
+    } finally {
+      releaseModule();
+    }
+    await page.waitForLoadState('load');
+    await page.unroute(mainModule);
+    await page.goto(site.url+'/#session');
+    await expect(opening).toBeHidden();
+    await page.goto(site.url);
+    expect(await opening.getAttribute('data-active')).toBe('false');
+    await expect(page.getByRole('button',{name:'Replay intro'})).toBeVisible();
+  });
+}
+
 test('only a pending wheel entrance reverses and completed entry stays closed',async({browser})=>{
   const context=await browser.newContext({viewport:{width:1440,height:900}});
   const page=await context.newPage();
@@ -116,11 +147,15 @@ test('intro bootstrap is Home-only',async({browser})=>{
 
 test('first-paint guard reveals the page when the main module fails',async({page})=>{
   await page.setViewportSize({width:1440,height:900});
-  await page.route(/\/assets\/site-[^/]+\.js$/,route=>route.abort());
+  const mainModule=/\/assets\/site-[^/]+\.js$/;
+  await page.route(mainModule,route=>route.abort());
   await page.goto(site.url);
   await expect(page.locator('html')).toHaveAttribute('data-intro','pending');
   await expect(page.locator('.site-header')).toBeHidden();
   await expect(page.locator('html')).toHaveAttribute('data-intro','skip',{timeout:4000});
   await expect(page.locator('.site-header')).toBeVisible();
   await expect(page.locator('.hero-copy h1')).toBeVisible();
+  await page.unroute(mainModule);
+  await page.reload();
+  await expect(page.locator('[data-opening-overlay]')).toHaveAttribute('data-active','true');
 });

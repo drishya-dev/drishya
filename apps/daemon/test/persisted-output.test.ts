@@ -17,6 +17,7 @@ it('records how commands and fetches ran, and reads saved output only from the h
   writeFileSync(join(results, 'big.txt'), `line 1\nkey ${secret}\nline 3\n`);
   writeFileSync(join(dir, 'elsewhere', 'tool-results', 'x.txt'), 'not the harness folder');
   writeFileSync(join(results, 'env.txt'), 'SECRET=1');
+  mkdirSync(join(results, 'retained-directory'));
   const t = '2026-10-21T00:00:00Z', base = { timestamp: t, cwd: dir, sessionId: session };
   const call = (id: string, name: string, input: unknown) => ({ ...base, type: 'assistant', uuid: `a-${id}`, message: { id: `m-${id}`, role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } });
   const result = (id: string, toolUseResult: unknown, text = 'output') => ({ ...base, type: 'user', uuid: `r-${id}`, toolUseResult, message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: text }] } });
@@ -29,6 +30,7 @@ it('records how commands and fetches ran, and reads saved output only from the h
     call('b4', 'Bash', { command: 'cat .env' }), result('b4', shell({ persistedOutputPath: join(results, 'env.txt') })),
     call('b5', 'Bash', { command: 'grep -r nothing .' }), result('b5', shell({ stdout: '', returnCodeInterpretation: 'No matches found', interrupted: true })),
     call('b6', 'Bash', { command: 'pnpm dev' }), result('b6', shell({ backgroundTaskId: 'task9', timedOutAfterMs: 600000 })),
+    call('b7', 'Bash', { command: 'pnpm lint' }), result('b7', shell({ persistedOutputPath: join(results, 'retained-directory') })),
     call('w1', 'WebFetch', { url: 'https://example.com/docs', prompt: 'read' }), result('w1', { url: 'https://example.com/docs', code: 200, codeText: 'OK', bytes: 52465, durationMs: 1840, result: 'Docs text' }),
     { ...base, type: 'user', uuid: 'p2', permissionMode: 'acceptEdits', message: { role: 'user', content: 'Again' } },
     { ...base, type: 'user', uuid: 'p3', permissionMode: 'auto', message: { role: 'user', content: 'Now on auto' } },
@@ -54,4 +56,5 @@ it('records how commands and fetches ran, and reads saved output only from the h
   expect(await readPersistedOutput(app.store, recordingId, `${recordingId}.b3`)).toEqual({ available: false, reason: 'removed' });
   expect(await readPersistedOutput(app.store, recordingId, `${recordingId}.b4`)).toEqual({ available: false, reason: 'protected' });
   expect(await readPersistedOutput(app.store, recordingId, `${recordingId}.b5`)).toEqual({ available: false, reason: 'not-recorded' });
+  expect(await readPersistedOutput(app.store, recordingId, `${recordingId}.b7`)).toEqual({ available: false, reason: 'removed' });
 });

@@ -2,19 +2,22 @@
 // node scripts/site-footage-publish.ts .local/site-footage-real/<run>
 // After Yash reviews review.html: repeat with --approve <printed digest>.
 import{createHash,randomBytes}from'node:crypto';
-import{lstatSync,readFileSync,realpathSync,writeFileSync,renameSync}from'node:fs';
+import{lstatSync,realpathSync,writeFileSync,renameSync}from'node:fs';
 import{resolve,sep,join}from'node:path';
 import{parseArgs}from'node:util';
 import{fileURLToPath}from'node:url';
 import{FEATURES}from'../apps/site/src/footage.ts';
+import{readVerifiedFile}from'./lib/read-verified-file.ts';
+
+const MAX_METADATA_BYTES = 1024 * 1024;
+const MAX_FRAME_BYTES = 8 * 1024 * 1024;
 
 const {values,positionals}=parseArgs({allowPositionals:true,options:{approve:{type:'string'}}});
 if(positionals.length!==1)throw Error('Provide one capture directory under .local.');
 const root=fileURLToPath(new URL('../',import.meta.url));
 const directory=realpathSync(resolve(positionals[0]!)),local=realpathSync(resolve(root,'.local'));
 if(!directory.startsWith(local+sep)||lstatSync(resolve(positionals[0]!)).isSymbolicLink())throw Error('Capture must be inside this worktree’s .local directory.');
-const metadata=join(directory,'capture.json');if(lstatSync(metadata).isSymbolicLink()||!lstatSync(metadata).isFile())throw Error('Capture metadata must be a regular file.');
-let capture;try{capture=JSON.parse(readFileSync(metadata,'utf8'));}catch{throw Error('Capture metadata is invalid.');}
+let capture;try{capture=JSON.parse(readVerifiedFile(join(directory,'capture.json'),MAX_METADATA_BYTES).toString('utf8'));}catch{throw Error('Capture metadata is invalid.');}
 if(!capture.complete||capture.failures.length||capture.reviewed)throw Error('Only a complete, unfailed, unmodified capture can be reviewed.');
 const pairs:[string,string,string?][]=[
  ['explorer','r-explorer','explorer-open-0'],['history-a','r-history-a'],['history-b','r-history-b','history-step'],['workspace','r-workspace'],
@@ -27,9 +30,8 @@ const targets=new Map<string,{click?:[number,number];zoom?:[number,number,number
 const [width,height]=capture.viewport as[number,number];
 if(width!==1440||height!==900)throw Error('Capture must use the agreed 1440×900 viewport.');
 for(const [name,source,key] of pairs){
- const file=join(directory,`${source}.jpg`),stat=lstatSync(file);
- if(stat.isSymbolicLink()||!stat.isFile()||stat.size>8*1024*1024)throw Error('Invalid capture asset.');
- const bytes=readFileSync(file);if(bytes[0]!==255||bytes[1]!==216)throw Error('Capture asset is not JPEG.');
+ const bytes=readVerifiedFile(join(directory,`${source}.jpg`),MAX_FRAME_BYTES);
+ if(bytes[0]!==255||bytes[1]!==216)throw Error('Capture asset is not JPEG.');
  if(!capture.frames.includes(source)||!capture.frameSources[source])throw Error('Frame provenance is missing.');
  const provenance=capture.frameSources[source];if(!['claude-code','codex','antigravity'].includes(provenance.harness)||!/^rec_[a-f0-9]{8,64}$/.test(provenance.recording))throw Error('Invalid frame provenance.');
  buffers.set(name,bytes);digest.update(name).update(bytes);

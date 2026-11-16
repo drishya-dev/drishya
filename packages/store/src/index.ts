@@ -7,7 +7,7 @@
 // dedicated worker is a tracked follow-up (engineering plan §1).
 
 import { createHash, randomUUID } from 'node:crypto';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { isPersonPrompt, isBlobText } from '@drishya/contracts';
@@ -379,6 +379,12 @@ export class Store {
     this.dataDir = dataDir;
     this.isMemory = !!opts.memory;
     mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+    // SEC-4: `mode` applies only to a directory this call creates. A folder that already existed (made by hand, restored from a
+    // backup, created by an older version under a loose umask) keeps its bits, and the database in it is then readable by every
+    // local user. Tighten it; on Windows the profile's access list is what protects the folder and chmod does nothing.
+    if (!opts.memory && !opts.readOnly && process.platform !== 'win32') {
+      try { chmodSync(dataDir, 0o700); } catch { /* not ours to change (a shared or read-only mount): leave it */ }
+    }
     this.db = new DatabaseSync(opts.memory ? ':memory:' : join(dataDir, 'drishya.db'), { readOnly: opts.readOnly });
     this.blobs = new BlobStore(join(dataDir, 'blobs'));
     this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000; PRAGMA temp_store = FILE; PRAGMA cache_size = -8192;');
@@ -1367,7 +1373,7 @@ export class Store {
 
   /** Hits keep captured native turn numbers; otherwise count person prompts, excluding harness notices. */
   search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
-    const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
+    const safe = query.replace(/["*^:()\u0000-\u001f]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
     // Read prompt metadata once, not once per hit. Large bodies use their stored prefix:
     // every recognised harness wrapper is a leading shape, before any clipping.
@@ -1415,7 +1421,7 @@ export class Store {
   /** One worker-side FTS query, never an unbounded list of recording IDs. */
   searchLibrary(query: LibrarySearchQuery): LibrarySearchPage {
     if(query.q.length>200)throw new Error('Library search is limited to 200 characters');
-    const safe = query.q.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
+    const safe = query.q.replace(/["*^:()\u0000-\u001f]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
     if (!safe) return {items:[]};
     const count=Math.max(1,Math.min(50,Math.trunc(query.count??50)));
     const where=['search MATCH ?', 'search.rowid < ?'];

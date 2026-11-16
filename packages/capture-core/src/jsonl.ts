@@ -2,7 +2,8 @@
 // (engineering plan §5: "a 2 GB session is not necessarily many small lines").
 
 import { createHash } from 'node:crypto';
-import { open, stat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open, type FileHandle } from 'node:fs/promises';
 
 export interface SourceCursor {
   /** Byte offset just past the last fully consumed line. */
@@ -39,17 +40,28 @@ export interface ReadOptions {
 
 const FINGERPRINT_BYTES = 1024;
 const CHUNK = 1 << 20;
+const JOURNAL_READ_FLAGS = constants.O_RDONLY | (constants.O_NONBLOCK ?? 0);
 // Yield at complete records before an ingest turn must seal/store a large array. This
 // is a soft batch budget, separate from the hard read and individual-record limits.
 const BATCH_BYTES = 4 * 1024 * 1024;
 
+async function journalSize(file: FileHandle): Promise<number> {
+  const info = await file.stat();
+  if (!info.isFile()) throw new Error('Journal source is not a regular file');
+  return info.size;
+}
+
+async function readFingerprint(file: FileHandle, size: number): Promise<string> {
+  const buf = Buffer.alloc(Math.min(FINGERPRINT_BYTES, size));
+  const { bytesRead } = await file.read(buf, 0, buf.length, 0);
+  // An empty or growing-but-short file has an unstable prefix; only fingerprint what exists.
+  return createHash('sha256').update(buf.subarray(0, bytesRead)).digest('hex').slice(0, 16) + ':' + bytesRead;
+}
+
 export async function fingerprintOf(path: string): Promise<string> {
-  const fh = await open(path, 'r');
+  const fh = await open(path, JOURNAL_READ_FLAGS);
   try {
-    const buf = Buffer.alloc(FINGERPRINT_BYTES);
-    const { bytesRead } = await fh.read(buf, 0, FINGERPRINT_BYTES, 0);
-    // An empty or growing-but-short file has an unstable prefix; only fingerprint what exists.
-    return createHash('sha256').update(buf.subarray(0, bytesRead)).digest('hex').slice(0, 16) + ':' + bytesRead;
+    return await readFingerprint(fh, await journalSize(fh));
   } finally {
     await fh.close();
   }
@@ -60,29 +72,31 @@ export const initialCursor = (): SourceCursor => ({ offset: 0, generation: 0, fi
 export async function readJsonl(path: string, from: SourceCursor, opts: ReadOptions = {}): Promise<ReadResult> {
   const maxRecord = opts.maxRecordBytes ?? 16 * 1024 * 1024;
   const maxRead = opts.maxReadBytes ?? 64 * 1024 * 1024;
-  const st = await stat(path);
-  let cursor = { ...from };
-  let reset: ReadResult['reset'];
-
-  const fp = await fingerprintOf(path);
-  if (cursor.fingerprint) {
-    const [, oldLen] = cursor.fingerprint.split(':');
-    const [, newLen] = fp.split(':');
-    const comparable = Number(oldLen) === FINGERPRINT_BYTES && Number(newLen) === FINGERPRINT_BYTES;
-    if (st.size < cursor.offset) reset = 'truncated';
-    else if (comparable && fp !== cursor.fingerprint) reset = 'replaced';
-  }
-  if (reset) cursor = { offset: 0, generation: cursor.generation + 1, fingerprint: '' };
-  cursor.fingerprint = fp;
-
-  const records: JsonlRecord[] = [];
-  if (st.size <= cursor.offset) return { records, cursor, reset, size: st.size };
-
-  const fh = await open(path, 'r');
+  const fh = await open(path, JOURNAL_READ_FLAGS);
   try {
+    // A journal can rotate while it is being tailed. Its size, prefix and records must
+    // come from the same opened file for the cursor to describe what was read.
+    const size = await journalSize(fh);
+    const fp = await readFingerprint(fh, size);
+    let cursor = { ...from };
+    let reset: ReadResult['reset'];
+
+    if (cursor.fingerprint) {
+      const [, oldLen] = cursor.fingerprint.split(':');
+      const [, newLen] = fp.split(':');
+      const comparable = Number(oldLen) === FINGERPRINT_BYTES && Number(newLen) === FINGERPRINT_BYTES;
+      if (size < cursor.offset) reset = 'truncated';
+      else if (comparable && fp !== cursor.fingerprint) reset = 'replaced';
+    }
+    if (reset) cursor = { offset: 0, generation: cursor.generation + 1, fingerprint: '' };
+    cursor.fingerprint = fp;
+
+    const records: JsonlRecord[] = [];
+    if (size <= cursor.offset) return { records, cursor, reset, size };
+
     const batchStart = cursor.offset;
     let pos = cursor.offset;
-    const end = Math.min(st.size, cursor.offset + maxRead);
+    const end = Math.min(size, cursor.offset + maxRead);
     let pending: Buffer[] = [];
     let pendingBytes = 0;
     let lineStart = pos;
@@ -123,43 +137,43 @@ export async function readJsonl(path: string, from: SourceCursor, opts: ReadOpti
         lineStart = lineEnd;
         cursor.offset = lineEnd;
         i = stop + 1;
-        if (cursor.offset - batchStart >= BATCH_BYTES) return { records, cursor, reset, size: st.size };
+        if (cursor.offset - batchStart >= BATCH_BYTES) return { records, cursor, reset, size };
       }
       pos += bytesRead;
     }
 
     // An oversized line longer than this whole read: consume what was skipped so the next
     // call makes progress instead of re-reading the same bytes forever.
-    if (skipping && lineStart < end && !(end === st.size && opts.acceptUnterminated)) {
-      if (!gapReported) records.push({ type: 'oversized', offset: lineStart, bytes: end - lineStart });
-      cursor.offset = end;
+    if (skipping && lineStart < pos && !(pos === size && opts.acceptUnterminated)) {
+      if (!gapReported) records.push({ type: 'oversized', offset: lineStart, bytes: pos - lineStart });
+      cursor.offset = pos;
       cursor.inOversized = true;
-      return { records, cursor, reset, size: st.size };
+      return { records, cursor, reset, size };
     }
 
     // A trailing line without a newline is only accepted for a completed file, and only
     // once it parses — a writer may be half-way through it.
-    if (lineStart < end && end === st.size && opts.acceptUnterminated) {
-      const bytes = end - lineStart;
+    if (lineStart < pos && pos === size && opts.acceptUnterminated) {
+      const bytes = pos - lineStart;
       if (skipping) {
         if (!gapReported) records.push({ type: 'oversized', offset: lineStart, bytes });
-        cursor.offset = end;
+        cursor.offset = pos;
       } else {
         const text = Buffer.concat(pending).toString('utf8').trim();
         if (text) {
           try {
             records.push({ type: 'record', offset: lineStart, bytes, value: JSON.parse(text) });
-            cursor.offset = end;
+            cursor.offset = pos;
           } catch {
             // leave it for the next read
           }
-        } else cursor.offset = end;
+        } else cursor.offset = pos;
       }
     }
+    return { records, cursor, reset, size };
   } finally {
     await fh.close();
   }
-  return { records, cursor, reset, size: st.size };
 }
 
 function pushLine(records: JsonlRecord[], buf: Buffer, offset: number, bytes: number) {

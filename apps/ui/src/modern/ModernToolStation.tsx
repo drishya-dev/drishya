@@ -127,11 +127,15 @@ export function ModernToolStation({ projection, scene, agents }: {
       return;
     }
 
-    const before = node.getBoundingClientRect().top;
+    const before = node.getBoundingClientRect().top, beforeHeight = node.offsetHeight;
     const wasOpen = details.open;
     if (frame.current !== undefined) cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => {
+    let frames = 0;
+    // MOTION-4b: a disclosure's content becomes visible one frame after `open` flips (the paired disclosure motion), so wait up to
+    // three frames for the dock's own size to change before measuring where it has to travel from.
+    const measure = () => {
       frame.current = undefined;
+      if (node.isConnected && details.isConnected && details.open !== wasOpen && node.offsetHeight === beforeHeight && ++frames < 3) { frame.current = requestAnimationFrame(measure); return; }
       if (!node.isConnected || !details.isConnected || details.open === wasOpen || !node.checkVisibility()) return;
       recentering.current?.cancel();
       syncCenter();
@@ -145,7 +149,8 @@ export function ModernToolStation({ projection, scene, agents }: {
         [{ transform: 'translateY(' + offset + 'px)' }, { transform: 'none' }],
         { duration: surfaceDuration('panel', wasOpen), easing: surfaceEasing() },
       );
-    });
+    };
+    frame.current = requestAnimationFrame(measure);
   }
 
   return <div ref={rail} className="toolbox-rail">

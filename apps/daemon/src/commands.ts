@@ -60,7 +60,7 @@ export async function main() {
       console.log(`  Open:  ${running.launchUrl}`);
       if (values.dev) console.log(`  Dev UI: http://127.0.0.1:5173/#token=${running.token}  (run \`pnpm ui:dev\`)`);
       console.log(`  Data:  ${running.app.store.dataDir}\n`);
-      if (!values['no-open'] && !values.dev) openBrowser(running.launchUrl);
+      if (!values['no-open'] && !values.dev) openBrowser(running.openUrl()); // SEC-4: a one-time code, not the token: this link is in the browser launcher's command line
       const stop = async () => {
         await running.close();
         await running.app.close();

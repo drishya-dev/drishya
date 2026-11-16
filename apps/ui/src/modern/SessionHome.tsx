@@ -19,6 +19,7 @@ import { elapsed } from '../lib/now-state.ts';
 import { importLabel, writingSince, type ImportProgress } from '../lib/home-import.ts';
 import { useWaitNotice } from '../lib/use-wait-notice.ts';
 import { HomeWaitCard } from '../components/WaitCard.tsx';
+import { useReveal } from '../lib/reveal.ts';
 
 const statCount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 function SessionStats({stats}: {stats: RecordingSummary['stats']}) {
@@ -76,6 +77,7 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
   },[recordings,sources]);
   const active=useMemo(()=>inventory.flatMap(session=>{const since=session.nested?undefined:writingSince({sourceModifiedAt:session.source?.modifiedAt,health:session.recording?.health},now.getTime());return since===undefined?[]:[{session,since}];}).sort((a,b)=>b.since-a.since).map(item=>item.session),[inventory,now]);
   const showIntro=intro??inventory.length===0;
+  const introduction=useReveal<HTMLParagraphElement>(showIntro);
   useEffect(()=>setWorkspacesOpen(false),[phone]);
   useEffect(()=>{
     if(!phone||!workspacesOpen)return;
@@ -161,7 +163,7 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
       </div>
     </section>
     <div className="mh-sheet">
-    <section className="mh-intro"><div><span className="mh-eyebrow">Your work, in view</span><h1>{showIntro?'Your agents. In view.':'Your sessions.'}</h1>{showIntro&&<p id="home-introduction">Drishya brings agent work, code and review into one local workspace.</p>}</div><div className="mh-intro-actions"><button aria-expanded={showIntro} className="btn ghost mh-about" aria-label="About Drishya" onClick={()=>setIntro(!showIntro)}><svg className="mh-about-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg><span>{showIntro?'Less introduction':'About Drishya'}</span></button><button className="btn mh-refresh" onClick={()=>void refreshSessions()} disabled={refreshing} aria-busy={refreshing}><InterfaceGlyph name="refresh"/>{refreshing?'Refreshing…':'Refresh sessions'}</button></div></section>
+    <section className="mh-intro"><div><span className="mh-eyebrow">Your work, in view</span><h1>{showIntro?'Your agents. In view.':'Your sessions.'}</h1>{introduction.shown&&<p ref={introduction.ref} id="home-introduction">Drishya brings agent work, code and review into one local workspace.</p>}</div><div className="mh-intro-actions"><button aria-expanded={showIntro} className="btn ghost mh-about" aria-label="About Drishya" onClick={()=>setIntro(!showIntro)}><svg className="mh-about-mark" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg><span>{showIntro?'Less introduction':'About Drishya'}</span></button><button className="btn mh-refresh" onClick={()=>void refreshSessions()} disabled={refreshing} aria-busy={refreshing}><InterfaceGlyph name="refresh"/>{refreshing?'Refreshing…':'Refresh sessions'}</button></div></section>
     <HomeOverview sessions={inventory.filter(s=>!s.nested)} groups={projects} now={now} onGroup={key=>{choose(key);dock(true);}}/>
     <section className="mh-library" aria-label="Session library"><div className="mh-filters"><label className="mh-search"><InterfaceGlyph name="search"/><input aria-label="Find sessions" placeholder="Search sessions or workspaces…" onFocus={()=>dock(true)} maxLength={200} value={query} onChange={e=>{setQuery(e.target.value);reset();}} onKeyDown={e=>{if(e.key==='Escape'&&query){e.preventDefault();e.stopPropagation();setQuery('');reset();}}}/>{query&&<button className="mh-clear-search icon-btn" aria-label="Clear session search" onClick={()=>{setQuery('');reset();}}>×</button>}</label><select aria-label="Harness" value={harness} onChange={e=>{setHarness(e.target.value);reset();}}><option value="all">All harnesses</option><option value="codex">Codex</option><option value="claude-code">Claude Code</option><option value="antigravity">Antigravity</option></select><select aria-label="Session time range" value={days} onChange={e=>{setDays(Number(e.target.value));reset();}}><option value={0}>All time</option><option value={1}>Last day</option><option value={7}>Last week</option><option value={30}>Last month</option></select></div>
       {error&&<div className="mh-error" role="alert">{error}<button className="btn ghost" onClick={()=>void refreshSessions()} disabled={refreshing}>Retry</button></div>}

@@ -1,7 +1,7 @@
 // Classifying shell commands into read / search / test. A deterministic rule over the captured
 // command text — always labelled derived, never presented as the harness's own statement.
 
-import { isTestCommand } from './tests.ts';
+import { firstShellSegment, isTestCommand } from './tests.ts';
 
 export type ShellClass =
   | { kind: 'test' }
@@ -11,42 +11,57 @@ export type ShellClass =
 
 export const SHELL_RULE = 'shell-classify-v1';
 
-/** Split on whitespace, honouring simple quotes. Enough for classification, not a shell parser. */
-function words(cmd: string): string[] {
+/** Split on whitespace, honouring simple quotes and keeping each argument's original spelling. */
+function words(cmd: string): string[] | undefined {
   const out: string[] = [];
-  const re = /"((?:\\.|[^"\\])*)"|'([^']*)'|(\S+)/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(cmd))) out.push(m[1] ?? m[2] ?? m[3] ?? '');
+  let i = 0;
+  while (i < cmd.length) {
+    const char = cmd[i]!;
+    if (/\s/.test(char)) { i++; continue; }
+    if (char === '"' || char === "'") {
+      const start = ++i;
+      while (i < cmd.length && cmd[i] !== char) {
+        if (cmd[i] === '\\' && char === '"') i++;
+        i++;
+      }
+      // The boundary scan treats doubled quotes as one argument, but the spelling varies by shell.
+      if (i >= cmd.length || cmd[i + 1] === char) return undefined;
+      out.push(cmd.slice(start, i++));
+    } else {
+      const start = i++;
+      while (i < cmd.length && !/\s/.test(cmd[i]!)) i++;
+      out.push(cmd.slice(start, i));
+    }
+  }
   return out;
 }
 
-/** The single command we can classify; pipelines and chains are only classified by their head. */
-function head(cmd: string): string {
-  let c = cmd.trim();
+function head(cmd: string): ReturnType<typeof firstShellSegment> {
+  const trimmed = cmd.trim();
   // `cd dir && cmd` is common in agent shells; the interesting part follows.
-  const cd = /^cd\s+("[^"]+"|'[^']+'|\S+)\s*(&&|;)\s*/.exec(c);
-  if (cd) c = c.slice(cd[0].length);
-  return c.split(/\s*(?:\|\||&&|;|\|)\s*/)[0] ?? c;
+  const cd = /^cd\s+("[^"]+"|'[^']+'|\S+)\s*(&&|;)\s*/.exec(trimmed);
+  return firstShellSegment(trimmed.slice(cd?.[0].length ?? 0));
 }
 
 export function classifyShell(command: string): ShellClass {
   if (isTestCommand(command)) return { kind: 'test' };
-  const h = head(command);
+  const { text: h, allowRead, multiline } = head(command);
+  if (multiline) return { kind: 'shell' };
   const w = words(h);
+  if (!w) return { kind: 'shell' };
   const bin = (w[0] ?? '').split(/[\\/]/).pop()!.toLowerCase().replace(/\.exe$/, '');
   const args = w.slice(1);
   const positional = args.filter((a) => !a.startsWith('-'));
-  const isPipeline = h !== command.trim() && /\|/.test(command);
 
-  if (!isPipeline && (bin === 'cat' || bin === 'type' || bin === 'get-content' || bin === 'gc' || bin === 'nl' || bin === 'bat') && positional.length === 1) {
+  if (allowRead && (bin === 'cat' || bin === 'type' || bin === 'get-content' || bin === 'gc' || bin === 'nl' || bin === 'bat') && positional.length === 1) {
     return { kind: 'read', path: positional[0]! };
   }
-  if (bin === 'sed' && args[0] === '-n') {
+  if (allowRead && bin === 'sed' && args[0] === '-n') {
     const range = /^'?(\d+),(\d+)p'?$/.exec(args[1] ?? '');
     const file = args[2];
     if (range && file && args.length === 3) return { kind: 'read', path: file, start: Number(range[1]), end: Number(range[2]) };
   }
-  if ((bin === 'head' || bin === 'tail') && positional.length >= 1) {
+  if (allowRead && (bin === 'head' || bin === 'tail') && positional.length >= 1) {
     const file = positional.at(-1)!;
     if (!/^\d+$/.test(file)) {
       const n = Number(/-n\s*(\d+)|-(\d+)/.exec(h)?.slice(1).find(Boolean) ?? 10);

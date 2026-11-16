@@ -27,6 +27,18 @@ export interface PatchFile {
   hunks: Hunk[];
 }
 
+const FILE_HEADERS = [
+  ['*** Update File:', 'update'],
+  ['*** Add File:', 'add'],
+  ['*** Delete File:', 'delete'],
+] as const;
+const MOVE_HEADER = '*** Move to:';
+
+function patchPath(label: string): string | undefined {
+  const path = label.trim();
+  return path && !/[\r\n\u2028\u2029]/.test(path) ? path : undefined;
+}
+
 /** Read only line ranges actually reported in a unified diff. Never guess them from context. */
 export function parseUnifiedHunks(content: string): Hunk[] {
   const hunks: Hunk[] = [];
@@ -50,17 +62,21 @@ export function parseApplyPatch(text: string): PatchFile[] {
   };
   for (const raw of text.split('\n')) {
     const line = raw.replace(/\r$/, '');
-    let m: RegExpExecArray | null;
-    if ((m = /^\*\*\* (Update|Add|Delete) File:\s*(.+)$/.exec(line))) {
+    const header = FILE_HEADERS.find(([prefix]) => line.startsWith(prefix));
+    if (header) {
       flush();
-      cur = { path: m[2]!.trim(), op: m[1]!.toLowerCase() as PatchFile['op'], hunks: [] };
+      const [prefix, op] = header;
+      const path = patchPath(line.slice(prefix.length));
+      if (path === undefined) { cur = undefined; continue; }
+      cur = { path, op, hunks: [] };
       files.push(cur);
       if (cur.op === 'add') hunk = { oldStart: 0, oldLines: 0, newStart: 1, newLines: 0, lines: [] };
       continue;
     }
     if (!cur) continue;
-    if ((m = /^\*\*\* Move to:\s*(.+)$/.exec(line))) {
-      cur.moveTo = m[1]!.trim();
+    if (line.startsWith(MOVE_HEADER)) {
+      const path = patchPath(line.slice(MOVE_HEADER.length));
+      if (path !== undefined) cur.moveTo = path;
       continue;
     }
     if (line.startsWith('*** End Patch') || line.startsWith('*** End of File')) continue;

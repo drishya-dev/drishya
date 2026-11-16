@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import type { Artifact } from '@drishya/contracts';
 import { useApp } from '../state.ts';
 import { CodeView, ProvenanceBadge } from './common.tsx';
+import { useReveal } from '../lib/reveal.ts';
 
 export interface SourceReference {
   text: string;
@@ -26,6 +27,7 @@ export function ReadingReferenceProvider({ children }: { children: ReactNode }) 
   const [open, setOpen] = useState(false);
   const [copyStatus, setCopyStatus] = useState('');
   const toggle = useRef<HTMLButtonElement>(null);
+  const reveal = useReveal<HTMLDivElement>(open);
   const close = useRef<HTMLButtonElement>(null);
   // Check during render as well: no stale reference flashes across a session or replay boundary.
   const reference = available && pin && pin.source === source && pin.recordingId === recordingId && pin.mode === mode && pin.cutoff === cutoff ? pin.reference : undefined;
@@ -48,7 +50,7 @@ export function ReadingReferenceProvider({ children }: { children: ReactNode }) 
         </button>
         <button className="btn ghost small" aria-label="Remove pinned source reference" onClick={() => { setPin(undefined); setOpen(false); }}>Remove</button>
       </div>
-      {open && <div id="pinned-source-content">
+      {reveal.shown && <div id="pinned-source-content" ref={reveal.ref}>
         <div className="reader-tools"><ProvenanceBadge artifact={reference.artifact} /><span className="muted small">Temporary historical range · not current workspace</span><button className="btn ghost small" ref={close} onClick={minimize}>Minimize reference</button></div>
         {/* CodeView removes one terminator; preserve a selected final blank source line. */}
         <div className="reference-content"><CodeView text={`${reference.text}\n`} startLine={reference.start} path={reference.path} /></div>
