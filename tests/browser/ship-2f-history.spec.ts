@@ -80,6 +80,10 @@ test.afterAll(async () => {
 
 test('SHIP-2f: history separates thinking, quiet notices, compaction seams, full-column 600px cards, no orphan chevrons, and readable plan provenance', async ({ page }) => {
   await page.addInitScript(() => { localStorage.setItem('drishya.reasoningDetail', 'expanded'); });
+  // Each palette and viewport samples a fresh location, not the previous case's reopened plan.
+  await page.route('**/v1/working-locations', route => route.request().method() === 'GET'
+    ? route.fulfill({json: {version: 1, sessions: []}})
+    : route.continue());
 
   for (const width of [600, 1440]) {
     for (const palette of ['jet', 'midnight', 'paper'] as const) {
@@ -98,6 +102,7 @@ test('SHIP-2f: history separates thinking, quiet notices, compaction seams, full
       await expect(planToggle).toBeVisible();
       if ((await planToggle.getAttribute('aria-expanded')) !== 'true') await planToggle.click();
       await expect(page.locator('article.op-plan .prov').first()).toBeVisible();
+      await expect(page.locator('.history .prose.prose-reasoning:not(.reasoning-gap)').first()).toBeVisible();
 
       const metrics = await page.evaluate(() => {
         const think = document.querySelector('.history .prose.prose-reasoning:not(.reasoning-gap)')!;

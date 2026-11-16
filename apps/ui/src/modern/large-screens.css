@@ -181,5 +181,5 @@
 :root[data-ui-version=modern] .connected-workspace .folder-explorer .tree-evidence-filter-menu { z-index:20; }
 :root[data-ui-version=modern] .connected-workspace .workspace-header:has(details[open]),
 :root[data-ui-version=modern] .connected-workspace :is(.workspace-leading,.workspace-secondary,.modern-review-control):has(details[open]),
-:root[data-ui-version=modern] .connected-workspace .prompt-composer:has(details[open],.composer-add-menu:not([hidden])) { z-index:70; }
+:root[data-ui-version=modern] .connected-workspace .prompt-composer:not(.composer-minimized):has(.native-options[open],.composer-add-menu:not([hidden])) { z-index:70; }
 :root[data-ui-version=modern] .connected-workspace .workspace-header:has(details[open]) .studio-actions { z-index:5; }

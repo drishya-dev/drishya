@@ -38,21 +38,22 @@ test('prose uses the reading column and the prompt is a capsule on the right', a
     const prose = page.locator('.history .prose').first();
     await prose.scrollIntoViewIfNeeded();
 
-    // The prose block spans the reading column; paragraphs keep a measure (no more than 100 characters of the body font).
+    // The prose block spans the reading column; paragraphs keep the UI-39 measure of 75ch in the body font.
     const geometry = await page.evaluate(() => {
       const box = (el: Element) => { const b = el.getBoundingClientRect(); return { left: b.left, right: b.right, width: b.width }; };
       const proseEl = document.querySelector('.history .prose')!, p = proseEl.querySelector('p')!;
       const inner = document.querySelector('.history-inner')!;
       const cs = getComputedStyle(inner);
       const content = { left: inner.getBoundingClientRect().left + parseFloat(cs.paddingLeft), right: inner.getBoundingClientRect().right - parseFloat(cs.paddingRight) };
-      const sample = document.createElement('span'); sample.textContent = '0'.repeat(75); // UI-39 part 7: lines of 75ch (was 100ch) sample.style.cssText = `position:absolute;visibility:hidden;white-space:pre;font:${getComputedStyle(p).font}`;
-      document.body.append(sample); const hundred = sample.getBoundingClientRect().width; sample.remove();
+      const sample = document.createElement('span');
+      sample.style.cssText = `position:absolute;visibility:hidden;width:75ch;font:${getComputedStyle(p).font}`;
+      document.body.append(sample); const measure = sample.getBoundingClientRect().width; sample.remove();
       const marks = document.querySelector('.history-prompt-marks')?.getBoundingClientRect();
-      return { prose: box(proseEl), p: box(p), content, hundred, marksLeft: marks?.left ?? Infinity, doc: document.documentElement.scrollWidth };
+      return { prose: box(proseEl), p: box(p), content, measure, marksLeft: marks?.left ?? Infinity, doc: document.documentElement.scrollWidth };
     });
     expect(geometry.prose.width, `prose spans the column at ${width}`).toBeGreaterThan(geometry.content.right - geometry.content.left - 40 - (width <= 880 ? 26 : 0));
-    expect(geometry.p.width).toBeLessThanOrEqual(geometry.hundred + 1);
-    expect(geometry.p.width).toBeGreaterThan(Math.min(geometry.hundred, geometry.prose.width) * 0.8);
+    expect(geometry.p.width).toBeLessThanOrEqual(geometry.measure + 1);
+    expect(geometry.p.width).toBeGreaterThan(Math.min(geometry.measure, geometry.prose.width) * 0.8);
     expect(geometry.prose.right, 'prose clears the prompt rail').toBeLessThanOrEqual(geometry.marksLeft + 1);
     expect(geometry.doc).toBeLessThanOrEqual(width);
 

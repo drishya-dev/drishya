@@ -55,7 +55,9 @@ for(const count of [3,300])test(`${count} agents keep their family and filter in
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:`.local/ui10-agents-${count}-${width}.png`});
  }
- await page.setViewportSize({width:600,height:568});await list.scrollIntoViewIfNeeded();await list.evaluate(el=>el.scrollTop=el.scrollHeight);
+ await page.setViewportSize({width:600,height:568});
+ // At this height the Toolbox itself scrolls as well as the long inventory.
+ await last.scrollIntoViewIfNeeded();
  await expect(last).toBeInViewport();await expect(summary).toBeInViewport();
  expect(await list.evaluate(el=>el.clientHeight)).toBeLessThanOrEqual(Math.ceil(568*.36));
  await summary.press('Escape');await expect(list).toBeHidden();await expect(summary).toBeFocused();
