@@ -14,7 +14,7 @@ import { storageUsage } from './storage.ts';
 
 const repoRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 
-const HELP = `drishya ${VERSION} — see what your coding agents did. Observe only.
+const HELP = `drishya ${VERSION} — see what your coding agents did.
 
   drishya serve [--port 7878] [--no-open] [--dev]   start the local app
   drishya sources [--json]                           list Claude Code and Codex sessions on this machine

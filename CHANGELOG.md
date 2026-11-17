@@ -12,7 +12,7 @@ The first public release.
 
 ### Added
 
-- **Live view and replay** of Claude Code, Codex and Antigravity sessions on one Home: every read, search, command, test and edit shown as the real captured content, in order, beside the repository's files. Read-only capture; secrets are redacted before anything is stored.
+- **Live view and replay** of Claude Code and Codex sessions on one Home: every read, search, command, test and edit shown as the real captured content, in order, beside the repository's files. Read-only capture; secrets are redacted before anything is stored.
 - **Reading tools:** the file the agent is on beside its work with that file's earlier changes, a Workspace for reading and drafting, Changes for comparing branches and pull requests with the session that edited each file, the Git graph, and search across all sessions.
 - **Conversation and Work views** of the same session, and a repository map.
 - **Opt-in controller** for Claude Code and Codex: after per-checkout consent, send the next prompt, answer questions and exact approvals, and interrupt the turn, through each harness's supported protocol. Capture never depends on it.
@@ -22,7 +22,7 @@ The first public release.
 
 ### Known limits
 
-- Built and tested on Windows 11. Linux and macOS are not verified yet.
+- See the [0.1.0 release notes](docs/release-notes-0.1.0.md#platform-verification) for platform verification.
 - Antigravity sessions are read after the fact; live following is planned (see the [roadmap](ROADMAP.md)).
 - Agent journals are not a stable, documented format, so unknown records are shown as unknown rather than guessed.
 

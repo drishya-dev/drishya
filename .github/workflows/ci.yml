@@ -62,9 +62,11 @@ jobs:
   browser:
     if: ${{ (github.event_name == 'workflow_dispatch' || github.event.repository.private == false) && !inputs.checks_only }}
     name: browser (${{ matrix.os }})
-    timeout-minutes: 75
+    # macOS runs one browser at a time: its hosted runner is the smallest, and two workers there produced
+    # load-timing failures in a different spec on most runs (17 Nov, before 0.1.0). Slower, but a red run means a bug.
+    timeout-minutes: ${{ matrix.os == 'macos-latest' && 120 || 75 }}
     env:
-      DRISHYA_WORKERS: 2
+      DRISHYA_WORKERS: ${{ matrix.os == 'macos-latest' && 1 || 2 }}
     strategy:
       fail-fast: false
       matrix:

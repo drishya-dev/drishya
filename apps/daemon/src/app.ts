@@ -13,7 +13,8 @@ import { Store } from '@drishya/store';
 import { HistoryService } from './history.ts';
 import { workingLocations } from '../../../packages/contracts/src/working-locations.ts';
 
-export const VERSION = '0.1.0-draft';
+declare const DRISHYA_PACKAGE_VERSION: string | undefined;
+export const VERSION = typeof DRISHYA_PACKAGE_VERSION === 'string' ? DRISHYA_PACKAGE_VERSION : '0.1.0-draft';
 
 export function dataDir(): string {
   return resolve(process.env.DRISHYA_HOME ?? join(homedir(), '.drishya'));
