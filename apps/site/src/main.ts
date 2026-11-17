@@ -11,9 +11,9 @@ import { createDots, type Dots } from './dots.ts';
 import { createMap, type Tone } from './map.ts';
 import { appScreen, terminalScreen } from './product.ts';
 
-// Install command follows README "Install from npm (at launch)"; the package publishes on launch day. Source links work without a separate docs service.
+// Install commands follow the npm package name `drishya` (Yash, 17 Nov); the package publishes on launch day. Source links work without a separate docs service.
 const SITE = {
-  install: 'npm install -g @drishya-dev/cli',
+  install: 'npx drishya serve',
   repo: 'https://github.com/drishya-dev/drishya',
   links: { docs: 'https://github.com/drishya-dev/drishya#readme', changelog: 'https://github.com/drishya-dev/drishya/blob/main/CHANGELOG.md', issues: 'https://github.com/drishya-dev/drishya/issues', feedback: 'https://github.com/drishya-dev/drishya/issues/new/choose', license: 'https://github.com/drishya-dev/drishya/blob/main/LICENSE' } as Record<string, string>,
 };
