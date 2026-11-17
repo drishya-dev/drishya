@@ -166,23 +166,51 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     launchCodes.delete(code);
     return expires !== undefined && expires > now();
   };
-  const sessionValid = (sid: string): boolean => {
+  const sessionExpired = (s: { created: number; lastSeen: number }, t: number) =>
+    t - s.lastSeen > idleMs || t - s.created > maxAgeMs;
+  const sessionValid = (sid: string, renew = false): boolean => {
     const s = sessions.get(sid);
     if (!s) return false;
     const t = now();
-    if (t - s.lastSeen > idleMs || t - s.created > maxAgeMs) {
-      sessions.delete(sid);
+    if (sessionExpired(s, t)) {
+      revokeSession(sid);
       return false;
     }
-    s.lastSeen = t;
+    if (renew) s.lastSeen = t;
     return true;
   };
   const uiDir = opts.uiDir ?? defaultUiDir();
-  const clients = new Set<ServerResponse>();
+  // A bearer stream uses the server lifetime. Cookie streams belong to the exact session
+  // that authenticated the request, with the same expiry and revocation as ordinary reads.
+  const clients = new Map<ServerResponse, { auth: string | true; beat: NodeJS.Timeout }>();
   let port = opts.port ?? 7878;
 
+  const removeClient = (res: ServerResponse) => {
+    const client = clients.get(res);
+    if (!client) return;
+    clearInterval(client.beat);
+    clients.delete(res);
+    if (!clients.size) {
+      sourceWatch.stop();
+      // Nobody is looking: the tail relaxes its poll and releases the resident fold.
+      app.ingest.setViewerPresent(false);
+      app.ingest.releaseFolds();
+    }
+  };
+  const revokeSession = (sid: string) => {
+    sessions.delete(sid);
+    for (const [res, client] of clients) {
+      if (client.auth !== sid) continue;
+      removeClient(res);
+      res.end();
+    }
+  };
+  const sendToClient = (res: ServerResponse, auth: string | true, data: string) => {
+    if (auth !== true && !sessionValid(auth)) return;
+    if (!writeEvent(res, data)) removeClient(res);
+  };
   const broadcast = (data: string) => {
-    for (const c of clients) if (!writeEvent(c, data)) clients.delete(c);
+    for (const [res, client] of clients) sendToClient(res, client.auth, data);
   };
   const onChange = (ev: ChangeEvent) => {
     broadcast(`event: change\ndata: ${JSON.stringify(ev)}\n\n`);
@@ -205,12 +233,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   const allowedHosts = () => new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
   const allowedOrigins = () => new Set([`http://127.0.0.1:${port}`, `http://localhost:${port}`, ...(opts.devOrigins ?? [])]);
 
-  const authed = (req: IncomingMessage): boolean => {
+  const authed = (req: IncomingMessage): string | true | undefined => {
     const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
     if (bearer && safeEqual(bearer, token)) return true;
     // SEC-4: cookies have no port, so a page on another port of this host can add a second `drishya_session`
     // that browsers send ahead of the real one. Any valid one signs the request in; a bad one cannot lock the person out.
-    return sessionsOf(req).some(sessionValid);
+    return sessionsOf(req).find((sid) => sessionValid(sid, true));
   };
 
   const inFlight = new Set<Promise<void>>();
@@ -229,27 +257,28 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
         if (!bearer || !(safeEqual(bearer, token) || consumeLaunchCode(bearer))) throw new HttpError(401, 'invalid launch token');
         const t = now();
-        for (const [k, v] of sessions) if (t - v.lastSeen > idleMs || t - v.created > maxAgeMs) sessions.delete(k);
+        for (const [sid, session] of sessions) if (sessionExpired(session, t)) revokeSession(sid);
         while (sessions.size >= maxSessions) {
           const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
-          sessions.delete(oldest[0]);
+          revokeSession(oldest[0]);
         }
         const sid = randomBytes(24).toString('hex');
         sessions.set(sid, { created: t, lastSeen: t });
         res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
         return json(res, { ok: true });
       }
-      if (!authed(req)) throw new HttpError(401, 'not signed in to this Drishya launch — open the link printed by `drishya serve`');
+      const auth = authed(req);
+      if (!auth) throw new HttpError(401, 'not signed in to this Drishya launch — open the link printed by `drishya serve`');
       // Sign-out. A cross-site form cannot send DELETE, and Origin is already checked above.
       if (url.pathname === '/v1/session' && req.method === 'DELETE') {
-        for (const sid of sessionsOf(req)) sessions.delete(sid);
+        for (const sid of sessionsOf(req)) revokeSession(sid);
         res.setHeader('set-cookie', 'drishya_session=; Max-Age=0; HttpOnly; SameSite=Strict; Path=/');
         return json(res, { ok: true });
       }
       // State-changing requests need an explicit JSON content type: a CSRF form cannot send one.
       if (req.method !== 'GET' && req.method !== 'HEAD' && !(req.headers['content-type'] ?? '').startsWith('application/json')) throw new HttpError(415, 'JSON body required');
 
-      await route(req, res, url);
+      await route(req, res, url, auth);
     } catch (e) {
       const { status, body } = errorBody(e);
       if (status === 500) console.error(redactText(e instanceof Error ? (e.stack ?? e.message) : String(e)).text);
@@ -273,7 +302,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     void request.finally(() => inFlight.delete(request));
   });
 
-  const route = async (req: IncomingMessage, res: ServerResponse, url: URL) => {
+  const route = async (req: IncomingMessage, res: ServerResponse, url: URL, auth: string | true) => {
     const m = req.method ?? 'GET';
     const parts = url.pathname.split('/').filter(Boolean).slice(1).map(decodeURIComponent); // drop "v1"
     const [a, id, sub, subId] = parts;
@@ -305,20 +334,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       // Every (re)connect starts with the current revisions, so a viewer that missed notices
       // converges even if nothing new is ever written (audit A07).
       res.write(`event: sync\ndata: ${JSON.stringify({ revisions: app.store.revisions() })}\n\n`);
-      clients.add(res);
+      const beat = setInterval(() => sendToClient(res, auth, ': beat\n\n'), 25_000);
+      clients.set(res, { auth, beat });
       app.ingest.setViewerPresent(true);
       sourceWatch.start();
-      const beat = setInterval(() => writeEvent(res, ': beat\n\n') || clients.delete(res), 25_000);
-      req.on('close', () => {
-        clearInterval(beat);
-        clients.delete(res);
-        if (!clients.size) {
-          sourceWatch.stop();
-          // Nobody is looking: the tail relaxes its poll and a resident fold is released (capture continues).
-          app.ingest.setViewerPresent(false);
-          app.ingest.releaseFolds();
-        }
-      });
+      res.once('close', () => removeClient(res));
       return;
     }
     if (a === 'revisions' && m === 'GET') return json(res, { revisions: app.store.revisions() });
@@ -774,7 +794,10 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     close: async () => {
       await controller.close();
       await new Promise<void>((ok) => {
-        for (const c of clients) c.end();
+        for (const c of clients.keys()) {
+          removeClient(c);
+          c.end();
+        }
         sourceWatch.stop();
         app.ingest.off('change', onChange);
         app.ingest.off('health', onHealth);

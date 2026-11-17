@@ -1,9 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import * as fsPromises from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { App } from '../src/app.ts';
 import { readCheckpointFile } from '../src/checkpoint-file.ts';
+
+vi.mock('node:fs/promises', { spy: true });
 
 let dir: string, app: App;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'drishya-checkpoint-')); app = new App(join(dir, 'data')); });
@@ -52,6 +55,26 @@ it('links each edit to its turn checkpoint and reads the backup only with approv
   expect(await readCheckpointFile(app.store, recordingId, 'cccccccccccccccc@v1', true)).toEqual({ available: false, reason: 'not-recorded' });
   expect(await readCheckpointFile(app.store, recordingId, 'bbbbbbbbbbbbbbbb@v1', true)).toEqual({ available: false, reason: 'not-recorded' });
   expect(await readCheckpointFile(app.store, recordingId, '../../projects/C--work/cp-session.jsonl', true)).toEqual({ available: false, reason: 'not-recorded' });
+
+  const outside = join(dir, 'outside');
+  mkdirSync(outside);
+  const backup = 'aaaaaaaaaaaaaaaa@v2';
+  const replacement = join(outside, backup);
+  writeFileSync(replacement, 'synthetic unrelated file');
+  const actualFs = await vi.importActual<typeof fsPromises>('node:fs/promises');
+  const swapped = await actualFs.open(replacement, 'r');
+  const read = vi.spyOn(swapped, 'read');
+  vi.mocked(fsPromises.open).mockResolvedValueOnce(swapped);
+  try {
+    expect(await readCheckpointFile(app.store, recordingId, backup, true)).toEqual({ available: false, reason: 'removed' });
+    expect(read).not.toHaveBeenCalled();
+  } finally {
+    vi.mocked(fsPromises.open).mockReset();
+  }
+
   rmSync(join(history, 'aaaaaaaaaaaaaaaa@v2'));
+  rmSync(join(history, 'cccccccccccccccc@v1'));
+  rmdirSync(history);
+  symlinkSync(outside, history, process.platform === 'win32' ? 'junction' : 'dir');
   expect(await readCheckpointFile(app.store, recordingId, 'aaaaaaaaaaaaaaaa@v2', true)).toEqual({ available: false, reason: 'removed' });
 });

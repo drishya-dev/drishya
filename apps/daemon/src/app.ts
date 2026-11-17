@@ -333,10 +333,29 @@ export function maskLocalPaths<T>(value: T, roots: (string | undefined)[]): T {
   variants.sort((a, b) => b[0].length - a[0].length); // longest first: workspace before home
   const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = variants.map(([v, to]) => [new RegExp(esc(v), process.platform === 'win32' ? 'gi' : 'g'), to] as const);
+  const mask = (s: string) => re.reduce((value, [r, to]) => value.replace(r, to), s);
   const walk = (v: unknown): unknown => {
-    if (typeof v === 'string') return re.reduce((s, [r, to]) => s.replace(r, to), v);
+    if (typeof v === 'string') return mask(v);
     if (Array.isArray(v)) return v.map(walk);
-    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, walk(x)]));
+    if (v && typeof v === 'object') {
+      const entries = Object.entries(v).map(([key, value]) => ({ key, masked: mask(key), value }));
+      const unchanged = new Set(entries.filter(({ key, masked }) => key === masked).map(({ key }) => key));
+      const reserved = new Set(entries.map(({ masked }) => masked));
+      const nextSuffix = new Map<string, number>();
+      return Object.fromEntries(entries.map(({ key, masked, value }) => {
+        let outputKey = masked;
+        if (key !== masked && (unchanged.has(masked) || nextSuffix.has(masked))) {
+          // Keep natural keys and preserve every value when two paths mask to the same key.
+          let suffix = nextSuffix.get(masked) ?? 2;
+          do { outputKey = `${masked} (${suffix++})`; } while (reserved.has(outputKey));
+          reserved.add(outputKey);
+          nextSuffix.set(masked, suffix);
+        } else if (key !== masked) {
+          nextSuffix.set(masked, 2);
+        }
+        return [outputKey, walk(value)];
+      }));
+    }
     return v;
   };
   return walk(value) as T;
