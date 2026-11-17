@@ -6,7 +6,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { request } from 'node:http';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { describeRoutes, extractRoutes, type Route } from './lib/routes.ts';
 import { startScratch, rawCall, type Reply, type Scratch } from './lib/scratch.ts';
 
@@ -271,6 +271,66 @@ describe('sessions', () => {
     const reply = await s.call('/v1/session', { method: 'DELETE', headers: { cookie: mine, origin: 'http://evil.example', ...json } });
     expect(reply.status).toBe(403);
     expect((await s.call('/v1/config', { headers: { cookie: mine } })).status).toBe(200);
+  });
+});
+
+describe('session-bound change streams', () => {
+  it.each(['sign-out', 'idle expiry', 'age expiry', 'eviction'])('ends only the affected stream on %s', async (reason) => {
+    let clock = 1_000_000;
+    const t = await startScratch({ now: () => clock, sessionIdleMs: 100, sessionMaxAgeMs: 200, maxSessions: 2 });
+    const abort = new AbortController();
+    const connect = async (headers: Record<string, string>) => {
+      const signal = AbortSignal.any([abort.signal, AbortSignal.timeout(3000)]);
+      const res = await fetch(t.run.url + '/v1/changes', { headers, signal });
+      expect(res.status).toBe(200);
+      const stream = res.body!.getReader();
+      let initial = '';
+      while (!initial.includes('event: sync') || !initial.endsWith('\n\n')) {
+        const chunk = await stream.read();
+        if (chunk.done) throw new Error('change stream ended before sync');
+        initial += Buffer.from(chunk.value).toString('utf8');
+      }
+      return stream;
+    };
+    try {
+      if (reason === 'idle expiry') vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+      const first = await t.signIn();
+      const revoked = await connect({ cookie: first });
+      if (reason === 'idle expiry') {
+        clock += 50;
+        await vi.advanceTimersByTimeAsync(25_000);
+        const heartbeat = await revoked.read();
+        expect(Buffer.from(heartbeat.value!).toString()).toBe(': beat\n\n');
+      }
+      if (reason === 'age expiry') {
+        clock += 90;
+        expect((await t.call('/v1/config', { headers: { cookie: first } })).status).toBe(200);
+        clock += 90;
+        expect((await t.call('/v1/config', { headers: { cookie: first } })).status).toBe(200);
+      }
+      clock += 1;
+      const second = await t.signIn();
+      const active = await connect({ cookie: second });
+      const bearer = await connect({ ...t.bearer, cookie: first });
+      if (reason === 'sign-out') {
+        expect((await t.call('/v1/session', { method: 'DELETE', headers: { cookie: first } })).status).toBe(200);
+      } else if (reason === 'eviction') {
+        await t.signIn();
+      } else {
+        clock += reason === 'idle expiry' ? 100 : 20;
+      }
+
+      t.run.app.ingest.emit('health', { recordingId: 'synthetic-session' });
+      expect((await revoked.read()).done).toBe(true);
+      for (const stream of [active, bearer]) {
+        const next = await stream.read();
+        expect(next.done).toBe(false);
+        expect(Buffer.from(next.value!).toString()).toContain('event: health');
+      }
+    } finally {
+      abort.abort();
+      try { await t.close(); } finally { vi.useRealTimers(); }
+    }
   });
 });
 

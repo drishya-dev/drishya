@@ -3,7 +3,7 @@ import {CheckoutGrants,checkoutIdentity,checkoutGrantKey,type CheckoutIdentity} 
 // They never stand in for captured historical artifacts.
 import { open, lstat, readFile, realpath } from 'node:fs/promises';
 import { isAbsolute, join, relative, resolve, sep, parse } from 'node:path';
-import { MAX_IMAGE_BYTES, isDeniedPath, redactText, sniffImage, tooManyPixels } from '@drishya/privacy';
+import { MAX_IMAGE_BYTES, hasImageDimensions, isDeniedPath, redactText, sniffImage, tooManyPixels } from '@drishya/privacy';
 import { App, HttpError } from './app.ts';
 import { isIndexableFile } from '@drishya/indexer';
 import { recordedFileRoots, recordedMainRootPrefixes } from './file-roots.ts';
@@ -198,8 +198,8 @@ export class WorkspaceAccess {
       const body = Buffer.alloc(stat.size);
       let read = 0;
       while (read < body.length) { const part = await handle.read(body, read, body.length - read, read); if (!part.bytesRead) break; read += part.bytesRead; }
-      const sniff = sniffImage(body.subarray(0, 65_536));
-      if (!sniff) throw new HttpError(415, 'the file is not a PNG, JPEG, GIF or WebP image');
+      const sniff = sniffImage(body.subarray(0, read));
+      if (!hasImageDimensions(sniff)) throw new HttpError(415, 'the file has no readable PNG, JPEG, GIF or WebP image dimensions');
       if (tooManyPixels(sniff)) throw new HttpError(413, 'the image declares more pixels than the reader supports');
       const after = await lstat(file);
       if (after.isSymbolicLink() || after.ino !== stat.ino || after.dev !== stat.dev || read !== stat.size) throw new HttpError(409, 'file changed while reading');
@@ -245,8 +245,8 @@ export class WorkspaceAccess {
       const after=await lstat(file);
       const finalFile=await this.exactImageFile(path),finalRoot=await this.root(id);
       if(this.imageGrants.get(key)!==grant||(this.accessEpoch.get(id)??0)!==epoch||read!==stat.size||after.isSymbolicLink()||`${after.dev}:${after.ino}:${after.size}:${after.mtimeMs}:${after.ctimeMs}`!==identity||finalFile!==file||finalRoot!==root)throw new HttpError(409,'image or access changed while reading');
-      const sniff=sniffImage(body.subarray(0,65536));
-      if(!sniff)throw new HttpError(415,'the file is not a PNG, JPEG, GIF or WebP image');
+      const sniff=sniffImage(body);
+      if(!hasImageDimensions(sniff))throw new HttpError(415,'the file has no readable PNG, JPEG, GIF or WebP image dimensions');
       if(tooManyPixels(sniff))throw new HttpError(413,'the image declares more pixels than the reader supports');
       return {mime:sniff.mime,body,modifiedAt:stat.mtime.toISOString(),path:file};
     }finally{await handle.close();}
