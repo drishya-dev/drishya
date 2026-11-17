@@ -13,7 +13,9 @@ export * from './image.ts';
 // Azure storage AccountKey, Databricks, Linear, Notion and Discord bot token rules; older stores scrub on open.
 // p5: a string that is a JSON document (a tool argument recorded as JSON text inside JSON) is redacted value by value, because
 // an escaped newline glued to a token defeated every word-boundary rule. p4 data may hold such tokens.
-export const PRIVACY_POLICY_VERSION = 'p5';
+// p6: a structured field whose name says it holds a secret (`password`, `apiKey`, `access-token`, …) has its value redacted
+// whatever the value looks like, at any depth. Pattern rules only see text; the name is evidence they never had. p5 data may hold such values.
+export const PRIVACY_POLICY_VERSION = 'p6';
 
 /** Longest single string kept verbatim; beyond this the tail is cut with a marker. */
 export const MAX_STRING_BYTES = 4 * 1024 * 1024;
@@ -119,6 +121,34 @@ const RULES: Rule[] = [
   },
 ];
 
+/**
+ * p6. Whether an object key names a secret, so the value stored under it is redacted without looking at its shape.
+ * Case and separators do not matter (`apiKey`, `api-key`, `API_KEY`); the key is split into words and judged by its last
+ * word, so `db_password` and `clientSecret` match while `secret_name`, `token_count` and `author` do not. Passwords match
+ * anywhere in the name (`password_confirmation`). Deliberately without a bare `key` or `auth`: `key: "Enter"` and
+ * `auth: "oauth"` are ordinary fields.
+ */
+const SECRET_LAST_WORD = /(?:password|passwd|passphrase|secret|token|apikey|accesskey|privatekey|secretkey|credential|authorization|bearer)$/;
+// A plural names a collection (`secrets`, `tokens`) only on its own; after another word it is usually a count (`max_tokens`).
+const SECRET_PLURAL = /^(?:password|secret|token|credential|apikey)s$/;
+const SECRET_KEY_PREFIX = new Set(['api', 'access', 'private', 'secret', 'signing', 'encryption', 'master', 'ssh', 'session', 'auth', 'client']);
+export function isSecretFieldKey(key: string): boolean {
+  // A key that is already a redaction marker has been handled; its value is judged on its own.
+  if (key.length > 200 || key.includes('[REDACTED:')) return false;
+  const words = key.replace(/([a-z0-9])([A-Z])/g, '$1 $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2').toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  if (!words.length) return false;
+  if (words.some((w) => /^(?:password|passwd|passphrase)s?$/.test(w))) return true;
+  const last = words[words.length - 1]!;
+  if (SECRET_LAST_WORD.test(last) || (words.length === 1 && SECRET_PLURAL.test(last))) return true;
+  return last === 'key' && words.length > 1 && SECRET_KEY_PREFIX.has(words[words.length - 2]!);
+}
+
+/** A value that names where a secret comes from rather than being one: `${TOKEN}`, `<token>`, `process.env.X`, or our own marker. */
+const SECRET_REFERENCE = /^(?:\[REDACTED:[a-z-]+\]|\$\{[^}]*\}|\{\{[^}]*\}\}|<[^>]*>|process\.env\.\w+|os\.environ.*|x{3,}|\*+|\.+|true|false|null|undefined|none)$/i;
+export const isSecretReference = (v: string) => v.length === 0 || SECRET_REFERENCE.test(v.trim());
+export const SECRET_FIELD_RULE = 'secret-field';
+export const SECRET_FIELD_MARKER = `[REDACTED:${SECRET_FIELD_RULE}]`;
+
 /** Paths whose content is never kept, whatever it contains. */
 const DENY_PATH = /(^|[\\/])(\.env(\.[^\\/]*)?|\.netrc|\.npmrc|\.pypirc|id_rsa[^\\/]*|id_ed25519[^\\/]*|id_ecdsa[^\\/]*|credentials(\.json)?|secrets?\.(json|ya?ml|toml)|[^\\/]*\.(pem|key|p12|pfx|keystore|jks))$/i;
 const ALLOW_PATH = /(^|[\\/])\.env\.(example|sample|template|defaults)$/i;
@@ -201,28 +231,35 @@ function replaceAssignments(text: string, keywords: RegExp, replace: (match: str
  * therefore redacted value by value, as the harness's own tools would read it, and written back as JSON.
  */
 const NESTED_JSON_LIMIT = 4 * 1024 * 1024;
+// A JSON document with no escape in it can still hold a field named like a secret, so the gate also looks for such a word.
+const SECRET_WORD_HINT = /password|passwd|passphrase|secret|token|api[_-]?key|apikey|access[_-]?key|private[_-]?key|credential|authorization|bearer/i;
 function redactNested(input: string, plain: RedactResult, depth: number): RedactResult {
-  if (depth > 8 || input.length < 8 || input.length > NESTED_JSON_LIMIT || !input.includes('\\')) return plain;
+  if (depth > 8 || input.length < 8 || input.length > NESTED_JSON_LIMIT) return plain;
   const start = input.search(/\S/);
   if (start < 0 || (input[start] !== '{' && input[start] !== '[')) return plain;
+  if (!input.includes('\\') && !SECRET_WORD_HINT.test(input)) return plain;
   let parsed: unknown;
   try { parsed = JSON.parse(input); } catch { return plain; }
   if (!parsed || typeof parsed !== 'object') return plain;
   const hits = new Map<string, number>();
-  const walk = (v: unknown): unknown => {
+  const hit = (rule: string, count: number) => hits.set(rule, (hits.get(rule) ?? 0) + count);
+  const walk = (v: unknown, secret: boolean): unknown => {
     if (typeof v === 'string') {
+      if (secret && !isSecretReference(v)) { hit(SECRET_FIELD_RULE, 1); return SECRET_FIELD_MARKER; }
       const r = redactNestedAware(v, depth + 1);
-      for (const h of r.hits) hits.set(h.rule, (hits.get(h.rule) ?? 0) + h.count);
+      for (const h of r.hits) hit(h.rule, h.count);
       return r.text;
     }
-    if (Array.isArray(v)) return v.map(walk);
-    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [redactText(k).text, walk(x)]));
+    if (Array.isArray(v)) return v.map((x) => walk(x, secret));
+    if (v && typeof v === 'object') return Object.fromEntries(Object.entries(v as Record<string, unknown>).map(([k, x]) => [redactText(k).text, walk(x, secret || isSecretFieldKey(k))]));
     return v;
   };
-  const cleaned = walk(parsed);
+  const cleaned = walk(parsed, false);
   if (!hits.size) return plain;
-  const final = redactPlain(JSON.stringify(cleaned));
-  for (const h of final.hits) hits.set(h.rule, (hits.get(h.rule) ?? 0) + h.count);
+  // Keep the document's own layout (indented or compact) so a file that is JSON reads the same after redaction.
+  const indent = /^[\[{][ \t]*\r?\n([ \t]+)\S/.exec(input.slice(start))?.[1];
+  const final = redactPlain(JSON.stringify(cleaned, null, indent));
+  for (const h of final.hits) hit(h.rule, h.count);
   return { text: final.text, hits: [...hits].map(([rule, count]) => ({ rule, count })) };
 }
 const redactNestedAware = (input: string, depth: number) => redactNested(input, redactPlain(input), depth);
@@ -291,11 +328,16 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
   const redactions: RedactionNote[] = [];
   let omitted = false;
 
-  const walk = (v: unknown, field: string, denied: boolean): unknown => {
+  const walk = (v: unknown, field: string, denied: boolean, secret = false): unknown => {
     if (typeof v === 'string') {
       if (denied) {
         omitted = true;
         return '[OMITTED: content of a protected file]';
+      }
+      // p6: the key said this value is a secret, so its shape does not matter.
+      if (secret && !isSecretReference(v)) {
+        redactions.push({ field, rule: SECRET_FIELD_RULE, count: 1 });
+        return SECRET_FIELD_MARKER;
       }
       // Redact first, then cut: cutting first can leave a secret's head too short for any rule.
       const r = redactText(v.length > max ? v.slice(0, max * REDACT_WINDOW_FACTOR) : v);
@@ -304,7 +346,7 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
       omitted = true;
       return r.text.slice(0, max) + `\n[TRUNCATED: ${v.length - max} more characters]`;
     }
-    if (Array.isArray(v)) return v.map((x, i) => walk(x, `${field}[${i}]`, denied));
+    if (Array.isArray(v)) return v.map((x, i) => walk(x, `${field}[${i}]`, denied, secret));
     if (v && typeof v === 'object') {
       const o = v as Record<string, unknown>;
       // D7 (revised 21 Oct): an image an adapter captured is kept only if its bytes re-check as an
@@ -329,7 +371,7 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
         omitted = true;
         // The payload goes; what is kept beside it is walked like anything else.
         const kept = Object.fromEntries(Object.entries(o).filter(([k]) => k !== 'base64' && k !== 'data'));
-        return { ...(walk(kept, field, denied) as Record<string, unknown>), omitted: true };
+        return { ...(walk(kept, field, denied, secret) as Record<string, unknown>), omitted: true };
       }
       let childDenied = denied;
       for (const k of PATH_KEYS) {
@@ -345,7 +387,7 @@ export function sanitize<T>(value: T, opts: SanitizeOptions = {}): SanitizeResul
         if (key !== k) for (const h of redactText(k).hits) redactions.push({ field: f, rule: h.rule, count: h.count });
         // Path fields themselves are kept so the user can see *that* a protected file was touched.
         const keep = PATH_KEYS.has(k) || (childDenied && LABEL_KEYS.has(k) && isLabel(x));
-        out[key] = walk(x, f, keep ? false : childDenied);
+        out[key] = walk(x, f, keep ? false : childDenied, secret || (!keep && isSecretFieldKey(k)));
       }
       return out;
     }
