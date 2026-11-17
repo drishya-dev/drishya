@@ -43,7 +43,7 @@ Also read the list once by eye, because an allowlist only knows what was thought
 cd dist/package && npm pack --dry-run
 ```
 
-Then the manual half of the walk, which a script cannot do: start the **installed** package (`node <install>/node_modules/@drishya-dev/cli/apps/daemon/src/cli.mjs serve`), open the link, visit Home, a session, Files, Changes, Git, Search, Settings and the demo with the browser's Network panel open, and confirm every request goes to `127.0.0.1`. Confirm one listener: `netstat -ano | findstr LISTENING` (Windows) or `ss -ltnp` (Linux) shows the daemon on `127.0.0.1` only.
+Then the manual half of the walk, which a script cannot do: start the **installed** package (`node <install>/node_modules/drishya/apps/daemon/src/cli.mjs serve`), open the link, visit Home, a session, Files, Changes, Git, Search, Settings and the demo with the browser's Network panel open, and confirm every request goes to `127.0.0.1`. Confirm one listener: `netstat -ano | findstr LISTENING` (Windows) or `ss -ltnp` (Linux) shows the daemon on `127.0.0.1` only.
 
 ## 3. Dependencies
 
@@ -81,9 +81,9 @@ The tools are single portable binaries (gitleaks from `gitleaks/gitleaks` releas
 - [ ] `SECURITY.md` is at the repository root and GitHub's **Private vulnerability reporting** is enabled (Settings → Code security), so the report link in it works.
 - [ ] Dependabot alerts and security updates are on; open alerts: 0.
 - [ ] Branch protection on `main`; Actions workflow permissions read-only; fork pull requests need approval; no repository secrets (`release.yml` uses npm trusted publishing, which needs none).
-- [ ] The npm trusted publisher for `@drishya-dev/cli` is set (repository `drishya-dev/drishya`, workflow `release.yml`, environment `npm-release`).
+- [ ] The npm trusted publisher for `drishya` is set (repository `drishya-dev/drishya`, workflow `release.yml`, environment `npm-release`).
 - [ ] Run `release.yml` first **without** `publish` and read its log; then, a builder starts it with `publish` ticked. Never run `npm publish` from a laptop: it carries no provenance.
-- [ ] After publishing: `npm view @drishya-dev/cli dist.attestations` shows a provenance attestation, and `npm audit signatures` in a scratch project that installs the package passes.
+- [ ] After publishing: `npm view drishya dist.attestations` shows a provenance attestation, and `npm audit signatures` in a scratch project that installs the package passes.
 - [ ] The README's *Privacy* section still matches the code: re-read it against `tests/security/06-outbound-traffic.test.ts` and the list of opt-ins.
 
 ## 6. Record

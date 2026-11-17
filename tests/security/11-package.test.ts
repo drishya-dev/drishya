@@ -14,7 +14,7 @@ const root = process.cwd();
 const who: LocalIdentity = { home: 'C:\\Users\\someone-else', user: 'someone-else', workspace: 'D:\\work\\drishya' };
 
 const goodManifest = {
-  name: '@drishya-dev/cli', version: '0.1.0', license: 'Apache-2.0', type: 'module',
+  name: 'drishya', version: '0.1.0', license: 'Apache-2.0', type: 'module',
   repository: { type: 'git', url: 'git+https://github.com/drishya-dev/drishya.git' },
   publishConfig: { access: 'public', provenance: true },
   bin: { drishya: './apps/daemon/src/cli.mjs' },

@@ -155,6 +155,8 @@ main, .footer { position: relative; z-index: 1; }
 
 .tools, .install, .privacy, .compare { padding: clamp(96px, 14vh, 160px) 0; }
 .section-lead { margin-top: 18px; color: var(--t2); font-size: 17px; max-width: 62ch; }
+.section-lead a { color: var(--t1); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; transition: text-decoration-color .2s; }
+.section-lead a:hover { text-decoration-color: currentColor; }
 .section-lead code { font-size: .9em; color: var(--ivory); background: rgba(241,238,228,.07); padding: 1px 6px; border-radius: 5px; }
 /* ---------- install ---------- */
 .install-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; }
