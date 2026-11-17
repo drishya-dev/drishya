@@ -23,7 +23,7 @@ export function queuedInputChunk(store: Store, recordingId: string, id: string, 
     if (!visible) return;
   }
   const text = value(observation.payload).text;
-  if (isBlobText(text)) return store.blobs.readTextChunk(text.$blob, start, CHUNK);
+  if (isBlobText(text)) return store.blobsFor([observation.recordingId]).capturedChunk(text.$blob, start, CHUNK);
   if (typeof text !== 'string') return;
   const buffer = Buffer.from(text), begin = Math.min(start, buffer.length);
   if (begin < buffer.length && (buffer[begin]! & 0xc0) === 0x80) throw Error('Invalid UTF-8 boundary.');
@@ -52,7 +52,7 @@ export function queueResolutionEvidence(store: Store, projection: Projection, ow
     if (observation.availability !== 'complete') continue;
     if (observation.kind==='message.user' || observation.kind==='queue.operation') {
       const stored=value(observation.payload).text;
-      const text=typeof stored==='string' ? stored : isBlobText(stored) ? store.blobs.get(stored.$blob) : undefined;
+      const text=typeof stored==='string' ? stored : isBlobText(stored) ? store.blobsFor([observation.recordingId]).captured(stored.$blob) : undefined;
       if (text !== undefined) inputs.set(observation.id,{textFingerprint:createHash('sha256').update(text).digest('hex')+':'+Buffer.byteLength(text),hasText:text.length>0,sourceId:observation.source.sourceId,generation:observation.source.generation});
     }
     if (observation.kind==='turn.end' && !value(observation.payload).reason) ends.push({id:observation.id,agentId:observation.agentId,sourceId:observation.source.sourceId,generation:observation.source.generation});
