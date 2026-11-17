@@ -1,3 +1,10 @@
 packages:
   - packages/*
   - apps/*
+
+# GHSA-fc5q-39xc-vjpf (picomatch ReDoS, high, no patched version yet) reaches only the build and test tools
+# (vite, vitest, tinyglobby). The published package bundles no third-party code, so it is not affected.
+# Ignored so the release audit can pass; remove when picomatch ships a fix. Decision log, 18 Nov 2026.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
