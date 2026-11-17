@@ -84,7 +84,7 @@ try {
   const packed = JSON.parse(command(process.execPath, [npmCli, 'pack', '--json', '--pack-destination', scratch], join(root, 'dist/package'))) as { filename: string }[];
   const tarball = join(scratch, packed[0]!.filename);
   command(process.execPath, [npmCli, 'install', '--prefix', installed, tarball, '--ignore-scripts', '--offline', '--no-audit', '--no-fund']);
-  const packageRoot = join(installed, 'node_modules/@drishya-dev/cli');
+  const packageRoot = join(installed, 'node_modules/drishya');
   for (const line of readFileSync(join(packageRoot, 'SHA256SUMS'), 'utf8').trim().split('\n')) {
     const [, hash, name] = /^([0-9a-f]{64})  (.+)$/.exec(line)!;
     assert.equal(createHash('sha256').update(readFileSync(join(packageRoot, name!))).digest('hex'), hash, `installed checksum: ${name}`);

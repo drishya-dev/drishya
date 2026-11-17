@@ -9,7 +9,7 @@ Drishya runs locally and shows what a coding agent read, ran, and changed alongs
 - **Connected sessions.** Send a prompt to a supported local Claude Code or Codex session from the app after granting workspace access and confirming the session is idle in other clients. The harness applies its own permissions.
 - **Usage.** The Usage menu shows recorded token counts and available context and limit data. Coverage depends on what the harness records, including Codex rate-limit windows when present.
 
-The CLI package is `@drishya-dev/cli` and requires Node.js 24. It opens a desktop browser and supports window widths of 600 px and above. Session data stays on your machine and the server listens on loopback. The [README](../README.md) covers installation, first run, privacy, and uninstall.
+The CLI package is `drishya` and requires Node.js 24. It opens a desktop browser and supports window widths of 600 px and above. Session data stays on your machine and the server listens on loopback. The [README](../README.md) covers installation, first run, privacy, and uninstall.
 
 ## Platform verification
 
@@ -19,6 +19,6 @@ The CLI package is `@drishya-dev/cli` and requires Node.js 24. It opens a deskto
 - A second clean Windows machine walkthrough, physical Mac acceptance, SHIP-10's fresh user review and ten-minute pass, and the final SEC-4b and SEC-5 sign-off remain pending.
 - These results identify the candidate tested. If security or packaging changes replace it, record the replacement commit and digest and rerun the affected acceptance checks.
 
-## Publication package
+## Integration verification
 
-PR #523 proposes the plain package name `drishya`. The candidate documented above is still `@drishya-dev/cli`. Confirm the final package name in its packed manifest and update the install instructions before publishing.
+This checkout combines SHIP-9 with the plain npm name, README/feedback and website launch changes. The 1dcc3e1e results above belong to the earlier scoped-name candidate. Verify this combined package and record its new digest before using it for final installer acceptance.
