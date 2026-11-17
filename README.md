@@ -186,7 +186,7 @@ No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
 - `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
 - To send prompts: `claude` or `codex` installed and signed in.
 
-Drishya runs on Node.js with no native add-ons. See the [release notes](docs/release-notes-0.1.0.md#platform-verification) for Windows, Linux and macOS verification.
+Hand-tested on Windows 11. Drishya runs on Node.js with no native add-ons. CI checks typechecking, units, security, package installation and browsers on Windows, Ubuntu and macOS. A genuine Linux install and live session were checked under WSL2. Physical Mac acceptance remains pending. See the [release notes](docs/release-notes-0.1.0.md#platform-verification) for the exact candidate evidence.
 
 </details>
 
