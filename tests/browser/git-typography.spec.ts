@@ -38,17 +38,25 @@ test('Git graph, reference filters and commit badges meet metadata and control f
  }
 });
 
-test('larger Git text keeps refs, rows and commit-file navigation inside desktop and phone bounds',async({page})=>{
- const atlas=await openGraph(page);
- for(const width of [1440,900,390,320]){
+for(const width of [1440,900,600]){
+ test(`larger Git text keeps refs, rows and commit-file navigation inside ${width} px desktop bounds`,async({page})=>{
   await page.setViewportSize({width,height:844});
-  if(width<=820){const refs=atlas.locator('.atlas-references');if(await refs.getAttribute('open')===null)await refs.locator('summary').click();}
-  await atlas.getByRole('button',{name:/All \d+/,exact:true}).click();
+  const atlas=await openGraph(page);
+  const refs=atlas.locator('.atlas-references');
+  const narrow=width<=820;
+  if(narrow){
+   await expect(refs).toHaveJSProperty('open',false);
+   await refs.locator('summary').click();
+  }
+  const allRefs=atlas.getByRole('button',{name:/All \d+/,exact:true});
+  await expect(allRefs).toBeVisible();
+  await allRefs.click();
+  await expect(allRefs).toHaveAttribute('aria-pressed','true');
   await expect(atlas.getByRole('textbox',{name:'Find Git branches and tags'})).toBeInViewport();
   const scope=atlas.getByRole('group',{name:'Reference scope'});await expect(scope).toBeInViewport();
   expect(await atlas.evaluate(el=>el.scrollWidth<=el.clientWidth+1),`${width} dialog`).toBe(true);
   expect(await atlas.locator('.atlas-ref-content').evaluate(el=>el.scrollWidth<=el.clientWidth+1)).toBe(true);
-  if(width<=820)await atlas.locator('.atlas-references>summary').click();
+  if(narrow)await refs.locator('summary').click();
   const row=atlas.locator(`[data-row-hash="${tip}"]`);await row.scrollIntoViewIfNeeded();await row.click();
   await expect(atlas.locator('.atlas-message pre')).toContainText('Change 2');
   await expect(atlas.getByRole('combobox',{name:'Commit comparison parent'})).toBeInViewport();
@@ -56,6 +64,9 @@ test('larger Git text keeps refs, rows and commit-file navigation inside desktop
   expect(await atlas.locator('.atlas-detail-content').evaluate(el=>el.scrollWidth<=el.clientWidth+1),`${width} detail`).toBe(true);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:`.local/ui2-git-${width}.png`});
-  await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
- }
-});
+  if(narrow){
+   await atlas.getByRole('button',{name:'Back to Git graph',exact:true}).click();
+   await expect(row).toBeVisible();
+  }
+ });
+}

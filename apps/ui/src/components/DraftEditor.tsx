@@ -33,9 +33,9 @@ const colors=HighlightStyle.define([
 ]);
 
 /** One editable DOM, memory-only. Keep its selection and undo history while comparing. */
-export default function DraftEditor({path,text,change,error,hidden,ref}: {
+export default function DraftEditor({path,text,change,error,hidden,shouldAutofocus,ref}: {
   path:string; text:string; change:(text:string)=>void; error:(message:string)=>void;
-  hidden:boolean; ref:Ref<DraftEditorHandle>;
+  hidden:boolean; shouldAutofocus:()=>boolean; ref:Ref<DraftEditorHandle>;
 }) {
   const keys=useId();
   const host=useRef<HTMLDivElement>(null),view=useRef<EditorView>(null);
@@ -76,7 +76,7 @@ export default function DraftEditor({path,text,change,error,hidden,ref}: {
       }),
     ]})});
     view.current=editor;
-    if(!hidden&&host.current?.closest('.desk-pane.active'))editor.focus();
+    if(!hidden&&shouldAutofocus()&&host.current?.closest('.desk-pane.active'))editor.focus();
     return ()=>{view.current=null;editor.destroy();};
     // Keep the real editor mounted; shared draft updates below map into its existing state.
   },[path]);
