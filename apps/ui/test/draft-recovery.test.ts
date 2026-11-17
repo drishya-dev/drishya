@@ -15,7 +15,7 @@ describe('explicit encrypted draft recovery',()=>{
     const store=new WorkspaceDrafts();store.set('one','file.ts',draft);const snapshot=recoverySnapshot(store,'one','/synthetic');
     const first=await sealRecovery(snapshot,password),second=await sealRecovery(snapshot,password);expect(first).not.toBe(second);
     await expect(unsealRecovery(first,'wrong passphrase')).rejects.toThrow('Incorrect passphrase');
-    const envelope=JSON.parse(first);envelope.cipher='A'+envelope.cipher.slice(1);await expect(unsealRecovery(JSON.stringify(envelope),password)).rejects.toThrow();
+    const envelope=JSON.parse(first);envelope.cipher=(envelope.cipher[0]==='A'?'B':'A')+envelope.cipher.slice(1);await expect(unsealRecovery(JSON.stringify(envelope),password)).rejects.toThrow();
     await expect(sealRecovery(snapshot,'short')).rejects.toThrow('12–1024');
   });
   it('rejects secrets and protected paths without silently changing draft code',async()=>{
