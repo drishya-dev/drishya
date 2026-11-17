@@ -8,7 +8,22 @@
   <meta name="page-type" content="software" />
   <meta name="site-kind" content="software" />
   <meta name="theme-color" content="#0a0b0d" />
-  <link rel="icon" href="/mark.svg" type="image/svg+xml" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Drishya" />
+  <meta property="og:title" content="Drishya · See your coding agent work" />
+  <meta property="og:description" content="The real files, output and diffs your coding agent read, ran and changed, on a map of your own repository. Free, open source, runs on your machine." />
+  <meta property="og:image" content="https://raw.githubusercontent.com/drishya-dev/drishya/main/assets/brand/social-preview.png" />
+  <meta property="og:image:width" content="1280" />
+  <meta property="og:image:height" content="640" />
+  <meta property="og:image:alt" content="Drishya, the woven mark and the name on a graphite ground." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Drishya · See your coding agent work" />
+  <meta name="twitter:description" content="The real files, output and diffs your coding agent read, ran and changed, on a map of your own repository. Free, open source, runs on your machine." />
+  <meta name="twitter:image" content="https://raw.githubusercontent.com/drishya-dev/drishya/main/assets/brand/social-preview.png" />
+  <meta name="twitter:image:alt" content="Drishya, the woven mark and the name on a graphite ground." />
+  <link rel="icon" type="image/svg+xml" href="/brand/drishya-tab.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/brand/drishya-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/brand/drishya-180.png" />
   <link rel="preload" href="/fonts/InterVariable.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="/fonts/JetBrainsMono-Regular.woff2" as="font" type="font/woff2" crossorigin />
   <style>
@@ -172,10 +187,10 @@
     <section id="install" class="install" data-chapter="install" aria-labelledby="install-title">
       <div class="wrap install-grid">
         <div>
-          <h2 id="install-title" data-split>Run it with one command</h2>
-          <p class="section-lead"><code>npx drishya</code> downloads and runs Drishya without installing it. To keep it, install it once with <code>npm install -g drishya</code>, then run <code>drishya</code>. It opens in your browser and finds the Claude Code and Codex sessions already on this machine.</p>
+          <h2 id="install-title" data-split>Install it, then run it</h2>
+          <p class="section-lead">Install it once with <code>npm install -g @drishya-dev/cli</code>, then run <code>drishya serve</code>. It opens in your browser and finds the Claude Code, Codex and Antigravity sessions already on this machine.</p>
           <ol class="install-steps">
-            <li><strong>Run it.</strong> Needs Node 24 or later. Nothing to sign up for.</li>
+            <li><strong>Install it.</strong> Needs Node.js 24. Nothing to sign up for.</li>
             <li><strong>Pick a session.</strong> Running sessions show as live; finished ones replay.</li>
             <li><strong>Read the work.</strong> Open any file, output or diff the agent touched.</li>
           </ol>
@@ -183,12 +198,11 @@
         </div>
         <div class="terminal" aria-label="Terminal">
           <div class="frame-bar"><span class="dot-row" aria-hidden="true"><i></i><i></i><i></i></span><span class="frame-title">Terminal</span></div>
-          <pre class="terminal-body"><span class="muted"># run once, without installing</span>
-<span class="prompt">$</span> <span data-install-command>npx drishya</span>
+          <pre class="terminal-body"><span class="muted"># install once</span>
+<span class="prompt">$</span> <span data-install-command>npm install -g @drishya-dev/cli</span>
 
-<span class="muted"># or install it, then run it any time</span>
-<span class="prompt">$</span> npm install -g drishya
-<span class="prompt">$</span> drishya</pre>
+<span class="muted"># then run it any time</span>
+<span class="prompt">$</span> drishya serve</pre>
           <div class="copy-row"><button class="button primary button--snail" type="button" data-copy>Copy the install command</button><span class="copy-status" data-copy-status aria-live="polite"></span></div>
         </div>
       </div>
@@ -214,13 +228,13 @@
       <div class="wrap close-inner">
         <div class="close-mark" data-logo="close" aria-hidden="true"></div>
         <h2 id="close-title" data-split>Keep the work. Understand the change.</h2>
-        <p class="section-lead">Free and open source under Apache-2.0. Built for developers working with Claude Code, Codex and Antigravity.</p>
+        <p class="section-lead">Free and open source under <a data-link="license" href="#">Apache-2.0</a>. Built for developers working with Claude Code, Codex and Antigravity.</p>
         <div class="hero-actions">
           <a class="button primary button--snail" href="#install">Install Drishya</a>
           <a class="button ghost star button--snail" data-star-link href="#"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m10 2.5 2.3 4.7 5.2.8-3.8 3.7.9 5.2L10 14.4l-4.6 2.5.9-5.2-3.8-3.7 5.2-.8z"/></svg>Star on GitHub</a>
         </div>
         <nav class="close-links" aria-label="Project">
-          <a data-repo-link href="#">Source code</a><a data-link="docs" href="#">Documentation</a><a data-link="changelog" href="#">Changelog</a><a data-link="issues" href="#">Report an issue</a>
+          <a data-repo-link href="#">Source code</a><a data-link="docs" href="#">Documentation</a><a data-link="changelog" href="#">Changelog</a><a data-link="issues" href="#">Report an issue</a><a data-link="feedback" href="#">Share feedback</a>
         </nav>
       </div>
     </section>
@@ -231,7 +245,7 @@
       <a class="brand" href="#top"><span class="brand-mark" data-logo="small"></span><span class="brand-word">Drishya</span></a>
       <p><span lang="hi">दृश्य</span>, “that which is seen”.</p>
       <nav aria-label="Footer">
-        <a href="#install">Install</a><a href="#privacy">Privacy</a><a data-link="docs" href="#">Docs</a><a data-link="changelog" href="#">Changelog</a><a data-repo-link href="#">GitHub</a>
+        <a href="#install">Install</a><a href="#privacy">Privacy</a><a data-link="docs" href="#">Docs</a><a data-link="changelog" href="#">Changelog</a><a data-link="feedback" href="#">Feedback</a><a data-repo-link href="#">GitHub</a>
       </nav>
       <p class="legal">The sessions shown on this page are examples. Claude Code, Codex and Antigravity belong to their respective owners.</p>
     </div>

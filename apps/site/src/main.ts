@@ -11,11 +11,11 @@ import { createDots, type Dots } from './dots.ts';
 import { createMap, type Tone } from './map.ts';
 import { appScreen, terminalScreen } from './product.ts';
 
-// Install version is selected by SHIP-9. Source links work without a separate docs service.
+// Install command follows README "Install from npm (at launch)"; the package publishes on launch day. Source links work without a separate docs service.
 const SITE = {
-  install: 'npx drishya',
+  install: 'npm install -g @drishya-dev/cli',
   repo: 'https://github.com/drishya-dev/drishya',
-  links: { docs: 'https://github.com/drishya-dev/drishya#readme', changelog: 'https://github.com/drishya-dev/drishya/releases', issues: 'https://github.com/drishya-dev/drishya/issues' } as Record<string, string>,
+  links: { docs: 'https://github.com/drishya-dev/drishya#readme', changelog: 'https://github.com/drishya-dev/drishya/blob/main/CHANGELOG.md', issues: 'https://github.com/drishya-dev/drishya/issues', feedback: 'https://github.com/drishya-dev/drishya/issues/new/choose', license: 'https://github.com/drishya-dev/drishya/blob/main/LICENSE' } as Record<string, string>,
 };
 
 const reduced = document.documentElement.dataset.motion === 'reduced';
