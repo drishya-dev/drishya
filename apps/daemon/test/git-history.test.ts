@@ -2,7 +2,7 @@ import {execFileSync} from 'node:child_process';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync,existsSync} from 'node:fs';
 import {join,resolve,sep} from 'node:path';
 import {tmpdir} from 'node:os';
-import {beforeAll,afterAll,it,expect} from 'vitest';
+import {beforeAll,afterAll,describe,it,expect} from 'vitest';
 import {App} from '../src/app.ts';
 import {WorkspaceAccess} from '../src/workspace.ts';
 import {GitReview,readGit} from '../src/git-review.ts';
@@ -65,24 +65,31 @@ it('authenticates HTTP history and validates every page/object parameter',async(
   const response=await fetch(`${url}/git/history`,{headers});expect(response.status).toBe(200);expect((await response.json() as {commits:unknown[]}).commits).toHaveLength(50);
   expect((await fetch(`${url}/git/history?start=1.2`,{headers})).status).toBe(400);expect((await fetch(`${url}/git/commit?hash=${first}&parent=9000`,{headers})).status).toBe(400);
 },20_000);
-it('gives squash-merge evidence: a squash commit and its branch carry the same content signature, others do not',async()=>{
-  const repo=join(dir,'squash');mkdirSync(repo);
-  const sh=(...args:string[])=>execFileSync('git',args,{cwd:repo,encoding:'utf8',windowsHide:true}).trim();
-  sh('init','-b','main');sh('config','user.name','Synthetic');sh('config','user.email','synthetic@example.invalid');
-  writeFileSync(join(repo,'a.ts'),'a\n');sh('add','.');sh('commit','-m','Root');
-  sh('switch','-c','feature');writeFileSync(join(repo,'f.ts'),'one\n');sh('add','.');sh('commit','-m','Feature one');
-  writeFileSync(join(repo,'f.ts'),'two\n');writeFileSync(join(repo,'g.ts'),'g\n');sh('add','.');sh('commit','-m','Feature two');const head=sh('rev-parse','HEAD');
-  sh('switch','main');writeFileSync(join(repo,'m.ts'),'m\n');sh('add','.');sh('commit','-m','Unrelated main work');
-  sh('switch','-c','open');writeFileSync(join(repo,'o.ts'),'o\n');sh('add','.');sh('commit','-m','Open work');const open=sh('rev-parse','HEAD');
-  sh('switch','main');sh('merge','--squash','feature');sh('commit','-m','Feature (#1)');const squash=sh('rev-parse','HEAD');
-  const page=await gitHistory(args=>readGit(repo,args));
-  expect(page.branchSignatures?.[head]).toBeTruthy();
-  expect(page.changeSignatures?.[squash]).toBe(page.branchSignatures?.[head]);
-  expect(page.branchSignatures?.[open]).toBeTruthy();
-  // Only the open branch's own commit wrote its contents; nothing on main did.
-  expect(Object.entries(page.changeSignatures??{}).filter(([,value])=>value===page.branchSignatures?.[open]).map(([hash])=>hash)).toEqual([open]);
-  // The tip of the primary line is not a branch head of its own.
-  expect(page.branchSignatures?.[squash]).toBeUndefined();
+describe('squash-merge evidence',()=>{
+  let repo:string,head:string,open:string,squash:string;
+  // Real repository construction uses the same setup budget as the outer fixture.
+  beforeAll(()=>{
+    repo=join(dir,'squash');mkdirSync(repo);
+    const sh=(...args:string[])=>execFileSync('git',args,{cwd:repo,encoding:'utf8',windowsHide:true}).trim();
+    sh('init','-b','main');sh('config','user.name','Synthetic');sh('config','user.email','synthetic@example.invalid');
+    writeFileSync(join(repo,'a.ts'),'a\n');sh('add','.');sh('commit','-m','Root');
+    sh('switch','-c','feature');writeFileSync(join(repo,'f.ts'),'one\n');sh('add','.');sh('commit','-m','Feature one');
+    writeFileSync(join(repo,'f.ts'),'two\n');writeFileSync(join(repo,'g.ts'),'g\n');sh('add','.');sh('commit','-m','Feature two');head=sh('rev-parse','HEAD');
+    sh('switch','main');writeFileSync(join(repo,'m.ts'),'m\n');sh('add','.');sh('commit','-m','Unrelated main work');
+    sh('switch','-c','open');writeFileSync(join(repo,'o.ts'),'o\n');sh('add','.');sh('commit','-m','Open work');open=sh('rev-parse','HEAD');
+    sh('switch','main');sh('merge','--squash','feature');sh('commit','-m','Feature (#1)');squash=sh('rev-parse','HEAD');
+  },30_000);
+
+  it('a squash commit and its branch carry the same content signature, others do not',async()=>{
+    const page=await gitHistory(args=>readGit(repo,args));
+    expect(page.branchSignatures?.[head]).toBeTruthy();
+    expect(page.changeSignatures?.[squash]).toBe(page.branchSignatures?.[head]);
+    expect(page.branchSignatures?.[open]).toBeTruthy();
+    // Only the open branch's own commit wrote its contents; nothing on main did.
+    expect(Object.entries(page.changeSignatures??{}).filter(([,value])=>value===page.branchSignatures?.[open]).map(([hash])=>hash)).toEqual([open]);
+    // The tip of the primary line is not a branch head of its own.
+    expect(page.branchSignatures?.[squash]).toBeUndefined();
+  });
 });
 
 it('handles unborn, detached and shallow repositories without inventing commits or parents',async()=>{

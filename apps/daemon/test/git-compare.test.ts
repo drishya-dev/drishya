@@ -65,13 +65,16 @@ it('splits files into changed on both, only the compare side, and only the base 
   expect(snapshot()).toBe(before);
 });
 
-it('is read-only: every ref, HEAD, the tree and the stash are identical after every compare operation',async()=>{
+// Check each real operation separately so its read-only guarantee has its own execution budget.
+it.each([
+  {operation:'listing refs',run:()=>gitCompareRefs(read)},
+  {operation:'comparing a remote-tracking branch',run:()=>gitCompare(read,{base:'refs/remotes/origin/main',head:'refs/heads/topic'})},
+  {operation:'comparing a tag with a commit',run:()=>gitCompare(read,{base:'refs/tags/v1',head:topicTip})},
+  {operation:'reading the base patch',run:()=>gitCompareFile(read,{base:'refs/heads/main',head:'refs/heads/topic',path:'b.ts',side:'base'})},
+  {operation:'reading the head patch',run:()=>gitCompareFile(read,{base:'refs/heads/main',head:'refs/heads/topic',path:'b.ts',side:'head'})},
+])('is read-only: every ref, HEAD, the tree, stash and object inventory are identical after $operation',async({run})=>{
   const before=snapshot(),objects=git('count-objects','-v');
-  await gitCompareRefs(read);
-  await gitCompare(read,{base:'refs/remotes/origin/main',head:'refs/heads/topic'});
-  await gitCompare(read,{base:'refs/tags/v1',head:topicTip});
-  await gitCompareFile(read,{base:'refs/heads/main',head:'refs/heads/topic',path:'b.ts',side:'base'});
-  await gitCompareFile(read,{base:'refs/heads/main',head:'refs/heads/topic',path:'b.ts',side:'head'});
+  await run();
   expect(snapshot()).toBe(before);
   expect(git('count-objects','-v')).toBe(objects);
 });
