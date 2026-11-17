@@ -67,13 +67,17 @@ rmSync(join(dir, 'blobs'), { recursive: true, force: true });
 const blobs = new SqliteBlobStore(db, join(dir, 'blobs'));
 // A global hash match alone is not ownership: forgetting another recording may remove it.
 // Reuse only references held by observations of this view, which source-store GC preserves.
+const scopes = new Map<string, ReturnType<Store['blobsFor']>>();
+const scope = (ids: string[]) => { const key = ids.join('+'); let s = scopes.get(key); if (!s) { if (scopes.size >= 64) scopes.clear(); s = source.blobsFor(ids); scopes.set(key, s); } return s; };
 const capturedBlobs = new Set<string>();
 function rememberCapturedBlobs(value: unknown): void {
   if (isBlobText(value)) { capturedBlobs.add(value.$blob); return; }
   if (Array.isArray(value)) { for (const child of value) rememberCapturedBlobs(child); }
   else if (value && typeof value === 'object') for (const child of Object.values(value)) rememberCapturedBlobs(child);
 }
-const io = {
+// A captured reference resolves only for the recordings this view reads (SEC-4b); `allows` is the gate.
+const ioFor = (ids: string[]) => ({
+  allows: (sha: string) => scope(ids).allows(sha),
   get: (sha: string) => source.blobs.get(sha) ?? blobs.get(sha),
   put: (text: string) => {
     // Most long typed/wrapper output already lives in the captured blob store. Its exact
@@ -82,7 +86,7 @@ const io = {
     const sha = createHash('sha256').update(text).digest('hex');
     return capturedBlobs.has(sha) && source.blobs.has(sha) ? { sha, bytes: Buffer.byteLength(text) } : blobs.put(text);
   },
-};
+});
 const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
 const HISTORY_VERSION = `h3-lineage-4096-${PRIVACY_POLICY_VERSION}`;
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
@@ -143,7 +147,7 @@ function build(id: string, ids: string[], live: boolean, counts: Record<string, 
   if (process.env.DRISHYA_HISTORY_TIMING) console.error('history build: rebuilding;', resident ? `resident matches=${residentFor()} rows=${resident.rows} total=${source.countObservations(last)} seq=${resident.sequence}` : 'no resident');
   resident = undefined;
   capturedBlobs.clear();
-  const chunked = new ChunkedFold(source, ids, io, reduceOptions(live), (o) => rememberCapturedBlobs(o.payload));
+  const chunked = new ChunkedFold(source, ids, ioFor(ids), reduceOptions(live), (o) => rememberCapturedBlobs(o.payload));
   while (!chunked.step(2000));
   const projection = shaped(chunked.fold.snapshot(live), ids);
   resident = { id, ids, fold: chunked.fold, lineage: chunked.lineage, sequence: source.lastSequence(last), rows: source.countObservations(last), ancestors: ancestorRevisions(ids, counts), saved: 0 };
@@ -203,7 +207,7 @@ function resume(id: string, ctx: Pick<Lookup, 'ids' | 'counts'>): boolean {
   if (ctx.ids.length > 1 && (!lineage || !meta.lineage)) return reject();
   const reader = lineage ? source.lineageReader(lineage, meta.lineage) : undefined;
   if (meta.blobs.some((sha) => !source.blobs.has(sha) && !blobs.has(sha))) return reject();
-  const fold = ProjectionFold.restore({ head: meta.head, state: Buffer.from(row.state.buffer, row.state.byteOffset, row.state.byteLength), blobs: meta.blobs }, io, { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
+  const fold = ProjectionFold.restore({ head: meta.head, state: Buffer.from(row.state.buffer, row.state.byteOffset, row.state.byteLength), blobs: meta.blobs }, ioFor(ctx.ids), { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
   if (!fold) return reject();
   capturedBlobs.clear();
   resident = { id, ids: ctx.ids, fold, lineage: reader, sequence: meta.sequence, rows: meta.rows, ancestors: meta.ancestors, saved: meta.rows };
@@ -357,7 +361,7 @@ function tailView(id: string, ctx: Lookup): View {
       return { id, revision: ctx.revision, projection, revisions: ctx.revisions, partial: { observations: tail.observations + added.length } };
     }
   }
-  const built = buildTail(source, ctx.ids, io, reduceOptions(ctx.live), { prompts: TAIL_PROMPT_COUNT });
+  const built = buildTail(source, ctx.ids, ioFor(ctx.ids), reduceOptions(ctx.live), { prompts: TAIL_PROMPT_COUNT });
   const projection = shaped(built.fold.snapshot(ctx.live), ctx.ids);
   tail = { id, ids: ctx.ids, fold: built.fold, observations: built.observations, ancestors: ancestorRevisions(ctx.ids, ctx.counts), last: projection };
   return { id, revision: ctx.revision, projection, revisions: ctx.revisions, ...(built.complete ? {} : { partial: { observations: built.observations } }) };
@@ -380,7 +384,7 @@ function startBackground(id: string, ctx: Lookup): void {
     for (let attempt = 0; attempt < 3; attempt++) {
       const from = attempt === 0 ? ctx : lookup(id);
       capturedBlobs.clear();
-      const chunked = new ChunkedFold(source, from.ids, io, reduceOptions(from.live), (o) => rememberCapturedBlobs(o.payload));
+      const chunked = new ChunkedFold(source, from.ids, ioFor(from.ids), reduceOptions(from.live), (o) => rememberCapturedBlobs(o.payload));
       for (;;) {
         const start = performance.now();
         let done = false;
@@ -540,13 +544,14 @@ async function artifactChunk(id: string, artifactId: string, start: number, requ
     if (field === 'structured') {
       value = JSON.stringify(value, (_key, item: unknown) => {
         if (!isBlobText(item)) return item;
-        const text = source.blobs.get(item.$blob);
+        const text = scope([owner]).captured(item.$blob);
         if (text !== undefined) return text;
         partial = 'Some captured structured values are no longer stored; unavailable references are shown explicitly.';
         return {$blob:item.$blob,availability:'no-longer-stored'};
       }, 2);
     }
     if (typeof value !== 'string' && !isBlobText(value)) return {available:false,reason:'not-captured',fields,field};
+    if (isBlobText(value) && !scope([owner]).allows(value.$blob)) return {available:false,reason:'not-captured',fields,field};
     const stored = typeof value === 'string' ? blobs.put(value) : undefined;
     const sha = stored?.sha ?? (isBlobText(value) ? value.$blob : '');
     const chunk = (stored ? blobs : source.blobs).readTextChunk(sha, start);

@@ -60,9 +60,14 @@ describe('sealed web result pages',()=>{
     expect(()=>readWebResult(store,recording,`${recording}.item:${id}`,{resultId:id})).toThrow();
   });
   it('reports removed sealed bytes and never treats a blob key as a local path',()=>{
-    call();append('tool.result','call',{outcome:{kind:'web',text:{$blob:'0'.repeat(64),bytes:10,preview:'Unavailable original'}}});
+    // A real stored reference whose bytes were later removed, then an old row that holds a path where a hash belongs.
+    call();const long='Unavailable original '.repeat(1500);append('tool.result','call',{outcome:{kind:'web',text:long}});
+    const stored=JSON.stringify(store.operationObservations(recording,'call').at(-1)!.payload);const sha=/"\$blob":"([0-9a-f]{64})"/.exec(stored)![1]!;
+    store.blobs.delete(sha);
     expect(readWebResult(store,recording,`${recording}.call`)).toMatchObject({availability:'removed',originalComplete:false,original:''});
-    call('bad-key');append('tool.result','bad-key',{text:{$blob:join(dir,'never-opened.jsonl'),bytes:10,preview:'Never read'}});
+    call('bad-key');const id=append('tool.result','bad-key',{text:'placeholder'});
+    const row=store.observationById(recording,id)!;
+    store.db.prepare('UPDATE observations SET body=? WHERE id=?').run(JSON.stringify({...row,payload:{text:{$blob:join(dir,'never-opened.jsonl'),bytes:10,preview:'Never read'}}}),id);
     const get=vi.spyOn(store.blobs,'get');expect(readWebResult(store,recording,`${recording}.bad-key`).availability).toBe('removed');expect(get).not.toHaveBeenCalled();
   });
   it('keeps complete structured seeds, inert URLs, empty lists and UTF8 bounds honest',()=>{

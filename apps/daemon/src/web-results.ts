@@ -41,7 +41,7 @@ export function readWebResult(store: Store, recordingId: string, operationId: st
     if (!isBlobText(value)) return undefined;
     // BlobStore's content-addressed key must not become an arbitrary local path.
     if (!/^[a-f0-9]{64}$/.test(value.$blob)) { removed = true; return undefined; }
-    const text = store.blobs.get(value.$blob);
+    const text = store.blobsFor([recordingId]).captured(value.$blob);
     if (text === undefined) removed = true;
     return text;
   };
