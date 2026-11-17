@@ -22,7 +22,11 @@ const LINKED_GITDIR = /^gitdir:\s*(.+?)\s*$/m, WORKTREE_ADMIN = /^(.*?)[\\/]\.gi
 export async function verifyOwnGitDir(root: string): Promise<void> {
   const marker = await lstat(join(root, '.git')).catch(() => undefined);
   if (!marker) throw new HttpError(403, 'No repository there.');
-  if (marker.isDirectory()) return;
+  if (marker.isDirectory()) {
+    // A plain repository keeps its own history: a `commondir` file here would hand Git another repository's refs and objects.
+    if (await lstat(join(root, '.git', 'commondir')).catch(() => undefined)) throw new HttpError(403, 'The .git folder redirects to another repository.');
+    return verifyOwnObjectStore(join(root, '.git'));
+  }
   if (!marker.isFile() || marker.size > 4096) throw new HttpError(403, 'Unexpected .git entry.');
   const gitdir = LINKED_GITDIR.exec(await readFile(join(root, '.git'), 'utf8').catch(() => ''))?.[1];
   const admin = gitdir ? WORKTREE_ADMIN.exec(resolve(root, gitdir))?.[0] : undefined;
@@ -30,6 +34,44 @@ export async function verifyOwnGitDir(root: string): Promise<void> {
   const ownGitFile = await realpath(join(root, '.git')).catch(() => '');
   if (!admin || !backlink || !ownGitFile || await realpath(resolve(admin, backlink)).catch(() => '') !== ownGitFile) {
     throw new HttpError(403, 'The .git entry does not point to a worktree of this checkout.');
+  }
+  // `<repository>/.git/worktrees/<name>` shares `<repository>/.git`; Git writes `commondir` as `../..`. Any other target is another repository.
+  const commonFile = (await readFile(join(admin, 'commondir'), 'utf8').catch(() => '')).trim();
+  const common = join(admin, '..', '..');
+  if (!commonFile || await realpath(resolve(admin, commonFile)).catch(() => '') !== await realpath(common).catch(() => '#')) {
+    throw new HttpError(403, 'The worktree shares history with a different repository.');
+  }
+  return verifyOwnObjectStore(common);
+}
+
+/**
+ * SEC-4b: objects must come from this repository's own store. A repository can borrow another folder's objects through
+ * `objects/info/alternates` (or a redirected `objects` link) and then name any object it can find there. Plain repositories
+ * with no alternates, and linked worktrees, are unaffected. A repository made with `clone --shared` or `--reference` must be
+ * repacked first (`git repack -a -d`, then remove the alternates file).
+ */
+async function verifyOwnObjectStore(commonDir: string): Promise<void> {
+  const own = await realpath(join(commonDir, 'objects')).catch(() => '');
+  const within = (path: string, parent: string) => path === parent || path.startsWith(parent + sep);
+  if (!own || !within(own, await realpath(commonDir).catch(() => '#'))) throw new HttpError(403, 'The object store is not inside this repository.');
+  for (const name of ['alternates', 'http-alternates']) {
+    const file = join(commonDir, 'objects', 'info', name);
+    // One handle for the size check and the read, so the file cannot change between them.
+    const handle = await open(file, 'r').catch(() => undefined);
+    if (!handle) continue;
+    let text: string;
+    try {
+      const info = await handle.stat();
+      if (!info.isFile() || info.size > 65_536) throw new HttpError(403, 'This repository borrows objects from another folder.');
+      text = await handle.readFile('utf8');
+    } finally { await handle.close(); }
+    const entries = text.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+    if (name === 'http-alternates' && entries.length) throw new HttpError(403, 'This repository borrows objects from another folder.');
+    for (const entry of entries) {
+      if (entry.startsWith('"') || /[\x00-\x1f]/.test(entry)) throw new HttpError(403, 'This repository borrows objects from another folder.');
+      const target = await realpath(resolve(commonDir, 'objects', entry)).catch(() => '');
+      if (!target || !within(target, own)) throw new HttpError(403, 'This repository borrows objects from another folder. Repack it (git repack -a -d) and remove objects/info/alternates to review it here.');
+    }
   }
 }
 

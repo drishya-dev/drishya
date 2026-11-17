@@ -87,7 +87,7 @@ export function delegationThread(store:Store,p:Projection,operationId:string,sta
   const last=(key:string)=>safeActivities.findLast(o=>typeof o.agent[key]==='string')?.agent[key] as string|undefined;
   const input=object(object(call.payload).input),intent=object(object(call.payload).intent);
   const rawTask=input.prompt??intent.prompt;
-  const taskValue=typeof rawTask==='string'?rawTask:rawTask&&typeof rawTask.$blob==='string'&&rawTask.bytes<=2*1024*1024?store.blobs.get(rawTask.$blob):undefined;
+  const taskValue=typeof rawTask==='string'?rawTask:rawTask&&typeof rawTask.$blob==='string'&&rawTask.bytes<=2*1024*1024?store.blobsFor([call.recordingId]).captured(rawTask.$blob):undefined;
   const task=op.detail.descriptionEncrypted||typeof taskValue==='string'&&/^gAAAA[A-Za-z0-9_-]{80,}={0,2}$/.test(taskValue)?undefined:taskValue;
   const taskLimited=!!rawTask&&typeof rawTask==='object'&&rawTask.bytes>2*1024*1024;
   const taskMissing=!!rawTask&&typeof rawTask==='object'&&typeof rawTask.$blob==='string'&&taskValue===undefined;

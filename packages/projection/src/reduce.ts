@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r46';
+export const REDUCER_VERSION = 'r47';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -64,6 +64,11 @@ const SEPARATE_LOGS = new Set(['item_completed:Reasoning', 'item_completed:Agent
 
 export interface BlobIO {
   get(sha: string): string | undefined;
+  /**
+   * Whether a blob reference found in captured data may be resolved. A hash is a content address, not a
+   * permission. Absent means the caller vouches for every reference.
+   */
+  allows?(sha: string): boolean;
   put(text: string): { sha: string; bytes: number };
 }
 
@@ -218,7 +223,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
   const text = (v: TextValue | undefined | null, allowPreview = true): string | undefined => {
     if (v === undefined || v === null) return undefined;
     if (typeof v === 'string') return v;
-    if (isBlobText(v)) return io.get(v.$blob) ?? (allowPreview ? v.preview : undefined);
+    if (isBlobText(v)) return (io.allows && !io.allows(v.$blob) ? undefined : io.get(v.$blob)) ?? (allowPreview ? v.preview : undefined);
     return undefined;
   };
   const rel = (p: string | undefined, cwd?: string): string => {
@@ -267,7 +272,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
     let blob: string | undefined;
     let bytes = 0;
     let lineCount = 0;
-    if (a.blobRef && isBlobText(a.blobRef)) {
+    if (a.blobRef && isBlobText(a.blobRef) && (!io.allows || io.allows(a.blobRef.$blob))) {
       blob = a.blobRef.$blob;
       bytes = a.blobRef.bytes;
       const t = io.get(blob);

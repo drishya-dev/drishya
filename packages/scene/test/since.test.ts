@@ -152,3 +152,43 @@ describe('READ-5 per-file edits by turn', () => {
     expect(s.edits).toBe(25); expect(s.fileEdits).toHaveLength(20); expect(s.added).toBe(25);
   });
 });
+
+describe('SEC-4b since statistics keyed by captured filenames', () => {
+  const NAMES = ['__proto__', 'constructor', 'hasOwnProperty', 'toString', 'valueOf'];
+  const recording = (agent: string, names: string[]) => {
+    const base = p.operations.find((o) => o.kind === 'edit')!;
+    const ops = names.map((path, i) => ({ ...base, id: `${agent}-${i}`, agentId: agent, status: 'ok' as const, startSequence: 0, endSequence: 0, paths: [{ path, role: 'write' as const, basis: 'captured' as const }], detail: { kind: 'edit' as const, path, hunks: [{ oldStart: 1, oldLines: 1, newStart: 1, newLines: 1, lines: ['+one', '+two', '-gone'] }], created: false, reconstruction: 'available' as const } }));
+    const timeline = ops.flatMap((o, i) => [{ type: 'op-start', id: `s${o.id}`, operationId: o.id, sequence: 2 * i + 1, agentId: agent }, { type: 'op-end', id: `e${o.id}`, operationId: o.id, sequence: 2 * i + 2, agentId: agent }]);
+    return { ...p, gaps: [], lastSequence: 40, operations: ops, timeline } as unknown as Projection;
+  };
+
+  it('keeps each name an ordinary own key and never touches shared prototypes', () => {
+    const before = Object.getOwnPropertyNames(Object.prototype).sort();
+    const a = sinceSnapshot(recording('a', NAMES), -1);
+    for (const name of NAMES) expect(Object.hasOwn(a.fileStats!, name)).toBe(true);
+    for (const name of NAMES) expect(a.fileStats![name]).toMatchObject({ added: 2, removed: 1, edits: 1 });
+    expect(Object.getOwnPropertyNames(Object.prototype).sort()).toEqual(before);
+    expect(({} as Record<string, unknown>).added).toBeUndefined();
+    expect(({} as Record<string, unknown>).edits).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call({}, 'x')).toBe(false);
+    expect((Object.prototype.hasOwnProperty as unknown as Record<string, unknown>).added).toBeUndefined();
+    expect((Object.prototype.constructor as unknown as Record<string, unknown>).added).toBeUndefined();
+  });
+
+  it('does not let one recording change another recording\'s statistics', () => {
+    const clean = sinceSnapshot(recording('c', ['a.ts', 'b.ts']), -1).fileStats;
+    sinceSnapshot(recording('hostile', NAMES), -1);
+    sinceSnapshot(recording('hostile', NAMES), -1);
+    const after = sinceSnapshot(recording('c', ['a.ts', 'b.ts']), -1).fileStats;
+    expect(JSON.parse(JSON.stringify(after))).toEqual(JSON.parse(JSON.stringify(clean)));
+    expect(Object.keys(after!).sort()).toEqual(['a.ts', 'b.ts']);
+    const other = sinceSnapshot(recording('other', ['constructor']), -1).fileStats!;
+    expect(other['constructor']).toMatchObject({ added: 2, removed: 1, edits: 1 }); // not 4 / 2 / 2
+  });
+
+  it('survives the JSON round trip the daemon uses', () => {
+    const wire = JSON.parse(JSON.stringify(sinceSnapshot(recording('a', NAMES), -1)));
+    for (const name of NAMES) expect(Object.hasOwn(wire.fileStats, name)).toBe(true);
+    expect(wire.fileStats['__proto__']).toMatchObject({ edits: 1 });
+  });
+});

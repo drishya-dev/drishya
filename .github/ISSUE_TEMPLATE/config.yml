@@ -6,3 +6,8 @@ contact_links:
   - name: Report a security problem privately
     url: https://github.com/drishya-dev/drishya/security/advisories/new
     about: Do not open a public issue for a vulnerability. See SECURITY.md.
+  # Enable GitHub Discussions in the repository settings first, then uncomment this and the
+  # README / app links can point questions here too.
+  # - name: Ask a question or share how you use Drishya
+  #   url: https://github.com/drishya-dev/drishya/discussions
+  #   about: Questions, setups and half-formed ideas that are not yet a bug or a feature request.

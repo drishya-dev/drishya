@@ -10,7 +10,7 @@ import { PRIVACY_POLICY_VERSION } from '../src/index.ts';
 const keywords = ['password','passwd','pwd','secret','token','apikey','api_key','api-key','accesskey','access_key','access-key','privatekey','private_key','private-key','clientsecret','client_secret','client-secret','auth'];
 const secret = 'aB3dE5fG7hJ9kL2mN4pQ6rS8';
 test('keyword-first assignments preserve old full redaction output and hit order', () => {
-  expect(PRIVACY_POLICY_VERSION).toBe('p5');
+  expect(PRIVACY_POLICY_VERSION).toBe('p6');
   for (const k of keywords) for (const key of [k,k.toUpperCase(),'before_'+k+'_after','x-'+k,'token_'+k]) {
     for (const op of [':','=']) for (const quote of ['', '"', "'", String.fromCharCode(96)]) {
       for (const value of [secret,'placeholder','abcdefgh','process.env.KEY',secret+'=token='+secret]) {

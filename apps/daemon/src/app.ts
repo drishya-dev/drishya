@@ -1,4 +1,5 @@
 import {recordedFileRoots,recordedMainRootPrefixes} from './file-roots.ts';
+import {isUnsafeRecordedPath} from './remote-path.ts';
 // Shared application wiring used by the server and the CLI.
 
 import { existsSync, realpathSync, statSync } from 'node:fs';
@@ -163,6 +164,8 @@ export class App {
   /** A directory the map may scan only with care: missing, not a directory, or a whole drive/home. */
   private unscannable(root: string): string | undefined {
     let r: string;
+    // A recorded network or device path is not checked at all; that check is itself the access (SEC-4b).
+    if (isUnsafeRecordedPath(root)) return 'is a network or device path, which is not read';
     try {
       if (!existsSync(root) || !statSync(root).isDirectory()) return 'is not a directory on this machine';
       r = realpathSync(root);

@@ -674,7 +674,7 @@ export class Ingestor extends EventEmitter {
     if (!projection) {
       // One ordered read: the reducer reads its input three times, and a database cursor would run its query each time.
       const input = count <= 10_000 ? [...this.store.orderedObservations(recordingId)] : this.store.orderedObservations(recordingId);
-      projection = reduce(recordingId, input, this.store.blobs, { adapters: this.descriptors, live, ordered: true });
+      projection = reduce(recordingId, input, this.store.blobsFor([recordingId]), { adapters: this.descriptors, live, ordered: true });
       // A followed recording changes again within a moment; it is stored when it stops being followed.
       if (count <= 10_000 && !live) this.store.putProjection(recordingId, REDUCER_VERSION, count, JSON.stringify(projection));
     }
@@ -699,13 +699,13 @@ export class Ingestor extends EventEmitter {
       if (added.length <= FOLD_BATCH && fold.observationCount + added.length === count && fold.append(added)) { appended = true; this.foldStats.appended++; }
       else { fold = undefined; this.foldStats.rebuilt++; }
     }
-    if (!fold) fold = ProjectionFold.build([recordingId], [...this.store.orderedObservations(recordingId)], this.store.blobs, opts);
+    if (!fold) fold = ProjectionFold.build([recordingId], [...this.store.orderedObservations(recordingId)], this.store.blobsFor([recordingId]), opts);
     entry = this.keepFold(recordingId, fold, appended ? (entry?.updates ?? 0) + 1 : 0);
     let projection = fold.snapshot(true);
     if (appended && this.foldCheckEvery && entry.updates % this.foldCheckEvery === 0) {
       // The runtime check: a full rebuild must hash the same. A mismatch is logged locally, the rebuild is served and the fold replaced.
       this.foldStats.checked++;
-      const rebuilt = reduce(recordingId, [...this.store.orderedObservations(recordingId)], this.store.blobs, opts);
+      const rebuilt = reduce(recordingId, [...this.store.orderedObservations(recordingId)], this.store.blobsFor([recordingId]), opts);
       if (projectionDigest(rebuilt) !== projectionDigest(projection)) {
         this.foldStats.mismatches++;
         console.warn(`[drishya] fold check: the incremental projection of ${recordingId.slice(0, 12)} differs from a full rebuild at ${count} observations; serving the rebuild`);
@@ -755,7 +755,7 @@ export class Ingestor extends EventEmitter {
     const cached = this.projectionCache.get(cacheKey);
     if (cached && cached.count === count) return cached.projection;
     const live = unique.some((id) => this.store.getRecording(id)?.live);
-    const projection = reduce(lineage?.currentRecordingId ?? key, lineage ? this.store.lineageObservations(lineage) : this.store.orderedObservations(unique), this.store.blobs, { adapters: this.descriptors, live, ordered: true, lineage });
+    const projection = reduce(lineage?.currentRecordingId ?? key, lineage ? this.store.lineageObservations(lineage) : this.store.orderedObservations(unique), this.store.blobsFor([...unique, ...(lineage?.recordingIds ?? [])]), { adapters: this.descriptors, live, ordered: true, lineage });
     // A combined view spanning worktrees has no single repository root. Its paths remain
     // evidence-backed per source, and the map uses captured paths instead of one checkout.
     if (mixedRoots) projection.workspaceRoot = undefined;

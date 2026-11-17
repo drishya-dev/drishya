@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { isPersonPrompt, isBlobText } from '@drishya/contracts';
 import type { BlobText, Observation, RecordingSummary, RedactionNote, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
-import { PRIVACY_POLICY_VERSION, redactText } from '../../privacy/src/index.ts';
+import { PRIVACY_POLICY_VERSION, SECRET_FIELD_MARKER, SECRET_FIELD_RULE, isSecretFieldKey, isSecretReference, redactText } from '../../privacy/src/index.ts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
 import { recordingStats } from './recording-stats.ts';
 
@@ -22,6 +22,10 @@ const clockTime = (time: string | null | undefined) => time && Number.isFinite(D
 /** Strings longer than this move out of the observation into the blob store. */
 export const INLINE_LIMIT = 16 * 1024;
 const PREVIEW = 2048;
+const BLOB_KEY = '$blob';
+/** Where a `$blob` key that a journal carried is kept: as captured data, never resolved. */
+export const CAPTURED_BLOB_KEY = 'capturedBlobKey';
+const BLOB_REF = /"\$blob":"([0-9a-f]{64})"/g;
 /** D7 (revised 21 Oct): distinct image bytes one recording may keep. */
 const IMAGE_BUDGET = 256 * 1024 * 1024;
 
@@ -315,6 +319,23 @@ export class BlobStore {
   }
 }
 
+/**
+ * The blobs one selection of recordings may resolve. The store is content addressed, so a hash alone proves
+ * nothing about whose text it names: a captured reference resolves only when an observation of one of these
+ * recordings holds it. `get` and `put` stay unscoped for text the reducer derives itself.
+ */
+export class ScopedBlobs {
+  private readonly store: Store;
+  readonly recordingIds: readonly string[];
+  constructor(store: Store, recordingIds: readonly string[]) { this.store = store; this.recordingIds = recordingIds; }
+  allows(sha: string): boolean { return this.recordingIds.some((id) => this.store.recordingReferencesBlob(id, sha)); }
+  get(sha: string): string | undefined { return this.store.blobs.get(sha); }
+  put(text: string): { sha: string; bytes: number } { return this.store.blobs.put(text); }
+  /** The text a captured reference names, when this selection holds that reference. */
+  captured(sha: string): string | undefined { return this.allows(sha) ? this.store.blobs.get(sha) : undefined; }
+  capturedChunk(sha: string, start?: number, count?: number): TextChunk | undefined { return this.allows(sha) ? this.store.blobs.readTextChunk(sha, start, count) : undefined; }
+}
+
 /** Positional reads over one stored blob. */
 export interface BlobReader { read(buf: Buffer, length: number, position: number): number; close(): void }
 
@@ -554,8 +575,13 @@ export class Store {
       return { key: candidate, changed: candidate !== key };
     };
 
-    const redactStored = (value: unknown, field: string, hits: RedactionNote[], checkBlobs: boolean): { value: unknown; changed: boolean } => {
+    const redactStored = (value: unknown, field: string, hits: RedactionNote[], checkBlobs: boolean, secret = false): { value: unknown; changed: boolean } => {
       if (typeof value === 'string') {
+        // p6: a value under a secret-named key, whatever it looks like.
+        if (secret && !isSecretReference(value)) {
+          hits.push({ field, rule: SECRET_FIELD_RULE, count: 1 });
+          return { value: SECRET_FIELD_MARKER, changed: true };
+        }
         const r = redactText(value);
         if (r.text === value) return { value, changed: false };
         for (const h of r.hits) hits.push({ field, rule: h.rule, count: h.count });
@@ -564,7 +590,7 @@ export class Store {
       if (Array.isArray(value)) {
         let changed = false;
         const out = value.map((item, i) => {
-          const res = redactStored(item, `${field}[${i}]`, hits, checkBlobs);
+          const res = redactStored(item, `${field}[${i}]`, hits, checkBlobs, secret);
           if (res.changed) changed = true;
           return res.value;
         });
@@ -609,7 +635,7 @@ export class Store {
           const rk = safeRedactedKey(k, out, tentativeField, hits);
           const f = field ? `${field}.${rk.key}` : rk.key;
           if (rk.changed) changed = true;
-          const rc = redactStored(child, f, hits, checkBlobs);
+          const rc = redactStored(child, f, hits, checkBlobs, secret || isSecretFieldKey(k));
           if (rc.changed) changed = true;
           out[rk.key] = rc.value;
         }
@@ -757,6 +783,8 @@ export class Store {
       this.db.exec('VACUUM; PRAGMA wal_checkpoint(TRUNCATE);');
     }
     this.policyCache.clear();
+    this.blobScopes.clear();
+    this.blobMisses.clear();
   }
 
   private q(sql: string): StatementSync {
@@ -941,6 +969,8 @@ export class Store {
     });
     this.policyCache.delete(id);
     this.imageBudgets.delete(id);
+    this.blobScopes.delete(id);
+    this.blobMisses.clear();
     const shared = new Set<string>();
     for (const table of ['observations', 'projections']) {
       for (const row of this.db.prepare(`SELECT body FROM ${table}`).iterate()) {
@@ -1068,6 +1098,7 @@ export class Store {
       }
       this.q('UPDATE sources SET cursor = ? WHERE id = ?').run(JSON.stringify(cursor), sourceId);
       if (added.length) {
+        this.noteBlobRefs(recordingId, added);
         if (added.some(o => o.kind === 'turn.detail' || (o.kind === 'usage' && (o.payload as { source?: string }).source === 'claude-cost-state'))) {
           this.updateRecordingStats(recordingId);
         }
@@ -1296,10 +1327,12 @@ export class Store {
     }
     if (Array.isArray(v)) return v.map((x) => this.externalize(x, recordingId));
     if (v && typeof v === 'object') {
-      if (typeof (v as BlobText).$blob === 'string') return v;
       const o = v as Record<string, unknown>;
       if (o.kind === 'captured-image' && typeof o.data === 'string') return this.keepImage(o, recordingId);
-      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k, this.externalize(x, recordingId)]));
+      // A blob reference is something this method makes, never something a journal brings: its hash would be
+      // a key into text that may belong to another recording. A journal-supplied `$blob` stays as captured
+      // data under a name no reader resolves.
+      return Object.fromEntries(Object.entries(v).map(([k, x]) => [k === BLOB_KEY ? CAPTURED_BLOB_KEY : k, this.externalize(x, recordingId)]));
     }
     return v;
   }
@@ -1325,6 +1358,44 @@ export class Store {
 
   /** Image blobs this recording holds (CONTENT-1), so an image is served only to its own recording. */
   imageShas(recordingId: string): ReadonlySet<string> { return this.imageBudget(recordingId).shas; }
+
+  /**
+   * Blob hashes each recording's own stored observations reference. A hash is a content address, not a
+   * permission: another recording may hold the same text, or a stale reference may name text that is
+   * not the recording's to show. Resolving anything a journal named goes through this set.
+   */
+  private blobScopes = new Map<string, Set<string>>();
+  private blobMisses = new Set<string>();
+  private blobScope(recordingId: string): Set<string> {
+    let scope = this.blobScopes.get(recordingId);
+    if (scope) return scope;
+    scope = new Set();
+    for (const row of this.q(`SELECT body FROM observations WHERE recording_id = ? AND body LIKE '%"$blob":"%'`).iterate(recordingId) as Iterable<{ body: string }>) {
+      for (const m of row.body.matchAll(BLOB_REF)) scope.add(m[1]!);
+    }
+    this.blobScopes.set(recordingId, scope);
+    return scope;
+  }
+  private noteBlobRefs(recordingId: string, observations: Observation[]) {
+    this.blobMisses.clear();
+    const scope = this.blobScopes.get(recordingId);
+    if (!scope) return;
+    for (const o of observations) for (const m of JSON.stringify(o).matchAll(BLOB_REF)) scope.add(m[1]!);
+  }
+  /** Whether a stored observation of this recording references the blob (another process may have appended it). */
+  recordingReferencesBlob(recordingId: string, sha: string): boolean {
+    if (!/^[0-9a-f]{64}$/.test(sha)) return false;
+    const scope = this.blobScope(recordingId);
+    if (scope.has(sha)) return true;
+    const miss = `${recordingId}|${sha}`;
+    if (this.blobMisses.has(miss)) return false;
+    if (this.q('SELECT 1 AS ok FROM observations WHERE recording_id = ? AND body LIKE ? LIMIT 1').get(recordingId, `%"$blob":"${sha}"%`)) { scope.add(sha); return true; }
+    if (this.blobMisses.size >= 10_000) this.blobMisses.clear();
+    this.blobMisses.add(miss);
+    return false;
+  }
+  /** Blob text for the recordings of one selection, and for nothing else. */
+  blobsFor(recordingIds: readonly string[]): ScopedBlobs { return new ScopedBlobs(this, [...new Set(recordingIds)]); }
 
   private imageBudgets = new Map<string, { shas: Set<string>; total: number }>();
   private imageBudget(recordingId: string) {
