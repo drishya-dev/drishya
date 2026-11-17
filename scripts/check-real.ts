@@ -50,10 +50,11 @@ import {blobDiffLines} from './real-cases/blob-diff-lines.ts';
 import {longDiffLines} from './real-cases/long-diff-lines.ts';
 import {widePassages} from './real-cases/wide-passages.ts';
 import {redaction} from './real-cases/redaction.ts';
+import { claudeCheckpoints } from './real-cases/claude-checkpoints.ts';
 
 
 
-const cases: RealCase[] = [redaction, fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, longDiffLines, widePassages, usageContext, linkProse];
+const cases: RealCase[] = [redaction, fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, longDiffLines, widePassages, usageContext, linkProse, claudeCheckpoints];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 cases.push(antigravity);
 cases.push(antigravityLive);
