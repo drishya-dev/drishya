@@ -1,0 +1,18 @@
+/* FEEDBACK-1: a quiet text link, muted at rest, one step brighter on hover. No motion beyond the colour change. */
+.feedback-link {
+  display:inline-flex; align-items:center; gap:4px; min-height:24px; padding:0 2px; border-radius:var(--round-sm,4px);
+  color:var(--t3); text-decoration:none; font:inherit; transition:color 160ms ease;
+}
+.feedback-arrow { color:var(--t3); transition:color 160ms ease; }
+@media (hover:hover) and (pointer:fine) {
+  .feedback-link:hover, .feedback-link:hover .feedback-arrow { color:var(--t1); }
+}
+.feedback-link:focus-visible { outline:2px solid var(--focus,currentColor); outline-offset:2px; }
+.settings-dialog .feedback-link { color:var(--t2); text-decoration:underline; text-underline-offset:3px; text-decoration-color:var(--line-3,currentColor); }
+@media (prefers-reduced-motion:reduce), (forced-colors:active) {
+  .feedback-link, .feedback-arrow { transition:none; }
+}
+@media (forced-colors:active) {
+  .feedback-link { color:LinkText; }
+  .feedback-link:focus-visible { outline-color:Highlight; }
+}

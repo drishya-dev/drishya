@@ -33,10 +33,16 @@ body:
     validations:
       required: true
   - type: input
+    id: version
+    attributes:
+      label: Drishya version
+      description: Shown in Settings, under Privacy. Or the commit, if you run from a checkout.
+      placeholder: e.g. 0.1.0
+  - type: input
     id: harness
     attributes:
-      label: Harness and version
-      placeholder: e.g. Claude Code 2.1.x, Codex CLI 0.x — or "prototype"
+      label: Agent and version
+      placeholder: e.g. Claude Code 2.1.x, Codex CLI 0.x, Antigravity
   - type: input
     id: env
     attributes:
@@ -50,7 +56,5 @@ body:
   - type: textarea
     id: acceptance
     attributes:
-      label: How we can verify it
-      description: Describe what should be true after the change, and any specific cases or constraints.
-    validations:
-      required: true
+      label: How we can verify a fix
+      description: Optional. What should be true once it is fixed, and any specific cases or constraints.

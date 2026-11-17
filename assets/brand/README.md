@@ -20,7 +20,7 @@ The woven mark and the name. The code in this repository is Apache-2.0; the **na
 
 ## Where the copies live
 
-The app and the website serve their own copies from their `public` folders, because a bundler cannot reach outside its root: `apps/ui/public/brand/` (app icon, tab icon, favicon sizes) and `apps/site/public/mark.svg`. A unit test (`apps/ui/test/brand-assets.test.ts`) fails if those copies differ from the files here, so **change a file here first and copy it to where it is served**.
+The app and the website serve their own copies from their `public` folders, because a bundler cannot reach outside its root: `apps/ui/public/brand/` (app icon, tab icon, favicon sizes) and `apps/site/public/mark.svg` and `apps/site/public/social-preview.png`. A unit test (`apps/ui/test/brand-assets.test.ts`) fails if those copies differ from the files here, so **change a file here first and copy it to where it is served**.
 
 ## Rebuilding the social preview
 
