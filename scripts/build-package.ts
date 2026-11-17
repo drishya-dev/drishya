@@ -8,6 +8,8 @@ import { build } from 'esbuild';
 
 const root = resolve(import.meta.dirname, '..');
 const out = resolve(root, 'dist/package');
+const workspace = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as { version?: string };
+const version = workspace.version ?? '0.1.0-alpha.0';
 if (!out.startsWith(root + sep)) throw new Error('package output must stay inside the workspace');
 rmSync(out, { recursive: true, force: true });
 mkdirSync(resolve(out, 'apps/daemon/src'), { recursive: true });
@@ -26,14 +28,14 @@ await build({
   format: 'esm',
   packages: 'bundle',
   legalComments: 'none',
+  define: { DRISHYA_PACKAGE_VERSION: JSON.stringify(version) },
 });
 cpSync(resolve(root, 'apps/ui/dist'), resolve(out, 'apps/ui/dist'), { recursive: true });
 cpSync(resolve(root, 'fixtures/synthetic'), resolve(out, 'fixtures/synthetic'), { recursive: true });
 cpSync(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));
-const workspace = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as { version?: string };
 writeFileSync(resolve(out, 'package.json'), JSON.stringify({
   name: '@drishya-dev/cli',
-  version: workspace.version ?? '0.1.0-alpha.0',
+  version,
   description: 'Local, read-only live view and replay for coding agents',
   license: 'Apache-2.0',
   repository: { type: 'git', url: 'git+https://github.com/drishya-dev/drishya.git' },
