@@ -91,6 +91,8 @@ try {
   }
   const help = command(process.execPath, [entry]);
   assert.match(help, /drishya serve/);
+  const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as { version: string };
+  assert.equal(help.split(' ')[1], manifest.version, 'installed CLI help version');
   const fixture = join(installed, 'node_modules', 'drishya', 'fixtures', 'synthetic');
   const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
   const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
