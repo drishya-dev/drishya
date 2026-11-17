@@ -8,6 +8,7 @@ const read = (path: string) => readFileSync(new URL(`../../../${path}`, import.m
 describe('brand assets', () => {
   it.each([
     ['apps/site/public/mark.svg', 'assets/brand/mark-on-dark.svg'],
+    ['apps/site/public/social-preview.png', 'assets/brand/social-preview.png'],
     ['apps/ui/public/brand/drishya.svg', 'assets/brand/app-icon.svg'],
     ['apps/ui/public/brand/drishya.png', 'assets/brand/app-icon.png'],
     ['apps/ui/public/brand/drishya-tab.svg', 'assets/brand/mark-adaptive.svg'],
