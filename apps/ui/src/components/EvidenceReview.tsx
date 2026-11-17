@@ -56,7 +56,7 @@ function MoreRows({ load }: { load?: () => void }) {
 const FilesPage = memo(function FilesPage({ data, close }: { data: SinceSnapshot; close: LeaveReview }) {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   return data.editedFiles.map(path => {
-    const leave = () => close(path), stat = data.fileStats?.[path];
+    const leave = () => close(path), stat = data.fileStats && Object.hasOwn(data.fileStats, path) ? data.fileStats[path] : undefined;
     const openFile = () => { useApp.getState().set({ filePanel: path, filePanelFocus: 'change', currentFile: undefined, explore: false }); leave(); };
     const showMap = () => { leave(); useApp.setState({mapVisible:true,explore:true,developerWorkspace:false,selectedOp:undefined,expandedOp:undefined,filePanel:undefined,currentFile:undefined,mapFocusPath:path}); };
     const edits = <FileEdits stat={stat} close={leave}/>, net = <SessionDiff diff={stat?.netDiff} open={operationId=>{useApp.getState().select(operationId);leave();}}/>;

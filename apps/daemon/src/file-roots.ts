@@ -1,4 +1,5 @@
 import {localFileUrlPath} from '@drishya/capture-core';
+import {isUnsafeRecordedPath} from './remote-path.ts';
 import {setImmediate as yieldTurn} from 'node:timers/promises';
 import {createHash} from 'node:crypto';
 import type {Store} from '@drishya/store';
@@ -88,7 +89,7 @@ export function withFileRootEvidence(roots:RecordedRoot[],projection:Projection,
 /** Existence is a read-only snapshot of recorded directories, not permission to read their contents. */
 export async function withFileRootDiskState(value:{roots:RecordedRoot[];truncated:boolean}) {
   const roots=await Promise.all(value.roots.map(async root=>{
-    if(!isAbsolute(root.root)||process.platform==='win32'&&root.root.startsWith('/')&&!root.root.startsWith('//'))return {...root,onDisk:'unavailable' as const};
+    if(!isAbsolute(root.root)||isUnsafeRecordedPath(root.root)||process.platform==='win32'&&root.root.startsWith('/'))return {...root,onDisk:'unavailable' as const};
     try{return {...root,onDisk:(await stat(root.root)).isDirectory()?'present' as const:'removed' as const};}
     catch(error){return {...root,onDisk:(error as NodeJS.ErrnoException).code==='ENOENT'?'removed' as const:'unavailable' as const};}
   }));return {...value,roots};

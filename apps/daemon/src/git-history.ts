@@ -187,7 +187,7 @@ function signatureFromFiles(files:Map<string,string>):string {
 }
 function filesRecordFromMap(files:Map<string,string>):Record<string,string>|null {
   if(!files.size||files.size>MAX_FILES_PER_CHANGE)return null;
-  const record:Record<string,string>={};
+  const record:Record<string,string>=Object.create(null);
   for(const [path,blob] of files){
     const safePath=clean(path);
     if(safePath)record[safePath]=blob;
@@ -300,7 +300,7 @@ async function squashEvidence(git:Git,commits:GitCommit[],tip:string|undefined,p
             else{
               const namesRaw=await git(['show','--no-show-signature','--no-notes','--no-renames','--name-only','-z','--format=',...ownCommits,'--']).catch(()=>'');
               const ownPaths=new Set(namesRaw.split('\0').map(clean).filter(Boolean));
-              const filtered:Record<string,string>={};
+              const filtered:Record<string,string>=Object.create(null);
               for(const [path,blob] of Object.entries(netFiles))if(ownPaths.has(path))filtered[path]=blob;
               rememberMap(filesCache,boKey,Object.keys(filtered).length?filtered:null);
             }

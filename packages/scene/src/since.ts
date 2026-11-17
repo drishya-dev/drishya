@@ -67,7 +67,9 @@ export const FILE_EDIT_LIMIT = 20;
 const gapTitle = (reason: string) => reason === 'compaction' ? 'Earlier context compacted' : reason === 'unsupported-record' ? 'Record Drishya does not read yet' : `Gap: ${reason.replace(/-/g, ' ')}`;
 
 export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[]): Record<string, SinceFileStat> {
-  const wanted = new Set(paths), ops = new Map(p.operations.map((o) => [o.id, o])), stats: Record<string, SinceFileStat> = {};
+  const wanted = new Set(paths), ops = new Map(p.operations.map((o) => [o.id, o]));
+  // Keyed by a captured filename, so a Map: a plain object makes `__proto__`, `constructor` or `hasOwnProperty` alias shared prototype state (SEC-4b).
+  const stats = new Map<string, SinceFileStat>();
   const { starts, ends } = operationObservations(p);
   const turnsByAgent = new Map<string, number[]>(), testsByAgent = new Map<string, { start: number; op: Operation }[]>();
   for (const item of p.timeline) if (item.type === 'turn' && isPersonPrompt(item.prompt)) (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
@@ -79,7 +81,8 @@ export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[
   for (const edit of [...edits].sort((a, b) => a.sequence - b.sequence)) {
     const op = edit.operationId ? ops.get(edit.operationId) : undefined;
     if (!op || op.detail.kind !== 'edit' || !wanted.has(op.detail.path)) continue;
-    const stat = stats[op.detail.path] ??= { added: 0, removed: 0, edits: 0 };
+    let stat = stats.get(op.detail.path);
+    if (!stat) stats.set(op.detail.path, stat = { added: 0, removed: 0, edits: 0 });
     let added = 0, removed = 0;
     for (const hunk of op.detail.hunks) for (const line of hunk.lines) { if (line.startsWith('+')) added++; else if (line.startsWith('-')) removed++; }
     stat.added += added; stat.removed += removed; stat.edits++;
@@ -96,7 +99,8 @@ export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[
     }
     (stat.fileEdits ??= []).push(entry);
   }
-  return stats;
+  // No prototype, so the filename `__proto__` stays an ordinary own key for every reader of the result.
+  return Object.assign(Object.create(null) as Record<string, SinceFileStat>, Object.fromEntries(stats));
 }
 
 /** Whole-session facts with bounded previews for the reader; never count just a page. */

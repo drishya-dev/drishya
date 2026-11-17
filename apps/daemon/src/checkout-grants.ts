@@ -5,6 +5,7 @@ import {dirname,join,parse,resolve} from 'node:path';
 import {homedir} from 'node:os';
 import {sanitize} from '@drishya/privacy';
 import type {Store} from '@drishya/store';
+import {isUnsafeRecordedPath} from './remote-path.ts';
 
 export interface CheckoutIdentity {
   root:string; directory:string;
@@ -19,7 +20,7 @@ const spellingKey=(path:string)=>createHash('sha256').update(normalize(path)).di
 export const checkoutGrantKey=(path:string)=>{
   // A spelling alias is the same capability. A vanished alias is found through
   // its saved approval spelling when a canonical lookup is no longer possible.
-  let canonical=path;try{canonical=realpathSync.native(path);}catch{}
+  let canonical=path;if(!isUnsafeRecordedPath(path))try{canonical=realpathSync.native(path);}catch{}
   return spellingKey(canonical);
 };
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
@@ -47,6 +48,7 @@ async function marker(path:string):Promise<string> {
   } finally {await handle.close();}
 }
 export async function checkoutIdentity(given:string):Promise<CheckoutIdentity> {
+  if(isUnsafeRecordedPath(given))throw new CheckoutIdentityError('A network or device path cannot be a checkout.');
   const requested=resolve(given),root=await realpath(requested);
   const home=await realpath(homedir()).catch(()=>homedir());
   if(normalize(root)===normalize(parse(root).root)||normalize(root)===normalize(home))throw new CheckoutIdentityError('This folder is too broad to remember.');
