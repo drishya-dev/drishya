@@ -1,13 +1,13 @@
 # Drishya: engineering, integration and delivery plan
 
-**7 October amendment:** [Connected workspace](26-connected-workspace.md) implements session folders/current-file reading and an explicitly authorized opt-in native prompt controller. This supersedes older observe-only product scope while preserving passive capture, privacy/evidence boundaries and publishing-only CI. No event/store schema or runtime dependency changed.
+**7 October amendment:** [Connected workspace](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#26-connected-workspace) implements session folders/current-file reading and an explicitly authorized opt-in native prompt controller. This supersedes older observe-only product scope while preserving passive capture, privacy/evidence boundaries and publishing-only CI. No event/store schema or runtime dependency changed.
 
 > **5 Oct implementation amendment:** [08: bounded history reader](08-b4-history-reader.md) is current for worker ownership, streaming/indexed history, internal reader APIs and measured release limits. Earlier full-projection and deferral statements below are historical.
 
 
 21 September 2026 · Proposed architecture amendments and build gates
 
-> **30 September amendment:** [IMPLEMENTATION_ROADMAP](../IMPLEMENTATION_ROADMAP.md) governs current execution order and reliability/live-history/deployment amendments. [Baseline audit](06-baseline-audit.md) distinguishes built behavior from verified results and open defects. The built stack uses `node:sqlite` and `node:http` + SSE; see CODEBASE/STATUS for the recorded deviations from the proposal below. Live history accumulates independently of reading position; playback is optional. Schema proposals still require both builders' agreement.
+> **30 September amendment:** [IMPLEMENTATION_ROADMAP](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#implementation-roadmap) governs current execution order and reliability/live-history/deployment amendments. [Baseline audit](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#06-baseline-audit) distinguishes built behavior from verified results and open defects. The built stack uses `node:sqlite` and `node:http` + SSE; see CODEBASE/STATUS for the recorded deviations from the proposal below. Live history accumulates independently of reading position; playback is optional. Schema proposals still require both builders' agreement.
 
 This plan preserves a local browser application and an independent collector. It narrows the first implementation while making historical replay, privacy and performance explicit. It is not an implemented architecture. Schema changes below are proposals to reconcile with [reference 03](../reference/03-event-schema.md) before its first stable version.
 

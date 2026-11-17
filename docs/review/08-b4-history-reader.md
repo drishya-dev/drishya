@@ -70,7 +70,7 @@ Historical contrast: the prior 100k update took 4.35 s and valid 1 GiB import re
 
 ## Correctness and install checks
 
-Implementation `8e55907`, [PR #22](https://github.com/drishya-dev/drishya/pull/22), passed all seven jobs in [CI run 37328879714](https://github.com/drishya-dev/drishya/actions/runs/37328879714): checks/browser on Windows and Linux, offline package verification on Windows, Linux and macOS. Other-builder review remains required before merge.
+Implementation `8e55907`, PR #22, passed all seven jobs in [CI run 37328879714](https://github.com/drishya-dev/drishya/actions/runs/37328879714): checks/browser on Windows and Linux, offline package verification on Windows, Linux and macOS. Other-builder review remains required before merge.
 
 - Typechecks and 206 unit tests cover streaming timestamp ordering/migration, reducer snapshot/append equivalence, late rebuilds, as-of artifact visibility, restart, shared derived cleanup, bounded page/material APIs, metadata updates and storage reporting.
 - Eight synthetic browser tests cover existing B2/B3/P1 behavior and the new 12k-observation paged journey: earlier windows, detached capture, global search, optional replay and low-resource state. Scroll-anchor regression is also repeated five times.

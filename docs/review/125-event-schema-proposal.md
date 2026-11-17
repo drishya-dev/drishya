@@ -1,6 +1,6 @@
 # 125 — Event-schema proposal: close the harness-data gap
 
-**19 October 2026 · Claude Sonnet 5.5 · TASKS DATA-10.** Status: **proposal, nothing implemented.** The event schema changes only by agreement between both builders ([AGENTS](../../AGENTS.md#how-we-work--two-builders-one-repo)). Tick the agreement table in §9, then implementation PRs (label `schema`) may start. Evidence for every field is [123](123-harness-data-audit.md) plus the extra structure probes listed in §10.
+**19 October 2026 · Claude Sonnet 5.5 · TASKS DATA-10.** Status: **proposal, nothing implemented.** The event schema changes only by agreement between both builders ([AGENTS](../../AGENTS.md#how-we-work)). Tick the agreement table in §9, then implementation PRs (label `schema`) may start. Evidence for every field is [123](123-harness-data-audit.md) plus the extra structure probes listed in §10.
 
 ## 1. What this changes, in one page
 

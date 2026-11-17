@@ -3,6 +3,7 @@ import { redactText } from '@drishya/privacy';
 import { HttpError } from './app.ts';
 import type { App } from './app.ts';
 import type { GithubReply } from './link-types.ts';
+import { executable } from './native-executable.ts';
 
 // LINK-1: GitHub PR and issue hover cards. Drishya holds no token and calls no GitHub endpoint itself. When the person opts in
 // (Settings), a card for a github.com pull request or issue URL is answered by the person's own installed, signed-in `gh` CLI,
@@ -23,7 +24,12 @@ export function parseGithubUrl(value: string): { owner: string; repo: string; ki
 }
 
 export const defaultGhRun: GhRun = (args, signal, maxBuffer = 256 * 1024) => new Promise((yes, no) => {
-  execFile('gh', args, { signal, timeout: 15_000, maxBuffer, windowsHide: true, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } }, (error, stdout, stderr) => {
+  const bin = executable('gh');
+  if (!bin) {
+    no(Object.assign(new Error('GitHub CLI is unavailable on the configured PATH.'), { code: 'ENOENT' }));
+    return;
+  }
+  execFile(bin, args, { signal, timeout: 15_000, maxBuffer, windowsHide: true, env: { ...process.env, GH_PROMPT_DISABLED: '1', NO_COLOR: '1' } }, (error, stdout, stderr) => {
     if (error) { const e = error as NodeJS.ErrnoException & { stderr?: string }; e.stderr = String(stderr).slice(0, 400); no(e); } else yes(stdout);
   });
 });

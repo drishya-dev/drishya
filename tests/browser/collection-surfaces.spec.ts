@@ -71,7 +71,31 @@ for(const count of [3,300]){
   const imports=reader.locator('.import-context');await imports.locator('summary').click();await expect(imports).toHaveAttribute('data-size',count===3?'fit':'page');await expect(imports.locator('.import-destination')).toHaveCount(Math.min(count,8));
   if(count===300){const next=imports.getByRole('button',{name:'Next',exact:true});for(let n=0;n<37;n++)await next.click();await expect(next).toBeDisabled();await expect(imports.locator('.import-destination').last()).toContainText('collection-299.ts');await expect(imports.locator('.import-destination')).toHaveCount(4);}
   else await expect(imports.getByRole('navigation',{name:'Import connection pages'})).toHaveCount(0);
-  for(const width of [390,320]){await page.setViewportSize({width,height:900});if(await page.locator('.folder-explorer').isVisible())await page.getByRole('button',{name:'Minimize files',exact:true}).click();const actions=reader.getByLabel('File actions for main.ts',{exact:true});if(!await reader.locator('.desk-options').evaluate(node=>(node as HTMLDetailsElement).open))await actions.click();if(!await imports.evaluate(node=>(node as HTMLDetailsElement).open))await imports.locator('summary').click();const menu=reader.locator('.desk-options-body');const box=(await menu.boundingBox())!;expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(width+1);await imports.getByRole('button',{name:/^Work on/}).last().focus();await expect(imports.getByRole('button',{name:/^Work on/}).last()).toBeInViewport();}await page.setViewportSize({width:1440,height:900});
+  const filesTrigger=desk.getByRole('button',{name:'Choose workspace file',exact:true});
+  const explorer=page.locator('.folder-explorer');
+  const actions=reader.getByLabel('File actions for main.ts',{exact:true});
+  const options=reader.locator('.desk-options');
+  const menu=options.locator('.desk-options-body');
+  const lastAction=imports.getByRole('button',{name:/^Work on/}).last();
+  for(const width of [600,1440]){
+   await page.setViewportSize({width,height:900});
+   if(width===600){
+    await expect(filesTrigger).toBeVisible();
+    if(await explorer.isVisible())await explorer.getByRole('button',{name:'Minimize files',exact:true}).click();
+    await expect(explorer).toBeHidden();
+   }else await expect(filesTrigger).toBeHidden();
+   if(!await options.evaluate(node=>(node as HTMLDetailsElement).open))await actions.click();
+   if(!await imports.evaluate(node=>(node as HTMLDetailsElement).open))await imports.locator('summary').click();
+   await expect(async()=>{
+    const box=await menu.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x+box!.width).toBeLessThanOrEqual(width+1);
+   }).toPass({timeout:5000});
+   await lastAction.focus();
+   await expect(lastAction).toBeFocused();
+   await expect(lastAction).toBeInViewport();
+  }
   await page.screenshot({path:`.local/ui10-imports-${count}.png`});await page.keyboard.press('Escape');await desk.getByRole('button',{name:'Back to agent',exact:true}).click();
   // Normalize only current-Git DTOs: this matrix tests presentation, real Git/consent has separate coverage.
   await page.route('**/git',route=>route.fulfill({json:{approved:true,scope:'current-git'}}));

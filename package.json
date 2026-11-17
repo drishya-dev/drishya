@@ -17,7 +17,7 @@
     "package:verify": "pnpm package:build && node scripts/verify-package.ts && pnpm test:security",
     "demo:bundle": "node apps/daemon/src/cli.ts demo-bundle --out apps/ui/public/demo/bundle.json",
     "test": "vitest run",
-    "test:browser": "pnpm ui:build && node scripts/test-browser.ts",
+    "test:browser": "pnpm ui:build && pnpm --filter drishya-site build && node scripts/test-browser.ts",
     "test:security": "vitest run --config vitest.security.config.ts",
     "test:security:mutations": "node tests/security/mutations.ts",
     "test:watch": "vitest",

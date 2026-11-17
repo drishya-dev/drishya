@@ -2,7 +2,7 @@
 
 An interactive design prototype of Drishya's core experience, built to make [`VISION.md`](../VISION.md) tangible. **Synthetic data only.** Every event is invented to tell one coherent story; nothing here reads a harness, and it must never be presented as a working integration.
 
-It is the current design reference, in the clean developer-tool theme described in [`VISION.md` §5](../VISION.md#5-theme-a-clean-developer-tool). The obsolete storyboard and app concept gallery were removed at the builder's request. Both prototype HTML references remain; the integrated app is the deliverable. See [motion lifecycle](../review/22-p1-motion-lifecycle.md).
+It is the current design reference, in the clean developer-tool theme described in [`VISION.md` §5](../VISION.md#5-theme-a-clean-developer-tool). The obsolete storyboard and app concept gallery were removed at the builder's request. Both prototype HTML references remain; the integrated app is the deliverable. See [motion lifecycle](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#22-p1-motion-lifecycle).
 
 ## Deep links
 
@@ -16,7 +16,7 @@ One self-contained file with no dependencies and no network calls. Serve `docs/`
 python -m http.server 5178 --bind 127.0.0.1 --directory docs
 ```
 
-Then open <http://127.0.0.1:5178/prototype/index.html>. In the Claude desktop app, the `docs-static` entry in `.claude/launch.json` does the same thing. Opening the file straight from disk also works in most browsers.
+Then open <http://127.0.0.1:5178/prototype/index.html>. Opening the file straight from disk also works in most browsers.
 
 ## The story it tells
 
@@ -46,7 +46,7 @@ A developer asks for free orders to reach checkout. **Claude** reads the guard, 
 
 ## What it proves — and what it does not
 
-**30 September direction:** this remains a synthetic interaction reference, not the final frontend. Its play/pause filmstrip is useful for testing and optional recorded playback. The final live app keeps accumulating history while the reader scrolls back; it does not require a timed playback cursor to reveal new work. Port useful interactions into `apps/ui`, keeping real API integration. See [PRODUCT_DIRECTION](../PRODUCT_DIRECTION.md) and [IMPLEMENTATION_ROADMAP](../IMPLEMENTATION_ROADMAP.md).
+**30 September direction:** this remains a synthetic interaction reference, not the final frontend. Its play/pause filmstrip is useful for testing and optional recorded playback. The final live app keeps accumulating history while the reader scrolls back; it does not require a timed playback cursor to reveal new work. Port useful interactions into `apps/ui`, keeping real API integration. See [PRODUCT_DIRECTION](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#product-direction) and [IMPLEMENTATION_ROADMAP](../PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#implementation-roadmap).
 
 It demonstrates the composition, the five signature moves, retention and overlap, evidence-linked hover, holding and following, filters, explore, scrubbing, reduced motion and phone width.
 

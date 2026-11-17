@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -19,7 +19,7 @@ function raster(width: number, height: number) {
 let dir: string, app: App, server: RunningServer, id: string;
 const timestamp = '2026-10-26T00:00:00Z';
 test.beforeAll(async () => {
-  dir = mkdtempSync(join(tmpdir(), 'drishya-image-desktop-'));
+  dir = mkdtempSync(join(realpathSync.native(tmpdir()), 'drishya-image-desktop-'));
   const root = join(dir, 'repo'); mkdirSync(root); mkdirSync(join(root, '.local'));
   const data = raster(1600, 1200); writeFileSync(join(root, 'space # image.png'), data); writeFileSync(join(root, '.local', 'protected.png'), data);
   app = new App(join(dir, 'store')); server = await startServer({ app, port: 0 });
@@ -37,7 +37,7 @@ test.beforeAll(async () => {
     ...paths.map((path, i) => ({ timestamp, type: 'event_msg', payload: { type: 'item_completed', item: { type: 'ImageView', id: `image-${i}`, path } } }))].map(r => JSON.stringify(r)).join('\n') + '\n');
   id = (await app.ingest.importSource('codex', source)).recordingId;
 });
-test.afterAll(async () => { await server?.close(); await app?.close(); if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw Error('Unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
+test.afterAll(async () => { await server?.close(); await app?.close(); if (!resolve(dir).startsWith(realpathSync.native(tmpdir()) + sep)) throw Error('Unsafe temporary path'); rmSync(dir, { recursive: true, force: true }); });
 async function open(page: Page) {
   await page.goto(server.launchUrl); await expect(page.locator('.home')).toBeVisible();
   await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);

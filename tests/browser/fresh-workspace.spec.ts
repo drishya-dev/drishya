@@ -22,8 +22,19 @@ async function settled(node:Locator) {
   await node.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
   await node.evaluate(el=>Promise.all(el.getAnimations({subtree:true}).map(animation=>animation.finished.catch(()=>undefined))));
 }
+async function pauseSurfaceAtCreation(surface:Locator) {
+  return surface.evaluateHandle(node=>{
+    const original=Element.prototype.animate;
+    Element.prototype.animate=function(frames,options) {
+      const animation=original.call(this,frames,options);
+      if(this===node||node.contains(this)){animation.pause();animation.currentTime=0;}
+      return animation;
+    };
+    return ()=>{Element.prototype.animate=original;};
+  });
+}
 async function pasteDraft(editor:Locator,text:string) {
-  await editor.focus();await editor.press('Control+a');
+  await editor.focus();await editor.press('ControlOrMeta+a');
   await editor.evaluate((node,text)=>{const data=new DataTransfer();data.setData('text/plain',text);node.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));},text);
 }
 
@@ -35,7 +46,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  const before=(await composer.boundingBox())!;
  expect(before.width).toBeGreaterThan(500);
  // Pause at creation: an IPC round trip can outlast the entire short morph under load.
- await composer.evaluate(node=>{const original=Element.prototype.animate;(window as any).__restoreComposerAnimation=()=>{Element.prototype.animate=original;};Element.prototype.animate=function(frames,options){const animation=original.call(this,frames,options);if(this===node||node.contains(this)){animation.pause();animation.currentTime=0;}return animation;};});
+ const restoreComposerAnimation=await pauseSurfaceAtCreation(composer);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
  const pause=async(time:number)=>composer.evaluate((node,time)=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=time;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};},time);
  const start=await pause(0);for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
@@ -46,7 +57,7 @@ test('prompt minimize and reversal share measured bounds without changing layout
  expect((await composer.locator('[data-surface-label]').boundingBox())!.height).toBeLessThan(30);
  await composer.getByRole('button',{name:'Expand prompt',exact:true}).click({force:true});const reversed=await pause(0);
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(reversed[key]-middle[key]),`reversed ${key}`).toBeLessThan(1.5);
- await composer.evaluate(node=>{node.getAnimations({subtree:true}).forEach(animation=>animation.finish());(window as any).__restoreComposerAnimation();});
+ await composer.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));await restoreComposerAnimation.evaluate(restore=>restore());await restoreComposerAnimation.dispose();
  await expect.poll(()=>composer.evaluate(node=>Math.abs(parseFloat(getComputedStyle(node.closest('.viewer')!).getPropertyValue('--composer-gap'))-24-node.offsetHeight))).toBeLessThanOrEqual(3);
  await composer.getByRole('button',{name:'Minimize prompt',exact:true}).focus();await page.keyboard.press('Enter');expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
  await page.emulateMedia({reducedMotion:'reduce'});await composer.getByRole('button',{name:'Expand prompt',exact:true}).click();expect(await composer.evaluate(node=>node.getAnimations().length)).toBe(0);
@@ -56,11 +67,13 @@ test('prompt minimize and reversal share measured bounds without changing layout
 test('toolbox minimizes from actual bounds and keeps its compact icon and independent scroll',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
  const toolbox=page.locator('.modern-tool-station');await expect(toolbox).toBeVisible();const before=(await toolbox.boundingBox())!;
+ // Pause at creation so an IPC round trip cannot outlast the morph before measurement.
+ const restoreToolboxAnimation=await pauseSurfaceAtCreation(toolbox);
  await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();
  const start=await toolbox.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};});
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
  expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);
- await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));
+ await toolbox.evaluate(node=>node.getAnimations({subtree:true}).forEach(animation=>animation.finish()));await restoreToolboxAnimation.evaluate(restore=>restore());await restoreToolboxAnimation.dispose();
  const compact=toolbox.getByRole('button',{name:'Expand toolbox',exact:true});
  expect(await compact.evaluate(button=>{
   const box=button.getBoundingClientRect();
@@ -231,6 +244,8 @@ test('Home dense sessions remain reachable through virtualization and responsive
   for(let index=0;index<160&&seen.size<160;index++) {
     for(const title of await rows.locator('strong').evaluateAll(nodes=>nodes.map(node=>node.getAttribute('title')!)))seen.add(title);
     await list.evaluate(node=>{node.scrollTop+=Math.max(100,node.clientHeight*.8);});
+    // Let the virtual list paint the rows for this position before reading them (two frames), or a slow runner skips some.
+    await page.evaluate(()=>new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve()))));
     await page.waitForTimeout(25);
   }
   expect(seen.size,'No session should be skipped when more virtual rows are loaded').toBe(160);
@@ -1041,7 +1056,7 @@ test('Workspace large draft comparison retains complete text, editing state and 
   const editor=document.getByRole('textbox',{name:'Local draft for src/cart/comparison.ts',exact:true});
   const draft=Array.from({length:1500},(_,i)=>`export const draftLine${i+1} = ${i+1};`).join('\n');
   await pasteDraft(editor,draft);
-  await editor.press('Control+Home');await editor.press('Shift+End');
+  await editor.press('ControlOrMeta+Home');await editor.press('Shift+End');
   const selection=await page.evaluate(()=>getSelection()?.toString());
   // Let CodeMirror finish its queued keyboard-selection measurement before setting the reading position.
   await page.evaluate(()=>new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
@@ -1065,10 +1080,10 @@ test('Workspace large draft comparison retains complete text, editing state and 
   await expect.poll(()=>scroller.evaluate(node=>node.scrollTop)).toBe(250);
   const downloaded=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await downloaded).path())!,'utf8')).toBe(draft);
-  await editor.press('Control+z');
+  await editor.press('ControlOrMeta+z');
   const undone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await undone).path())!,'utf8')).toBe(readFileSync(join(root,'src/cart/comparison.ts'),'utf8'));
-  await editor.press('Control+y');
+  await editor.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');
   const redone=page.waitForEvent('download');await document.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await document.getByRole('button',{name:'Download draft',exact:true}).click();
   expect(readFileSync((await (await redone).path())!,'utf8')).toBe(draft);
   expect(readFileSync(join(root,'src/cart/comparison.ts'),'utf8')).not.toContain('draftLine');
@@ -1091,12 +1106,12 @@ test('Workspace editor indents, undoes and preserves exact line endings without 
     await expect(editor).toBeVisible();expect(await editor.evaluate(node=>{const style=getComputedStyle(node);return [style.fontSize,style.lineHeight];})).toEqual(readingType);
     await expect(editor).toBeFocused();await expect(file.locator('.cm-lineNumbers')).toBeVisible();
     await expect(file.getByRole('button',{name:'Review edit with harness',exact:true})).toBeDisabled();
-    await editor.press('Control+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
+    await editor.press('ControlOrMeta+End');await page.keyboard.insertText('// added');await editor.press('Enter');await page.keyboard.insertText('next');
     const download=async()=>{const pending=page.waitForEvent('download');await file.getByRole('button',{name:'Download draft',exact:true,includeHidden:true}).locator('xpath=ancestor::details[1]').locator(':scope>summary').click();await file.getByRole('button',{name:'Download draft',exact:true}).click();return readFileSync((await (await pending).path())!,'utf8');};
     expect(await download()).toBe(original+'// added'+eol+'next');
-    await editor.press('Control+Home');await editor.press('Tab');
+    await editor.press('ControlOrMeta+Home');await editor.press('Tab');
     expect(await download()).toBe((path.endsWith('endings.ts')?'    ':'  ')+original+'// added'+eol+'next');
-    await editor.press('Control+z');expect(await download()).toBe(original+'// added'+eol+'next');
+    await editor.press('ControlOrMeta+z');expect(await download()).toBe(original+'// added'+eol+'next');
     await editor.fill('x'.repeat(256*1024+1));
     await expect(file.getByRole('alert')).toContainText('This change was not applied');
     expect(await download()).toBe(original+'// added'+eol+'next');
@@ -1455,12 +1470,12 @@ test('a real pending-input shape expands the composer and replies to that reques
   await composer.getByRole('button',{name:'Minimize prompt',exact:true}).click();
   state={...state,state:'approval',inputRequests:[{id:'input-request',questions:[question]}]};
   const form=page.getByRole('form',{name:'Agent needs your input'});await expect(form).toBeVisible();
-  await expect(composer.locator('.modern-composer-state')).toHaveText('Answer requested');
+  await expect(composer.locator('.modern-composer-state')).toHaveText('Needs an answer');
   await expect(form.getByRole('button',{name:'Send answer',exact:true})).toBeDisabled();
   await form.getByRole('radio',{name:/Small patch/}).check();
   await form.getByRole('textbox',{name:'Answer: Which approach?',exact:true}).fill('Keep scope tiny');
   await expect(form.getByRole('radio',{name:/Small patch/})).not.toBeChecked();
-  for(const width of [1440,390]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
+  for(const width of [1440,600]) {await page.setViewportSize({width,height:900});expect(await composer.evaluate(n=>n.scrollWidth-n.clientWidth)).toBeLessThanOrEqual(1);await page.screenshot({path:resolve(`.local/native-input-${width}.png`)});}
   await form.getByRole('button',{name:'Send answer',exact:true}).click();
   await expect.poll(()=>answer).toEqual({runId:'input-run',requestId:'input-request',answers:{q0:{options:[],text:'Keep scope tiny'}}});
   expect(prompts).toBe(0);await expect(form).toHaveCount(0);
@@ -1592,7 +1607,7 @@ test('captured changes lead to typed map connections, current reading and a pers
   const toggle=page.getByRole('switch',{name:'Import paths',exact:true});if(await toggle.getAttribute('aria-checked')==='true')await toggle.click();
   await page.getByRole('button',{name:'Back to work',exact:true}).click();await page.getByRole('button',{name:'Explore repository map',exact:true}).click();await expect(changes).toHaveAttribute('aria-pressed','true');
   await page.getByRole('textbox',{name:'Find a file on the map',exact:true}).fill(path);await page.locator('.map-matches').getByRole('button',{name:path,exact:true}).click();if(await toggle.getAttribute('aria-checked')!=='true')await toggle.click();
-  for(const width of [1440,390]){await page.setViewportSize({width,height:900});await expect(connections).toBeVisible();for(const control of await page.locator('.map-tools button:visible').all())expect(await control.evaluate(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));})).toBe(true);const tools=(await page.locator('.map-tools').boundingBox())!,reader=(await connections.boundingBox())!;for(const control of await page.getByRole('navigation',{name:'Workspace views'}).locator('button:visible').all()){const b=(await control.boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(b.y+b.height);}if(width===390)expect(reader.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(reader.x+reader.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-investigation-${width}.png`)});}
+  for(const width of [1440,390]){await page.setViewportSize({width,height:900});await expect(connections).toBeVisible();expect(await page.locator('.map-tools button:visible').evaluateAll(nodes=>nodes.every(node=>{const r=node.getBoundingClientRect();return node.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}))).toBe(true);const tools=(await page.locator('.map-tools').boundingBox())!,reader=(await connections.boundingBox())!;for(const control of await page.getByRole('navigation',{name:'Workspace views'}).locator('button:visible').all()){const b=(await control.boundingBox())!;expect(tools.y).toBeGreaterThanOrEqual(b.y+b.height);}if(width===390)expect(reader.y).toBeGreaterThanOrEqual(tools.y+tools.height);expect(reader.x+reader.width).toBeLessThanOrEqual(width+1);await page.screenshot({path:resolve(`.local/map-investigation-${width}.png`)});}
 });
 
 

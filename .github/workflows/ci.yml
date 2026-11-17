@@ -1,11 +1,20 @@
 name: ci
 
+# SHIP-16. Windows, Linux and macOS on Node 24 with a frozen install. docs/CI_POLICY.md has the cost rules.
+#
+# While the repository is private, hosted minutes are metered, so a push or a pull request starts this workflow
+# but every job is skipped (a skipped job uses no runner and no minutes); only a builder's manual dispatch runs it.
+# The moment the repository is public the same triggers run it for free, with no edit here: each job's `if` reads
+# `github.event.repository.private`.
 on:
-  # Run once for a finished candidate, after local checks; commits do not spend hosted minutes.
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
     inputs:
       checks_only:
-        description: 'Only platform type/unit/package checks (targeted verification, not a full gate)'
+        description: 'Only the platform checks (typecheck, units, builds, security, package); skip the browser suite'
         type: boolean
         default: false
 
@@ -13,34 +22,47 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
+# Actions are pinned to a full commit (the same ones release.yml uses), not a movable tag.
 jobs:
   check:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.repository.private == false }}
+    name: check (${{ matrix.os }})
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
+      # The lockfile is frozen: a changed dependency fails here instead of being resolved anew.
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm test
-      # Packaging rebuilds the UI and checks the installed tarball.
+      - run: pnpm ui:build
+      - run: pnpm --filter drishya-site build
+      - run: pnpm test:security
+      # Builds the package, checks its contents, installs the packed tarball offline, records every network
+      # attempt of the installed server, and runs the security suite again against that install.
       - run: pnpm package:verify
       # The committed demo bundle must match what the fixtures produce.
       - run: pnpm demo:bundle && git diff --exit-code -- apps/ui/public/demo/bundle.json
         shell: bash
 
   browser:
-    if: ${{ !inputs.checks_only }}
+    if: ${{ (github.event_name == 'workflow_dispatch' || github.event.repository.private == false) && !inputs.checks_only }}
+    name: browser (${{ matrix.os }})
+    timeout-minutes: 75
     env:
       DRISHYA_WORKERS: 2
     strategy:
@@ -49,19 +71,22 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install chromium
+      # Linux needs Chromium's system libraries as well as the browser; the flag is harmless elsewhere.
+      - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:browser
       # Keep Playwright's page snapshot when a browser test fails, so a CI-only failure can be
       # diagnosed. The browser tests use synthetic data only.
       - if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: playwright-results-${{ matrix.os }}
           path: test-results/

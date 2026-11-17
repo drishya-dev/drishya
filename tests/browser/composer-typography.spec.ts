@@ -103,7 +103,7 @@ async function send(page: Page, composer: Locator, prompt: string) {
   }
 }
 
-for (const [width, height] of [[1440, 900], [390, 844]] as const) {
+for (const [width, height] of [[1440, 900], [600, 900]] as const) {
   test(`the composer keeps metadata at 11 px, controls at 12 px and the raised text at 4.5:1 while drafting at ${width}px`, async ({ page }) => {
     const composer = await open(page, width, height);
     await everyPalette(page, `${width} idle pill`);

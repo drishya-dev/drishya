@@ -1,3 +1,4 @@
+import {surfaceDuration,surfaceEasing} from '../lib/surface-motion.ts';
 import type { Projection } from '@drishya/contracts';
 import type { Scene } from '@drishya/scene';
 import { useCallback, useLayoutEffect, useRef, type MouseEvent, type ReactNode } from 'react';
@@ -126,11 +127,15 @@ export function ModernToolStation({ projection, scene, agents }: {
       return;
     }
 
-    const before = node.getBoundingClientRect().top;
+    const before = node.getBoundingClientRect().top, beforeHeight = node.offsetHeight;
     const wasOpen = details.open;
     if (frame.current !== undefined) cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => {
+    let frames = 0;
+    // MOTION-4b: a disclosure's content becomes visible one frame after `open` flips (the paired disclosure motion), so wait up to
+    // three frames for the dock's own size to change before measuring where it has to travel from.
+    const measure = () => {
       frame.current = undefined;
+      if (node.isConnected && details.isConnected && details.open !== wasOpen && node.offsetHeight === beforeHeight && ++frames < 3) { frame.current = requestAnimationFrame(measure); return; }
       if (!node.isConnected || !details.isConnected || details.open === wasOpen || !node.checkVisibility()) return;
       recentering.current?.cancel();
       syncCenter();
@@ -140,12 +145,12 @@ export function ModernToolStation({ projection, scene, agents }: {
       // Keep the translated dock inside the rail even when the open group fills it.
       const offset = Math.max(bounds.top - after.top, Math.min(bounds.bottom - after.bottom, before - after.top));
       if (Math.abs(offset) < 0.5) return;
-      const easing = getComputedStyle(document.documentElement).getPropertyValue('--ease-out').trim() || 'cubic-bezier(.16, 1, .3, 1)';
       recentering.current = node.animate(
         [{ transform: 'translateY(' + offset + 'px)' }, { transform: 'none' }],
-        { duration: 180, easing },
+        { duration: surfaceDuration('panel', wasOpen), easing: surfaceEasing() },
       );
-    });
+    };
+    frame.current = requestAnimationFrame(measure);
   }
 
   return <div ref={rail} className="toolbox-rail">

@@ -2,7 +2,7 @@
 // captured values cannot become options; the executable cannot come from the repository; Git runs with
 // its extension points off and never touches the network.
 import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { launchToken } from '../../apps/daemon/src/commands.ts';
 import { executable } from '../../apps/daemon/src/native-executable.ts';
@@ -42,9 +42,9 @@ describe('every place a program is started', () => {
     for (const file of sources('apps/ui/src')) expect(readFileSync(join(root, file), 'utf8'), file).not.toMatch(/child_process/);
   });
 
-  it('the browser opener runs only the launch link, whose characters are URL-safe', () => {
+  it('the browser opener runs only the one-time launch link (SEC-4), whose characters are URL-safe', () => {
     const source = readFileSync(join(root, 'apps/daemon/src/commands.ts'), 'utf8');
-    expect(source).toContain('openBrowser(running.launchUrl)');
+    expect(source).toContain('openBrowser(running.openUrl())');
     expect(source.match(/openBrowser\(/g)).toHaveLength(2); // the call and the definition
     expect(launchToken(undefined)).toBeUndefined();
     expect(launchToken('abcdefghijklmnopqrstuvwxyz0123456789_-ABCD')).toBeTruthy();
@@ -136,7 +136,9 @@ describe('Git never touches the network', () => {
     // `git remote` and `diff-tree` are local reads; the writing forms of `remote` are never used.
     expect(trace2).not.toMatch(/git remote (?:add|update|prune|set-url|set-head|remove|rm|rename)/);
     expect(trace2).not.toMatch(/git-remote-|remote-http|ls-remote|upload-pack|receive-pack|run_command: ssh|credential/i);
-    expect(relative(root, repo).startsWith('..')).toBe(true);
+    // Outside the checkout: `..` on one drive, an absolute path when the temp directory is on another (Windows runners).
+    const fromRoot = relative(root, repo);
+    expect(fromRoot.startsWith('..') || isAbsolute(fromRoot)).toBe(true);
   });
 
   it('turns prompting and lazy fetching off for every call', () => {

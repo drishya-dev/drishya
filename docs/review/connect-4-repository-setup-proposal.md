@@ -4,7 +4,7 @@
 
 ## What FILES-13 established
 
-The wrong root entries came from unlocated search output being combined with the repository tree. They were not caused simply by waiting for workspace approval: captured entries stayed in the union even after approval. Genuine Drishya Claude captures contained 50 / 133 such basenames. Recorded worktree labels also lost their distinguishing parent directories. [FILES-13 #364](https://github.com/drishya-dev/drishya/pull/364) fixes those display/evidence problems independently of permissions.
+The wrong root entries came from unlocated search output being combined with the repository tree. They were not caused simply by waiting for workspace approval: captured entries stayed in the union even after approval. Genuine Drishya Claude captures contained 50 / 133 such basenames. Recorded worktree labels also lost their distinguishing parent directories. FILES-13 #364 fixes those display/evidence problems independently of permissions.
 
 Onboarding therefore does not repair file locations and must never guess them. It can still improve the repeated in-session consent experience that prompted CONNECT-4.
 

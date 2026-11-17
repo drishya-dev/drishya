@@ -8,28 +8,136 @@ const SCRIPT = /^(npm|pnpm|yarn|bun)\s+(run\s+)?test(:[\w-]+)?(\s|$)/i;
 const PREFIX = /^((cd\s+("[^"]*"|'[^']*'|\S+))|(timeout\s+\d+[smh]?)|(env\s+)|(sudo\s+)|([A-Z_][A-Z0-9_]*=("[^"]*"|'[^']*'|\S*)))\s*/;
 const NODE_RUNNER=/^node(?:\.exe)?\s+["']?(?:[^\s"']*[/\\])?(?:vitest(?:\.m?js)?|jest(?:\.m?js)?|(?:@playwright[/\\]test|playwright)[/\\]cli\.js["']?\s+test)(?:["']?\s|["']?$)/i;
 
-/** Separators inside quoted patterns/scripts are data, not executable segments. */
-function commandSegments(body:string):string[] {
-  const parts:string[]=[];let quote='',start=0;
-  for(let i=0;i<body.length;i++){
-    const char=body[i]!;
-    if(quote){
-      if(char==='\\'&&quote!=="'"){i++;continue;}
-      if(char===quote){if(body[i+1]===quote&&quote!== '`'){i++;continue;}quote='';}
+/** A separator or input marker inside a quoted argument or comment is data. */
+function* shellSymbols(body: string, state = { quote: '' }): IterableIterator<number> {
+  let tokenStart = true;
+  for (let i = 0; i < body.length; i++) {
+    const char = body[i]!;
+    if (char === '\n' || char === '\r') {
+      tokenStart = true;
+      if (!state.quote) yield i;
       continue;
     }
-    if(char==='"'||char==="'"||char==='`'){quote=char;continue;}
-    if(char==='\\'){i++;continue;}
-    if(char===';'||char==='|'||char==='\n'||char==='\r'||char==='&'&&body[i+1]==='&'){
-      parts.push(body.slice(start,i));if(body[i+1]===char)i++;start=i+1;
+    if (!state.quote && tokenStart && char === '#') {
+      while (i + 1 < body.length && body[i + 1] !== '\n' && body[i + 1] !== '\r') i++;
+      continue;
+    }
+    if (state.quote) {
+      tokenStart = false;
+      if (char === '\\' && state.quote !== "'") { i++; continue; }
+      if (char === state.quote) {
+        if (body[i + 1] === char && char !== '`') { i++; continue; }
+        state.quote = '';
+      }
+      continue;
+    }
+    if (char === '"' || char === "'" || char === '`') { state.quote = char; tokenStart = false; continue; }
+    if (char === '\\') { tokenStart = false; i++; continue; }
+    tokenStart = /\s/.test(char) || ';&|<>()'.includes(char);
+    if (char === ';' || char === '|' || char === '&' || char === '<' || char === '@') yield i;
+  }
+}
+
+function* commandBoundaries(body: string): IterableIterator<{ at: number; next: number; pipe: boolean }> {
+  let next = 0;
+  for (const at of shellSymbols(body)) {
+    if (at < next) continue;
+    const char = body[at]!;
+    if (char === ';' || char === '|' || char === '\n' || char === '\r' || (char === '&' && body[at + 1] === '&')) {
+      next = at + (body[at + 1] === char ? 2 : 1);
+      yield { at, next, pipe: char === '|' };
     }
   }
-  parts.push(body.slice(start));return parts;
+}
+
+/** A derived file read needs an isolated output source. */
+export function firstShellSegment(body: string): { text: string; allowRead: boolean; multiline: boolean } {
+  let headEnd = body.length;
+  let start = 0;
+  let pastLine = false;
+  let compound = false;
+  let multiline = false;
+  const noteLaterCommand = (end: number) => {
+    if (headEnd === body.length) return;
+    const segment = body.slice(start, end).trimStart();
+    if (segment && !segment.startsWith('#')) {
+      compound = true;
+      multiline ||= pastLine;
+    }
+  };
+  for (const boundary of commandBoundaries(body)) {
+    noteLaterCommand(boundary.at);
+    headEnd = Math.min(headEnd, boundary.at);
+    compound ||= boundary.pipe;
+    pastLine ||= body[boundary.at] === '\n' || body[boundary.at] === '\r';
+    start = boundary.next;
+  }
+  noteLaterCommand(body.length);
+  const text = body.slice(0, headEnd).trimEnd();
+  for (const at of shellSymbols(text)) {
+    // Stdin redirections and here-strings can supply the content independently of a file argument.
+    if (text[at] === '<' || (text[at] === '@' && (text[at + 1] === '"' || text[at + 1] === "'"))) {
+      return { text, allowRead: false, multiline };
+    }
+  }
+  return { text, allowRead: !compound, multiline };
+}
+
+function* commandSegments(body: string): IterableIterator<string> {
+  let start = 0;
+  for (const { at, next } of commandBoundaries(body)) {
+    yield body.slice(start, at);
+    start = next;
+  }
+  yield body.slice(start);
+}
+
+/** Recognise simple shell heredoc delimiters and PowerShell here-strings without scanning ahead from each opener. */
+function withoutInputBodies(cmd: string): string | undefined {
+  if (!cmd.includes('<<') && !cmd.includes("@'") && !cmd.includes('@"')) return cmd;
+  const lines = cmd.split(/\r?\n/);
+  const kept: string[] = [];
+  const state = { quote: '' };
+  const opener = /<<(-?)[^\S\r\n]*(?:"([\w.-]+)"|'([\w.-]+)'|([\w.-]+))(?=$|[\s;&|<>])|@(["'])$/y;
+  let ends: { marker: string; trimTabs: boolean; hereString: boolean }[] = [];
+  let nextEnd = 0;
+  for (const [index, line] of lines.entries()) {
+    const end = ends[nextEnd];
+    if (end) {
+      const text = end.trimTabs ? line.replace(/^\t+/, '') : line;
+      if (end.hereString && text.startsWith(end.marker)) {
+        kept[kept.length - 1] += text.slice(end.marker.length);
+        nextEnd++;
+      } else if (!end.hereString && text === end.marker) nextEnd++;
+      continue;
+    }
+    ends = [];
+    nextEnd = 0;
+    if (index === lines.length - 1) { kept.push(line); continue; }
+
+    let cursor = 0;
+    const parts: string[] = [];
+    for (const at of shellSymbols(line, state)) {
+      if (at < cursor || (line[at] !== '<' && line[at] !== '@') || line[at - 1] === '<') continue;
+      opener.lastIndex = at;
+      const match = opener.exec(line);
+      if (!match) continue;
+      const hereString = match[5] !== undefined;
+      ends.push({ marker: hereString ? match[5] + '@' : (match[2] ?? match[3] ?? match[4])!, trimTabs: match[1] === '-', hereString });
+      parts.push(line.slice(cursor, at), hereString ? '@heredoc@' : '<<heredoc');
+      cursor = opener.lastIndex;
+    }
+    // The following lines are handled as a here-string body, not an ordinary quoted value.
+    if (ends.at(-1)?.hereString) state.quote = '';
+    if (cursor) parts.push(line.slice(cursor));
+    kept.push(cursor ? parts.join('') : line);
+  }
+  return ends[nextEnd] ? undefined : kept.join('\n');
 }
 
 export function isTestCommand(cmd: string): boolean {
-  // Heredoc and PowerShell here-string bodies are data being written, not commands being run.
-  const body = cmd.replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?\n\s*\2\b/g, '<<heredoc').replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '@heredoc@');
+  const body = withoutInputBodies(cmd);
+  if (body === undefined) return false;
   for (let seg of commandSegments(body)) {
     seg = seg.trim();
     for (let i = 0; i < 5; i++) {

@@ -1,3 +1,4 @@
+import {useSurfacePresence} from '../lib/surface-motion.ts';
 import {fileName,fileFolder} from '../lib/file-identity.ts'; import {plural} from '../lib/plural.ts';
 import {CapturedFileFallback} from './FileHistory.tsx';
 import {FileReadingActions} from './FileReadingActions.tsx';
@@ -10,7 +11,7 @@ import {NativeReturn} from './NativeReturn.tsx';
 import {workspaceTabLabels} from '../lib/workspace-tab-labels.ts';
 import {WorkspaceOptions} from './WorkspaceOptions.tsx';
 import './workspace-source-controls.css';
-import { lazy, Suspense, useEffect, useMemo, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import { useApp } from '../state.ts';
 import { workspaceApi } from '../api.ts';
 import { useWorkspaceMemory, useWorkspaceState } from '../lib/workspace-memory-react.ts';
@@ -49,6 +50,7 @@ export function DeveloperWorkspace() {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const narrow = useNarrowWorkspace(), foldersHidden = useApp(s => s.foldersHidden);
   const desk = useRef<HTMLElement>(null);
+  const present=useSurfacePresence(open?true:undefined,desk,'panel',id);
   const mode = useApp(s => s.mode), { workspace, approve, controller } = useSessionWorkspace();
   const [files, setFiles] = useWorkspaceState<string[]>('desk/files', []);
   const [primary, setPrimary] = useWorkspaceState('desk/primary', '');
@@ -92,15 +94,16 @@ export function DeveloperWorkspace() {
     return () => window.removeEventListener('drishya-open-workspace-file', choose);
   }, [pane, split, narrow, setFiles, setPrimary, setSecondary]);
   useLayoutEffect(() => {
-    const viewer = desk.current?.closest<HTMLElement>('.viewer'), header = desk.current?.querySelector('header');
-    if (!open || !narrow || !viewer || !header) return;
-    const measure = () => viewer.style.setProperty('--desk-tools-bottom', `${header.getBoundingClientRect().bottom - viewer.getBoundingClientRect().top + 8}px`);
+    const section = desk.current, viewer = section?.closest<HTMLElement>('.viewer'), header = section?.querySelector('header');
+    if (!open || !narrow || !section || !viewer || !header) return;
+    // The reader moves during entry, so reserve from its layout box.
+    const measure = () => viewer.style.setProperty('--desk-tools-bottom', `${section.offsetTop + header.offsetTop + header.offsetHeight + 8}px`);
     const observer = new ResizeObserver(measure); observer.observe(header);
     const crown = viewer.querySelector('.workspace-header'); if (crown) observer.observe(crown);
     measure();
     return () => { observer.disconnect(); viewer.style.removeProperty('--desk-tools-bottom'); };
   }, [open, narrow]);
-  if (!open || mode !== 'history' || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
+  if (!present || mode !== 'history' || source?.kind !== 'daemon' || !id || id.includes('+')) return null;
   const closeTab = (path: string) => {
     const next = files.filter(file => file !== path); setFiles(next); tabs.current = next;
     if (primary === path) setPrimary(next[0] ?? '');
@@ -160,6 +163,20 @@ export function DeveloperWorkspace() {
   </section>;
 }
 
+function DraftEditorLoading({autofocus}: {autofocus:RefObject<boolean>}) {
+  useLayoutEffect(() => {
+    const controller=new AbortController();
+    const cancel=()=>{autofocus.current=false;};
+    // New input takes precedence over the focus requested before the editor loaded.
+    const options={capture:true,signal:controller.signal};
+    document.addEventListener('pointerdown',cancel,options);
+    document.addEventListener('keydown',cancel,options);
+    document.addEventListener('click',cancel,options);
+    return ()=>controller.abort();
+  },[autofocus]);
+  return <p role="status" className="desk-loading">Opening editor…</p>;
+}
+
 function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,changed,close }: {id:string;slot:number;path:string;source:object;drafts:WorkspaceDrafts;revision:number;changed:()=>void;close:()=>void}) {
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const memory = useWorkspaceMemory(), locationKey = `desk/document/${slot}/${path}`;
@@ -192,11 +209,15 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
   const latest=current.candidate??file,conflict=!!draft&&!draft.creation&&!!latest&&latest.text!==draft.base;
   const baseSnapshot=draft&&latest?{...latest,text:draft.base,totalLines:draft.base.split('\n').length,modifiedAt:draft.modifiedAt}:undefined;
   const body = useRef<HTMLDivElement>(null), editor = useRef<DraftEditorHandle>(null), alive = useRef(true), pendingLine = useRef<number>(undefined);
+  const autofocus = useRef(true);
   useEffect(() => { alive.current=true; return () => { alive.current=false; }; },[]);
   useLayoutEffect(() => {
     // Focus only the pane the user is editing; a restored draft in the other
     // pane must not steal input. Comparing keeps the same editor/selection mounted.
-    if (editing && !comparing) editor.current?.focus();
+    if (editing && !comparing) {
+      if(editor.current) editor.current.focus();
+      else autofocus.current=true;
+    }
   },[editing,comparing]);
   const {previewDocument,documentError}=useMemo(()=>{
     if(!file)return {previewDocument:undefined,documentError:''};
@@ -253,7 +274,7 @@ function WorkspaceDocument({ id,slot,path,source,drafts,revision:_revision,chang
     {conflict&&draft&&latest&&<div className="source-version-notice draft-source-conflict" role="region" aria-label="Draft source conflict"><span>{latest.text===draft.text?'Current file matches your draft':'Disk differs from this draft’s base'}<small>Your draft is retained · no automatic merge</small></span><button className="btn ghost" onClick={()=>setCompareSource(true)}>Compare base to disk</button><button className="btn ghost" onClick={()=>{setCompareDisk(true);setComparing(true);}}>Compare draft to disk</button><button className="btn ghost" disabled={current.busy} onClick={()=>void current.refresh()}>Check disk</button></div>}
     {compareSource&&baseSnapshot&&latest&&<SourceComparison path={path} before={baseSnapshot} after={latest} beforeLabel="Draft base" close={()=>setCompareSource(false)}/>}
     {!modern && !editing && <ImportContext path={path} current openCurrent={target => window.dispatchEvent(new CustomEvent('drishya-open-workspace-file',{detail:target}))}/>}
-    {editing && draft ? <><div className="desk-draft-bar"><span>Local draft · disk unchanged · lost on reload unless saved as a recovery snapshot</span><button className="btn ghost" aria-pressed={comparing} onClick={() => {setCompareDisk(false);setComparing(!comparing);}}>{comparing ? 'Edit draft' : 'Compare draft'}</button><button className="btn" disabled={preparing||conflict||(!draft.creation&&draft.text===draft.base)} onClick={() => void prepare(draft)}>Review {draft.creation?'creation':'edit'} with harness</button></div><Suspense fallback={<p role="status" className="desk-loading">Opening editor…</p>}><DraftEditor ref={editor} path={path} text={draft.text} hidden={comparing} error={setError} change={text => { try { drafts.set(id,path,{...draft,text}); setError(''); changed(); } catch(err) { setError((err as Error).message); } }}/></Suspense>{comparing && <DraftComparison draft={compareDisk&&latest?{...draft,base:latest.text,modifiedAt:latest.modifiedAt}:draft} path={path} revision={drafts.version(id,path)} baseLabel={compareDisk?'Latest checked disk snapshot':undefined}/>}</> : <>
+    {editing && draft ? <><div className="desk-draft-bar"><span>Local draft · disk unchanged · lost on reload unless saved as a recovery snapshot</span><button className="btn ghost" aria-pressed={comparing} onClick={() => {setCompareDisk(false);setComparing(!comparing);}}>{comparing ? 'Edit draft' : 'Compare draft'}</button><button className="btn" disabled={preparing||conflict||(!draft.creation&&draft.text===draft.base)} onClick={() => void prepare(draft)}>Review {draft.creation?'creation':'edit'} with harness</button></div><Suspense fallback={<DraftEditorLoading autofocus={autofocus}/>}><DraftEditor ref={editor} path={path} text={draft.text} hidden={comparing} shouldAutofocus={()=>autofocus.current} error={setError} change={text => { try { drafts.set(id,path,{...draft,text}); setError(''); changed(); } catch(err) { setError((err as Error).message); } }}/></Suspense>{comparing && <DraftComparison draft={compareDisk&&latest?{...draft,base:latest.text,modifiedAt:latest.modifiedAt}:draft} path={path} revision={drafts.version(id,path)} baseLabel={compareDisk?'Latest checked disk snapshot':undefined}/>}</> : <>
       {markdown && <div className="desk-document-views" role="group" aria-label="Markdown presentation"><button className="btn ghost" disabled={overDocumentLimit} title={overDocumentLimit?documentLimitMessage(documentSize):undefined} aria-pressed={formatted} onClick={()=>setReading(old=>({...old,formatted:true}))}>Document</button><button className="btn ghost" aria-pressed={!formatted} onClick={()=>setReading(old=>({...old,formatted:false}))}>Source</button></div>}
       {markdown&&overDocumentLimit&&<p className="muted small desk-document-limit" role="status">{documentLimitMessage(documentSize)} Showing Source.</p>}
       {formatted ? <><div className="desk-markdown" ref={body} onScroll={e=>memory.set(`${locationKey}/scroll/document`,{top:e.currentTarget.scrollTop,left:e.currentTarget.scrollLeft})} tabIndex={0} aria-label={`Rendered document ${path}`}>{previewDocument ? <Markdown text={previewDocument.text} document /> : documentError ? <p role="alert">{documentError}<button className="btn ghost" onClick={()=>setReading(old=>({...old,formatted:false}))}>Read source</button></p> : <p role="status">Rendering document…</p>}</div><footer><span>{current.candidate?'Retained reading':'Current disk'}{previewDocument?` · ${plural(previewDocument.totalLines,'line')}${previewDocument.redacted?' · redacted':''}`:''}</span><button className="btn ghost" disabled={current.busy} onClick={()=>void current.refresh()}>Refresh</button></footer></> : <>

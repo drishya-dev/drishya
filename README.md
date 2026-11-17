@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/readme/mark-on-dark.svg">
-    <img src="docs/readme/mark-on-light.svg" alt="Drishya" width="72">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/mark-on-dark.svg">
+    <img src="assets/brand/mark-on-light.svg" alt="Drishya" width="72">
   </picture>
 </p>
 
@@ -185,7 +185,7 @@ No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
 - `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
 - To send prompts: `claude` or `codex` installed and signed in.
 
-Built and tested on Windows 11. It is plain Node with no native add-ons, but Linux and macOS have not been verified yet.
+Drishya runs on Node.js with no native add-ons. See the [release notes](docs/release-notes-0.1.0.md#platform-verification) for Windows, Linux and macOS verification.
 
 </details>
 
@@ -203,11 +203,11 @@ drishya serve
 To try a release candidate before publication, use the tarball supplied for that candidate:
 
 ```bash
-npm install -g --offline --ignore-scripts ./drishya-dev-cli-0.1.0.tgz
+npm install -g --offline --ignore-scripts --no-audit --no-fund ./drishya-dev-cli-0.1.0.tgz
 drishya serve
 ```
 
-Run these commands in the folder containing the tarball. On Windows, open a new terminal if it cannot find the command after installation. The [release notes](docs/release-notes-0.1.0.md) list the candidate's current verification status.
+Run these commands in the folder containing the tarball. On Windows, open a new terminal if it cannot find the command after installation.
 
 </details>
 
@@ -216,9 +216,9 @@ Run these commands in the folder containing the tarball. On Windows, open a new 
 <br>
 
 1. `serve` prints a link and opens it. The link carries a random token, new on every launch, that keeps other websites out. If the browser does not open, copy the link from the terminal.
-2. **Home** lists the sessions Drishya found. A session is imported when you first open it.
+2. **Home** lists the sessions Drishya found. A session is imported when you first open it. If the list is empty, finish a turn in Claude Code or Codex in a Git checkout and return to Home.
 3. To let Drishya read a repository's current files, choose **Enable workspace reading** in the Files rail. It asks once per checkout and never writes to it.
-4. To send a prompt, open a Claude Code or Codex session with its native CLI installed and signed in. Expand **Ask your agent…**, enter a prompt, and choose **Send prompt**. When prompted, confirm the session is idle in other clients before choosing **Confirm and send**.
+4. To send a prompt, open a Claude Code or Codex session with its native CLI installed and signed in. Expand the prompt composer if it is closed, enter a prompt, and choose **Send prompt**. When prompted, confirm the session is idle in other clients before choosing **Confirm and send**.
 5. Stop with Ctrl+C. Use `--port` if the default port (7878) is taken.
 
 If you run from a checkout, rebuild the UI (`corepack pnpm ui:build`) after updating the source.
@@ -305,8 +305,8 @@ TypeScript run directly on Node 24 over `node:sqlite` and `node:http`, with a Re
 
 Drishya is built and maintained by **Harsh Jain** and **Yash Doke**.
 
-Changes follow the two-builder review workflow documented in [AGENTS.md](AGENTS.md).
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), the [roadmap](ROADMAP.md) and the [open issues](https://github.com/drishya-dev/drishya/issues). The [Code of Conduct](CODE_OF_CONDUCT.md) applies, the [changelog](CHANGELOG.md) records releases, and [AGENTS.md](AGENTS.md) holds the rules for coding agents working in this repository.
 
 ## License
 
-[Apache License 2.0](LICENSE). Agent names and logos belong to their owners and are shown only to say which agents Drishya works with.
+The code is licensed under the [Apache License 2.0](LICENSE). The **Drishya name and logo are not licensed for other products** (see [TRADEMARKS.md](TRADEMARKS.md); brand files are in [assets/brand](assets/brand/README.md)). Agent names and logos belong to their owners and are shown only to say which agents Drishya works with.

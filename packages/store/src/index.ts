@@ -7,7 +7,7 @@
 // dedicated worker is a tracked follow-up (engineering plan §1).
 
 import { createHash, randomUUID } from 'node:crypto';
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { isPersonPrompt, isBlobText } from '@drishya/contracts';
@@ -90,7 +90,7 @@ export class BlobStore {
   private known = new Set<string>();
   constructor(dir: string) {
     this.dir = dir;
-    mkdirSync(dir, { recursive: true });
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
   }
   private pathOf(sha: string) {
     return join(this.dir, sha.slice(0, 2), sha);
@@ -109,7 +109,7 @@ export class BlobStore {
   /** Atomic: written to a temp name and renamed, so a reference never points at half a file. */
   protected save(sha: string, buf: Buffer): void {
     const p = this.pathOf(sha), folder = dirname(p);
-    if (!this.madeDirs.has(folder)) { mkdirSync(folder, { recursive: true }); this.madeDirs.add(folder); }
+    if (!this.madeDirs.has(folder)) { mkdirSync(folder, { recursive: true, mode: 0o700 }); this.madeDirs.add(folder); }
     const tmp = `${p}.${randomUUID()}.tmp`;
     writeFileSync(tmp, buf, { mode: 0o600 });
     renameSync(tmp, p);
@@ -379,7 +379,23 @@ export class Store {
     this.dataDir = dataDir;
     this.isMemory = !!opts.memory;
     mkdirSync(dataDir, { recursive: true, mode: 0o700 });
-    this.db = new DatabaseSync(opts.memory ? ':memory:' : join(dataDir, 'drishya.db'), { readOnly: opts.readOnly });
+    // SEC-4: `mode` applies only to a directory this call creates. A folder that already existed (made by hand, restored from a
+    // backup, created by an older version under a loose umask) keeps its bits, and the database in it is then readable by every
+    // local user. Tighten it; on Windows the profile's access list is what protects the folder and chmod does nothing.
+    if (!opts.memory && !opts.readOnly && process.platform !== 'win32') {
+      try { chmodSync(dataDir, 0o700); } catch { /* not ours to change (a shared or read-only mount): leave it */ }
+    }
+    const dbFile = join(dataDir, 'drishya.db');
+    // SHIP-16: the folder's 0700 is the real guard, but a data folder that is copied, restored or moved (a backup, `cp -r`, a
+    // shared mount) loses it, and SQLite makes the database and its -wal and -shm files under the process umask (0644 on Linux).
+    // Create the database 0600 first (SQLite gives its -wal and -shm the same bits) and tighten one that already exists.
+    if (!opts.memory && !opts.readOnly && process.platform !== 'win32') {
+      try { writeFileSync(dbFile, '', { flag: 'a', mode: 0o600 }); } catch { /* read-only mount: SQLite reports it */ }
+      for (const suffix of ['', '-wal', '-shm']) {
+        try { chmodSync(dbFile + suffix, 0o600); } catch { /* absent, or not ours to change */ }
+      }
+    }
+    this.db = new DatabaseSync(opts.memory ? ':memory:' : dbFile, { readOnly: opts.readOnly });
     this.blobs = new BlobStore(join(dataDir, 'blobs'));
     this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000; PRAGMA temp_store = FILE; PRAGMA cache_size = -8192;');
     if (!opts.readOnly) {
@@ -1367,7 +1383,7 @@ export class Store {
 
   /** Hits keep captured native turn numbers; otherwise count person prompts, excluding harness notices. */
   search(recordingId: string, query: string, limit = 50): SessionSearchHit[] {
-    const safe = query.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
+    const safe = query.replace(/["*^:()\u0000-\u001f]/g, ' ').trim().split(/\s+/).filter(Boolean).map((t) => `"${t}"`).join(' ');
     if (!safe) return [];
     // Read prompt metadata once, not once per hit. Large bodies use their stored prefix:
     // every recognised harness wrapper is a leading shape, before any clipping.
@@ -1415,7 +1431,7 @@ export class Store {
   /** One worker-side FTS query, never an unbounded list of recording IDs. */
   searchLibrary(query: LibrarySearchQuery): LibrarySearchPage {
     if(query.q.length>200)throw new Error('Library search is limited to 200 characters');
-    const safe = query.q.replace(/["*^:()]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
+    const safe = query.q.replace(/["*^:()\u0000-\u001f]/g, ' ').trim().split(/\s+/).filter(Boolean).map(t => `"${t}"`).join(' ');
     if (!safe) return {items:[]};
     const count=Math.max(1,Math.min(50,Math.trunc(query.count??50)));
     const where=['search MATCH ?', 'search.rowid < ?'];

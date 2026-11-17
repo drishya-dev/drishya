@@ -39,7 +39,7 @@ Mount at most 96 action nodes (32 in low resource mode), 28 nearby passage/prose
 groups, 240 order connectors, 80 timeline marks and 100 repository file labels
 (40 in low resource mode). Keep the existing paged history and artifact cache.
 File readers request bounded source/diff pages; large recordings use worker-owned
-history windows. See [review 72](../../docs/review/72-observation-canvas.md).
+history windows. See [review 72](../../docs/PRODUCT_WORK_HISTORY_REVIEW_NOTES.md#72-observation-canvas).
 
 ## Retained Classic foundation — 14 October
 

@@ -11,7 +11,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 interface Edit { file: string; find: string; replace: string }
-interface Mutation { name: string; edits: Edit[]; tests: string[] }
+// `windowsOnly` names why the defence cannot be exercised elsewhere; on other systems the entry is skipped, not counted as missed.
+interface Mutation { name: string; edits: Edit[]; tests: string[]; windowsOnly?: string }
 
 const S = 'apps/daemon/src/server.ts';
 const W = 'apps/daemon/src/workspace.ts';
@@ -30,13 +31,27 @@ export const MUTATIONS: Mutation[] = [
   { name: 'gate: no CORS allowance', edits: [{ file: S, find: 'for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);', replace: "for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v); res.setHeader('access-control-allow-origin', '*');" }], tests: ['02-request-gate'] },
   { name: 'gate: constant-time token compare', edits: [{ file: S, find: 'return x.length === y.length && timingSafeEqual(x, y);', replace: 'return a === b;' }], tests: ['02-request-gate'] },
   { name: 'gate: the token is not accepted in a query string', edits: [{ file: S, find: 'if (bearer && safeEqual(bearer, token)) return true;', replace: "if (bearer && safeEqual(bearer, token)) return true; if (new URL(req.url ?? '/', 'http://x').searchParams.get('token') === token) return true;" }], tests: ['02-request-gate'] },
-  { name: 'gate: sign-out ends the session', edits: [rm(S, 'if (sid) sessions.delete(sid);')], tests: ['02-request-gate'] },
+  { name: 'gate: sign-out ends the session', edits: [rm(S, 'for (const sid of sessionsOf(req)) sessions.delete(sid);')], tests: ['02-request-gate'] },
   { name: 'gate: session expiry', edits: [{ file: S, find: 'if (t - s.lastSeen > idleMs || t - s.created > maxAgeMs) {', replace: 'if (false) {' }], tests: ['02-request-gate'] },
   { name: 'headers: X-Frame-Options', edits: [rm(S, "'x-frame-options': 'DENY',")], tests: ['02-request-gate'] },
   { name: 'headers: Referrer-Policy', edits: [rm(S, "'referrer-policy': 'no-referrer',")], tests: ['02-request-gate'] },
   { name: 'headers: CSP script-src', edits: [{ file: S, find: "script-src 'self';", replace: "script-src 'self' 'unsafe-inline';" }], tests: ['02-request-gate'] },
+  // SEC-4: found by the penetration pass (12-pentest)
+  { name: 'pentest: any valid session cookie signs in (cookie tossing)', edits: [{ file: S, find: 'return sessionsOf(req).some(sessionValid);', replace: "return sessionValid(sessionsOf(req)[0] ?? '');" }], tests: ['12-pentest'] },
+  { name: 'pentest: a malformed escape is a 400', edits: [rm(S, "if (e instanceof URIError) return { status: 400, body: { error: 'malformed URL' } };")], tests: ['12-pentest'] },
+  { name: 'pentest: an empty part of a combined recording id is a 404', edits: [rm(S, "if (id.split('+').some((part) => !part)) throw new HttpError(404, 'no such recording');")], tests: ['12-pentest'] },
+  { name: 'pentest: only the history fields reach the worker', edits: [{ file: S, find: 'pageBytes(app.readingId(id), query)', replace: 'pageBytes(app.readingId(id), body as never)' }], tests: ['12-pentest'] },
+  { name: 'pentest: control characters in a search are word breaks', edits: [{ file: 'packages/store/src/index.ts', find: String.raw`.replace(/["*^:()\u0000-\u001f]/g, ' ')`, replace: String.raw`.replace(/["*^:()]/g, ' ')` }, { file: 'packages/store/src/index.ts', find: String.raw`.replace(/["*^:()\u0000-\u001f]/g, ' ')`, replace: String.raw`.replace(/["*^:()]/g, ' ')` }], tests: ['12-pentest'] },
+  { name: 'pentest: an unknown stored result is a 404', edits: [{ file: S, find: "throw new HttpError(404, 'Stored result not found.'); } // SEC-4", replace: "throw error; } // SEC-4" }], tests: ['12-pentest'] },
+  { name: 'pentest: a launch code signs in once', edits: [rm(S, '    launchCodes.delete(code);')], tests: ['12-pentest'] },
+  { name: 'pentest: the browser is opened with a code, not the token', edits: [{ file: 'apps/daemon/src/commands.ts', find: 'openBrowser(running.openUrl());', replace: 'openBrowser(running.launchUrl);' }], tests: ['12-pentest'] },
+  { name: 'pentest: a launch code expires', edits: [{ file: S, find: 'return expires !== undefined && expires > now();', replace: 'return expires !== undefined;' }], tests: ['12-pentest'] },
+  { name: 'pentest: a redirected .git is rejected (history/compare/graph)', edits: [rm(G, "await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.")], tests: ['12-pentest'] },
+  { name: 'pentest: a redirected .git is rejected (snapshot)', edits: [rm(G, "await verifyOwnGitDir(root); // SEC-4: for the Snapshot surface — the toplevel check above does not see where Git keeps history, only the work tree.")], tests: ['12-pentest'] },
+  // SHIP-16: found by the first Linux run (14-ship16-store-modes)
+  { name: 'ship-16: the database is created owner-only', edits: [{ file: 'packages/store/src/index.ts', find: "try { writeFileSync(dbFile, '', { flag: 'a', mode: 0o600 }); }", replace: "try { void 0; }" }, { file: 'packages/store/src/index.ts', find: "for (const suffix of ['', '-wal', '-shm']) {", replace: 'for (const suffix of []) {' }], tests: ['14-ship16-store-modes'] },
   // 3. file access
-  { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'] },
+  { name: 'files: static server stays inside the UI directory', edits: [rm(S, "if (!file.startsWith(resolve(uiDir) + sep) && file !== resolve(uiDir)) throw new HttpError(403, 'outside the UI directory');")], tests: ['03-file-access'], windowsOnly: 'SHIP-16: POSIX normalize() clamps `..` at the root and a backslash is an ordinary character, so no request path can reach this check from outside the directory; Windows treats both as separators' },
   { name: 'files: workspace grant required', edits: [rm(W, "if (!root || !rec.workspaceRoot || await realpath(rec.workspaceRoot) !== root) throw new HttpError(403, 'approve this session workspace first');")], tests: ['03-file-access'] },
   {
     name: 'files: path containment (`..`, protected names, root check and index membership together)',
@@ -55,7 +70,7 @@ export const MUTATIONS: Mutation[] = [
   { name: 'exec: Git fsmonitor off', edits: [{ file: G, find: "'-c', 'core.fsmonitor=false', ", replace: '' }], tests: ['00-verify-first'] },
   { name: 'exec: submodule work trees are not scanned', edits: [{ file: G, find: "'--ignore-submodules=dirty'", replace: "'--ignore-submodules=none'" }], tests: ['00-verify-first'] },
   { name: 'exec: the harness is never started through a shell', edits: [{ file: 'apps/daemon/src/controller.ts', find: '{ cwd: root, shell: false, windowsHide: true, stdio: \'pipe\', env: { ...process.env, CLAUDE_CODE_DISABLE', replace: '{ cwd: root, shell: true, windowsHide: true, stdio: \'pipe\', env: { ...process.env, CLAUDE_CODE_DISABLE' }], tests: ['05-command-execution', '10-controller'] },
-  { name: 'exec: relative PATH entries are ignored', edits: [{ file: 'apps/daemon/src/native-executable.ts', find: '.filter(dir => dir && (isAbsolute(dir) || win32.isAbsolute(dir)));', replace: '.filter(Boolean);' }], tests: ['05-command-execution'] },
+  { name: 'exec: relative PATH entries are ignored', edits: [{ file: 'apps/daemon/src/native-executable.ts', find: '.filter(dir => isAbsolute(dir));', replace: '.filter(Boolean);' }], tests: ['05-command-execution'] },
   { name: 'exec: a launch token must be URL-safe', edits: [{ file: 'apps/daemon/src/commands.ts', find: "if (!/^[A-Za-z0-9_-]{16,128}$/.test(value)) throw new Error(", replace: 'if (false) throw new Error(' }], tests: ['05-command-execution'] },
   // 6. outbound traffic
   { name: 'outbound: no network client in the daemon', edits: [{ file: S, find: 'const MAX_STREAMS = 64;', replace: "const MAX_STREAMS = 64; void fetch('http://example.com/ping').catch(() => undefined);" }], tests: ['06-outbound-traffic'] },
@@ -82,9 +97,10 @@ const restore = () => { for (const [file, bytes] of originals) writeFileSync(joi
 process.on('exit', restore);
 process.on('SIGINT', () => { restore(); process.exit(130); });
 
-let notCaught = 0;
+let notCaught = 0, skipped = 0;
 const rows: string[] = [];
 for (const mutation of selected) {
+  if (mutation.windowsOnly && process.platform !== 'win32') { skipped++; console.log(`SKIPPED   ${mutation.name}  (${mutation.windowsOnly})`); continue; }
   for (const edit of mutation.edits) {
     if (!originals.has(edit.file)) originals.set(edit.file, readFileSync(join(root, edit.file)));
     const text = readFileSync(join(root, edit.file), 'utf8');
@@ -93,12 +109,13 @@ for (const mutation of selected) {
   }
   const run = spawnSync('pnpm', ['exec', 'vitest', 'run', '--config', 'vitest.security.config.ts', ...mutation.tests], { cwd: root, encoding: 'utf8', shell: true, timeout: 280_000 });
   restore();
-  const output = `${run.stdout}${run.stderr}`;
+  // SHIP-16: Vitest colours its summary on Linux, which hid the "Tests N failed" line from the match below.
+  const output = `${run.stdout}${run.stderr}`.replace(new RegExp(String.fromCharCode(27) + '\\[[0-9;]*m', 'g'), '');
   const failed = /Tests\s+(?:(\d+) failed)/.exec(output)?.[1] ?? (run.status === 0 ? '0' : 'file error');
   const caught = run.status !== 0;
   if (!caught) notCaught++;
   rows.push(`${caught ? 'CAUGHT  ' : 'MISSED  '} ${mutation.name}  [${mutation.tests.join(', ')}]  failing tests: ${failed}`);
   console.log(rows.at(-1));
 }
-console.log(`\n${selected.length - notCaught}/${selected.length} defences have a test that fails when they are removed`);
+console.log(`\n${selected.length - skipped - notCaught}/${selected.length - skipped} defences have a test that fails when they are removed${skipped ? ` (${skipped} skipped: not reachable on ${process.platform})` : ''}`);
 process.exit(notCaught ? 1 : 0);

@@ -17,6 +17,10 @@ describe('Antigravity tool mapping', () => {
     expect(outcomeFor('write_file', { Path: 'x' }, 'Updated file')).toEqual({ kind: 'edit', path: 'x' });
     expect(outcomeFor('write_file', { Path: 'x' }, 'Created file')).toMatchObject({ created: true });
   });
+  it('reads the first complete exit status and preserves wrapped whitespace', () => {
+    expect(recordedExitCode('Message: Exit code: 3\r\nExit status: unavailable\r\n\tExit status \r\n: \t-2\r\nExit code: 0')).toBe(-2);
+    expect(recordedExitCode('Exit code: 2 bytes written\n  Exit code: 0  \n')).toBe(0);
+  });
   it('maps requested edits, searches, web and spawn without claiming applied edits', () => {
     expect(intentFor('edit_file', { TargetFile: 'a', Target: 'old', Replacement: 'new', AllowMultiple: true })).toEqual({ kind: 'edit', path: 'a', edits: [{ oldString: 'old', newString: 'new', replaceAll: true }] });
     expect(outcomeFor('edit_file', { TargetFile: 'a' }, 'failed')).toEqual({ kind: 'edit', path: 'a' });

@@ -15,12 +15,7 @@ import { rawCall, removeTemp, startScratch, tempDir, type Scratch } from './lib/
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const walk = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.name === 'node_modules' || e.name === 'dist' || e.name === '.git' ? [] : e.isDirectory() ? walk(join(dir, e.name)) : [join(dir, e.name)]));
 
-describe('1. git and gh are started by bare name with the repository as the working directory', () => {
-  // Finding: not exploitable. On Windows an executable named `git.exe` in the working directory is NOT
-  // preferred over PATH by Node 24's child_process (checked here with a copy of node.exe standing in for
-  // an attacker's program: it would print a Node version instead of "git version"). The engine range
-  // (>=24 <25) is pinned in package.json. This test fails if a future runtime starts preferring the
-  // working directory, and then the remedy is to resolve the absolute path once at start.
+describe('1. Git and GitHub CLI use absolute PATH executables', () => {
   let dir: string, plant: string, here: string;
   beforeAll(() => {
     dir = tempDir();
@@ -45,10 +40,14 @@ describe('1. git and gh are started by bare name with the repository as the work
 
   it('the gh runner uses the installed gh (or none), never the one in the working directory', async () => {
     process.chdir(plant);
-    const outcome = await defaultGhRun(['--version'], AbortSignal.timeout(10_000)).then((out) => ({ out }), (error: NodeJS.ErrnoException) => ({ error }));
+    // The first launch of an installed `gh` can take over ten seconds on a hosted Windows runner (the antivirus scans it); that is a slow
+    // start, not an answer, so ask again once. Anything else, a second timeout included, is the result.
+    const ask = () => defaultGhRun(['--version'], AbortSignal.timeout(20_000)).then((out) => ({ out }), (error: NodeJS.ErrnoException) => ({ error }));
+    let outcome = await ask();
+    if ('error' in outcome && outcome.error.code === 'ABORT_ERR') outcome = await ask();
     if ('out' in outcome) expect(outcome.out).toMatch(/^gh version /);
     else expect(outcome.error.code).toBe('ENOENT'); // gh is not installed on this machine
-  });
+  }, 60_000);
 });
 
 describe('2. the session cookie is not scoped to a port', () => {

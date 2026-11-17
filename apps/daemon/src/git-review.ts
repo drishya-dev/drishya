@@ -6,7 +6,8 @@ import { redactText } from '@drishya/privacy';
 import {safeGitPath as safe,gitDiffFlags as diffFlags} from './git-paths.ts';
 import {GitHistoryCache,gitHistory,gitCommit,gitRefGeneration,verifyGitHistoryGeneration,type GitHistoryQuery} from './git-history.ts';
 import { HttpError } from './app.ts';
-import type { WorkspaceAccess } from './workspace.ts';
+import { executable } from './native-executable.ts';
+import { verifyOwnGitDir, type WorkspaceAccess } from './workspace.ts';
 
 import type { GitFile, GitSnapshot, GitOmission } from './git-types.ts';
 import type {HistoryService} from './history.ts';
@@ -47,10 +48,12 @@ export async function readGit(root: string, args: string[], signal?: AbortSignal
 }
 
 function runGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
+  const bin = executable('git');
+  if (!bin) return Promise.reject(new HttpError(422, 'Git is unavailable on the configured PATH.'));
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1' };
   // Ambient override variables must not redirect this reader to a different worktree/config.
   for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|COMMON_DIR|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|SHALLOW_FILE|REPLACE_REF_BASE|GRAFT_FILE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
-  return new Promise((yes, no) => execFile('git', ['--no-pager','--no-replace-objects','--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
+  return new Promise((yes, no) => execFile(bin, ['--no-pager','--no-replace-objects','--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
     if (error && String(error.code) === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') no(new HttpError(413, 'Git output exceeds the inspection content limit.'));
     else if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
     else yes(stdout);
@@ -125,6 +128,7 @@ export class GitReview {
       const signal=AbortSignal.timeout(30_000);
       const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
       if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
+      await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.
       const result=await inspect(git,root);
       if(!this.grants.has(id)||await this.workspace.root(id)!==root)throw new HttpError(403,'Git reading access changed. Approve this workspace again.');
       return result;
@@ -215,6 +219,7 @@ export class GitReview {
     let overrides: string[] = [];
     const git: GitReader = (root, args) => this.read(root, [...overrides, ...args], signal);
     if (await realpath(resolve((await git(root, ['rev-parse', '--show-toplevel'])).trim())) !== root) throw new HttpError(403, 'The selected workspace must be the repository root.');
+    await verifyOwnGitDir(root); // SEC-4: for the Snapshot surface — the toplevel check above does not see where Git keeps history, only the work tree.
     // Status/diff may invoke clean/process filters. Disable each configured driver
     // for this invocation only; do not change the repository's configuration.
     const configKeys = await git(root, ['config', '--list', '--name-only']);
