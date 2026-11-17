@@ -14,12 +14,12 @@ afterEach(async () => { await app.close(); if (!resolve(dir).startsWith(resolve(
 
 // DATA-5 (review125 S5): checkpoint references per turn; backups read only on request, with approval.
 it('links each edit to its turn checkpoint and reads the backup only with approval, redacted', async () => {
-  const session = 'cp-session', work = join(dir, 'work'), project = join(dir, 'projects', 'C--work'), history = join(dir, 'file-history', 'origin-session');
+  const session = 'cp-session', work = join(dir, 'work'), project = join(dir, 'projects', 'C--work'), history = join(dir, 'file-history', session);
   mkdirSync(join(work, 'src'), { recursive: true }); mkdirSync(project, { recursive: true }); mkdirSync(history, { recursive: true });
   const secret = 'AKIA' + 'ABCDEFGHIJKLMNOP';
   writeFileSync(join(history, 'aaaaaaaaaaaaaaaa@v2'), `export const key = '${secret}';\nexport const total = 1;\n`);
   writeFileSync(join(history, 'cccccccccccccccc@v1'), 'SECRET=1\n');
-  // A forked journal: its rows (and backups) belong to the session it continues, not its own file name.
+  // The rows name another session (a fork's); with no verified parent the backups are read from the journal's own session only (checkpoint-lineage.test.ts).
   const t = '2026-10-21T00:00:00Z', base = { timestamp: t, cwd: work, sessionId: 'origin-session' };
   const rows = [
     { ...base, type: 'system', subtype: 'informational', uuid: 's0', content: 'resumed' },

@@ -27,14 +27,35 @@ export async function readCheckpointFile(store: Store, recordingId: string, back
   if (isDeniedPath(entry.path)) return { available: false, reason: 'protected' };
   if (!approved) return { available: false, reason: 'needs-workspace-approval' };
   // <claude home>/projects/<project>/<session>.jsonl → <claude home>/file-history/<session>/<backup>.
-  // The session the checkpoint was written under first, then the journal's own.
-  const home = dirname(dirname(dirname(recording.sourcePath)));
-  const sessions = [...new Set([recorded, basename(recording.sourcePath, '.jsonl')])].filter((s): s is string => !!s && SESSION.test(s));
-  for (const session of sessions) {
+  // Only the recording's verified sessions: its own journal's, and the parents the capture linked by native
+  // references. A session id inside a journal row is a claim; it is used only when it names one of those.
+  const sessions = verifiedSessions(store, recordingId, recording.sourcePath, recorded);
+  for (const { home, session } of sessions) {
     const folder = join('file-history', session, backup);
     const file = await readHarnessText(join(home, folder), home, (real, root) => real === join(root, folder));
     if (file.available) return file;
     if (file.reason === 'outside-harness-folder') break;
   }
+  // Same answer as a backup the harness no longer holds: nothing tells a verified session from an unrelated one.
   return { available: false, reason: 'removed' };
+}
+
+/** The Claude Code sessions whose backup folders this recording may read, each with the home its journal lives under. */
+function verifiedSessions(store: Store, recordingId: string, ownPath: string, recorded: string | undefined): { home: string; session: string }[] {
+  const out: { home: string; session: string }[] = [];
+  const add = (path: string | undefined) => {
+    const session = path ? basename(path, '.jsonl') : '';
+    if (path && SESSION.test(session) && !out.some((o) => o.session === session)) out.push({ home: dirname(dirname(dirname(path))), session });
+  };
+  add(ownPath);
+  // Newest ancestor first; the chain is the store's exact native-parent links, never a journal's own id.
+  const chain = store.lineageView(recordingId)?.recordingIds.filter((id) => id !== recordingId).reverse() ?? [];
+  for (const id of chain) {
+    const parent = store.getRecording(id);
+    if (parent?.harness === 'claude-code') add(parent.sourcePath);
+  }
+  // The session the checkpoint was written under first, when it is one of those.
+  const first = out.findIndex((o) => o.session === recorded);
+  if (first > 0) out.unshift(...out.splice(first, 1));
+  return out;
 }

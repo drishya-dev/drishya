@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
 import { isPersonPrompt, isBlobText } from '@drishya/contracts';
 import type { BlobText, Observation, RecordingSummary, RedactionNote, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
-import { PRIVACY_POLICY_VERSION, redactText } from '../../privacy/src/index.ts';
+import { PRIVACY_POLICY_VERSION, SECRET_FIELD_MARKER, SECRET_FIELD_RULE, isSecretFieldKey, isSecretReference, redactText } from '../../privacy/src/index.ts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
 import { recordingStats } from './recording-stats.ts';
 
@@ -575,8 +575,13 @@ export class Store {
       return { key: candidate, changed: candidate !== key };
     };
 
-    const redactStored = (value: unknown, field: string, hits: RedactionNote[], checkBlobs: boolean): { value: unknown; changed: boolean } => {
+    const redactStored = (value: unknown, field: string, hits: RedactionNote[], checkBlobs: boolean, secret = false): { value: unknown; changed: boolean } => {
       if (typeof value === 'string') {
+        // p6: a value under a secret-named key, whatever it looks like.
+        if (secret && !isSecretReference(value)) {
+          hits.push({ field, rule: SECRET_FIELD_RULE, count: 1 });
+          return { value: SECRET_FIELD_MARKER, changed: true };
+        }
         const r = redactText(value);
         if (r.text === value) return { value, changed: false };
         for (const h of r.hits) hits.push({ field, rule: h.rule, count: h.count });
@@ -585,7 +590,7 @@ export class Store {
       if (Array.isArray(value)) {
         let changed = false;
         const out = value.map((item, i) => {
-          const res = redactStored(item, `${field}[${i}]`, hits, checkBlobs);
+          const res = redactStored(item, `${field}[${i}]`, hits, checkBlobs, secret);
           if (res.changed) changed = true;
           return res.value;
         });
@@ -630,7 +635,7 @@ export class Store {
           const rk = safeRedactedKey(k, out, tentativeField, hits);
           const f = field ? `${field}.${rk.key}` : rk.key;
           if (rk.changed) changed = true;
-          const rc = redactStored(child, f, hits, checkBlobs);
+          const rc = redactStored(child, f, hits, checkBlobs, secret || isSecretFieldKey(k));
           if (rc.changed) changed = true;
           out[rk.key] = rc.value;
         }
