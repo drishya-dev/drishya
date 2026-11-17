@@ -10,6 +10,7 @@ import { foldTemporary, parentFolder, timeSection, workspaceGroups } from '../li
 import { useApp } from '../state.ts';
 import { useWorkspaceState, useWorkspaceMemory } from '../lib/workspace-memory-react.ts';
 import { GitHubStarLink } from './GitHubStarLink.tsx';
+import { FeedbackLink } from './FeedbackLink.tsx';
 import { HomeOverview } from './HomeOverview.tsx';
 import './session-home.css';
 import './home-active.css';
@@ -188,6 +189,6 @@ export function SessionHome({recordings,sources,now,opening,error,refresh,onOpen
       </div>
     </section>
     </div>
-    </div><footer className="mh-footer"><span>Local capture. No telemetry.</span><GitHubStarLink/><span/></footer>
+    </div><footer className="mh-footer"><span>Local capture. No telemetry.</span><GitHubStarLink/><FeedbackLink/></footer>
   </div>;
 }
