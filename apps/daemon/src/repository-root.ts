@@ -1,6 +1,7 @@
 // Which repository a captured folder belongs to, for grouping worktrees on Home.
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { isUnsafeRecordedPath } from './remote-path.ts';
 
 const AGENT_WORKTREE = /^(.*?)[\\/]\.claude[\\/]worktrees[\\/][^\\/]+(?:[\\/]|$)/i;
 const LINKED_GITDIR = /^gitdir:\s*(.+?)\s*$/m;
@@ -12,6 +13,8 @@ const POINTER_BYTES = 4096, CACHE_LIMIT = 4096;
 async function resolveRepository(cwd: string): Promise<string | undefined> {
   const agent = AGENT_WORKTREE.exec(cwd)?.[1];
   if (agent) return agent;
+  // A recorded network or device path is never opened to look for a pointer (SEC-4b).
+  if (isUnsafeRecordedPath(cwd)) return undefined;
   const pointer = await readFile(join(cwd, '.git'), 'utf8').catch(() => undefined);
   if (!pointer || pointer.length > POINTER_BYTES) return undefined;
   const gitdir = LINKED_GITDIR.exec(pointer)?.[1];
