@@ -56,10 +56,16 @@ async function verifyOwnObjectStore(commonDir: string): Promise<void> {
   if (!own || !within(own, await realpath(commonDir).catch(() => '#'))) throw new HttpError(403, 'The object store is not inside this repository.');
   for (const name of ['alternates', 'http-alternates']) {
     const file = join(commonDir, 'objects', 'info', name);
-    const info = await lstat(file).catch(() => undefined);
-    if (!info) continue;
-    if (!info.isFile() || info.size > 65_536) throw new HttpError(403, 'This repository borrows objects from another folder.');
-    const entries = (await readFile(file, 'utf8').catch(() => '')).split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
+    // One handle for the size check and the read, so the file cannot change between them.
+    const handle = await open(file, 'r').catch(() => undefined);
+    if (!handle) continue;
+    let text: string;
+    try {
+      const info = await handle.stat();
+      if (!info.isFile() || info.size > 65_536) throw new HttpError(403, 'This repository borrows objects from another folder.');
+      text = await handle.readFile('utf8');
+    } finally { await handle.close(); }
+    const entries = text.split(/\r?\n/).map(line => line.trim()).filter(line => line && !line.startsWith('#'));
     if (name === 'http-alternates' && entries.length) throw new HttpError(403, 'This repository borrows objects from another folder.');
     for (const entry of entries) {
       if (entry.startsWith('"') || /[\x00-\x1f]/.test(entry)) throw new HttpError(403, 'This repository borrows objects from another folder.');
