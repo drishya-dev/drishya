@@ -142,11 +142,22 @@ for(const width of [600,1440]){
     await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
     await desk.getByRole('textbox',{name:'New workspace file path'}).fill('new/nested/draft.ts');
     await desk.getByRole('button',{name:'Create draft',exact:true}).click();
+    const editor=desk.getByLabel('Local draft for new/nested/draft.ts',{exact:true});
+    await expect(editor).toBeFocused();
+    await desk.getByRole('button',{name:'Compare draft',exact:true}).click();
+    await desk.getByRole('button',{name:'Edit draft',exact:true}).click();
+    await expect(editor).toBeFocused();
     await selectedVisible(page,'new/nested/draft.ts');
     await expect(page.locator('[data-tree-path="new/nested/draft.ts"]')).toHaveAttribute('aria-description','Local draft; file not created on disk.');
   });
 
   test(`Touched excludes active untouched files and unsent creation drafts at ${width}px`,async({page})=>{
+    let releaseEditor!:()=>void;
+    const editorReady=new Promise<void>(resolve=>{releaseEditor=resolve;});
+    await page.route(/\/assets\/DraftEditor-[^/]+\.js$/,async route=>{
+      await editorReady;
+      await route.continue();
+    });
     await open(page,width);
     await navigate(page,'README.md');await selectedVisible(page,'README.md');
     const explorer=page.locator('.folder-explorer'),filter=explorer.locator('.tree-evidence-filter');
@@ -168,8 +179,22 @@ for(const width of [600,1440]){
     await desk.getByRole('button',{name:'＋ New file',exact:true}).click();
     await desk.getByRole('textbox',{name:'New workspace file path'}).fill('new/untouched-draft.ts');
     await desk.getByRole('button',{name:'Create draft',exact:true}).click();
-    await selectedVisible(page,'new/untouched-draft.ts');
-    await touched();
+    try {
+      await selectedVisible(page,'new/untouched-draft.ts');
+      await expect(desk.getByText('Opening editor…')).toBeVisible();
+      const trigger=explorer.getByLabel('File filters',{exact:true});
+      // Exercise pointer activation even when a native summary does not take focus.
+      await trigger.evaluate(element=>element.addEventListener('mousedown',event=>event.preventDefault(),{once:true}));
+      await trigger.click();
+      await expect(filter).toHaveAttribute('open','');
+    } finally {
+      releaseEditor();
+    }
+    const editor=desk.getByLabel('Local draft for new/untouched-draft.ts',{exact:true});
+    await expect(editor).toBeVisible();
+    await expect(editor).not.toBeFocused();
+    await explorer.getByRole('button',{name:'Touched',exact:true}).click();
+    await expect(filter).toHaveAttribute('data-touched','true');
     await expect(explorer.locator('[data-tree-path="new/untouched-draft.ts"]')).toHaveCount(0);
     await expect(explorer.locator('[data-tree-path="src/deep/b.ts"]')).toHaveCount(0);
     await expect(explorer.locator('[data-tree-path="src/a.ts"]')).toBeVisible();
