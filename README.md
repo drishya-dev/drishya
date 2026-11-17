@@ -218,7 +218,7 @@ Run these commands in the folder containing the tarball. On Windows, open a new 
 <summary>First run, step by step</summary>
 <br>
 
-1. `serve` prints a link and opens it. The link carries a random token, new on every launch, that keeps other websites out. If the browser does not open, copy the link from the terminal.
+1. `serve` opens the browser with a short-lived, single-use sign-in link and prints a separate fallback link in the terminal. The printed link carries a random token valid for this daemon launch. If the browser does not open, copy that printed link. Keep both links private.
 2. **Home** lists the sessions Drishya found. A session is imported when you first open it. If the list is empty, finish a turn in Claude Code or Codex in a Git checkout and return to Home.
 3. To let Drishya read a repository's current files, choose **Enable workspace reading** in the Files rail. It asks once per checkout and never writes to it.
 4. To send a prompt, open a Claude Code or Codex session with its native CLI installed and signed in. Expand the prompt composer if it is closed, enter a prompt, and choose **Send prompt**. When prompted, confirm the session is idle in other clients before choosing **Confirm and send**.
