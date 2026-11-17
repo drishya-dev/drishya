@@ -196,14 +196,16 @@ Drishya runs on Node.js with no native add-ons. See the [release notes](docs/rel
 The package is not published yet. From launch:
 
 ```bash
-npm install -g @drishya-dev/cli
+npm install -g drishya
 drishya serve
 ```
+
+Or run it once without installing: `npx drishya serve`.
 
 To try a release candidate before publication, use the tarball supplied for that candidate:
 
 ```bash
-npm install -g --offline --ignore-scripts --no-audit --no-fund ./drishya-dev-cli-0.1.0.tgz
+npm install -g --offline --ignore-scripts --no-audit --no-fund ./drishya-0.1.0.tgz
 drishya serve
 ```
 
@@ -250,7 +252,7 @@ With the npm install use `drishya <command>`; from a checkout use `corepack pnpm
 
 1. Stop Drishya (Ctrl+C).
 2. Delete its data directory: `~/.drishya` (`%USERPROFILE%\.drishya` on Windows), or wherever `DRISHYA_HOME` points.
-3. Delete your checkout, or run `npm uninstall -g @drishya-dev/cli`.
+3. Delete your checkout, or run `npm uninstall -g drishya`.
 
 Drishya changes nothing outside its own data directory, so there is nothing else to restore. To remove a single session, use `drishya forget <recording>`.
 

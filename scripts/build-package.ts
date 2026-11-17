@@ -34,7 +34,7 @@ cpSync(resolve(root, 'apps/ui/dist'), resolve(out, 'apps/ui/dist'), { recursive:
 cpSync(resolve(root, 'fixtures/synthetic'), resolve(out, 'fixtures/synthetic'), { recursive: true });
 cpSync(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));
 writeFileSync(resolve(out, 'package.json'), JSON.stringify({
-  name: '@drishya-dev/cli',
+  name: 'drishya',
   version,
   description: 'Local, read-only live view and replay for coding agents',
   license: 'Apache-2.0',

@@ -11,7 +11,7 @@ import { checkPackage, foreignImports, localIdentity, outboundProblems } from '.
 const root = resolve(import.meta.dirname, '..');
 const scratch = mkdtempSync(join(tmpdir(), 'drishya-package-'));
 const installed = join(scratch, 'installed');
-const entry = join(installed, 'node_modules', '@drishya-dev', 'cli', 'apps', 'daemon', 'src', 'cli.mjs');
+const entry = join(installed, 'node_modules', 'drishya', 'apps', 'daemon', 'src', 'cli.mjs');
 const env = { ...process.env, DRISHYA_HOME: join(scratch, 'data') };
 // SEC-5: the packed server runs with a recorder preloaded; every network attempt it makes is checked at the end.
 const netLog = join(scratch, 'network-attempts.log');
@@ -93,7 +93,7 @@ try {
   assert.match(help, /drishya serve/);
   const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as { version: string };
   assert.equal(help.split(' ')[1], manifest.version, 'installed CLI help version');
-  const fixture = join(installed, 'node_modules', '@drishya-dev', 'cli', 'fixtures', 'synthetic');
+  const fixture = join(installed, 'node_modules', 'drishya', 'fixtures', 'synthetic');
   const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
   const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
   // The fixture also retains its three captured assistant end_turn boundaries.
