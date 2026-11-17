@@ -285,11 +285,11 @@ Drishya's security claims are tests you can run yourself. `corepack pnpm test:se
 
 | Suite | Tests | What it proves |
 |---|---:|---|
-| **Request gate** | 241 | The route list is read from the server's own source, so a new route is covered the day it is added. Without the launch token or a session, every route answers 401; no cross-origin headers or preflight; writes must be JSON; sessions expire and can be revoked; the token stays out of logs and responses. |
+| **Request gate** | 241 | The route list is read from the server's own source, so a new route is covered the day it is added. Without the launch token or a session, every protected API route answers 401. The version probe and sign-in exchange are public. No cross-origin headers or preflight; writes must be JSON; sessions expire and can be revoked; the token stays out of logs and responses. |
 | **Host and Origin** | 193 | Every route refuses a foreign Host (421) and a foreign Origin (403), even with a valid session, including DNS-rebinding-style names. |
 | **Secrets canaries** | 11 | One invented secret per redaction rule is planted in each agent's journals. The database, blobs, previews, search index, exports, offline bundle, API responses, logs and error bodies are searched for the raw values. Every rule is also timed against hostile input so none can hang ingest. |
 | **Outbound traffic** | 6 | A full walk of the app with default settings sends nothing beyond loopback. Each opt-in (GitHub, prompts) sends exactly what is listed. The built page loads nothing from another host. No update check. |
-| **Command execution** | 8 | Every program is started with an argument list and no shell. Captured text cannot become an option. The executable cannot come from a repository. Git runs with its extension points off and never touches the network. |
+| **Command execution** | 8 | Native harnesses, Git and `gh` are started with argument lists and shell execution disabled. On Windows, the browser opener uses `cmd /c start` with a generated URL-safe launch link. Captured text cannot become an option. The executable cannot come from a repository. Git runs with its extension points off and never touches the network. |
 | **Package** | 48 | What the npm package may contain (paths, manifest, file contents, imports) and that the daemon has no runtime dependencies. Each rule is shown failing when the thing it guards appears. |
 
 The other 127 passing tests cover loopback-only binding (12), file access (59), hostile journal content (20), size and rate limits (12), what the page may keep (4), prompt sending and approvals (8) and the first five suspicions written down before the suite (12). The last 44 are regression tests for the penetration pass below.
@@ -298,6 +298,7 @@ The other 127 passing tests cover loopback-only binding (12), file access (59), 
 
 ```bash
 corepack pnpm install --frozen-lockfile
+corepack pnpm ui:build                   # includes the built-page outbound check
 corepack pnpm test:security              # the suite above
 corepack pnpm test:security:mutations    # removes each defence in turn and checks that a test fails
 corepack pnpm package:verify             # builds the real package and checks it
