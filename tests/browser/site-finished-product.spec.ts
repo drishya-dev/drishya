@@ -99,5 +99,8 @@ test('navigation, evidence and install actions remain usable',async({page})=>{
   await page.locator('.nav a[href="#install"]').click();await expect(page.locator('#install')).toBeInViewport();
   await page.locator('[data-copy]').click();
   await expect(page.locator('[data-copy-status]')).toHaveText(/Command copied|Clipboard unavailable/);
+  // Launch claims: the install path, and a plain feedback link (FEEDBACK-1).
+  await expect(page.locator('#install .terminal-body')).toContainText('npx drishya serve');await expect(page.locator('#install .terminal-body')).toContainText('npm install -g drishya');
+  expect(await page.locator('[data-link=feedback]').first().getAttribute('href')).toBe('https://github.com/drishya-dev/drishya/issues/new/choose');
   for(const link of await page.locator('[data-link]').all())expect(await link.getAttribute('href')).toMatch(/^https:\/\/github\.com\/drishya-dev\/drishya/);
 });
