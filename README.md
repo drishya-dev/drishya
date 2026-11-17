@@ -30,7 +30,8 @@
   <a href="#features">Features</a> &nbsp;·&nbsp;
   <a href="#agents">Agents</a> &nbsp;·&nbsp;
   <a href="#privacy">Privacy</a> &nbsp;·&nbsp;
-  <a href="SECURITY.md">Security</a>
+  <a href="#security-tested">Security</a> &nbsp;·&nbsp;
+  <a href="#contributing">Contributing</a>
 </p>
 
 <br>
@@ -143,7 +144,7 @@ Where an agent did not record its reasoning, Drishya says *Reasoning not recorde
   <img src="docs/readme/agents/hermes-agent.svg" width="32" alt="" align="absmiddle">&nbsp; <b>Hermes Agent</b>
 </p>
 
-<sub>Not promised for a date. Want another agent? <a href="https://github.com/drishya-dev/drishya/issues">Open an issue</a>, or add one: <a href="docs/CODEBASE.md#adapters--how-to-add-a-harness">how adapters work</a>.</sub>
+<sub>Not promised for a date. Want another agent? <a href="https://github.com/drishya-dev/drishya/issues/new?template=harness-integration.yml">Open an issue</a>, or add one: <a href="docs/CODEBASE.md#adapters--how-to-add-a-harness">how adapters work</a>.</sub>
 
 <details>
 <summary>Where Drishya finds sessions</summary>
@@ -275,20 +276,52 @@ The optional GitHub integration runs your own signed-in `gh`, and sending a prom
 >
 > **This is not a known vulnerability, and nothing is exposed by default.** Drishya binds to `127.0.0.1` and refuses any other address. This note is about a setup you would have to create yourself: once the port is reachable from elsewhere, anyone who obtains your launch link could read your sessions.
 
-<details>
+<details open>
 <summary><b>If the port is exposed anyway, what still protects you</b></summary>
 <br>
 
-- **No token, no access.** Every request for your data needs the launch token or the session cookie it was exchanged for, and is refused (401) without one. The token is random on every launch, compared in constant time, never accepted in a URL query, and never written to disk or logs. The cookie is `HttpOnly` and `SameSite=Strict`.
-- **Foreign requests are refused.** A request for a host name other than localhost is refused (421), a request from another website's origin is refused (403), and no cross-origin headers are ever sent. A proxy that rewrites the host name gets past the first check, which is why the token is the lock that matters.
-- **Secrets were never stored.** Keys and tokens in your sessions are redacted on the way in, so the database, search index, exports and the screen never hold them. The security suite plants a canary for each of the 28 redaction rules in every agent's journal and checks that none of them reaches any of those places.
+- **No token, no access.** Every request for your data needs the launch token or the session cookie it was exchanged for, and is refused (401) without one. The token is random on every launch, compared in constant time, sent only in a header (never read from a URL query), and never written to disk or logs. The link your browser is opened with carries a one-time code that expires after two minutes, not the token itself. The cookie is `HttpOnly` and `SameSite=Strict`, expires after 12 hours idle or 7 days, and at most 32 sessions are kept.
+- **Foreign requests are refused.** A request for a host name other than localhost is refused (421), a request from another website's origin is refused (403), and no cross-origin headers are ever sent. State-changing requests must be JSON, which a cross-site form cannot send. A proxy that rewrites the host name gets past the first check, which is why the token is the lock that matters.
+- **Secrets were never stored.** Keys and tokens in your sessions are redacted on the way in, so the database, search index, exports and the screen never hold them. The security suite plants a canary for each of the 27 redaction rules (28 canaries) in every agent's journal and checks that none of them reaches any of those places.
 - **Prompting needs your consent.** Sending a prompt needs the consent you gave for that checkout in the app, and each approval answers one exact request once.
 
 Redaction is best effort: a secret that matches no pattern is not caught. That is why the port belongs on your own machine.
 
-Found a problem? Report it privately through [SECURITY.md](SECURITY.md). What is defended and tested is in the [threat model](docs/review/sec-3-threat-model.md).
+Found a problem? Report it privately through [SECURITY.md](SECURITY.md). Each line above is a test: see [Security, tested](#security-tested).
 
 </details>
+
+## Security, tested
+
+Drishya's security claims are tests you can run yourself. `corepack pnpm test:security` ran on `main` at `02ca2bb9` (Windows 11, Node 24): **684 tests in 15 files, 678 passed, 6 skipped, 0 failed**, in about 90 seconds. Five of the skips are Linux and macOS file-permission tests; one checks the built package, which `package:verify` runs.
+
+| Suite | Tests | What it proves |
+|---|---:|---|
+| **Request gate** | 241 | The route list is read from the server's own source, so a new route is covered the day it is added. Without the launch token or a session, every protected API route answers 401. The version probe and sign-in exchange are public. No cross-origin headers or preflight; writes must be JSON; sessions expire and can be revoked; the token stays out of logs and responses. |
+| **Host and Origin** | 193 | Every route refuses a foreign Host (421) and a foreign Origin (403), even with a valid session, including DNS-rebinding-style names. |
+| **Secrets canaries** | 11 | One invented secret per redaction rule is planted in each agent's journals. The database, blobs, previews, search index, exports, offline bundle, API responses, logs and error bodies are searched for the raw values. Every rule is also timed against hostile input so none can hang ingest. |
+| **Outbound traffic** | 6 | A full walk of the app with default settings sends nothing beyond loopback. Each opt-in (GitHub, prompts) sends exactly what is listed. The built page loads nothing from another host. No update check. |
+| **Command execution** | 8 | Native harnesses, Git and `gh` are started with argument lists and shell execution disabled. On Windows, the browser opener uses `cmd /c start` with a generated URL-safe launch link. Captured text cannot become an option. The executable cannot come from a repository. Git runs with its extension points off and never touches the network. |
+| **Package** | 48 | What the npm package may contain (paths, manifest, file contents, imports) and that the daemon has no runtime dependencies. Each rule is shown failing when the thing it guards appears. |
+
+The other 127 passing tests cover loopback-only binding (12), file access (59), hostile journal content (20), size and rate limits (12), what the page may keep (4), prompt sending and approvals (8) and the first five suspicions written down before the suite (12). The last 44 are regression tests for the penetration pass below.
+
+**Run it yourself**
+
+```bash
+corepack pnpm install --frozen-lockfile
+corepack pnpm ui:build                   # includes the built-page outbound check
+corepack pnpm test:security              # the suite above
+corepack pnpm test:security:mutations    # removes each defence in turn and checks that a test fails
+corepack pnpm package:verify             # builds the real package and checks it
+```
+
+**Penetration pass (SEC-4a).** The release candidate, packed and installed as a user would, was attacked with a hostile web page in Edge and Firefox, DNS rebinding with real DNS, a seeded fuzzer (28,215 requests across all 95 routes), a network scan, a hostile repository and static analysis. It found **8 issues**, two high, two medium, four low. All are fixed, each with a regression test that fails without the fix. The report keeps the evidence and the open items.
+
+<!-- SEC-4b: replace the sentence below with the result once the pass has been repeated on the shipping installer. Do not claim it before. -->
+**SEC-4b**, the same pass repeated on the installer that ships, has not been done yet. Its result will be added here.
+
+Read the tests in [`tests/security/`](tests/security), the [threat model](docs/review/sec-3-threat-model.md) for what is defended and what is accepted, and the [SEC-4a report](docs/review/sec-4-pentest.md). Report a vulnerability privately through [SECURITY.md](SECURITY.md).
 
 ## Develop
 
@@ -303,11 +336,17 @@ corepack pnpm test:browser    # browser suite
 
 TypeScript run directly on Node 24 over `node:sqlite` and `node:http`, with a React 19 and Vite front end. [docs/CODEBASE.md](docs/CODEBASE.md) maps the packages; read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
+## Contributing
+
+**Developers.** Missing a feature you want? Propose it in an [idea issue](https://github.com/drishya-dev/drishya/issues/new?template=idea.yml), say you are taking it, and build it. Start with [CONTRIBUTING.md](CONTRIBUTING.md) (how to run, check and submit a change), the [roadmap](ROADMAP.md) and the [open issues](https://github.com/drishya-dev/drishya/issues); `good first issue` is the gentlest way in.
+
+**Agent makers and their communities.** If you build or use a coding agent, help Drishya show its work. An adapter reads the agent's own session records, read-only, and the rest of the product works unchanged. [How to add a harness](docs/CODEBASE.md#adapters--how-to-add-a-harness) has the steps, and the [Harness integration](https://github.com/drishya-dev/drishya/issues/new?template=harness-integration.yml) issue form is the place to say what your agent records and where. If you maintain the agent, the form has a place to say so.
+
+**Feedback.** A bug, an idea or a question: [open an issue](https://github.com/drishya-dev/drishya/issues/new/choose). The same link is in the app, on Home and in Settings; it opens GitHub, and Drishya sends nothing.
+
 ## Maintainers
 
-Drishya is built and maintained by **Harsh Jain** and **Yash Doke**.
-
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md), the [roadmap](ROADMAP.md) and the [open issues](https://github.com/drishya-dev/drishya/issues). The [Code of Conduct](CODE_OF_CONDUCT.md) applies, the [changelog](CHANGELOG.md) records releases, and [AGENTS.md](AGENTS.md) holds the rules for coding agents working in this repository.
+Drishya is built and maintained by **Harsh Jain** and **Yash Doke**. The [Code of Conduct](CODE_OF_CONDUCT.md) applies, the [changelog](CHANGELOG.md) records releases, and [AGENTS.md](AGENTS.md) holds the rules for coding agents working in this repository.
 
 ## License
 

@@ -29,6 +29,4 @@ body:
     id: acceptance
     attributes:
       label: How we can verify it
-      description: Describe what should be true after the change, and any specific cases or constraints.
-    validations:
-      required: true
+      description: Optional. What should be true once it is built, and any specific cases or constraints. Say here if you want to build it yourself.
