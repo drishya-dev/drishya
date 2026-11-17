@@ -13,6 +13,12 @@ The CLI package is `@drishya-dev/cli` and requires Node.js 24. It opens a deskto
 
 ## Platform verification
 
-- GitHub Actions passed the build, tests and package checks on Windows, Ubuntu and macOS at [main commit `ab4eb1d`](https://github.com/drishya-dev/drishya/actions/runs/44024026241).
-- The first preparation tarball built and installed offline on Windows 11 x64 with Node.js 24.11.1. The packaged verifier imported synthetic Claude Code and Codex recordings and checked that the server used only loopback.
-- The frozen-candidate gate and SEC-5 signoff are pending. So are the installed-package walkthroughs with a genuine live session on a second clean Windows machine, WSL2 Ubuntu and a physical Mac.
+- The frozen candidate at `1dcc3e1e30d7fc8d1cdc1b4aa3736664da27d801` passed all six hosted build, test, package and browser jobs on Windows, Ubuntu and macOS. [Candidate CI](https://github.com/drishya-dev/drishya/actions/runs/44046338310)
+- Its SHA-256 is `d9b7a72d9758aa9dd7ec72764b8c465dae260060671e25dc6298c18af19e21d6`. Windows 11 x64 with Node 24.11.1 passed the frozen offline install and package verifier.
+- The same tarball was installed offline on Ubuntu 24.04.5 LTS under WSL2 with Node 24.22.3. A genuine Codex session was imported and resumed through the installed app. The live reply rendered at 600 and 1440 px, with zero page errors and no non-loopback browser requests. [Candidate evidence](https://github.com/drishya-dev/drishya/pull/508)
+- A second clean Windows machine walkthrough, physical Mac acceptance, SHIP-10's fresh user review and ten-minute pass, and the final SEC-4b and SEC-5 sign-off remain pending.
+- These results identify the candidate tested. If security or packaging changes replace it, record the replacement commit and digest and rerun the affected acceptance checks.
+
+## Publication package
+
+PR #523 proposes the plain package name `drishya`. The candidate documented above is still `@drishya-dev/cli`. Confirm the final package name in its packed manifest and update the install instructions before publishing.
