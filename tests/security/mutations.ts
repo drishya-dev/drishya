@@ -77,6 +77,8 @@ export const MUTATIONS: Mutation[] = [
   // 7. secrets
   { name: 'secrets: a redaction rule (github-token)', edits: [{ file: 'packages/privacy/src/index.ts', find: "{ id: 'github-token', pattern: /\\b(?:gh[pousr]_[A-Za-z0-9]{36,255}|github_pat_[A-Za-z0-9_]{60,255})\\b/g },", replace: '' }], tests: ['07-secrets'] },
   { name: 'secrets: text encoded inside a string is redacted (Antigravity MCP arguments)', edits: [{ file: 'packages/privacy/src/index.ts', find: 'return redactNested(input, redactPlain(input), 0);', replace: 'return redactPlain(input);' }], tests: ['07-secrets'] },
+  { name: 'secrets: a secret-named structured field is redacted (objects)', edits: [{ file: 'packages/privacy/src/index.ts', find: 'secret || (!keep && isSecretFieldKey(k))', replace: 'secret' }], tests: ['15-structured-secrets'] },
+  { name: 'secrets: a secret-named structured field is redacted (JSON text)', edits: [{ file: 'packages/privacy/src/index.ts', find: 'walk(x, secret || isSecretFieldKey(k))', replace: 'walk(x, secret)' }], tests: ['15-structured-secrets'] },
   { name: 'secrets: error bodies are redacted', edits: [{ file: S, find: 'return { status, body: { error: redactText(message).text.slice(0, 2000) } };', replace: 'return { status, body: { error: message.slice(0, 2000) } };' }], tests: ['07-secrets'] },
   // 8. limits
   { name: 'limits: request body size', edits: [rm(S, "if (n > limit) throw new HttpError(413, 'body too large');")], tests: ['08-limits'] },
