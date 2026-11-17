@@ -185,7 +185,7 @@ No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
 - `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
 - To send prompts: `claude` or `codex` installed and signed in.
 
-Built and tested on Windows 11. It is plain Node with no native add-ons. A clean Linux run (Ubuntu 26.04 under WSL2, Node 24) passes the type checks, the unit and security tests and the installed package; some browser-suite cases still differ on Linux. macOS has not been verified yet.
+Hand-tested on Windows 11. It is plain Node with no native add-ons. Every change runs the type checks, the unit and security tests and the full browser suite on Windows, Ubuntu and macOS in CI, and a clean Linux install (Ubuntu under WSL2, Node 24) has been checked by hand. macOS has not been hand-tested on a physical Mac yet.
 
 </details>
 
@@ -196,9 +196,11 @@ Built and tested on Windows 11. It is plain Node with no native add-ons. A clean
 The package is not published yet. From launch:
 
 ```bash
-npm install -g @drishya-dev/cli
+npm install -g drishya
 drishya serve
 ```
+
+Or run it once without installing: `npx drishya serve`.
 
 </details>
 
@@ -240,7 +242,7 @@ With the npm install use `drishya <command>`; from a checkout use `corepack pnpm
 
 1. Stop Drishya (Ctrl+C).
 2. Delete its data directory: `~/.drishya` (`%USERPROFILE%\.drishya` on Windows), or wherever `DRISHYA_HOME` points.
-3. Delete your checkout, or run `npm uninstall -g @drishya-dev/cli`.
+3. Delete your checkout, or run `npm uninstall -g drishya`.
 
 Drishya changes nothing outside its own data directory, so there is nothing else to restore. To remove a single session, use `drishya forget <recording>`.
 

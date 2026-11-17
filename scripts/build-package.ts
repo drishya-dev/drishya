@@ -32,7 +32,7 @@ cpSync(resolve(root, 'fixtures/synthetic'), resolve(out, 'fixtures/synthetic'), 
 cpSync(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));
 const workspace = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')) as { version?: string };
 writeFileSync(resolve(out, 'package.json'), JSON.stringify({
-  name: '@drishya-dev/cli',
+  name: 'drishya',
   version: workspace.version ?? '0.1.0-alpha.0',
   description: 'Local, read-only live view and replay for coding agents',
   license: 'Apache-2.0',
