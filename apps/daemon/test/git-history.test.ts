@@ -21,7 +21,10 @@ beforeAll(async()=>{
   git('switch','main');writeFileSync(join(root,'main.ts'),'export const main=true;\n');git('add','.');git('commit','-m','Main fixture');
   git('merge','--no-ff','feature','-m','Merge fixture');merge=git('rev-parse','HEAD');
   git('tag','-a','v1',first,'-m','Annotated fixture');
-  for(let n=0;n<54;n++)git('commit','--allow-empty','-m',`History fixture ${n}`);
+  // One fast-import process writes the 54 empty history commits; one `git commit` each cost 54 process starts, and on a hosted
+  // Windows runner busy with other test files that alone outran the hook's 30 s (18 Nov). The commits keep the merge's tree.
+  const now=Math.floor(Date.now()/1000);
+  execFileSync('git',['fast-import','--quiet'],{cwd:root,windowsHide:true,input:Array.from({length:54},(_,n)=>{const message=`History fixture ${n}\n`;return `commit refs/heads/main\ncommitter Synthetic <synthetic@example.invalid> ${now+n} +0000\ndata ${Buffer.byteLength(message)}\n${message}${n===0?`from ${merge}\n`:''}\n`;}).join('')});
   const head=git('rev-parse','HEAD');
   execFileSync('git',['update-ref','--stdin'],{cwd:root,input:Array.from({length:112},(_,n)=>`update refs/heads/topic-${String(n).padStart(3,'0')} ${head}`).join('\n')+'\n',windowsHide:true});
   git('update-ref','refs/remotes/origin/main',head);
@@ -30,7 +33,7 @@ beforeAll(async()=>{
   git('config','core.fsmonitor',helper);git('config','diff.external',helper);git('config','gpg.program',helper);git('config','log.showSignature','true');
   const journal=join(dir,'fixture.jsonl');writeFileSync(journal,JSON.stringify({type:'user',uuid:'atlas-user',sessionId:'atlas-fixture',cwd:root,message:{role:'user',content:'Read local Git history'}})+'\n');
   app=new App(join(dir,'store'));id=(await app.ingest.importSource('claude-code',journal)).recordingId;access=new WorkspaceAccess(app);review=new GitReview(access);server=await startServer({app,port:0,uiDir:join(dir,'no-ui')});
-},30_000);
+},60_000);
 afterAll(async()=>{if(server)await server.close();if(app)await app.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe fixture path');rmSync(dir,{recursive:true,force:true});}});
 
 it('requires Git consent and pages real branches, tags and commit topology',async()=>{
