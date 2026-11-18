@@ -18,13 +18,16 @@ test('Fit preserves manual spatial orientation and leaves labels inside narrow m
   const fit = page.getByRole('button', { name: 'Fit', exact: true });
   await fit.focus(); await page.keyboard.press('Enter');
   expect(await map.getAttribute('data-map-yaw')).toBe(yaw); expect(await map.getAttribute('data-map-pitch')).toBe(pitch);
-  for (const width of [1280, 844, 390]) {
+  // 600 px is the narrowest supported window (AGENTS.md); the old 390 px case was a phone width.
+  for (const width of [1280, 844, 600]) {
     await page.setViewportSize({ width, height: 844 }); await fit.focus(); await page.keyboard.press('Enter');
-    const labels = map.locator('.map-file-label:visible');
-    await expect.poll(() => labels.count()).toBeGreaterThan(0);
-    for (const label of await labels.all()) {
-      const rect = (await label.boundingBox())!;
-      expect(rect.x).toBeGreaterThanOrEqual(0); expect(rect.x + rect.width).toBeLessThanOrEqual(width);
-    }
+    // The resize and Fit reposition labels over the next frames. Reading them one by one straight away measured the previous
+    // width's layout, or a label that had just been hidden (macOS runner, 18 Nov). Read every visible label in one frame
+    // until the fitted layout holds: some are shown and none crosses the window's edges.
+    await expect.poll(() => map.evaluate((el, width) => {
+      const shown = [...el.querySelectorAll('.map-file-label')].map(label => ({ box: label.getBoundingClientRect(), style: getComputedStyle(label) }))
+        .filter(({ box, style }) => box.width > 0 && box.height > 0 && style.visibility !== 'hidden' && style.display !== 'none');
+      return { shown: shown.length > 0, outside: shown.filter(({ box }) => box.left < 0 || box.right > width).length };
+    }, width), { timeout: 15_000 }).toEqual({ shown: true, outside: 0 });
   }
 });
