@@ -168,12 +168,10 @@ Antigravity support is the newest and has had the least real-world use; Drishya 
 Requires **Node.js 24**.
 
 ```bash
-git clone https://github.com/drishya-dev/drishya.git
-cd drishya
-corepack pnpm install --frozen-lockfile
-corepack pnpm ui:build
-corepack pnpm serve
+npx drishya serve
 ```
+
+Or install it with `npm install -g drishya` and run `drishya serve`. On Windows, open a new terminal if it cannot find the command after installation.
 
 `serve` opens Drishya in your browser. **Home** lists the sessions it finds; open one to follow it live or replay it.
 No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
@@ -192,26 +190,18 @@ Hand-tested on Windows 11. It is plain Node with no native add-ons. CI runs type
 </details>
 
 <details>
-<summary>Install from npm (at launch)</summary>
+<summary>Run from source</summary>
 <br>
 
-Release **0.1.0 is not published yet**. Use the source checkout or a supplied release-candidate tarball until it is available. After 0.1.0 is published:
-
 ```bash
-npm install -g drishya
-drishya serve
+git clone https://github.com/drishya-dev/drishya.git
+cd drishya
+corepack pnpm install --frozen-lockfile
+corepack pnpm ui:build
+corepack pnpm serve
 ```
 
-Or run it once without installing: `npx drishya serve`.
-
-To try a release candidate before publication, use the tarball supplied for that candidate:
-
-```bash
-npm install -g --offline --ignore-scripts --no-audit --no-fund ./drishya-0.1.0.tgz
-drishya serve
-```
-
-Run these commands in the folder containing the tarball. On Windows, open a new terminal if it cannot find the command after installation.
+Rebuild the UI (`corepack pnpm ui:build`) after updating the source.
 
 </details>
 
@@ -225,7 +215,6 @@ Run these commands in the folder containing the tarball. On Windows, open a new 
 4. To send a prompt, open a Claude Code or Codex session with its native CLI installed and signed in. Expand the prompt composer if it is closed, enter a prompt, and choose **Send prompt**. When prompted, confirm the session is idle in other clients before choosing **Confirm and send**.
 5. Stop with Ctrl+C. Use `--port` if the default port (7878) is taken.
 
-If you run from a checkout, rebuild the UI (`corepack pnpm ui:build`) after updating the source.
 
 </details>
 

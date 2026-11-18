@@ -6,7 +6,7 @@ The development before 0.1.0 happened in a private repository. Its task-by-task 
 
 ## [Unreleased]
 
-## [0.1.0] - unreleased
+## [0.1.0] - 2026-11-18
 
 The first public release.
 
