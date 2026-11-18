@@ -24,7 +24,7 @@ Each launcher owns one worker: `node <cli> embed-worker` with a private duplex p
 
 Concurrent launchers make separate workers on separate ephemeral loopback ports. None of them ever contacts, reuses or stops another Drishya, including a `drishya serve` on 7878. They share the store safely (appends skip duplicate observation IDs inside one transaction).
 
-`<Drishya home>/embed-discovery/<random>.json` holds only `version`, `pid`, `port`, `instanceId`. It is a hint, never a grant. The directory is owner-only (Windows ACL via built-in PowerShell/.NET, failing closed; POSIX 0700/0600 with an ownership check). A worker removes its own entry when it stops.
+`<Drishya home>/embed-discovery/<random>.json` holds only `version`, `pid`, `port`, `instanceId`. It is a hint, never a grant. The directory is owner-only (Windows: System32 `whoami` and `icacls` remove inheritance and every other account, including the explicit SYSTEM/Administrators entries a folder gets under a parent without inheritable entries, then read the DACL back as SDDL and fail closed with the failing step named in `detail`; POSIX 0700/0600 with an ownership check). A worker removes its own entry when it stops.
 
 ## The browser exchange
 

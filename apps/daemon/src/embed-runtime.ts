@@ -3,7 +3,7 @@ import {promisify} from 'node:util';
 import {randomBytes} from 'node:crypto';
 import {mkdir, lstat, open, readFile, rename, rm, chmod} from 'node:fs/promises';
 import {Socket} from 'node:net';
-import {join} from 'node:path';
+import {dirname, join} from 'node:path';
 import type {Readable} from 'node:stream';
 import {App} from './app.ts';
 import {EmbedCodes} from './embed-auth.ts';
@@ -40,11 +40,41 @@ function stepFailure(step: string, error: unknown): EmbedError {
   const why = e?.killed || e?.signal === 'SIGTERM' ? 'timeout' : typeof e?.code === 'number' ? `exit ${e.code}` : typeof e?.code === 'string' ? e.code : 'failed';
   return new EmbedError('DISCOVERY_UNSAFE', `${step}: ${why}`);
 }
+/** SDDL's two-letter names for well-known accounts, as icacls needs a SID to remove one. */
+const SDDL_ALIASES: Record<string, string> = {
+  SY: 'S-1-5-18', BA: 'S-1-5-32-544', BU: 'S-1-5-32-545', BG: 'S-1-5-32-546', PU: 'S-1-5-32-547', AU: 'S-1-5-11', WD: 'S-1-1-0',
+  CO: 'S-1-3-0', CG: 'S-1-3-1', OW: 'S-1-3-4', AN: 'S-1-5-7', IU: 'S-1-5-4', NU: 'S-1-5-2', SU: 'S-1-5-6', NS: 'S-1-5-20',
+  LS: 'S-1-5-19', RC: 'S-1-5-12', AC: 'S-1-15-2-1', PS: 'S-1-5-10', ED: 'S-1-5-9',
+};
+const sddlAces = (sddl: string) => {
+  const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
+  return dacl ? {flags: dacl[1]!, aces: [...dacl[2]!.matchAll(/\(([^)]*)\)/g)].map(m => m[1]!.split(';'))} : undefined;
+};
+/**
+ * Whether an SDDL string's DACL is protected (no inheritance) and holds only allow entries for `sid`. Pure, for tests.
+ * Returns a printable reason when it is not.
+ */
+export function privateDacl(sddl: string, sid: string): string | undefined {
+  const dacl = sddlAces(sddl);
+  if (!dacl) return 'verify: no DACL';
+  if (!dacl.flags.includes('P')) return 'verify: inheritance not removed';
+  if (!dacl.aces.length || dacl.aces.some(ace => ace[0] !== 'A' || ace[5] !== sid)) return `verify: ${dacl.aces.length} entries not only this user`;
+  return undefined;
+}
+/** The SIDs other than `sid` named in a DACL; an alias without a known SID is returned as is, so removal fails closed. */
+export function otherSids(sddl: string, sid: string): string[] {
+  return [...new Set((sddlAces(sddl)?.aces ?? []).map(ace => ace[5] ?? '').filter(who => who !== sid).map(who => SDDL_ALIASES[who] ?? who))];
+}
 /**
  * Windows: the discovery folder is readable by the current user only. Built-in `whoami` and `icacls`, by absolute System32
- * path (a bare name would let Windows search the current folder first), with arguments as a list and no shell. The result
- * is read back as SDDL, which is not localized, and anything but one protected allow entry for this user fails closed.
- * (PowerShell did the same in #497 but took seconds to start cold, and its failure reason was lost.)
+ * path (a bare name would let Windows search the current folder first), with arguments as a list and no shell.
+ *
+ * Inheritance is removed and every entry but this user's is removed by SID. Removing inheritance alone is not enough: a
+ * folder made under a parent with no inheritable entries (a hosted CI runner's temp folder) gets the process token's
+ * default DACL, SYSTEM and Administrators, as explicit entries. (`icacls /restore` would replace the DACL in one step but
+ * needs the restore privilege.) The result is read back as SDDL, which is not localized, and anything but one protected
+ * allow entry for this user fails closed. #497 did this through PowerShell, which can take seconds to start cold and
+ * whose failure reason was lost; every step here reports which one failed.
  */
 async function restrictWindowsDirectory(directory: string): Promise<void> {
   const options = {windowsHide: true, timeout: 30_000, maxBuffer: 64 * 1024};
@@ -52,19 +82,21 @@ async function restrictWindowsDirectory(directory: string): Promise<void> {
   const sid = /"(S-1-[0-9-]+)"\s*$/.exec(who.stdout.trim())?.[1];
   if (!sid) throw new EmbedError('DISCOVERY_UNSAFE', 'whoami: no user SID');
   const icacls = system32('icacls.exe');
-  // Drop inherited entries and grant only this user. No `/reset` first: a change propagates to existing entry files, and a
-  // reset would briefly widen them. An explicit entry someone else added is not removed; the read-back below refuses it.
+  const read = async (step: string) => {
+    // icacls' /save writes the folder's SDDL in UTF-16LE. The file sits beside the folder, never inside it.
+    const saved = join(dirname(directory), `.drishya-acl-${randomBytes(6).toString('hex')}.tmp`);
+    try {
+      await run(icacls, [directory, '/save', saved, '/q'], options).catch(e => {throw stepFailure(step, e);});
+      return (await readFile(saved)).toString('utf16le');
+    } finally {await rm(saved, {force: true});}
+  };
+  // No `/reset` first: a change propagates to existing entry files, and a reset would briefly widen them.
   await run(icacls, [directory, '/inheritance:r', '/grant:r', `*${sid}:(OI)(CI)F`, '/q'], options).catch(e => {throw stepFailure('icacls grant', e);});
-  const saved = join(directory, `.acl-${randomBytes(6).toString('hex')}.tmp`);
-  try {
-    await run(icacls, [directory, '/save', saved, '/q'], options).catch(e => {throw stepFailure('icacls save', e);});
-    const sddl = (await readFile(saved)).toString('utf16le');
-    const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
-    if (!dacl) throw new EmbedError('DISCOVERY_UNSAFE', 'verify: no DACL');
-    const aces = [...dacl[2]!.matchAll(/\(([^)]*)\)/g)].map(m => m[1]!.split(';'));
-    if (!dacl[1]!.includes('P')) throw new EmbedError('DISCOVERY_UNSAFE', 'verify: inheritance not removed');
-    if (!aces.length || aces.some(ace => ace[0] !== 'A' || ace[5] !== sid)) throw new EmbedError('DISCOVERY_UNSAFE', `verify: ${aces.length} entries not only this user`);
-  } finally {await rm(saved, {force: true});}
+  const others = otherSids(await read('icacls save'), sid);
+  if (others.some(other => !/^S-1-[0-9-]+$/.test(other))) throw new EmbedError('DISCOVERY_UNSAFE', 'verify: unknown account alias');
+  if (others.length) await run(icacls, [directory, '/remove', ...others.map(other => `*${other}`), '/q'], options).catch(e => {throw stepFailure('icacls remove', e);});
+  const reason = privateDacl(await read('icacls verify'), sid);
+  if (reason) throw new EmbedError('DISCOVERY_UNSAFE', reason);
 }
 export async function discoveryEntry(home: string, port: number): Promise<() => Promise<void>> {
   const directory = join(home, 'embed-discovery');

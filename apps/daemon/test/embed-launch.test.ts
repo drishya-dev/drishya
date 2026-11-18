@@ -6,9 +6,9 @@ import {spawnSync} from 'node:child_process';
 import {PassThrough} from 'node:stream';
 import {expect,it} from 'vitest';
 import {App} from '../src/app.ts';
-import {selection,openEmbed,nativeIdMatches,embedFailure} from '../src/embed-launch.ts';
+import {selection,openEmbed,nativeIdMatches,embedFailure,EmbedError} from '../src/embed-launch.ts';
 import {EmbedCodes} from '../src/embed-auth.ts';
-import {embedSupervisor,jsonLines,discoveryEntry} from '../src/embed-runtime.ts';
+import {embedSupervisor,jsonLines,discoveryEntry,privateDacl,otherSids} from '../src/embed-runtime.ts';
 import {execFileSync} from 'node:child_process';
 const entry=fileURLToPath(new URL('../src/cli.ts',import.meta.url));
 const fixture=fileURLToPath(new URL('../../../fixtures/synthetic/claude/checkout-fix.jsonl',import.meta.url));
@@ -112,15 +112,38 @@ it('a released detached worker keeps serving its pane, then stops by itself and 
  }finally{await rm(home,{recursive:true,force:true});}
 },40_000);
 
-it.runIf(process.platform==='win32')('Windows discovery is this user only, and a foreign entry fails closed with a printable reason',async()=>{
+it('the SDDL check accepts only a protected DACL of this user\'s allow entries, and names every other account',()=>{
+ const me='S-1-5-21-1-2-3-1001';
+ expect(privateDacl(`x\r\nD:PAI(A;;FA;;;${me})(A;OICI;FA;;;${me})\r\n`,me)).toBeUndefined();
+ expect(privateDacl(`D:AI(A;OICI;FA;;;${me})`,me)).toBe('verify: inheritance not removed');
+ expect(privateDacl(`D:PAI(A;OICI;FA;;;${me})(A;OICI;FA;;;SY)(A;OICI;FA;;;BA)`,me)).toBe('verify: 3 entries not only this user');
+ expect(privateDacl(`D:PAI(D;;FA;;;${me})`,me)).toBe('verify: 1 entries not only this user');
+ expect(privateDacl('D:PAI',me)).toBe('verify: 0 entries not only this user');
+ expect(privateDacl('O:BA',me)).toBe('verify: no DACL');
+ // A runner's default DACL: SYSTEM, Administrators and the user, as explicit entries.
+ expect(otherSids(`D:PAI(A;OICI;FA;;;${me})(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;S-1-5-21-9-9-9-500)`,me)).toEqual(['S-1-5-18','S-1-5-32-544','S-1-5-21-9-9-9-500']);
+ expect(otherSids(`D:PAI(A;;FA;;;ZZ)`,me)).toEqual(['ZZ']); // unknown alias: the caller refuses it
+});
+
+it.runIf(process.platform==='win32')('Windows discovery is this user only, even where the folder starts with explicit foreign entries',async()=>{
  const home=await mkdtemp(join(tmpdir(),'drishya-embed-acl-'));
+ const icacls=join(process.env.SystemRoot??'C:/Windows','System32','icacls.exe');
+ const sddl=async(dir:string)=>{const out=join(home,'acl.out');execFileSync(icacls,[dir,'/save',out,'/q'],{windowsHide:true});const text=(await readFile(out)).toString('utf16le');await rm(out);return text;};
  try {
-  const done=await discoveryEntry(home,1);const dir=join(home,'embed-discovery');
-  expect((await readdir(dir)).length).toBe(1);await done();
-  execFileSync(join(process.env.SystemRoot??'C:\Windows','System32','icacls.exe'),[dir,'/grant','*S-1-1-0:(R)','/q'],{windowsHide:true});
-  const error=await discoveryEntry(home,1).then(()=>undefined,e=>e);
-  expect(error).toMatchObject({code:'DISCOVERY_UNSAFE',detail:'verify: 2 entries not only this user'});
-  expect(embedFailure(error)).toMatchObject({code:'DISCOVERY_UNSAFE',detail:'verify: 2 entries not only this user'});
-  expect(await readdir(dir)).toEqual([]);
+  const dir=join(home,'embed-discovery');
+  await mkdir(dir);
+  // Explicit entries for Everyone and SYSTEM, like a token's default DACL on a hosted runner.
+  execFileSync(icacls,[dir,'/grant','*S-1-1-0:(R)','*S-1-5-18:(F)','/q'],{windowsHide:true});
+  const done=await discoveryEntry(home,1);
+  expect((await readdir(dir)).length).toBe(1);
+  const me=/"(S-1-[0-9-]+)"\s*$/.exec(execFileSync(join(process.env.SystemRoot??'C:/Windows','System32','whoami.exe'),['/user','/fo','csv','/nh'],{encoding:'utf8',windowsHide:true}).trim())![1]!;
+  expect(privateDacl(await sddl(dir),me)).toBeUndefined();
+  await done();expect(await readdir(dir)).toEqual([]);
  }finally{await rm(home,{recursive:true,force:true});}
+});
+
+it('a failed step travels as a printable detail, never as arbitrary text',()=>{
+ const failure=embedFailure(new EmbedError('DISCOVERY_UNSAFE','icacls grant: exit 5'));
+ expect(failure).toMatchObject({code:'DISCOVERY_UNSAFE',detail:'icacls grant: exit 5'});
+ expect(embedFailure(new EmbedError('DISCOVERY_UNSAFE','C:\\Users\\someone\\secret path')).detail).toBeUndefined();
 });
