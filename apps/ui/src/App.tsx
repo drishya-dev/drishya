@@ -13,6 +13,7 @@ import { WorkspaceNavigation } from './components/WorkspaceNavigation.tsx';
 import { restoreWorkingLocations, useWorkingRecovery } from './lib/working-recovery.ts';
 import { workspaceMemory } from './lib/workspace-memory.ts';
 import { installFocusModality } from './lib/focus-modality.ts';
+import { embeddedRecording, isEmbedded } from './lib/embed.ts';
 
 const DEMO_URL = `${import.meta.env.BASE_URL}demo/bundle.json`;
 
@@ -42,6 +43,10 @@ export function App() {
   const error = useApp((s) => s.error);
 
   useEffect(() => installFocusModality(), []);
+  // EMBED: a pane shows one session. Any path to Home (a button, a palette command, an error's way out) lands back on it.
+  useEffect(() => isEmbedded() ? useApp.subscribe((s) => {
+    if (s.screen === 'home') useApp.setState({ screen: s.recordingId ? 'viewer' : 'embed-missing' });
+  }) : undefined, []);
 
   // Boot: a replay bundle if asked for; otherwise the local daemon; otherwise the demo.
   useEffect(() => {
@@ -51,6 +56,15 @@ export function App() {
       try {
         if (p.bundle) return await openBundle(p.bundle, new URLSearchParams(location.search).get('demo') === 'live');
         const auth = await signIn();
+        if (auth === 'ok' && isEmbedded()) {
+          // EMBED: one session, no Home or session library. A missing session says so instead of falling back.
+          const id = embeddedRecording();
+          const recordings = await daemon.recordings();
+          if (!id || !recordings.some(r => r.id === id)) return useApp.setState({ screen: 'embed-missing' });
+          useApp.setState({ source: daemon, config: await daemon.config(), screen: 'loading', recordings });
+          await useApp.getState().openRecording(id, p.at === undefined ? undefined : { at: p.at });
+          return;
+        }
         if (auth === 'ok') {
           const recordings = await daemon.recordings();
           const saved=await restoreWorkingLocations().catch(()=>undefined);
@@ -78,6 +92,12 @@ export function App() {
       if (/token=/.test(location.hash)) return location.reload();
       const id = params().recording;
       const s = useApp.getState();
+      // EMBED: the pane stays on its session; Back or a stray link cannot reach Home.
+      if (isEmbedded() && s.recordingId && (!id || decodeURIComponent(id) !== s.recordingId)) {
+        history.replaceState(null, '', `${location.pathname}?embed=1#/r/${encodeURIComponent(s.recordingId)}`);
+        if (s.screen !== 'viewer') s.set({ screen: 'viewer' });
+        return;
+      }
       if (id && s.source?.kind === 'daemon') {
         // Home keeps the loaded recording. Browser Back must still restore its viewer.
         if (decodeURIComponent(id) !== s.recordingId || !s.projection) void s.openRecording(decodeURIComponent(id));
@@ -96,11 +116,35 @@ export function App() {
 
   const render = () => {
     if (screen === 'loading') return <div className="center muted">Starting…</div>;
+    if (screen === 'signed-out' && isEmbedded())
+      return (
+        <div className="center notice">
+          <h2>This link has been used</h2>
+          <p className="muted">A Drishya pane link opens once and expires after a minute. Run <code>/drishya</code> again, or <code>drishya embed --latest --cwd .</code> in the checkout, for a fresh one.</p>
+          <button className="btn" onClick={() => location.reload()}>Retry</button>
+        </div>
+      );
+    if (screen === 'embed-missing')
+      return (
+        <div className="center notice">
+          <h2>This session is not here</h2>
+          <p className="muted">It may have been forgotten, or this Drishya was started with a different data folder. Open it again from the agent with <code>/drishya</code>.</p>
+          <button className="btn" onClick={() => location.reload()}>Retry</button>
+        </div>
+      );
     if (screen === 'signed-out')
       return (
         <div className="center notice">
           <h2>Open Drishya from its launch link</h2>
           <p className="muted">This page needs the launch link printed by <code>drishya serve</code>. It keeps other websites from reading your sessions.</p><button className="btn" onClick={() => location.assign(`${location.pathname}?demo`)}>Open sample workspace</button>
+        </div>
+      );
+    if (screen === 'no-daemon' && isEmbedded())
+      return (
+        <div className="center notice">
+          <h2>Drishya has stopped</h2>
+          <p className="muted">The view for this pane closes by itself after ten minutes with nothing open. Run <code>/drishya</code> again to reopen this session.</p>
+          <button className="btn" onClick={() => location.reload()}>Retry</button>
         </div>
       );
     if (screen === 'no-daemon')

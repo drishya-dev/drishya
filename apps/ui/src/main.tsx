@@ -1,3 +1,6 @@
+// EMBED: must stay the first import. Imports evaluate in order, so the one-use launch code leaves the address bar
+// before any other module is evaluated.
+import './lib/embed-boot.ts';
 import {installStageGeometry} from './lib/stage-geometry.ts';
 import { installLiveProbe } from './lib/live-probe.ts';
 import { useApp } from './state.ts';
