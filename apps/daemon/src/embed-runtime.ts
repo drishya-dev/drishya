@@ -1,4 +1,5 @@
-import {spawn, execFileSync} from 'node:child_process';
+import {spawn, execFile} from 'node:child_process';
+import {promisify} from 'node:util';
 import {randomBytes} from 'node:crypto';
 import {mkdir, lstat, open, rename, rm, chmod} from 'node:fs/promises';
 import {Socket} from 'node:net';
@@ -54,8 +55,11 @@ export async function discoveryEntry(home: string, port: number): Promise<() => 
   const info = await lstat(directory);
   if (!info.isDirectory() || info.isSymbolicLink()) throw new EmbedError('DISCOVERY_UNSAFE');
   if (process.platform === 'win32') {
-    execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(windowsAcl, 'utf16le').toString('base64')],
-      {env: {...process.env, DRISHYA_EMBED_DIRECTORY: directory}, windowsHide: true, stdio: 'ignore', timeout: 10_000});
+    // The absolute system PowerShell: a bare name would let Windows search the current folder first.
+    const powershell = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    await promisify(execFile)(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(windowsAcl, 'utf16le').toString('base64')],
+      {env: {...process.env, DRISHYA_EMBED_DIRECTORY: directory}, windowsHide: true, timeout: 10_000})
+      .catch(() => {throw new EmbedError('DISCOVERY_UNSAFE');});
   } else {
     if (info.uid !== process.getuid?.()) throw new EmbedError('DISCOVERY_UNSAFE');
     await chmod(directory, 0o700);
