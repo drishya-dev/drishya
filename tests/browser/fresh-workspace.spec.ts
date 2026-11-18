@@ -1885,7 +1885,9 @@ test('restored Explorer preview stays beside history and above prompt across win
   }
  }
  await page.screenshot({path:resolve('.local/explorer-preview-safe.png')});
- await page.setViewportSize({width:390,height:844});expect((await reader.boundingBox())!.width).toBeLessThanOrEqual(390);
+ // 600 px is the narrowest supported window (the 390 px case was a phone width). The reader refits in its resize handler, so
+ // wait for the refit instead of reading the old layout (macOS runner, 18 Nov).
+ await page.setViewportSize({width:600,height:844});await expect.poll(async()=>(await reader.boundingBox())!.width).toBeLessThanOrEqual(600);
  await page.setViewportSize({width:1440,height:900});await page.reload();await expect(reader).toBeVisible();
  await expect.poll(async()=>{const r=(await reader.boundingBox())!,p=(await page.locator('.prompt-composer').boundingBox())!;return r.y+r.height-p.y;}).toBeLessThanOrEqual(-8);
 });
@@ -1906,6 +1908,7 @@ test('Explorer preview defaults to a compact right reader with title-bar keyboar
  await expect.poll(async()=>Math.abs((await reader.boundingBox())!.x-before.x)).toBeLessThan(2);
  const strip=(await reader.locator('.file-peek-tabs').boundingBox())!;await page.mouse.move(strip.x+strip.width-24,strip.y+strip.height/2);await page.mouse.down();await page.mouse.move(strip.x+strip.width-44,strip.y+strip.height/2,{steps:4});await page.mouse.up();expect(Math.abs((await reader.boundingBox())!.x-before.x+20)).toBeLessThan(2);
  await page.screenshot({path:resolve('.local/compact-preview-desktop.png')});
- await page.setViewportSize({width:600,height:900});expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');const narrow=(await reader.boundingBox())!;expect(narrow.x).toBeGreaterThanOrEqual(0);expect(narrow.x+narrow.width).toBeLessThanOrEqual(600);
+ // The reader refits in its resize handler; read its bounds once it has (it measured the 1440 px layout on macOS, 18 Nov).
+ await page.setViewportSize({width:600,height:900});await expect.poll(()=>page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');await expect.poll(async()=>{const box=(await reader.boundingBox())!;return box.x>=0&&box.x+box.width<=600;}).toBe(true);
  await page.setViewportSize({width:1440,height:960});await reader.getByRole('button',{name:'Close README.md',exact:true}).click();await expect(reader).toHaveCount(0);expect(await page.locator('.history .passage').first().evaluate(node=>getComputedStyle(node).zoom)).toBe('1');
 });
