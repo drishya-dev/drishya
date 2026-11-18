@@ -75,7 +75,7 @@ Drishya shows you all of it, as it happens: the real files, output and diffs, ne
     <td width="33%" valign="top">
       <img src="docs/readme/features/replay.svg" width="40" alt=""><br>
       <b>Replay and search</b><br>
-      <sub>Every session from every agent on one Home. Replay it, read it as work or conversation, search across all of them.</sub>
+      <sub>Every session from every agent on one Home. Replay it, read it as work or conversation, and search the ones you have opened.</sub>
     </td>
     <td width="33%" valign="top">
       <img src="docs/readme/features/private.svg" width="40" alt=""><br>
@@ -306,14 +306,14 @@ corepack pnpm test:security:mutations    # removes each defence in turn and chec
 corepack pnpm package:verify             # builds the real package and checks it
 ```
 
-**Penetration pass (SEC-4a).** The release candidate, packed and installed as a user would, was attacked with a hostile web page in Edge and Firefox, DNS rebinding with real DNS, a seeded fuzzer (28,215 requests across all 95 routes), a network scan, a hostile repository and static analysis. It found **8 issues**, two high, two medium, four low. All are fixed, each with a regression test that fails without the fix. The report keeps the evidence and the open items.
+**Penetration pass.** The release candidate, packed and installed as a user would, was attacked with a hostile web page in Edge and Firefox, DNS rebinding with real DNS, a seeded fuzzer (28,215 requests across all 95 routes), a network scan, a hostile repository and static analysis. It found **8 issues**, two high, two medium, four low. All are fixed, each with a regression test that fails without the fix. The report keeps the evidence and the open items.
 
-<!-- SEC-4b: replace the sentence below with the result once the pass has been repeated on the shipping installer. Do not claim it before. -->
-**SEC-4b**, the same pass repeated on the installer that ships, has not been done yet. Its result will be added here.
+<!-- Replace the paragraph below with the result once the hands-on pass has been repeated on the published package. Do not claim it before. -->
+**Before 0.1.0**, the automated scans were repeated on the release candidate: Semgrep, OWASP ZAP and CodeQL found nothing new beyond one accepted item (the page's content policy allows inline styles; scripts stay blocked). The full hands-on pass has not yet been repeated on the published package. Its result will be added here.
 
 For the current candidate scope and platform limits, read the [0.1.0 release notes](docs/release-notes-0.1.0.md). Final-package verification, security acceptance and builder sign-off are tracked in the [release checklist](docs/release-checklist.md).
 
-Read the tests in [`tests/security/`](tests/security), the [threat model](docs/review/sec-3-threat-model.md) for what is defended and what is accepted, and the [SEC-4a report](docs/review/sec-4-pentest.md). Report a vulnerability privately through [SECURITY.md](SECURITY.md).
+Read the tests in [`tests/security/`](tests/security), the [threat model](docs/review/sec-3-threat-model.md) for what is defended and what is accepted, and the [penetration test report](docs/review/sec-4-pentest.md). Report a vulnerability privately through [SECURITY.md](SECURITY.md).
 
 ## Develop
 
