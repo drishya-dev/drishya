@@ -166,8 +166,10 @@ export function App() {
         <p className="muted">Your sessions remain in the local store.</p>
         <div className="recovery-actions">
           <button className="btn primary" onClick={() => location.reload()}>Retry connection</button>
-          <button className="btn" onClick={() => location.assign(location.pathname)}>Open local workspace</button>
-          <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ error: e.message }))}>Open synthetic demo</button>
+          {!isEmbedded() && <>
+            <button className="btn" onClick={() => location.assign(location.pathname)}>Open local workspace</button>
+            <button className="btn" onClick={() => openBundle(DEMO_URL).catch((e) => useApp.setState({ error: e.message }))}>Open synthetic demo</button>
+          </>}
         </div>
       </div>
     );
