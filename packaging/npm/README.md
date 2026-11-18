@@ -40,7 +40,7 @@ drishya serve
 |---|:-:|:-:|:-:|
 | Claude Code | ✓ | ✓ | ✓ |
 | Codex | ✓ | ✓ | ✓ |
-| Antigravity | – | ✓ | – |
+| Antigravity | ✓ | ✓ | – |
 
 ## Commands
 
