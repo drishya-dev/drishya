@@ -497,6 +497,12 @@ test('tool cards retain visible results for short and long input/output combinat
     const output='OUTCOME_VISIBLE\n'+(longOutput?'result line\n'.repeat(200):'done');
     op.kind=kind;op.status='ok';op.detail=kind==='shell'?{kind,command:input,outputPreview:output,exitCode:0}:kind==='mcp'?{kind,server:'review',tool:'check',input:{query:input},resultPreview:output}:{kind,input:{query:input},resultPreview:output};
     await page.goto(`${server.url}/?demo&experience=modern&motion=0`);
+    // A reader who scrolls back to a card holds their place. A programmatic scroll does not detach Follow, so the next
+    // layout pass returned history to the latest work and moved the card out from under the hover (every attempt on the
+    // slower macOS runner, 18 Nov). Turn Follow off as that reader would.
+    const follow=page.getByRole('switch',{name:'Automatically follow new work'});
+    await expect(follow).toBeVisible();if(await follow.getAttribute('aria-checked')==='true')await follow.click();
+    await expect(follow).toHaveAttribute('aria-checked','false');
     const card=page.locator(`article[data-op-id="${op.id}"]`);
     await card.scrollIntoViewIfNeeded();
     const result=card.locator('.result-content');

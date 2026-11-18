@@ -41,8 +41,12 @@ for (const [width, height] of [[1440, 900], [600, 720]] as const)
     await page.goto(server.launchUrl);
     await expect(page.locator('.home')).toBeVisible();
     await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);
-    await expect(page.locator('.history')).toBeVisible();
-    await page.getByRole('button', { name: 'Explore repository map', exact: true }).click();
+    // Wait for the session's work, not only the history frame: opening restores the session's saved location (Explore
+    // included) when the projection lands, so a click before that was undone on a slow runner (macOS, 18 Nov).
+    await expect(page.locator('.history article[data-op-id]').first()).toBeVisible();
+    const explore = page.getByRole('button', { name: 'Explore repository map', exact: true });
+    await explore.click();
+    await expect(explore).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.map-legend')).toContainText(`${own} files`);
     await expect(page.locator('.map-legend')).toContainText('1 nested checkout not shown');
     await page.getByRole('button', { name: 'Show files', exact: true }).click();
