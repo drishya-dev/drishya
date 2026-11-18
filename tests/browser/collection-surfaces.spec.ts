@@ -1,4 +1,5 @@
 import { readUncommitted } from './git-navigation.ts';
+import { attachBrowserDiagnostics, installBrowserDiagnostics } from './ci-diagnostics.ts';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
 import {test,expect,type Page} from '@playwright/test';import {expandCard} from './history-gestures.ts';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
 let dir:string,app:App,server:RunningServer;const ids=new Map<number,string>();
@@ -23,7 +24,8 @@ test.beforeAll(async()=>{
  server=await startServer({app,port:0});
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw new Error('Unsafe temporary directory');rmSync(dir,{recursive:true,force:true});}});
-test.beforeEach(async({page})=>{let first=true;await page.route('**/v1/working-locations',async route=>{if(first&&route.request().method()==='GET'){first=false;await page.request.delete(route.request().url(),{headers:{'content-type':'application/json'}});}await route.continue();});});
+test.beforeEach(async({page})=>{await installBrowserDiagnostics(page);let first=true;await page.route('**/v1/working-locations',async route=>{if(first&&route.request().method()==='GET'){first=false;await page.request.delete(route.request().url(),{headers:{'content-type':'application/json'}});}await route.continue();});});
+test.afterEach(async ({ page }, info) => { await attachBrowserDiagnostics(page, info); });
 async function open(page:Page,count:number){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${ids.get(count)}`);}
 async function approve(page:Page){const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();if(await grant.isVisible())await grant.click();await expect(page.locator('.folder-explorer')).toHaveAttribute('data-reading-access','current');}
 

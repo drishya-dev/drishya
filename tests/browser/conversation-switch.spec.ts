@@ -5,8 +5,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 import { writeLongSession } from './conversation-fixture.ts';
+import { attachBrowserDiagnostics, installBrowserDiagnostics, sampleBrowserState } from './ci-diagnostics.ts';
 
 let dir: string, app: App, server: RunningServer, id: string;
+test.beforeEach(async ({ page }) => { await installBrowserDiagnostics(page); });
+test.afterEach(async ({ page }, info) => { await attachBrowserDiagnostics(page, info); });
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-conversation-switch-')); app = new App(join(dir, 'store')); server = await startServer({ app, port: 0 });
   id = (await app.ingest.importSource('claude-code', writeLongSession(dir, 'long'))).recordingId;
@@ -29,10 +32,14 @@ const topPart = (page: Page) => page.evaluate((selector) => {
 
 async function placeNear(page: Page, fraction: number, kind: 'turn' | 'prose' | 'ops' = 'ops') {
   const history = page.locator('.history');
+  await sampleBrowserState(page, 'before-place-near');
   await history.hover();
   await page.mouse.wheel(0, -200); // disable follow
+  await sampleBrowserState(page, 'after-wheel');
   await history.evaluate((el, f) => { el.scrollTop = Math.floor((el.scrollHeight - el.clientHeight) * f); }, fraction);
+  await sampleBrowserState(page, 'after-proportional-scroll');
   await page.waitForTimeout(1500);
+  await sampleBrowserState(page, 'before-part-alignment');
   const selector = kind === 'turn' ? '.turn' : kind === 'prose' ? '.prose' : '.ops-row, .run-line';
   await history.evaluate((el, sel) => {
     const box = el.getBoundingClientRect();
@@ -40,6 +47,7 @@ async function placeNear(page: Page, fraction: number, kind: 'turn' | 'prose' | 
     if (part) el.scrollTop += part.getBoundingClientRect().top - box.top + 8;
   }, selector);
   await page.waitForTimeout(1200);
+  await sampleBrowserState(page, 'after-part-alignment');
 }
 
 async function placeInMiddle(page: Page, kind: 'turn' | 'prose' | 'ops') {
