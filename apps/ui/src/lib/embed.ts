@@ -11,8 +11,9 @@ const CODE = /^[A-Za-z0-9_-]{43}$/;
 
 let pending: { code: string; recordingId: string } | undefined;
 
-export function isEmbedded(search: string = location.search): boolean {
-  return new URLSearchParams(search).get('embed') === '1';
+/** False outside a browser (unit tests run the store in Node, which has no `location`). */
+export function isEmbedded(search: string | undefined = typeof location === 'undefined' ? undefined : location.search): boolean {
+  return search !== undefined && new URLSearchParams(search).get('embed') === '1';
 }
 
 /** Takes the launch code out of the address bar. Runs once, first thing in main.tsx. */
