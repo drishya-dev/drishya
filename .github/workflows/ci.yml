@@ -11,7 +11,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, claude/ci-2-tmp-docs-base]
   schedule:
     - cron: '23 1 * * *'
   workflow_dispatch:
