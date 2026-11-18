@@ -22,7 +22,7 @@ What to expect: an acknowledgement within a few days, a fix or a written explana
 | The latest `0.1.x` release | Yes |
 | Anything older, and unreleased commits | No: update to the latest release |
 
-Drishya needs **Node.js 24** (`>=24 <25`). Run a Node 24 release that still receives security fixes.
+Drishya needs **Node.js 24 or newer** (`>=24`). Run a Node release that still receives security fixes.
 
 ## What is in scope
 

@@ -6,6 +6,12 @@ The development before 0.1.0 happened in a private repository. Its task-by-task 
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-18
+
+### Fixed
+
+- **`npx drishya` on Node 25 and 26 installed the 0.0.1 placeholder.** 0.1.0 declared `node: >=24 <25`, so npm skipped it on newer Node and fell back to the placeholder. The package now declares `>=24`. No code changes.
+
 ## [0.1.0] - 2026-11-18
 
 The first public release.
