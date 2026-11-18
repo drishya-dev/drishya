@@ -10,6 +10,7 @@ import { redactText } from '../../packages/privacy/src/index.ts';
 export const ALLOWED_PATHS: RegExp[] = [
   /^package\.json$/,
   /^LICENSE$/,
+  /^README\.md$/,
   /^BUILD\.json$/,
   /^SHA256SUMS$/,
   // The bundled daemon: entry, history worker and esbuild's hashed chunks, as ES modules only.

@@ -63,7 +63,7 @@ describe('SEC-5 package allowlist: paths', () => {
   }
 
   it('refuses anything not on the list, even an innocent-looking file', () => {
-    expect(checkPaths(['notes.txt', 'apps/daemon/src/extra.js', 'apps/ui/dist/assets/app.js.map', 'README.md', 'apps/ui/dist/assets/a b.js']).every((p) => /not on the allowlist/.test(p))).toBe(true);
+    expect(checkPaths(['notes.txt', 'apps/daemon/src/extra.js', 'apps/ui/dist/assets/app.js.map', 'docs/README.md', 'apps/ui/dist/assets/a b.js']).every((p) => /not on the allowlist/.test(p))).toBe(true);
     expect(checkPaths(['notes.txt', 'apps/daemon/src/extra.js'])).toHaveLength(2);
   });
 

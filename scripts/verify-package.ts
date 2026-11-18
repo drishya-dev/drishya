@@ -76,6 +76,7 @@ try {
   // SEC-5: what `npm pack` would publish is compared with the allowlist before anything is installed.
   const dry = JSON.parse(command(process.execPath, [npmCli, 'pack', '--dry-run', '--json'], join(root, 'dist/package'))) as { files: { path: string }[] }[];
   const packedPaths = dry[0]!.files.map((file) => file.path);
+  assert.ok(packedPaths.includes('README.md'), 'the package carries its npm README');
   const contents = checkPackage(join(root, 'dist/package'), packedPaths, localIdentity(root));
   assert.deepEqual(contents, [], `package contents:\n${contents.join('\n')}`);
   for (const path of packedPaths.filter((name) => /^apps\/daemon\/src\/.+\.mjs$/.test(name))) {
