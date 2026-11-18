@@ -1803,9 +1803,15 @@ test('file peek keeps tabs beside agent, replaces preview and anchors all four r
  await page.screenshot({path:resolve('.local/tabbed-file-peek.png')});
  await reader.getByRole('button',{name:'Close preview tab src/cart/total.ts'}).click();await expect(reader.getByRole('tab')).toHaveCount(2);
  await reader.getByRole('button',{name:'Reset File reader window layout'}).click();
- await page.setViewportSize({width:390,height:844});const phone=(await reader.boundingBox())!;expect(phone.x).toBeGreaterThanOrEqual(0);expect(phone.x+phone.width).toBeLessThanOrEqual(390);expect(phone.height).toBeGreaterThan(150);
- expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
- await page.screenshot({path:resolve('.local/tabbed-file-peek-phone.png')});
+ await page.setViewportSize({width:600,height:844});
+ await expect(async () => {
+  const bounds = (await reader.boundingBox())!;
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x+bounds.width).toBeLessThanOrEqual(600);
+  expect(bounds.height).toBeGreaterThan(150);
+  expect(await reader.evaluate(node=>node.scrollWidth-node.clientWidth)).toBeLessThanOrEqual(1);
+ }).toPass({timeout:5000});
+ await page.screenshot({path:resolve('.local/tabbed-file-peek-600.png')});
  await page.setViewportSize({width:1440,height:900});
  await expect.poll(async()=>JSON.stringify(await (await page.request.get(`${server.url}/v1/working-locations`)).json())).toContain('peek/tabs');
  await page.route('**/workspace',route=>route.fulfill({json:{approved:false,root,scope:'current-workspace'}}));

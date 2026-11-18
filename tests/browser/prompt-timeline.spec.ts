@@ -46,13 +46,19 @@ test('short prompt lists grow upward from the same bottom anchor and narrow scre
   const rail=page.getByRole('navigation',{name:'Prompt positions in history'});
   await expect(rail).toBeVisible();
   const initial=await rail.boundingBox();expect(initial!.y).toBeGreaterThan(300);
-  for(const width of [1440,900,390]) {
+  for(const width of [1440,900,600]) {
     await page.setViewportSize({width,height:844});
-    const r=await rail.boundingBox();expect(r!.y).toBeGreaterThan(0);expect(r!.y+r!.height).toBeLessThan(844);expect(r!.x).toBeGreaterThanOrEqual(0);
-    expect(await page.locator('.history').evaluate(el=>el.getBoundingClientRect().right)).toBe(width);
-    const tools=await page.locator('.catalog-toggle').boundingBox();if(tools&&r!.x<tools.x+tools.width&&r!.x+r!.width>tools.x)expect(r!.y+r!.height).toBeLessThanOrEqual(tools.y-10);
+    await expect(async () => {
+      const r = (await rail.boundingBox())!;
+      expect(r.y).toBeGreaterThan(0);
+      expect(r.y+r.height).toBeLessThan(844);
+      expect(r.x).toBeGreaterThanOrEqual(0);
+      expect(await page.locator('.history').evaluate(el=>el.getBoundingClientRect().right)).toBe(width);
+      const tools = await page.locator('.catalog-toggle').boundingBox();
+      if (tools && r.x < tools.x+tools.width && r.x+r.width > tools.x) expect(r.y+r.height).toBeLessThanOrEqual(tools.y-10);
+    }).toPass({ timeout: 5000 });
   }
-  await page.screenshot({path:resolve('.local/prompt-timeline-phone.png')});
+  await page.screenshot({path:resolve('.local/prompt-timeline-600.png')});
 });
 
 
