@@ -1,4 +1,5 @@
 import type { Page, TestInfo } from '@playwright/test';
+import { writeFile } from 'node:fs/promises';
 
 /** Bounded DOM state for synthetic browser tests. Captured text and input values are omitted. */
 export async function installBrowserDiagnostics(page: Page) {
@@ -18,9 +19,17 @@ export async function installBrowserDiagnostics(page: Page) {
     const state = () => {
       const history = document.querySelector<HTMLElement>('.history');
       const rail = document.querySelector<HTMLElement>('.complete-prompt-rail');
+      const bounds = history?.getBoundingClientRect();
+      const part = bounds && [...history!.querySelectorAll<HTMLElement>('.passage-slot:not([data-folded=hidden]):not([data-unloaded=true]) :is(.turn,.prose,.ops-row,.run-line)')]
+        .find(node => node.getBoundingClientRect().bottom > bounds.top + 1);
       return {
         active: describe(document.activeElement),
-        history: history && { top: history.scrollTop, height: history.scrollHeight, viewport: history.clientHeight },
+        history: history && { top: history.scrollTop, height: history.scrollHeight, viewport: history.clientHeight,
+          passage: part?.closest<HTMLElement>('[data-passage-id]')?.dataset.passageId,
+          kind: part?.className,
+          offset: part && bounds ? Math.round(part.getBoundingClientRect().top - bounds.top) : undefined,
+          unloaded: history.querySelectorAll('[data-unloaded=true]').length,
+        },
         rail: rail && {
           top: rail.scrollTop, height: rail.scrollHeight, viewport: rail.clientHeight,
           ordinals: [...rail.querySelectorAll<HTMLElement>('[data-prompt-ordinal]')].map(node => node.dataset.promptOrdinal),
@@ -73,5 +82,9 @@ export async function attachBrowserDiagnostics(page: Page, info: TestInfo) {
     }).__testDiagnostics;
     return data && { events: data.events, samples: data.samples, final: data.state(), viewport: { width: innerWidth, height: innerHeight } };
   }).catch(() => undefined);
-  if (diagnostics) await info.attach('browser-state', { body: JSON.stringify(diagnostics, null, 2), contentType: 'application/json' });
+  if (diagnostics) {
+    const path = info.outputPath('browser-state.json');
+    await writeFile(path, JSON.stringify(diagnostics, null, 2));
+    await info.attach('browser-state', { path, contentType: 'application/json' });
+  }
 }
