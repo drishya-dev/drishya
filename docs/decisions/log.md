@@ -15,6 +15,8 @@ Notes on reading it:
 
 ## Decisions, newest first
 
+- **18 Nov, README-3 / FEEDBACK-1 acceptance:** Harsh requested completion of the existing README and GitHub-issue feedback route. The app/README implementation (#524) and website links (#522) are merged; the missing `harness integration` label is now created. GitHub issues remains the chosen launch channel and Discussions remains optional and disabled. Updated the `decision` label to point here instead of retired `docs/STATUS.md`. The [acceptance record](../PRODUCT_WORK_HISTORY.md#readme-3) names the fresh source security run and GitHub rendering checks. Completing these documentation/link tasks does not complete SEC-4b or authorize publication.
+
 - **17 Nov, SEC-4b (release security pass):** (1) A repository whose `.git` has a `commondir` that names another repository, or whose `objects/info/alternates` (or a linked `objects` folder) reaches outside its own store, is refused by the Git surfaces; a `clone --shared` repository must be repacked first. (2) On Windows a journal-recorded path that starts with two separators (UNC, `\?\`, `\.\`) is never passed to the file system by Home, file roots, the map, the workspace status or approval. (3) Per-file review statistics are keyed by `Map`, never a plain object keyed by a captured file name. (4) Open, not decided: the controller reads the native session id from the journal text; binding it to the harness's own store and file name would make imported journals read-only for resume. | A hostile folder or journal could make Drishya read another repository, contact a network host before approval, or share statistics between recordings. | `apps/daemon/src/workspace.ts`, `remote-path.ts`, `packages/scene/src/since.ts` |
 
 
