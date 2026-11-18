@@ -57,3 +57,13 @@ Issue #534 tracks the fixes and diagnostics. The two resize tests now use suppor
 The collection and conversation-switch specs collect bounded DOM diagnostics. On failure they attach active-element and focus-call information, prompt-row removal events, scroll extents and staged reading-position samples. Recorded text and input values are omitted. The Git boundary fixture logs directory existence after each setup operation and watches changes to its worktree metadata. The security assertions are retained.
 
 Initial Windows checks passed the root TypeScript check, all five Git boundary cases, and the four affected parallel browser cases at two workers without retries. Cross-platform CI will establish the results for this repair commit.
+
+## Shared-draft selection follow-up
+
+[Run 44223516026](https://github.com/drishya-dev/drishya/actions/runs/44223516026) passed all three check jobs and the Ubuntu and Windows browser jobs. The repaired resize cases and the collection prompt-focus cases passed on macOS as well. Its browser job failed the CR shared-draft case on all three attempts. After the first pane changed the shared draft, the test refocused the second editor and immediately compared the document selection with its previous selection. It received an empty string. The serial four-pixel reading-offset miss passed on retry.
+
+CodeMirror retains its editor selection separately from the native DOM selection. Its focus handler schedules an update, and its selection observer explicitly handles browsers resetting the DOM range to the start on focus. The assertion sampled that range without waiting for restoration.
+
+A controlled focus reset reproduced the same empty-string failure while CodeMirror's retained anchor and head remained 0 and 30. Waiting for the selection to return to the second editor passed the same control for LF, CRLF and CR files, including the subsequent cross-pane synchronization, undo/redo and downloaded line-ending assertions. The persistent test now polls for that exact selection within the second editor. The temporary focus-reset injection remains in ignored scratch storage.
+
+The updated regression passed all three line-ending cases on Windows and all three on native Ubuntu, with one worker and zero retries. The root TypeScript check passed. macOS verification of this follow-up remains pending.
