@@ -16,7 +16,7 @@ Before starting, search the [Product Work History](docs/PRODUCT_WORK_HISTORY.md)
 
 ## Run it
 
-You need **Node.js 24** (`>=24 <25`), Git, and a desktop browser at least 600 px wide. Drishya was built and tested on Windows 11; Linux and macOS reports are welcome.
+You need **Node.js 24 or newer** (`>=24`), Git, and a desktop browser at least 600 px wide. Drishya was built and tested on Windows 11; Linux and macOS reports are welcome.
 
 ```bash
 corepack pnpm install --frozen-lockfile

@@ -47,7 +47,9 @@ writeFileSync(resolve(out, 'package.json'), JSON.stringify({
   // SEC-5: provenance links the tarball to the workflow run that built it; `npm publish` must run from CI with id-token.
   publishConfig: { access: 'public', provenance: true },
   type: 'module',
-  engines: { node: '>=24 <25' },
+  // No upper bound: npm skips a version whose engines exclude the running Node and falls back to an older
+  // release, so `<25` made Node 25 and 26 users get the 0.0.1 placeholder (18 Nov, 0.1.1).
+  engines: { node: '>=24' },
   bin: { drishya: './apps/daemon/src/cli.mjs' },
   files: ['apps/daemon/src', 'apps/ui/dist', 'fixtures/synthetic', 'README.md', 'LICENSE', 'BUILD.json', 'SHA256SUMS'],
 }, null, 2) + '\n');

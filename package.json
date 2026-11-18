@@ -1,11 +1,11 @@
 {
   "name": "drishya-workspace",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=24 <25"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "node apps/daemon/src/cli.ts serve --dev",
