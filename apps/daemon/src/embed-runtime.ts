@@ -1,13 +1,13 @@
 import {spawn, execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {randomBytes} from 'node:crypto';
-import {mkdir, lstat, open, rename, rm, chmod} from 'node:fs/promises';
+import {mkdir, lstat, open, readFile, rename, rm, chmod} from 'node:fs/promises';
 import {Socket} from 'node:net';
 import {join} from 'node:path';
 import type {Readable} from 'node:stream';
 import {App} from './app.ts';
 import {EmbedCodes} from './embed-auth.ts';
-import {EmbedError, embedFailure, openEmbed, selection, type EmbedLaunch, type EmbedSelection} from './embed-launch.ts';
+import {EmbedError, embedFailure, openEmbed, safeDetail, selection, type EmbedLaunch, type EmbedSelection} from './embed-launch.ts';
 import {startServer, type RunningServer} from './server.ts';
 
 /** Bounded newline transport. Never includes untrusted bytes in an error. */
@@ -32,34 +32,47 @@ export function jsonLines(input: Readable, limit: number, line: (value: unknown)
   input.on('end', () => {if (pending.length) reject();});
 }
 
-// Data enters a fixed script through an environment value, never through shell interpolation.
-const windowsAcl = `
-$ErrorActionPreference = 'Stop'
-$p = $env:DRISHYA_EMBED_DIRECTORY
-$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
-$acl = New-Object System.Security.AccessControl.DirectorySecurity
-$acl.SetOwner($sid)
-$acl.SetAccessRuleProtection($true, $false)
-$rule = New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', 'ContainerInherit,ObjectInherit', 'None', 'Allow')
-$acl.AddAccessRule($rule)
-[System.IO.Directory]::SetAccessControl($p, $acl)
-$actual = [System.IO.Directory]::GetAccessControl($p)
-if (-not $actual.AreAccessRulesProtected) { throw 'ACL not protected' }
-foreach ($r in $actual.Access) {
- if ($r.AccessControlType -eq 'Allow' -and $r.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) { throw 'ACL too broad' }
+const run = promisify(execFile);
+const system32 = (exe: string) => join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', exe);
+/** A short, content-free reason for a failed ACL step: the step and an exit code or error code only. */
+function stepFailure(step: string, error: unknown): EmbedError {
+  const e = error as {code?: unknown; killed?: unknown; signal?: unknown};
+  const why = e?.killed || e?.signal === 'SIGTERM' ? 'timeout' : typeof e?.code === 'number' ? `exit ${e.code}` : typeof e?.code === 'string' ? e.code : 'failed';
+  return new EmbedError('DISCOVERY_UNSAFE', `${step}: ${why}`);
 }
-`;
+/**
+ * Windows: the discovery folder is readable by the current user only. Built-in `whoami` and `icacls`, by absolute System32
+ * path (a bare name would let Windows search the current folder first), with arguments as a list and no shell. The result
+ * is read back as SDDL, which is not localized, and anything but one protected allow entry for this user fails closed.
+ * (PowerShell did the same in #497 but took seconds to start cold, and its failure reason was lost.)
+ */
+async function restrictWindowsDirectory(directory: string): Promise<void> {
+  const options = {windowsHide: true, timeout: 30_000, maxBuffer: 64 * 1024};
+  const who = await run(system32('whoami.exe'), ['/user', '/fo', 'csv', '/nh'], options).catch(e => {throw stepFailure('whoami', e);});
+  const sid = /"(S-1-[0-9-]+)"\s*$/.exec(who.stdout.trim())?.[1];
+  if (!sid) throw new EmbedError('DISCOVERY_UNSAFE', 'whoami: no user SID');
+  const icacls = system32('icacls.exe');
+  // Drop inherited entries and grant only this user. No `/reset` first: a change propagates to existing entry files, and a
+  // reset would briefly widen them. An explicit entry someone else added is not removed; the read-back below refuses it.
+  await run(icacls, [directory, '/inheritance:r', '/grant:r', `*${sid}:(OI)(CI)F`, '/q'], options).catch(e => {throw stepFailure('icacls grant', e);});
+  const saved = join(directory, `.acl-${randomBytes(6).toString('hex')}.tmp`);
+  try {
+    await run(icacls, [directory, '/save', saved, '/q'], options).catch(e => {throw stepFailure('icacls save', e);});
+    const sddl = (await readFile(saved)).toString('utf16le');
+    const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
+    if (!dacl) throw new EmbedError('DISCOVERY_UNSAFE', 'verify: no DACL');
+    const aces = [...dacl[2]!.matchAll(/\(([^)]*)\)/g)].map(m => m[1]!.split(';'));
+    if (!dacl[1]!.includes('P')) throw new EmbedError('DISCOVERY_UNSAFE', 'verify: inheritance not removed');
+    if (!aces.length || aces.some(ace => ace[0] !== 'A' || ace[5] !== sid)) throw new EmbedError('DISCOVERY_UNSAFE', `verify: ${aces.length} entries not only this user`);
+  } finally {await rm(saved, {force: true});}
+}
 export async function discoveryEntry(home: string, port: number): Promise<() => Promise<void>> {
   const directory = join(home, 'embed-discovery');
   await mkdir(directory, {recursive: true, mode: 0o700});
   const info = await lstat(directory);
   if (!info.isDirectory() || info.isSymbolicLink()) throw new EmbedError('DISCOVERY_UNSAFE');
   if (process.platform === 'win32') {
-    // The absolute system PowerShell: a bare name would let Windows search the current folder first.
-    const powershell = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
-    await promisify(execFile)(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(windowsAcl, 'utf16le').toString('base64')],
-      {env: {...process.env, DRISHYA_EMBED_DIRECTORY: directory}, windowsHide: true, timeout: 10_000})
-      .catch(() => {throw new EmbedError('DISCOVERY_UNSAFE');});
+    await restrictWindowsDirectory(directory);
   } else {
     if (info.uid !== process.getuid?.()) throw new EmbedError('DISCOVERY_UNSAFE');
     await chmod(directory, 0o700);
@@ -99,11 +112,11 @@ export function embedSupervisor(entry = process.argv[1]!, env = process.env, opt
   const stop = () => {fail(); channel.destroy(); if (child.exitCode === null) child.kill();};
   child.on('error', fail); child.on('exit', fail); channel.on('error', fail); channel.on('close', fail);
   jsonLines(channel, 8192, value => {
-    const r = value as {version?: unknown; requestId?: unknown; result?: EmbedLaunch; error?: {code?: unknown}};
+    const r = value as {version?: unknown; requestId?: unknown; result?: EmbedLaunch; error?: {code?: unknown; detail?: unknown}};
     if (!r || r.version !== 1 || typeof r.requestId !== 'string') return stop();
     const p = pending.get(r.requestId); if (!p) return;
     pending.delete(r.requestId); clearTimeout(p.timer);
-    if (r.error) p.reject(new EmbedError(typeof r.error.code === 'string' && /^[A-Z_]{1,64}$/.test(r.error.code) ? r.error.code : 'EMBED_UNAVAILABLE'));
+    if (r.error) p.reject(new EmbedError(typeof r.error.code === 'string' && /^[A-Z_]{1,64}$/.test(r.error.code) ? r.error.code : 'EMBED_UNAVAILABLE', safeDetail((r.error as {detail?: unknown}).detail)));
     else if (validLaunch(r.result)) p.resolve(r.result!);
     else {p.reject(new EmbedError('EMBED_UNAVAILABLE')); stop();}
   }, stop);

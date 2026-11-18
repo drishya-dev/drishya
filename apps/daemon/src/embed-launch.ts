@@ -5,9 +5,17 @@ import type {DiscoveredSource} from '@drishya/contracts';
 import type {App} from './app.ts';
 import type {EmbedCodes} from './embed-auth.ts';
 
+/** A diagnostic that is safe to print: a step name and an exit or error code, never a path, argument or content. */
+export function safeDetail(value: unknown): string | undefined {
+  return typeof value === 'string' && /^[A-Za-z0-9 :._-]{1,120}$/.test(value) ? value : undefined;
+}
 export class EmbedError extends Error {
   readonly code: string;
-  constructor(code: string) {super(code); this.code = code;}
+  readonly detail?: string;
+  constructor(code: string, detail?: string) {
+    const safe = safeDetail(detail);
+    super(safe ? `${code} (${safe})` : code); this.code = code; if (safe) this.detail = safe;
+  }
 }
 /**
  * Exactly one selector: a Drishya recording ID, the harness's own session ID (EMBED refined: the
@@ -67,8 +75,9 @@ export async function openEmbed(app: App, baseUrl: string, codes: EmbedCodes, in
   url.hash = 'launch=' + codes.mint(recording.id);
   return {url: url.href, port: Number(url.port), recordingId: recording.id, mode: 'top-level'};
 }
-export function embedFailure(error: unknown): {code: string; message: string} {
+export function embedFailure(error: unknown): {code: string; message: string; detail?: string} {
   const code = error instanceof EmbedError ? error.code : 'EMBED_UNAVAILABLE';
+  const detail = error instanceof EmbedError ? error.detail : undefined;
   // Fixed messages only: upstream errors may quote filenames, request bodies or credentials.
   return {code, message: code === 'IFRAME_UNSUPPORTED' ? 'Use a top-level pane or separate window.'
     : code === 'HOST_HANDOFF_UNAVAILABLE' ? 'This host cannot privately open a pane. Use the local drishya embed command.'
@@ -77,5 +86,6 @@ export function embedFailure(error: unknown): {code: string; message: string} {
     : code === 'CHECKOUT_MISMATCH' ? 'That session belongs to a different checkout.'
     : code === 'CHECKOUT_UNAVAILABLE' ? 'The checkout folder could not be read.'
     : code === 'INVALID_SELECTION' ? 'Give exactly one of a recording ID, a native session ID or --latest; --cwd must be absolute.'
-    : 'Drishya could not open this local view. Check the selector and local installation.'};
+    : code === 'DISCOVERY_UNSAFE' ? 'Drishya could not make its embed-discovery folder private to you, so it did not start.'
+    : 'Drishya could not open this local view. Check the selector and local installation.', ...(detail ? {detail} : {})};
 }

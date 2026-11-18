@@ -6,9 +6,10 @@ import {spawnSync} from 'node:child_process';
 import {PassThrough} from 'node:stream';
 import {expect,it} from 'vitest';
 import {App} from '../src/app.ts';
-import {selection,openEmbed,nativeIdMatches} from '../src/embed-launch.ts';
+import {selection,openEmbed,nativeIdMatches,embedFailure} from '../src/embed-launch.ts';
 import {EmbedCodes} from '../src/embed-auth.ts';
-import {embedSupervisor,jsonLines} from '../src/embed-runtime.ts';
+import {embedSupervisor,jsonLines,discoveryEntry} from '../src/embed-runtime.ts';
+import {execFileSync} from 'node:child_process';
 const entry=fileURLToPath(new URL('../src/cli.ts',import.meta.url));
 const fixture=fileURLToPath(new URL('../../../fixtures/synthetic/claude/checkout-fix.jsonl',import.meta.url));
 it('selector is strict; no arbitrary paths or shell arguments',()=>{
@@ -110,3 +111,16 @@ it('a released detached worker keeps serving its pane, then stops by itself and 
   expect(await readdir(join(home,'embed-discovery'))).toEqual([]);
  }finally{await rm(home,{recursive:true,force:true});}
 },40_000);
+
+it.runIf(process.platform==='win32')('Windows discovery is this user only, and a foreign entry fails closed with a printable reason',async()=>{
+ const home=await mkdtemp(join(tmpdir(),'drishya-embed-acl-'));
+ try {
+  const done=await discoveryEntry(home,1);const dir=join(home,'embed-discovery');
+  expect((await readdir(dir)).length).toBe(1);await done();
+  execFileSync(join(process.env.SystemRoot??'C:\Windows','System32','icacls.exe'),[dir,'/grant','*S-1-1-0:(R)','/q'],{windowsHide:true});
+  const error=await discoveryEntry(home,1).then(()=>undefined,e=>e);
+  expect(error).toMatchObject({code:'DISCOVERY_UNSAFE',detail:'verify: 2 entries not only this user'});
+  expect(embedFailure(error)).toMatchObject({code:'DISCOVERY_UNSAFE',detail:'verify: 2 entries not only this user'});
+  expect(await readdir(dir)).toEqual([]);
+ }finally{await rm(home,{recursive:true,force:true});}
+});

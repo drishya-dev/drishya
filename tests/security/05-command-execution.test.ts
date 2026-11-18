@@ -20,7 +20,7 @@ describe('every place a program is started', () => {
     expect(importers).toEqual([
       'apps/daemon/src/commands.ts', //            opens the launch link in the default browser
       'apps/daemon/src/controller.ts', //          the native harness the person chose to continue, behind consent
-      'apps/daemon/src/embed-runtime.ts', //       EMBED: this same CLI as a worker on a private fd-3 pipe; the system PowerShell's ACL API on Windows
+      'apps/daemon/src/embed-runtime.ts', //       EMBED: this same CLI as a worker on a private fd-3 pipe; System32 whoami/icacls for the folder ACL
       'apps/daemon/src/git-history.ts', //         `git patch-id` on a diff Git itself produced (stdin)
       'apps/daemon/src/git-review.ts', //          the read-only Git reader
       'apps/daemon/src/github-links.ts', //        the person's own `gh`, only after opt-in
