@@ -96,6 +96,15 @@ body.low-resource .wait-card,
   box-sizing: border-box;
 }
 
+/* Past the long-wait threshold the card moves into a notice with its message. The notice takes the card's allocation,
+   so the commit rows below do not jump up while it shows and back when the graph lands (UI-48, CI-2). */
+.atlas-history > .atlas-wait-long {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .wc-git-lane {
   display: flex;
   align-items: center;
