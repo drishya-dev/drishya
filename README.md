@@ -133,7 +133,7 @@ Where an agent did not record its reasoning, Drishya says *Reasoning not recorde
     <td><img src="docs/readme/agents/codex.svg" width="32" alt=""></td><td><b>Codex</b></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td>
   </tr>
   <tr>
-    <td><img src="docs/readme/agents/antigravity.svg" width="32" alt=""></td><td><b>Antigravity</b></td><td align="center">–</td><td align="center">✓</td><td align="center">–</td>
+    <td><img src="docs/readme/agents/antigravity.svg" width="32" alt=""></td><td><b>Antigravity</b></td><td align="center">✓</td><td align="center">✓</td><td align="center">–</td>
   </tr>
 </table>
 

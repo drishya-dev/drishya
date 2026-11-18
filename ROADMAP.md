@@ -15,7 +15,7 @@ Drishya 0.1.0 is a desktop product for Claude Code, Codex and Antigravity. It ob
 
 These were scoped during the first release and set aside on purpose. Each has a write-up in the Product Work History under its ID.
 
-- **Live Antigravity (AG-3 and AG-6).** Antigravity sessions are read after the fact today. The next step follows a session live, including background commands and subagent conversations, and adds the details its local database records (exit codes, applied diffs, branch, model, token use, durations).
+- **Fuller live Antigravity (AG-3 and AG-6).** An Antigravity session can be followed live today. The next step adds its background commands and subagent conversations as they happen, and the details its local database records (exit codes, applied diffs, branch, model, token use, durations).
 - **Drishya inside a harness (EMBED-2a and EMBED-2b).** An embed command and a view sized for a side pane, so a harness app can show Drishya beside the agent as a guest view. The design and security contract are settled in [`docs/review/embed-1-in-app.md`](docs/review/embed-1-in-app.md); the reference host is T3 Code.
 - **Lit files on the map (MAP-3).** The file the agent is on is pulled forward on the repository map with its name and type, while the rest of the map stays a quiet field. See [`docs/review/map-3-lit-files.md`](docs/review/map-3-lit-files.md).
 - **Storage management (STORE-1).** Settings shows what Drishya stores for each session and lets you clear chosen sessions' data. It never touches the harness's own journals.

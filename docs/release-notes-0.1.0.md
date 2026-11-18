@@ -4,7 +4,7 @@ The first public release.
 
 Drishya runs locally and shows what a coding agent read, ran, and changed alongside your repository. Open a captured session to follow new activity or read past work at your own pace.
 
-- **Sessions.** Claude Code and Codex recordings support live observation and replay. Antigravity recordings can be imported for read-only inspection.
+- **Sessions.** Claude Code and Codex recordings support live observation and replay. Antigravity sessions can be followed live and replayed, read-only: Drishya does not send prompts to Antigravity.
 - **Repository tools.** Browse files, inspect Changes and Git history, compare work, and search captured history. Reading current workspace files requires a grant for that checkout.
 - **Connected sessions.** Send a prompt to a supported local Claude Code or Codex session from the app after granting workspace access and confirming the session is idle in other clients. The harness applies its own permissions.
 - **Usage.** The Usage menu shows recorded token counts and available context and limit data. Coverage depends on what the harness records, including Codex rate-limit windows when present.
