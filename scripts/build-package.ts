@@ -33,10 +33,13 @@ await build({
 cpSync(resolve(root, 'apps/ui/dist'), resolve(out, 'apps/ui/dist'), { recursive: true });
 cpSync(resolve(root, 'fixtures/synthetic'), resolve(out, 'fixtures/synthetic'), { recursive: true });
 cpSync(resolve(root, 'LICENSE'), resolve(out, 'LICENSE'));
+// npm shows the package README on npmjs.com; this one uses absolute links because npm resolves no relative ones.
+cpSync(resolve(root, 'packaging/npm/README.md'), resolve(out, 'README.md'));
 writeFileSync(resolve(out, 'package.json'), JSON.stringify({
   name: 'drishya',
   version,
-  description: 'Local, read-only live view and replay for coding agents',
+  description: 'See what your coding agent is doing and review the code beside it: a local live view and replay for Claude Code, Codex and Antigravity',
+  keywords: ['claude-code', 'codex', 'antigravity', 'coding-agent', 'ai-agents', 'agent-replay', 'code-review', 'developer-tools', 'git', 'local-first'],
   license: 'Apache-2.0',
   repository: { type: 'git', url: 'git+https://github.com/drishya-dev/drishya.git' },
   homepage: 'https://github.com/drishya-dev/drishya#readme',
@@ -46,7 +49,7 @@ writeFileSync(resolve(out, 'package.json'), JSON.stringify({
   type: 'module',
   engines: { node: '>=24 <25' },
   bin: { drishya: './apps/daemon/src/cli.mjs' },
-  files: ['apps/daemon/src', 'apps/ui/dist', 'fixtures/synthetic', 'LICENSE', 'BUILD.json', 'SHA256SUMS'],
+  files: ['apps/daemon/src', 'apps/ui/dist', 'fixtures/synthetic', 'README.md', 'LICENSE', 'BUILD.json', 'SHA256SUMS'],
 }, null, 2) + '\n');
 const revision = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
 const dirty = spawnSync('git', ['diff', '--quiet', 'HEAD'], { cwd: root });
