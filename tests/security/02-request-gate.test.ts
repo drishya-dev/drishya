@@ -26,7 +26,8 @@ const noCors = (r: Reply) => Object.keys(r.headers).filter((k) => k.startsWith('
 const writeBody = (route: Route) => (WRITES.includes(route.method) ? { body: '{}' } : {});
 const json = { 'content-type': 'application/json' };
 /** The route list as the gate sees it: the gate's own two routes are checked separately below. */
-const gated = routes.filter((r) => !(r.method === 'GET' && r.template === '/v1/health') && !(r.method === 'POST' && r.template === '/v1/session'));
+// EMBED: the pane's one-use exchange is a sign-in route too; 18-embed.test.ts checks its gate case by case.
+const gated = routes.filter((r) => !(r.method === 'GET' && r.template === '/v1/health') && !(r.method === 'POST' && r.template === '/v1/session') && !(r.method === 'POST' && r.template === '/v1/embed/session'));
 
 describe('the route list', () => {
   it('is read from the server and is complete enough to trust', () => {

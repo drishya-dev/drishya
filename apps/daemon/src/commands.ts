@@ -17,6 +17,9 @@ const repoRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const HELP = `drishya ${VERSION} — see what your coding agents did.
 
   drishya serve [--port 7878] [--no-open] [--dev]   start the local app
+  drishya embed --latest --cwd DIR [--open]          open this checkout's newest session in a side pane (prints a one-use link)
+  drishya embed --session ID | <recording>           the same for one harness session ID or Drishya recording
+  drishya embed-mcp                                  stdio MCP server with the drishya.open_view tool, for agents
   drishya sources [--json]                           list Claude Code and Codex sessions on this machine
   drishya import <path> [--workspace DIR] [--live]   import one session journal (auto-detects the harness)
   drishya import --latest [claude-code|codex]        import the most recent session
@@ -30,6 +33,15 @@ Data lives in ${dataDir()} (override with DRISHYA_HOME).`;
 
 export async function main() {
   const [cmd, ...rest] = process.argv.slice(2);
+  if (cmd === 'embed-worker') {
+    if (rest.length > 1 || (rest[0] !== undefined && rest[0] !== '--detached')) throw new Error('embed worker takes only its inherited control channel');
+    return (await import('./embed-runtime.ts')).embedWorker(rest[0] === '--detached');
+  }
+  if (cmd === 'embed-mcp') {
+    if (rest.length) throw new Error('embed-mcp takes no arguments');
+    return (await import('./embed-mcp.ts')).embedMcp();
+  }
+  if (cmd === 'embed') return embedCommand(rest);
   const { values, positionals } = parseArgs({
     args: rest,
     allowPositionals: true,
@@ -160,6 +172,46 @@ export async function main() {
     }
     default:
       console.log(HELP);
+  }
+}
+
+/**
+ * EMBED: prints exactly one JSON line. By default the view runs in a detached worker that stops by itself once no pane
+ * has looked at it for ten minutes, so an agent's shell call returns at once. `--attach` keeps the worker tied to this
+ * process (a host that owns its child), and `--open` hands the one-use link to the system browser instead of stdout.
+ */
+async function embedCommand(rest: string[]) {
+  const {EmbedError, embedFailure, selection} = await import('./embed-launch.ts');
+  let supervisor: import('./embed-runtime.ts').EmbedSupervisor | undefined;
+  try {
+    // Refuse framing before touching storage or starting a worker, including malformed values.
+    if (rest.some(arg => arg === '--frame-ancestor' || arg.startsWith('--frame-ancestor='))) throw new EmbedError('IFRAME_UNSUPPORTED');
+    let parsed;
+    try {
+      parsed = parseArgs({args: rest, allowPositionals: true, options: {latest: {type: 'boolean'}, cwd: {type: 'string'}, session: {type: 'string'}, open: {type: 'boolean'}, attach: {type: 'boolean'}}});
+    } catch { throw new EmbedError('INVALID_SELECTION'); }
+    const {values, positionals} = parsed;
+    if (positionals.length > 1 || (values.open && values.attach)) throw new EmbedError('INVALID_SELECTION');
+    const input = selection({...(positionals[0] ? {sessionId: positionals[0]} : {}), ...(values.session !== undefined ? {nativeSessionId: values.session} : {}),
+      ...(values.latest ? {latest: true} : {}), ...(values.cwd !== undefined ? {cwd: values.cwd} : {})});
+    const runtime = await import('./embed-runtime.ts');
+    supervisor = runtime.embedSupervisor(undefined, process.env, {detached: !values.attach});
+    const launched = await supervisor.open(input);
+    const cleaned = new URL(launched.url);
+    cleaned.searchParams.delete('recording');
+    cleaned.hash = '/r/' + encodeURIComponent(launched.recordingId);
+    if (values.open) {
+      openBrowser(launched.url);
+      process.stdout.write(JSON.stringify({opened: 'system-browser', url: cleaned.href, port: launched.port, recordingId: launched.recordingId, mode: launched.mode}) + '\n');
+    } else process.stdout.write(JSON.stringify(launched) + '\n');
+    if (!values.attach) {supervisor.release(); return;}
+    const stop = async () => {await supervisor?.close();};
+    process.once('SIGINT', () => {void stop();}); process.once('SIGTERM', () => {void stop();});
+    process.stdout.once('error', () => {void stop();});
+  } catch (error) {
+    await supervisor?.close();
+    process.stdout.write(JSON.stringify({error: embedFailure(error)}) + '\n');
+    process.exitCode = 1;
   }
 }
 
