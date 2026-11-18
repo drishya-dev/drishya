@@ -25,7 +25,12 @@ for(const [path,eol] of cases)test(`both panes retain ${JSON.stringify(eol)} dra
  const layout=desk.getByLabel('Workspace layout actions',{exact:true});await layout.press('Enter');await desk.getByRole('button',{name:'Split view',exact:true}).press('Enter');const second=desk.locator('.desk-pane').nth(1);await second.focus();const showFiles=second.getByRole('button',{name:'Show files',exact:true});if(await showFiles.isVisible())await showFiles.click();await row.click();const b=second.getByRole('textbox',{name:`Local draft for ${path}`,exact:true});await expect(b).toContainText('first draft');
  await b.focus();await b.press('ControlOrMeta+Home');await b.press('Shift+End');const selection=await page.evaluate(()=>getSelection()?.toString());expect(selection).toContain('original');
  await append(page,a,'\n// newer first-pane work');await expect(b).toContainText('newer first-pane work');await expect(a).toBeFocused();await expect(a).toHaveAttribute('data-editor-identity','first');
- await b.focus();expect(await page.evaluate(()=>getSelection()?.toString())).toBe(selection);
+ await b.focus();
+ // Native focus can reset the DOM selection before CodeMirror restores its retained range.
+ await expect.poll(() => b.evaluate(el => {
+  const selected = el.ownerDocument.getSelection();
+  return selected && el.contains(selected.anchorNode) && el.contains(selected.focusNode) ? selected.toString() : '';
+ })).toBe(selection);
  await append(page,b,'\n// second-pane addition');await expect(a).toContainText('second-pane addition');await expect(a).toContainText('newer first-pane work');
  // A remote synchronization is not an undo step, and local undo retains the other pane's work.
  await b.press('ControlOrMeta+z');await expect(a).not.toContainText('second-pane addition');await expect(b).toContainText('newer first-pane work');await b.press(process.platform === 'darwin' ? 'Meta+Shift+z' : 'Control+y');await expect(a).toContainText('second-pane addition');

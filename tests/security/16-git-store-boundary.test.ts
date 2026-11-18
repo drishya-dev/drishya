@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, watch, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -31,13 +31,35 @@ describe('Git common directory', () => {
   });
   it('refuses a worktree admin folder whose commondir names another repository, even with a valid backlink', async () => {
     const host = repo('commondir-host'), work = join(base, 'commondir-work'), admin = join(host, '.git', 'worktrees', 'w');
-    mkdirSync(work); mkdirSync(admin, { recursive: true });
-    writeFileSync(join(work, '.git'), `gitdir: ${fwd(admin)}\n`);
-    writeFileSync(join(admin, 'gitdir'), fwd(join(work, '.git')) + '\n');
-    writeFileSync(join(admin, 'commondir'), fwd(join(other, '.git')) + '\n');
-    await refused(work);
-    writeFileSync(join(admin, 'commondir'), '../..\n');
-    await expect(verifyOwnGitDir(work)).resolves.toBeUndefined();
+    const events: object[] = [], states: object[] = [];
+    const snapshot = (stage: string) => states.push({ stage,
+      hostGit: existsSync(join(host, '.git')), work: existsSync(work), admin: existsSync(admin),
+      gitdir: existsSync(join(admin, 'gitdir')), commondir: existsSync(join(admin, 'commondir')),
+    });
+    const watcher = watch(join(host, '.git'), { recursive: true }, (event, file) => {
+      if (events.length < 40 && file?.toString().startsWith('worktrees')) events.push({ event, file: file.toString() });
+    });
+    watcher.on('error', error => { if (events.length < 40) events.push({ event: 'watch-error', code: (error as NodeJS.ErrnoException).code }); });
+    try {
+      snapshot('before-create');
+      mkdirSync(work); mkdirSync(admin, { recursive: true });
+      snapshot('admin-created');
+      writeFileSync(join(work, '.git'), `gitdir: ${fwd(admin)}\n`);
+      snapshot('forward-pointer-created');
+      writeFileSync(join(admin, 'gitdir'), fwd(join(work, '.git')) + '\n');
+      snapshot('backlink-created');
+      writeFileSync(join(admin, 'commondir'), fwd(join(other, '.git')) + '\n');
+      await refused(work);
+      writeFileSync(join(admin, 'commondir'), '../..\n');
+      await expect(verifyOwnGitDir(work)).resolves.toBeUndefined();
+    } catch (error) {
+      await new Promise<void>(done => setImmediate(done));
+      snapshot('failed');
+      console.error('Synthetic worktree setup diagnostics', JSON.stringify({ platform: process.platform, node: process.version, git: git(host, '--version'), states, events }));
+      throw error;
+    } finally {
+      watcher.close();
+    }
   });
 });
 
