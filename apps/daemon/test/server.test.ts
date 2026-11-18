@@ -56,6 +56,9 @@ function call(path: string, opts: { method?: string; headers?: Record<string, st
 }
 const auth = () => ({ authorization: `Bearer ${s.token}` });
 
+// The first paged-history and command requests reach the history worker. On a cold hosted Windows runner these two ran
+// past the 5 s default in 3 of 7 runs on 18 Nov (the whole file normally takes 1.2-1.7 s), so they wait like a load does.
+const WORKER_COLD_START = 30_000;
 it('bounds and validates paged history requests before reduction', async () => {
   for (const body of [{ promptStep: -1 }, { promptStep: 1.5 }, { promptStep: 'one' }, { count: -1 }, { step: 'ten' }, { start: 0.5 }, { pinnedPassageIds: [1] }, { filter: { tool: {} } }]) {
     expect((await call(`/v1/recordings/${recId}/history`, { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body })).status).toBe(400);
@@ -66,13 +69,13 @@ it('bounds and validates paged history requests before reduction', async () => {
   const usage = await call('/v1/storage', { headers: auth() });
   expect(usage.body.bytes).toBeGreaterThan(0);
   expect(usage.body.automaticDeletion).toBe(false);
-});
+}, WORKER_COLD_START);
 
 it('validates and authenticates captured command queries before worker reduction',async()=>{
   expect((await call(`/v1/recordings/${recId}/commands`)).status).toBe(401);
   for(const query of ['status=unsafe','direction=sideways','cursor=invalid',`q=${'x'.repeat(201)}`])expect((await call(`/v1/recordings/${recId}/commands?${query}`,{headers:auth()})).status).toBe(400);
   const result=await call(`/v1/recordings/${recId}/commands`,{headers:auth()});expect(result.status).toBe(200);expect(Array.isArray(result.body.items)).toBe(true);expect(result.body.items.length).toBeLessThanOrEqual(25);
-});
+}, WORKER_COLD_START);
 
 it('authenticates and bounds review insight pages',async()=>{
   expect((await call(`/v1/recordings/${recId}/review-insights`)).status).toBe(401);

@@ -80,6 +80,10 @@ async function invariants(page: Page, seen: Observed, label: string) {
   expect({ label, dialogs: seen.dialogs, popups: seen.popups }).toEqual({ label, dialogs: [], popups: 0 });
 }
 
+// Opening a session is a load: it follows a walk of the previous one, and the whole test took 2.2-2.6 min at 600 px on the hosted
+// Ubuntu runner (1.0 min on Windows, 1.1 min on macOS), where the 10 s default ran out once (18 Nov). Not reproduced on a desktop.
+const SESSION_OPEN = 30_000;
+
 const SKIP = /sign out|delete|forget|remove|clear|revoke|disconnect|stop|send|submit/i;
 
 async function walk(page: Page, seen: Observed, label: string, maxClicks = 36) {
@@ -110,7 +114,7 @@ for (const width of [600, 1440]) {
     expect(recordings.length).toBeGreaterThanOrEqual(2);
     for (const { adapter, id } of recordings) {
       await page.goto(`${s.run.url}/?experience=modern&motion=0#/r/${id}`);
-      await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
+      await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible({ timeout: SESSION_OPEN });
       await walk(page, seen, `${adapter} session`);
       // The hostile text really is on screen as text (so the checks above looked at something).
       await expect(page.getByText('window.__pwned', { exact: false }).first()).toBeVisible({ timeout: 15_000 });
@@ -133,7 +137,7 @@ test('what the browser keeps: no token, no session id, no journal content, no se
   await expect(page.locator('.home')).toBeVisible();
   for (const { id } of recordings) {
     await page.goto(`${s.run.url}/?experience=modern&motion=0#/r/${id}`);
-    await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Session work' })).toBeVisible({ timeout: SESSION_OPEN });
     await walk(page, seen, 'storage walk', 12);
   }
   // The address bar no longer carries the launch token.

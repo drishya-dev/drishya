@@ -82,9 +82,9 @@ test('Previous and Next change keep chronological ordinals across newest-first a
   await expect(label).toHaveText('8 of 31');
   await expect(work).toContainText(line(7));
   // Stepping all the way down crosses the 52 search-only entries to the opening read.
-  await previous.click();
-  while (await previous.isEnabled()) await previous.click();
-  await expect(label).toHaveText('1 of 31');
+  // One step at a time, each waiting for its ordinal: `while (isEnabled) click` raced the last step, which disabled the button
+  // after isEnabled had answered, and the next click then waited out the test (90 s, locally under load, 18 Nov).
+  for (let n = 8; n > 1; n--) { await previous.click(); await expect(label).toHaveText(`${n - 1} of 31`); }
   await expect(work).toContainText(line(0));
   await expect(previous).toBeDisabled();
   await expect(next).toBeEnabled();

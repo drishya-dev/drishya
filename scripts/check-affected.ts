@@ -1,21 +1,23 @@
 // TEST-3: run what a change can break, not the whole gate. Tier 1 and 2 of AGENTS.md "Definition of done".
-//   node scripts/check-affected.ts [--base origin/main] [--dry] [--all]
+//   node scripts/check-affected.ts [--base origin/main] [--dry] [--all] [--print-specs]
 // Changed files = everything differing from the merge-base with --base (commits, working tree, untracked). Runs the typecheck, the unit
 // tests that import a changed file (`vitest related`), and the browser specs that name a changed file or component. Files that every
 // screen depends on (History, the reducer, the scene composer, the daemon entry points, shared CSS, test config) run the whole browser
-// suite on the parallel runner instead. Docs-only changes run nothing. --dry prints the plan.
+// suite on the parallel runner instead. Docs-only changes run nothing. --dry prints the plan. --print-specs prints only the spec files that
+// name a changed file (one line, space-separated; empty when none), even when a wide file changed: CI's Windows and macOS pull-request
+// jobs run these plus a smoke list, and leave the whole suite to Linux and to main.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-const { values } = parseArgs({ options: { base: { type: 'string' }, dry: { type: 'boolean' }, all: { type: 'boolean' } } });
+const { values } = parseArgs({ options: { base: { type: 'string' }, dry: { type: 'boolean' }, all: { type: 'boolean' }, 'print-specs': { type: 'boolean' } } });
 const git = (...args: string[]) => execFileSync('git', args, { encoding: 'utf8' }).split('\n').map((l) => l.trim()).filter(Boolean);
 const base = values.base ?? 'origin/main';
 const mergeBase = git('merge-base', base, 'HEAD')[0]!;
 const changed = [...new Set([...git('diff', '--name-only', mergeBase), ...git('ls-files', '-o', '--exclude-standard')])];
 const code = changed.filter((f) => !f.startsWith('docs/') && !f.endsWith('.md'));
-if (!code.length) { console.log(`docs only (${changed.length} files): nothing to run`); process.exit(0); }
+if (!code.length) { if (values['print-specs']) process.exit(0); console.log(`docs only (${changed.length} files): nothing to run`); process.exit(0); }
 
 const wide = /^(apps\/ui\/src\/(App|main|store|api)\.|apps\/ui\/src\/(modern|styles?)\/.*\.css$|apps\/ui\/src\/components\/(History|ProductShell|Viewer)\.tsx$|packages\/projection\/src\/reduce\.ts$|packages\/scene\/src\/index\.ts$|packages\/contracts\/src\/index\.ts$|apps\/daemon\/src\/(server|app|history-worker)\.ts$|playwright\.config\.ts$|package\.json$|pnpm-lock\.yaml$)/;
 const wideHit = code.filter((f) => wide.test(f));
@@ -39,6 +41,8 @@ for (const file of code.filter((f) => !f.startsWith('tests/') && !f.startsWith('
     if (spec.includes(dashed) || body.includes(name) || body.includes(`/${dashed}`) || (lead && spec.includes(lead))) mapped.add(spec);
   }
 }
+
+if (values['print-specs']) { console.log(touchesUi ? [...mapped].sort().join(' ') : ''); process.exit(0); }
 
 const whole = values.all || wideHit.length > 0;
 const plan = [
