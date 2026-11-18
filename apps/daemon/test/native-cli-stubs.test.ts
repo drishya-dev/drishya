@@ -26,7 +26,8 @@ describe('browser-suite native CLI stubs', () => {
         expect(ready, harness).toEqual({ available: true, signedIn: true, supported: true, state: 'ready' });
       }
     } finally { stubs.remove(); }
-  });
+    // Compiling the Windows stand-in with csc.exe and running four readiness probes took 7.5 s on a busy hosted Windows runner (18 Nov).
+  }, 60_000);
   // CI-2: an interrupted run, or a stub .exe a virus scanner still held, left its folder in the temp directory. Each run sweeps
   // folders older than a day and leaves a younger one, which may belong to a run going on at the same time.
   it('sweeps stub folders an earlier run left behind, but not a current one', () => {
