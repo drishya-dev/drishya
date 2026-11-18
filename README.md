@@ -31,7 +31,8 @@
   <a href="#agents">Agents</a> &nbsp;·&nbsp;
   <a href="#privacy">Privacy</a> &nbsp;·&nbsp;
   <a href="#security-tested">Security</a> &nbsp;·&nbsp;
-  <a href="#contributing">Contributing</a>
+  <a href="#contributing">Contributing</a> &nbsp;·&nbsp;
+  <a href="https://drishya-dev.github.io/drishya/">Website</a>
 </p>
 
 <br>
@@ -186,7 +187,7 @@ No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
 - `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
 - To send prompts: `claude` or `codex` installed and signed in.
 
-Hand-tested on Windows 11. It is plain Node with no native add-ons. Every change runs the type checks, the unit and security tests and the full browser suite on Windows, Ubuntu and macOS in CI, and a clean Linux install (Ubuntu under WSL2, Node 24) has been checked by hand. macOS has not been hand-tested on a physical Mac yet.
+Hand-tested on Windows 11. It is plain Node with no native add-ons. CI runs type checks, unit and security tests, package verification and browser tests on Windows, Ubuntu and macOS, with [documented hosted-browser exclusions](playwright.config.ts). A clean Linux install (Ubuntu under WSL2, Node 24) has been checked by hand. macOS has not been hand-tested on a physical Mac yet.
 
 </details>
 
@@ -194,7 +195,7 @@ Hand-tested on Windows 11. It is plain Node with no native add-ons. Every change
 <summary>Install from npm (at launch)</summary>
 <br>
 
-The package is not published yet. From launch:
+Release **0.1.0 is not published yet**. Use the source checkout or a supplied release-candidate tarball until it is available. After 0.1.0 is published:
 
 ```bash
 npm install -g drishya
@@ -255,7 +256,7 @@ With the npm install use `drishya <command>`; from a checkout use `corepack pnpm
 2. Delete its data directory: `~/.drishya` (`%USERPROFILE%\.drishya` on Windows), or wherever `DRISHYA_HOME` points.
 3. Delete your checkout, or run `npm uninstall -g drishya`.
 
-Drishya changes nothing outside its own data directory, so there is nothing else to restore. To remove a single session, use `drishya forget <recording>`.
+To remove a single session, use `drishya forget <recording>`. Removing Drishya's data does not remove the original harness journals or changes made by a native harness after you sent it a prompt.
 
 </details>
 
@@ -265,8 +266,8 @@ Drishya changes nothing outside its own data directory, so there is nothing else
   <tr><td><b>Reads</b></td><td>Your agents' journals, read-only. A repository's files only after you allow it, and its Git data through fixed <code>git</code> commands with no shell.</td></tr>
   <tr><td><b>Stores</b></td><td>Redacted copies of what it imports, in <code>~/.drishya</code>. Nothing is written to your repositories or your agents' folders.</td></tr>
   <tr><td><b>Sends</b></td><td>Nothing. No telemetry, analytics, crash reports or update checks. The page loads nothing from other hosts.</td></tr>
-  <tr><td><b>Listens</b></td><td>On <code>127.0.0.1</code> only (port 7878 by default). Every request for your data needs the launch token.</td></tr>
-  <tr><td><b>Redacts</b></td><td>Keys, tokens, JWTs, credentials in URLs and the contents of files such as <code>.env</code>, <i>before</i> anything is stored, indexed, exported or shown.</td></tr>
+  <tr><td><b>Listens</b></td><td>On <code>127.0.0.1</code> only (port 7878 by default). Every request for your data needs the launch token or an authenticated session cookie.</td></tr>
+  <tr><td><b>Redacts</b></td><td>Matched keys, tokens, JWTs, URL credentials, strings in structured secret fields and protected-file contents such as <code>.env</code>, <i>before</i> storage, indexing, export or display. Redaction is best effort; review exports before sharing.</td></tr>
 </table>
 
 The optional GitHub integration runs your own signed-in `gh`, and sending a prompt runs your own `claude` or `codex`. Both are off until you use them.
@@ -282,7 +283,7 @@ The optional GitHub integration runs your own signed-in `gh`, and sending a prom
 
 - **No token, no access.** Every request for your data needs the launch token or the session cookie it was exchanged for, and is refused (401) without one. The token is random on every launch, compared in constant time, sent only in a header (never read from a URL query), and never written to disk or logs. The link your browser is opened with carries a one-time code that expires after two minutes, not the token itself. The cookie is `HttpOnly` and `SameSite=Strict`, expires after 12 hours idle or 7 days, and at most 32 sessions are kept.
 - **Foreign requests are refused.** A request for a host name other than localhost is refused (421), a request from another website's origin is refused (403), and no cross-origin headers are ever sent. State-changing requests must be JSON, which a cross-site form cannot send. A proxy that rewrites the host name gets past the first check, which is why the token is the lock that matters.
-- **Secrets were never stored.** Keys and tokens in your sessions are redacted on the way in, so the database, search index, exports and the screen never hold them. The security suite plants a canary for each of the 27 redaction rules (28 canaries) in every agent's journal and checks that none of them reaches any of those places.
+- **Matched secrets are removed before storage.** The security suite plants 28 canaries for the 27 text-pattern rules in every agent's journal and checks that none reaches the database, search index, exports or screen. Structured secret fields (such as `password` and `apiKey`) also have their string values redacted, including short values that match no text pattern; [dedicated tests](tests/security/15-structured-secrets.test.ts) cover them.
 - **Prompting needs your consent.** Sending a prompt needs the consent you gave for that checkout in the app, and each approval answers one exact request once.
 
 Redaction is best effort: a secret that matches no pattern is not caught. That is why the port belongs on your own machine.
@@ -293,7 +294,7 @@ Found a problem? Report it privately through [SECURITY.md](SECURITY.md). Each li
 
 ## Security, tested
 
-Drishya's security claims are tests you can run yourself. `corepack pnpm test:security` ran on `main` at `02ca2bb9` (Windows 11, Node 24): **684 tests in 15 files, 678 passed, 6 skipped, 0 failed**, in about 90 seconds. Five of the skips are Linux and macOS file-permission tests; one checks the built package, which `package:verify` runs.
+Drishya's security claims are tests you can run yourself. `corepack pnpm test:security` ran on `main` at `69d3c467` on 18 November 2026 (Windows 11, Node 24.11.1, UI built): **705 tests in 21 files, 700 passed, 5 skipped, 0 failed**, in about two minutes. All five skips are Linux and macOS file-permission tests. These counts describe this source-suite run; the final shipping package still needs the release checks below.
 
 | Suite | Tests | What it proves |
 |---|---:|---|
@@ -302,9 +303,9 @@ Drishya's security claims are tests you can run yourself. `corepack pnpm test:se
 | **Secrets canaries** | 11 | One invented secret per redaction rule is planted in each agent's journals. The database, blobs, previews, search index, exports, offline bundle, API responses, logs and error bodies are searched for the raw values. Every rule is also timed against hostile input so none can hang ingest. |
 | **Outbound traffic** | 6 | A full walk of the app with default settings sends nothing beyond loopback. Each opt-in (GitHub, prompts) sends exactly what is listed. The built page loads nothing from another host. No update check. |
 | **Command execution** | 8 | Native harnesses, Git and `gh` are started with argument lists and shell execution disabled. On Windows, the browser opener uses `cmd /c start` with a generated URL-safe launch link. Captured text cannot become an option. The executable cannot come from a repository. Git runs with its extension points off and never touches the network. |
-| **Package** | 48 | What the npm package may contain (paths, manifest, file contents, imports) and that the daemon has no runtime dependencies. Each rule is shown failing when the thing it guards appears. |
+| **Package** | 49 | What the npm package may contain (paths, manifest, file contents, imports) and that the daemon has no runtime dependencies. Each rule is shown failing when the thing it guards appears. |
 
-The other 127 passing tests cover loopback-only binding (12), file access (59), hostile journal content (20), size and rate limits (12), what the page may keep (4), prompt sending and approvals (8) and the first five suspicions written down before the suite (12). The last 44 are regression tests for the penetration pass below.
+Another 127 passing tests cover loopback-only binding (12), file access (59), hostile journal content (20), size and rate limits (12), what the page may keep (4), prompt sending and approvals (8) and the first five suspicions written down before the suite (12). The penetration-regression file has 44 tests (42 passed, 2 platform skips). A further 26 cover structured secrets, checkpoint lineage, export isolation, Git storage boundaries, recorded network paths, per-file statistics, local inputs and store permissions (23 passed, 3 platform skips).
 
 **Run it yourself**
 
@@ -320,6 +321,8 @@ corepack pnpm package:verify             # builds the real package and checks it
 
 <!-- SEC-4b: replace the sentence below with the result once the pass has been repeated on the shipping installer. Do not claim it before. -->
 **SEC-4b**, the same pass repeated on the installer that ships, has not been done yet. Its result will be added here.
+
+For the current candidate scope and platform limits, read the [0.1.0 release notes](docs/release-notes-0.1.0.md). Final-package verification, security acceptance and builder sign-off are tracked in the [release checklist](docs/release-checklist.md).
 
 Read the tests in [`tests/security/`](tests/security), the [threat model](docs/review/sec-3-threat-model.md) for what is defended and what is accepted, and the [SEC-4a report](docs/review/sec-4-pentest.md). Report a vulnerability privately through [SECURITY.md](SECURITY.md).
 

@@ -4,12 +4,12 @@ What is planned for Drishya, in plain words. This is a direction, not a promise:
 
 ## Now: finishing release 0.1.0
 
-Drishya 0.1.0 is a desktop product, built and tested on Windows 11, for Claude Code, Codex and Antigravity. It observes sessions read-only, with an opt-in controller for sending prompts to Claude Code and Codex. Linux and macOS are not verified yet. The product is feature-complete. What remains is checking and packaging it:
+Drishya 0.1.0 is a desktop product for Claude Code, Codex and Antigravity. It observes sessions read-only, with an opt-in controller for sending prompts to Claude Code and Codex. It has been hand-tested on Windows 11 and Ubuntu under WSL2; macOS coverage is CI-only, with no physical Mac acceptance pass. The product is feature-complete. What remains is final release acceptance and publication:
 
 - **The pentest on the installer that ships (SEC-4b).** The findings from the first pass are fixed and covered by tests. The second pass repeats it on the installed build with the OWASP ZAP scan, full CodeQL and Semgrep, a second device and a second operating-system account, and the three systems. The report is in [`docs/review/sec-4-pentest.md`](docs/review/sec-4-pentest.md).
-- **Continuous integration on Windows, Linux and macOS (SHIP-16),** including the packaged install check, and the macOS acceptance run (MAC-1).
+- **Final-commit verification (SHIP-16).** CI and packaged install checks exist on Windows, Ubuntu and macOS, with hosted-browser exclusions recorded in [`playwright.config.ts`](playwright.config.ts). The final release commit still needs its own release dry run; physical Mac acceptance (MAC-1) remains unperformed. See the [release notes](docs/release-notes-0.1.0.md) for platform coverage.
 - **A final whole test** of the release candidate, then the packaged release with install guide and release notes (SHIP-9).
-- **Documentation and the website:** the README, the website, how people give feedback without telemetry (FEEDBACK-1), and the launch posts.
+- **Launch communication:** the README, website and GitHub issue feedback links are implemented (#524 and #522); README-3 and FEEDBACK-1 acceptance is recorded in the [Product Work History](docs/PRODUCT_WORK_HISTORY.md#readme-3). Launch posts remain separate work.
 
 ## Next release
 
