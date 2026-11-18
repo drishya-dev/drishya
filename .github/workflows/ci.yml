@@ -3,7 +3,7 @@ name: ci
 # CI-2. What runs where, and why, is in docs/decisions/log.md ("CI runs by event"). In short:
 #   pull request  check on all three systems; the whole browser suite on Linux in four shards; on Windows and macOS the specs
 #                 that name a changed file plus a short smoke list. Browser jobs are skipped when only docs changed.
-#   push to main  check on all three; the whole browser suite on all three, four shards each.
+#   push to main  check on all three; the whole browser suite on all three (four shards on Linux and Windows, three on macOS).
 #   nightly       the same as a push to main, against main's head, so a timing fault on one system shows within a day.
 #   dispatch      the same as main, on any branch; `checks_only` skips the browser jobs.
 # release.yml has its own verify job and is not touched by this file.
@@ -120,10 +120,12 @@ jobs:
   # The whole browser suite, split by Playwright's --shard. Linux runs it for every PR that touches code; Windows and macOS
   # run it on main, nightly and dispatch. Each shard runs both passes of scripts/test-browser.ts (parallel, then the
   # timing-sensitive specs on one worker). macOS keeps one worker: two produced load-timing failures there (17 Nov).
+  # macOS runs three shards, not four: a Free-plan organization runs at most five macOS jobs at once, and three shards plus its check
+  # job leave one for a pull request's macOS jobs while main runs.
   browser:
     needs: changes
     if: ${{ needs.changes.outputs.code == 'true' }}
-    name: browser (${{ matrix.os }}, ${{ matrix.shard }}/4)
+    name: browser (${{ matrix.os }}, ${{ matrix.shard }}/${{ matrix.os == 'macos-latest' && 3 || 4 }})
     timeout-minutes: 45
     strategy:
       fail-fast: false
@@ -131,6 +133,9 @@ jobs:
         # Linux only on a pull request, all three otherwise (the changes job decides).
         os: ${{ fromJSON(needs.changes.outputs.systems) }}
         shard: [1, 2, 3, 4]
+        exclude:
+          - os: macos-latest
+            shard: 4
     runs-on: ${{ matrix.os }}
     env:
       DRISHYA_WORKERS: ${{ matrix.os == 'macos-latest' && 1 || 2 }}
@@ -155,7 +160,7 @@ jobs:
       # Linux needs Chromium's system libraries as well as the browser; the flag is harmless elsewhere. The suite runs
       # headless only, so the headless shell is enough.
       - run: pnpm exec playwright install --with-deps --only-shell chromium
-      - run: pnpm test:browser --shard=${{ matrix.shard }}/4
+      - run: pnpm test:browser --shard=${{ matrix.shard }}/${{ matrix.os == 'macos-latest' && 3 || 4 }}
       # Keep Playwright's page snapshot when a browser test fails, so a CI-only failure can be
       # diagnosed. The browser tests use synthetic data only.
       - if: failure()
