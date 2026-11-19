@@ -44,8 +44,28 @@ function stepFailure(step: string, error: unknown): EmbedError {
 const SDDL_ALIASES: Record<string, string> = {
   SY: 'S-1-5-18', BA: 'S-1-5-32-544', BU: 'S-1-5-32-545', BG: 'S-1-5-32-546', PU: 'S-1-5-32-547', AU: 'S-1-5-11', WD: 'S-1-1-0',
   CO: 'S-1-3-0', CG: 'S-1-3-1', OW: 'S-1-3-4', AN: 'S-1-5-7', IU: 'S-1-5-4', NU: 'S-1-5-2', SU: 'S-1-5-6', NS: 'S-1-5-20',
-  LS: 'S-1-5-19', RC: 'S-1-5-12', AC: 'S-1-15-2-1', PS: 'S-1-5-10', ED: 'S-1-5-9',
+  LS: 'S-1-5-19', RC: 'S-1-5-12', AC: 'S-1-15-2-1', PS: 'S-1-5-10', ED: 'S-1-5-9', RD: 'S-1-5-32-555', RU: 'S-1-5-32-554',
+  NO: 'S-1-5-32-556', MU: 'S-1-5-32-558', LU: 'S-1-5-32-559', IS: 'S-1-5-32-568', CY: 'S-1-5-32-569', ER: 'S-1-5-32-573',
+  HA: 'S-1-5-32-578', AA: 'S-1-5-32-579', RM: 'S-1-5-32-580', SO: 'S-1-5-32-549', PO: 'S-1-5-32-550', BO: 'S-1-5-32-551',
+  RE: 'S-1-5-32-552', AO: 'S-1-5-32-548', OI: 'S-1-5-32-575', ME: 'S-1-16-8192', HI: 'S-1-16-12288', SI: 'S-1-16-16384',
+  LW: 'S-1-16-4096', WR: 'S-1-5-33', AS: 'S-1-18-1', SS: 'S-1-18-2',
 };
+/**
+ * Aliases relative to an account domain, written instead of the full SID. `LA` is the built-in Administrator (RID 500):
+ * when the process runs as that account (a hosted Windows runner does), SDDL names this very user `LA`. They are resolved
+ * against the user's own domain; an account in another domain then simply does not match and is removed or refused.
+ */
+const DOMAIN_ALIASES: Record<string, number> = {
+  LA: 500, LG: 501, DA: 512, DU: 513, DG: 514, DC: 515, DD: 516, CA: 517, SA: 518, EA: 519, PA: 520, RS: 553, CN: 522, AP: 525, KA: 526, EK: 527, RO: 498,
+};
+/** The full SID an SDDL trustee names, or undefined for an alias we do not know (then the caller fails closed). */
+function trusteeSid(trustee: string, sid: string): string | undefined {
+  if (/^S-1-[0-9-]+$/.test(trustee)) return trustee;
+  if (SDDL_ALIASES[trustee]) return SDDL_ALIASES[trustee];
+  const rid = DOMAIN_ALIASES[trustee];
+  const domain = /^(S-1-5-21-\d+-\d+-\d+)-\d+$/.exec(sid)?.[1];
+  return rid !== undefined && domain ? `${domain}-${rid}` : undefined;
+}
 const sddlAces = (sddl: string) => {
   const dacl = /D:([A-Z]*)((?:\([^)]*\))*)/.exec(sddl);
   return dacl ? {flags: dacl[1]!, aces: [...dacl[2]!.matchAll(/\(([^)]*)\)/g)].map(m => m[1]!.split(';'))} : undefined;
@@ -58,12 +78,17 @@ export function privateDacl(sddl: string, sid: string): string | undefined {
   const dacl = sddlAces(sddl);
   if (!dacl) return 'verify: no DACL';
   if (!dacl.flags.includes('P')) return 'verify: inheritance not removed';
-  if (!dacl.aces.length || dacl.aces.some(ace => ace[0] !== 'A' || ace[5] !== sid)) return `verify: ${dacl.aces.length} entries not only this user`;
+  const unknown = dacl.aces.map(ace => ace[5] ?? '').find(trustee => !trusteeSid(trustee, sid));
+  if (unknown !== undefined) return `verify: unknown account alias ${/^[A-Z]{2}$/.test(unknown) ? unknown : '(other)'}`;
+  if (!dacl.aces.length || dacl.aces.some(ace => ace[0] !== 'A' || trusteeSid(ace[5]!, sid) !== sid)) return `verify: ${dacl.aces.length} entries not only this user`;
   return undefined;
 }
-/** The SIDs other than `sid` named in a DACL; an alias without a known SID is returned as is, so removal fails closed. */
+/**
+ * The full SIDs other than `sid` named in a DACL. An unknown alias is returned as is (two capital letters), so the caller
+ * refuses it rather than guess.
+ */
 export function otherSids(sddl: string, sid: string): string[] {
-  return [...new Set((sddlAces(sddl)?.aces ?? []).map(ace => ace[5] ?? '').filter(who => who !== sid).map(who => SDDL_ALIASES[who] ?? who))];
+  return [...new Set((sddlAces(sddl)?.aces ?? []).map(ace => ace[5] ?? '').map(trustee => trusteeSid(trustee, sid) ?? trustee).filter(who => who !== sid))];
 }
 /**
  * Windows: the discovery folder is readable by the current user only. Built-in `whoami` and `icacls`, by absolute System32
@@ -93,7 +118,8 @@ async function restrictWindowsDirectory(directory: string): Promise<void> {
   // No `/reset` first: a change propagates to existing entry files, and a reset would briefly widen them.
   await run(icacls, [directory, '/inheritance:r', '/grant:r', `*${sid}:(OI)(CI)F`, '/q'], options).catch(e => {throw stepFailure('icacls grant', e);});
   const others = otherSids(await read('icacls save'), sid);
-  if (others.some(other => !/^S-1-[0-9-]+$/.test(other))) throw new EmbedError('DISCOVERY_UNSAFE', 'verify: unknown account alias');
+  const unknown = others.find(other => !/^S-1-[0-9-]+$/.test(other));
+  if (unknown !== undefined) throw new EmbedError('DISCOVERY_UNSAFE', `verify: unknown account alias ${/^[A-Z]{2}$/.test(unknown) ? unknown : '(other)'}`);
   if (others.length) await run(icacls, [directory, '/remove', ...others.map(other => `*${other}`), '/q'], options).catch(e => {throw stepFailure('icacls remove', e);});
   const reason = privateDacl(await read('icacls verify'), sid);
   if (reason) throw new EmbedError('DISCOVERY_UNSAFE', reason);

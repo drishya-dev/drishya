@@ -95,12 +95,12 @@ it('the harness session ID selects that exact journal, and nothing path-shaped i
 });
 
 it('a released detached worker keeps serving its pane, then stops by itself and removes its discovery entry',async()=>{
- const home=await mkdtemp(join(tmpdir(),'drishya-embed-detached-'));
+ const home=await mkdtemp(join(tmpdir(),'drishya-embed-detached-'));let supervisor:ReturnType<typeof embedSupervisor>|undefined;
  try {
   const app=new App(home);const imported=await app.ingest.importSource('claude-code',fixture);await app.close();
-  const supervisor=embedSupervisor(entry,{...process.env,DRISHYA_HOME:home,DRISHYA_EMBED_IDLE_MS:'1500'},{detached:true});
+  supervisor=embedSupervisor(entry,{...process.env,DRISHYA_HOME:home,DRISHYA_EMBED_IDLE_MS:'1500'},{detached:true});
   const launched=await supervisor.open({sessionId:imported.recordingId});const pid=supervisor.pid!;
-  supervisor.release();
+  supervisor.release();supervisor=undefined;
   const u=new URL(launched.url);const code=new URLSearchParams(u.hash.slice(1)).get('launch')!;
   // The launcher is gone from the channel; the code it handed out still signs in exactly once.
   const r=await fetch(u.origin+'/v1/embed/session',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({code,recordingId:launched.recordingId})});
@@ -109,7 +109,7 @@ it('a released detached worker keeps serving its pane, then stops by itself and 
   const deadline=Date.now()+20_000;while(alive()&&Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,200));
   expect(alive()).toBe(false);
   expect(await readdir(join(home,'embed-discovery'))).toEqual([]);
- }finally{await rm(home,{recursive:true,force:true});}
+ }finally{await supervisor?.close();await rm(home,{recursive:true,force:true});} // a failed open must not leave the worker holding the store
 },40_000);
 
 it('the SDDL check accepts only a protected DACL of this user\'s allow entries, and names every other account',()=>{
@@ -123,6 +123,14 @@ it('the SDDL check accepts only a protected DACL of this user\'s allow entries, 
  // A runner's default DACL: SYSTEM, Administrators and the user, as explicit entries.
  expect(otherSids(`D:PAI(A;OICI;FA;;;${me})(A;;FA;;;SY)(A;;FA;;;BA)(A;;FA;;;S-1-5-21-9-9-9-500)`,me)).toEqual(['S-1-5-18','S-1-5-32-544','S-1-5-21-9-9-9-500']);
  expect(otherSids(`D:PAI(A;;FA;;;ZZ)`,me)).toEqual(['ZZ']); // unknown alias: the caller refuses it
+ expect(privateDacl(`D:PAI(A;;FA;;;ZZ)`,me)).toBe('verify: unknown account alias ZZ');
+ // Running as the built-in Administrator (a hosted runner), SDDL writes this very user as LA.
+ const admin='S-1-5-21-1-2-3-500';
+ expect(privateDacl(`D:PAI(A;OICI;FA;;;LA)`,admin)).toBeUndefined();
+ expect(otherSids(`D:PAI(A;OICI;FA;;;LA)(A;;FA;;;SY)(A;;FA;;;BA)`,admin)).toEqual(['S-1-5-18','S-1-5-32-544']);
+ // For any other user, LA is another account and is removed.
+ expect(otherSids(`D:PAI(A;OICI;FA;;;${me})(A;;FA;;;LA)`,me)).toEqual(['S-1-5-21-1-2-3-500']);
+ expect(privateDacl(`D:PAI(A;OICI;FA;;;${me})(A;;FA;;;LA)`,me)).toBe('verify: 2 entries not only this user');
 });
 
 it.runIf(process.platform==='win32')('Windows discovery is this user only, even where the folder starts with explicit foreign entries',async()=>{
