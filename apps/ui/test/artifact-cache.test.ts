@@ -7,6 +7,21 @@ function slice(text: string): ArtifactSlice {
 }
 
 describe('bounded artifact material', () => {
+  it('forgets selected and combined-session material without a late failure evicting reimported material', async () => {
+    const cache = new ArtifactCache();
+    await cache.get('1/rec_a+rec_b/material', 'reader', async () => slice('combined'));
+    await cache.get('2/rec_b/material', 'reader', async () => slice('other'));
+    let reject!: (error: Error) => void;
+    const old = cache.get('1/rec_a/material', 'reader', () => new Promise<ArtifactSlice>((_ok, fail) => { reject = fail; }));
+    const failed = old.catch((e: Error) => e.message);
+    await Promise.resolve();
+    cache.forgetRecording('rec_a');
+    await cache.get('1/rec_a/material', 'reader', async () => slice('reimported'));
+    reject(Error('old request')); expect(await failed).toBe('old request');
+    expect((await cache.get('1/rec_a/material', 'reader', async () => { throw Error('stale failure removed new material'); })).text).toBe('reimported');
+    expect((await cache.get('1/rec_a+rec_b/material', 'reader', async () => slice('fresh combined'))).text).toBe('fresh combined');
+    expect((await cache.get('2/rec_b/material', 'reader', async () => { throw Error('other session was removed'); })).text).toBe('other');
+  });
   it('evicts existing material when the low-resource budget is selected', async () => {
     const cache = new ArtifactCache();
     await cache.get('large', 'reader', async () => slice('x'.repeat(6 * 1024 * 1024)));
