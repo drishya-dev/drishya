@@ -1,5 +1,19 @@
 # Research ledger and evidence limits
 
+## Hermes Agent and T3 Code integration research, 19 November 2026
+
+Desk research for a future-release discussion; no installation, native-session acceptance, upstream contact or integration certification was performed. Source claims below were refreshed at pinned revisions for the [integration proposal](hermes-t3-integration-proposal.md); installed-version compatibility remains unverified.
+
+| Fact | Primary source | Implication / limit for Drishya |
+|---|---|---|
+| Hermes documents `~/.hermes/state.db` as its canonical session/message store, using SQLite WAL. `sessions.json` is a legacy gateway-routing mirror, not the CLI session index; older JSONL transcripts are no longer its active store. | [Hermes session documentation](https://github.com/NousResearch/hermes-agent/blob/fe8b920cae0980cef854f478236f525aaf2b93ce/website/docs/user-guide/sessions.md) | Start a read-only adapter feasibility check from the installed version's database/export contract. Do not assume the existing JSONL tailer can read Hermes or copy only a live database's main file without considering WAL consistency. Actual recorded file/diff/subagent coverage remains unverified. |
+| T3 describes itself as an interface controlling locally installed coding agents. | [T3 README](https://github.com/pingdotgg/t3code/blob/94baff19c6526a1bfa5ce2f9a2c37cbfb3703f31/README.md) | Treat hosting Drishya and capturing a native agent as separate capabilities; avoid duplicate recordings when the same native session is also opened through T3. |
+| T3's preview component checks availability and permission, and includes a desktop-only preview message. | [PreviewPanel source](https://github.com/pingdotgg/t3code/blob/94baff19c6526a1bfa5ce2f9a2c37cbfb3703f31/apps/web/src/components/preview/PreviewPanel.tsx) | A desktop guest-view prototype is a plausible next experiment, not proof of automatic pane support in every client. |
+
+The existing [EMBED-1 agreement](embed-1-in-app.md) already specifies a top-level local guest, private one-time launch handoff, exact session/checkout selection and separate controller consent. Reuse that contract and inspect the current embed implementation before proposing another bridge. A T3 maintainer agreement is not established by this research; builders own upstream outreach. PR #549 was refreshed on 19 November: open and unmerged, head `4787bd7f778b878da0c164870cd791ebeeb5a012`. This status is a point-in-time observation, not a guarantee for a later implementer.
+
+Planning recommendation, not an approved release commitment: validate the existing embed path in a T3 desktop prototype first; investigate a bounded, explicitly selected Hermes export for import/replay, then live increments and restart recovery. The pinned Hermes documentation describes whole-session JSONL backups, including inactive history; the compatibility facade now delegates to a persistence reader. Neither is a verified append-only live source. Reuse bounded shared ingest/history/UI paths and declare each connector's evidence limitations. Any schema expansion still needs both builders' agreement. No implementation or release date is promised here.
+
 ## Antigravity (Google), 13 November 2026
 
 Source for the [Antigravity harness review](antigravity-harness.md) and TASKS AG-1 to AG-6. Public documentation says what the product does; it does **not** document where or how it stores sessions. Storage facts below are either measured on this machine (the review) or user reports, and are labelled so.
