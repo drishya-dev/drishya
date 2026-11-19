@@ -217,7 +217,7 @@ jobs:
           path: test-results/
           retention-days: 7
 
-  # One stable name for branch protection: green when every job above passed or was skipped on purpose.
+  # One stable name for branch protection: green only when every job above passed or was skipped on purpose.
   ci:
     name: ci
     needs: [changes, check, browser, browser-pr]
@@ -230,4 +230,8 @@ jobs:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
           echo "job results: $RESULTS"
-          case " $RESULTS " in *" failure "*|*" cancelled "*) exit 1;; esac
+          # Allow-list, not deny-list: a job GitHub never gave a runner reports "abandoned" (18 Nov), and any result other than
+          # a pass or an on-purpose skip must fail the gate.
+          for result in $RESULTS; do
+            case "$result" in success|skipped) ;; *) echo "::error::a required job ended as $result"; exit 1;; esac
+          done
