@@ -6,9 +6,11 @@ import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
-import { groupMemberPaths, mapDetail, type MapGroup } from '../lib/map-detail.ts';
+import { groupMemberPaths, mapActivity, mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { MAP_REST_ALPHA, QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
-import { placeLabels, type LabelCandidate } from '../lib/map-labels.ts';
+import { placeLabels, placeActivityLabels, type LabelRect, type LabelCandidate } from '../lib/map-labels.ts';
+import { SIDE_PANELS, FILE_READER_SELECTOR } from '../lib/reading-edges.ts';
+import { FileIcon } from './FileIcon.tsx';
 import { useSessionWorkspace } from './SessionWorkspace.tsx';
 import { importConnections, observedGraph, neighborhoodGraph } from '../lib/map-focus.ts';
 import { createSpatialRenderer, fileDepth, spatialProject, type MapVertex } from '../lib/spatial-map.ts';
@@ -198,6 +200,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     return () => { cancelAnimationFrame(frame); document.removeEventListener('visibilitychange', resume); preference.removeEventListener('change', resume); };
   }, [spatialActive, orbit, motion, displayNodes.length]);
   const displayById = useMemo(() => new Map(displayNodes.map(n => [n.id, n])), [detail]);
+  const activity = useMemo(() => mapActivity(viewGraph, heat), [viewGraph, heat]);
   const heatMap = useMemo(() => new Map(heat.map((h) => [h.path, h])), [heat]);
 
   useEffect(() => {
@@ -320,7 +323,9 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
           for (const point of [points[k - 1]!, points[k]!]) edges.push({ x: point.x, y: point.y, z: va.z + (vb.z - va.z) * point.t, size: va.size, alpha: alpha * point.factor });
         }
       }
-      renderer.current.draw(nodes, edges, mapPalette(c).node, size.w, size.h, dpr);
+      const colours = mapPalette(c);
+      const highlights = activity.map(({node, cell}) => ({ ink: colours.tones[cell.tone], vertices: [{ ...project(node), size: (cell.active ? 7 : 5) * project(node).scale, alpha: .95 }] }));
+      renderer.current.draw(nodes, edges, colours.node, size.w, size.h, dpr, highlights);
       return;
     }
     const g = c.getContext('2d')!;
@@ -400,6 +405,12 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       g.fill();
     }
 
+    for (const { node, cell } of activity) {
+      const p = project(node);
+      g.globalAlpha = .95;
+      g.fillStyle = colours.tones[cell.tone];
+      g.beginPath(); g.arc(p.x, p.y, cell.active ? 3.5 : 2.5, 0, Math.PI * 2); g.fill();
+    }
     g.globalAlpha = 1;
 
   };
@@ -407,7 +418,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   redraw.current = draw;
   // Paint the camera's committed frame; scheduling another RAF here can cancel
   // every intermediate paint while React commits the next camera position.
-  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, spatialActive, yaw, pitch, passagePaths]);
+  useLayoutEffect(() => { draw(); }, [graph, detail, cam, size, lowResource, hoveredPath, explore, readingRect, resolvedTheme, connections, spatialActive, yaw, pitch, passagePaths, activity]);
 
   // ── interaction (explore mode) ────────────────────────────────────────────
   const drag = useRef<{ x: number; y: number; cx: number; cy: number; yaw: number; pitch: number; rotate: boolean; moved: boolean } | undefined>(undefined);
@@ -445,6 +456,40 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       return width;
     };
   }, [fontsReady]);
+  const [activityObstacles, setActivityObstacles] = useState<LabelRect[]>();
+  useLayoutEffect(() => {
+    const map = wrap.current, viewer = map?.closest('.viewer');
+    if (!map || !viewer || explore) { setActivityObstacles(undefined); return; }
+    const selector = `${SIDE_PANELS}, ${FILE_READER_SELECTOR}, .history-transport, .modern-replay-transport, .catalog-toggle, .history-inner, .prompt-rail, .workspace-header, .workspace-bar, .workspace-navigation, .workbench-station, .modern-toolbox, .folder-explorer, .prompt-composer, .map-reader, .reading-window, [role="dialog"], .follow-pill`;
+    const watched = new Set<Element>();
+    const resize = new ResizeObserver(() => measure());
+    const measure = () => {
+      const world = map.getBoundingClientRect();
+      const elements = [...document.querySelectorAll<HTMLElement>(selector)].filter(el => !map.contains(el));
+      const rects = elements.flatMap(el => {
+        if (!el.getClientRects().length || getComputedStyle(el).visibility === 'hidden') return [];
+        const r = el.getBoundingClientRect();
+        return r.width && r.height ? [{left:r.left-world.left,top:r.top-world.top,right:r.right-world.left,bottom:r.bottom-world.top}] : [];
+      });
+      // Reserve the full reading strip, including gaps between virtualized passages.
+      if (readingRect) rects.push({left:readingRect.left-world.left, right:readingRect.left+readingRect.width-world.left,top:0,bottom:size.h});
+      setActivityObstacles(before => JSON.stringify(before) === JSON.stringify(rects) ? before : rects);
+      const next = new Set<Element>([map, ...elements]);
+      for (const el of watched) if (!next.has(el)) { resize.unobserve(el); watched.delete(el); }
+      for (const el of next) if (!watched.has(el)) { watched.add(el); resize.observe(el); }
+    };
+    const observer = new MutationObserver(records => {
+      if (records.some(r => !map.contains(r.target))) measure();
+    });
+    measure(); observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden']});
+    window.addEventListener('scroll', measure, true);
+    return () => {resize.disconnect();observer.disconnect();window.removeEventListener('scroll', measure, true);};
+  }, [explore, size.w, size.h, readingRect]);
+  const activityLabels = useMemo(() => {
+    if (explore || !activityObstacles) return [];
+    const candidates = activity.map(({node}) => ({id:node.id, ...project(node),kind:'file' as const,text:node.path.split('/').pop()!}));
+    return placeActivityLabels(candidates, {width:size.w,height:size.h}, activityObstacles, labelWidth);
+  }, [activity, activityObstacles, explore, size, cam, spatialActive, yaw, pitch, labelWidth]);
   const labels = useMemo(() => {
     if (!explore) return [];
     const world = wrap.current?.getBoundingClientRect();
@@ -617,6 +662,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         const p = project(node);
         const visible = displayById.has(path) && size.w > 0 && p.x >= 6 && p.y >= 6 && p.x < size.w - 6 && p.y < size.h - 6;
         return <span key={path} className="map-origin-point" data-origin-file={path} data-origin-visible={visible} style={{ left: p.x - 3, top: p.y - 3 }} aria-hidden="true" />;
+      })}
+      {activityLabels.map(label => {
+        const item = activity.find(a => a.node.id === label.id)!;
+        return <button key={label.id} className="map-activity-chip" data-path={label.id} data-tone={item.cell.tone} title={`${item.cell.tone} · ${item.node.path}`} aria-label={`${item.cell.tone} ${item.node.path}`} style={{left:label.rect.left,top:label.rect.top,width:label.rect.right-label.rect.left}} onClick={() => set({filePanel:item.node.id,currentFile:undefined})}><FileIcon path={item.node.path}/><span>{label.text}</span></button>;
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} aria-label={`${node.path} · ${node.members.length} grouped files; zoom to reveal`} onPointerEnter={() => revealGroup(node, x, y)} onPointerLeave={() => setTip(current => current?.node.id === node.id ? undefined : current)} onFocus={() => revealGroup(node, x, y)} onBlur={() => setTip(current => current?.node.id === node.id ? undefined : current)} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>

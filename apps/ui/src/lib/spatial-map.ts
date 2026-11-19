@@ -42,13 +42,14 @@ export function createSpatialRenderer(canvas: HTMLCanvasElement) {
     gl.uniform3fv(colour, rgb(ink)); gl.uniform1i(points, mode === gl.POINTS ? 1 : 0); gl.drawArrays(mode, 0, vertices.length);
   };
   return {
-    draw(nodes: MapVertex[], edges: MapVertex[], ink: string, width: number, height: number, dpr: number) {
+    draw(nodes: MapVertex[], edges: MapVertex[], ink: string, width: number, height: number, dpr: number, highlights: { ink: string; vertices: MapVertex[] }[] = []) {
       gl.viewport(0, 0, canvas.width, canvas.height); gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.useProgram(program); gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       for (const attribute of [position, size, alpha]) gl.enableVertexAttribArray(attribute);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LEQUAL);
       gl.depthMask(false); paint(edges, gl.LINES, ink, width, height, dpr);
       gl.depthMask(true); paint(nodes, gl.POINTS, ink, width, height, dpr);
+      for (const highlight of highlights) paint(highlight.vertices, gl.POINTS, highlight.ink, width, height, dpr);
     },
     dispose() { gl.deleteBuffer(buffer); gl.deleteProgram(program); gl.deleteShader(vs); gl.deleteShader(fs); }
   };

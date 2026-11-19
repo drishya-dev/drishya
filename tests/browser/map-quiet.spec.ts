@@ -152,3 +152,36 @@ test('beneath the reading column dots and import lines stay visible but transluc
   });
   expect(exploring).toBeGreaterThan(110);
 });
+
+for (const width of [600, 1440]) test(`MAP-3 activity chips stay outside actual protected UI at ${width}px`, async ({page}) => {
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(()=>localStorage.setItem('drishya.mapOrbit','false'));
+ await openMap(page);
+ await page.waitForTimeout(400);
+ const check=async()=>expect(await page.evaluate(()=>{
+  const chips=[...document.querySelectorAll('.map-activity-chip')].map(e=>e.getBoundingClientRect());
+  const protectedBoxes=[...document.querySelectorAll('.history-inner,.prompt-rail,.workspace-header,.workspace-bar,.workbench-station,.folder-explorer,.prompt-composer,[role="dialog"]')].filter(e=>e.getClientRects().length).map(e=>e.getBoundingClientRect());
+  return chips.filter(a=>protectedBoxes.some(b=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)).length;
+ })).toBe(0);
+ await check();
+ await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Workspace settings'})).toBeVisible();await check();
+ await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
+ await expect(page.locator('.map-activity-chip')).toHaveCount(0);
+});
+
+test('MAP-3 mounts a real filename/type chip in a free gutter and suppresses it when the gutter closes', async ({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.route('**/graph*',async route=>{
+  const response=await route.fetch();const graph=await response.json();
+  if(Array.isArray(graph.nodes))for(const node of graph.nodes)if(node.id==='client/src/file3.ts'){node.x=0;node.y=.75;}
+  await route.fulfill({response,json:graph});
+ });
+ await openMap(page,true);
+ const chip=page.locator('.map-activity-chip[data-path="client/src/file3.ts"]');
+ await expect(chip).toBeVisible();await expect(chip.locator('.file-format')).toHaveCount(1);
+ await expect(chip).toHaveAttribute('data-tone','read');
+ await page.setViewportSize({width:600,height:900});
+ await expect(chip).toHaveCount(0);
+});

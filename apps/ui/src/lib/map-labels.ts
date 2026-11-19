@@ -54,3 +54,27 @@ export function placeLabels(candidates: readonly LabelCandidate[], map: { width:
   }
   return placed;
 }
+
+/** Four bounded positions beside the actual node. Never move a chip into unrelated free space. */
+export function placeActivityLabels(candidates: readonly LabelCandidate[], map: { width: number; height: number }, obstacles: readonly LabelRect[], measure: (text: string) => number): PlacedLabel[] {
+  const placed: PlacedLabel[] = [];
+  for (const candidate of candidates) {
+    // Include the existing 16 px file icon and its 6 px gap in the measured box.
+    const box = labelRect(candidate, text => measure(text) + 22);
+    const width = box.right - box.left, height = box.bottom - box.top;
+    const positions = [
+      { left: candidate.x + 8, top: candidate.y - 9 },
+      { left: candidate.x - width - 8, top: candidate.y - 9 },
+      { left: candidate.x - width / 2, top: candidate.y + 8 },
+      { left: candidate.x - width / 2, top: candidate.y - height - 8 },
+    ];
+    for (const p of positions) {
+      const rect = { ...p, right: p.left + width, bottom: p.top + height };
+      if (rect.left < 6 || rect.top < 6 || rect.right > map.width - 6 || rect.bottom > map.height - 6) continue;
+      if (obstacles.some(o => overlaps(rect, o, 8)) || placed.some(p => overlaps(rect, p.rect, LABEL_BOX.margin))) continue;
+      placed.push({ ...candidate, rect });
+      break;
+    }
+  }
+  return placed;
+}

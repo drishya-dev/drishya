@@ -651,3 +651,14 @@
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history { top: var(--workspace-tools-bottom, 134px); }
 :root[data-ui-version=modern][data-experience=classic] .connected-workspace:not(.developer-workspace-open) .history-inner { padding-top: 16px; }
 :root[data-ui-version=modern] .connected-workspace.developer-workspace-open .follow-pill { display: none; }
+
+/* MAP-3: compact real DOM material; no blur, glow or perpetual animation. */
+.map-activity-chip { position:absolute; display:flex; align-items:center; gap:6px; box-sizing:border-box; height:25px; max-width:190px; padding:4px 6px; border:1px solid var(--line-3); border-radius:var(--round-xs); background:var(--s1); color:var(--source); font:11px/15px var(--mono); pointer-events:auto; text-align:left; }
+.map-activity-chip span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.map-activity-chip .file-format { flex:none; width:16px; height:16px; }
+.map-activity-chip[data-tone=write] { color:var(--edited); }
+.map-activity-chip[data-tone=search] { color:var(--focus); }
+.map-activity-chip[data-tone=pass] { color:var(--pass); }
+.map-activity-chip[data-tone=fail] { color:var(--fail); }
+.map-activity-chip:hover { background:var(--s2); }
+.map-activity-chip:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
