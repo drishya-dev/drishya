@@ -37,4 +37,17 @@ Run `corepack pnpm ui:build` then `corepack pnpm check:real -- storage-clear`. T
 
 Synthetic guards cover shared files until last owner, preserved recording/search/history, reimport/missing deletion, late-import race, failure UI, confirmation/cancel focus, viewed/live navigation, symlink exclusion, invalidation, active-reader WAL reuse and scoped browser-cache cleanup.
 
-Focused checks: 257 tests/19 files (store/ingest/daemon), three unit workers; cache/storage 13 tests; six Storage/Antigravity browser checks, two browser workers, zero retries. Both typechecks pass. Final batch/package gate is pending. Maintainer review is required before merge; no subagents were launched under the explicit task restriction.
+Focused checks: 257 tests/19 files (store/ingest/daemon), three unit workers; cache/storage 13 tests; six Storage/Antigravity browser checks, two browser workers, zero retries. Both typechecks pass. Final batch/package results are recorded below. Maintainer review is required before merge; no subagents were launched under the explicit task restriction.
+
+## Final batch and review, resumed 20 November
+
+Frozen implementation `6a358c24`; the later delta updates only the existing Modern Settings tab assertion and this evidence. No second full batch was run.
+
+- Full units: **1,905 passed, one skipped**, 283 files, **three workers**. Both typechecks and UI/site builds pass.
+- `check:affected`: related-unit run at its default concurrency had four test timeout/cleanup failures (checkout-selection, git-branches, git-compare-service and the import-discovery server case). All **50 tests in those four files pass** on both this branch and unchanged main with one worker. This is not a claim that the original related run was green or that the exact default-concurrency failures were reproduced on main.
+- Complete parallel browser pass: **962 passed, 27 skipped, two failed**, **three workers**, no retries. Both failures were the old six-tab expectation in modern-only; it now includes the required Storage category. The corrected Modern/Storage selection passes **seven tests**, one worker.
+- The interrupted first serial pass is not counted as complete. Its resumed complete pass: **63 passed, one skipped, three failed**, one worker. Failures: Work/Conversation reading-place retention at 50% and 80% at 600 px, and exposed-reasoning menu-clock motion. Clean-main controls: 80% reproduces; 50% and reasoning pass. A focused rerun of all three on this branch passes. The 80% result is baseline TEST-2 evidence; the other initial timing failures are recorded without claiming clean-main reproduction. No assertions were relaxed or retries hidden.
+- `package:verify` passes: isolated offline packed CLI installation, both fixture harness imports, bundle, authenticated API and persisted restart; security **700 passed, five skipped** (20 files passed, one skipped).
+- Final genuine `check:real -- storage-clear` rerun passes all four harness/width combinations with the exact sizes/counts and pre/post figures in the table above; originals hash unchanged, the other recording/history stays readable and reimport restores counts.
+
+The complete batch is **not reported as green**. All task-specific reruns pass; the initial failures, baseline control and resource/concurrency limits remain visible for review. Author self-review checked ownership, stale asynchronous work, byte claims, containment and private-material exclusion. No new event schema/runtime dependency or native writes. Fresh independent/maintainer review is still pending; no subagents were used and no merge is authorized.
