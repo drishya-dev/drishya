@@ -8,7 +8,8 @@ Base: origin/main 30c83c9f. Issue #551. No additional agents/sessions.
 - [x] map-labels.ts: reuse measured label rectangles, bounded four placements around true node; reject all protected UI/labels; suppress when cramped.
 - [x] MapCanvas.tsx: static semantic point paint through both existing renderers; DOM chips use FileIcon and basename, original indexed coordinates. Hide in Explore (its labels own that mode). Protect history column/rail, dock, header, composer, reader/dialog and Files. Event/resize-driven geometry, no idle polling.
 - [x] map tests: selection/order/empty/unresolved, long filename and rectangle non-overlap; browser actual protected-rectangle assertions at 600/1440.
-- [ ] Real harness acceptance live/replay, resource settings, before/after measured idle cost, targeted checks, task review.
+- [x] Genuine Claude/Codex live/replay selection and occupied-layout suppression at both widths; targeted checks and reproducible static/orbit measurement (details below).
+- [ ] Independent maintainer review and assessment of full-gate uncertainty; visible genuine-session chip and physical resource/dense-map acceptance remain unproven.
 
 Ruling: retain existing heat rank rather than call it a literal last-three chronological list. Scene heat is step-derived and already drives live/replay; threshold/cap are presentation bounds. Cost if wrong: a frequently touched file can outrank a newer isolated read; chips describe activity, never chronology.
 
@@ -57,3 +58,9 @@ Final combined typecheck and 35 focused map/palette units passed. The later menu
 ### Test-outcome truth guard
 
 The composer's heat tone `pass` is a default for non-error test activity, including unreported outcomes; it is not sufficient evidence of a confirmed pass. The map now paints that tone as generic **test activity** using existing focus ink, while retaining explicit failure styling. This is presentation-only: no composer, capture, schema or working-set change. The new regression was watched fail before implementation. Fresh map typecheck, **31 units and 9 browser journeys passed** with one browser worker. Earlier recorded counts apply to their stated revisions.
+
+### Final measurement and handoff
+
+The same three-window probe completed on `3d1d6dfd` after the truth guard. Static medians: task 1.130 ms, script 0.033 ms per two seconds; zero RAF callbacks, renders, layouts and style recalculations in every static window. Intentional orbit: task 375.938 ms, script 19.748 ms; 26–27 renders and four point draws per render. The desktop update separated this run from the earlier paired measurements, so the lower task/script times are not attributed to the change. The repeat corroborates bounded rendering and idle counters only. Raw probes remain ignored in `.local/map-3/`.
+
+Draft #555 contains the implementation and evidence. Next action: independent maintainer review of placement, the heat-rank ruling and measured cost, plus assessment of the recorded full-gate failures. The task remains open for that review and the explicitly unproven acceptance above; no merge or publication is authorized by this handoff.
