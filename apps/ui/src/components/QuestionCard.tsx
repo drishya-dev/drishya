@@ -142,7 +142,10 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
         onClick={(e) => e.stopPropagation()}
       >
         <header className="question-interactive-header">
-          <strong>Question to you</strong>
+          <div className="question-header-lead">
+            <span className="question-status-beacon" aria-hidden="true" />
+            <span className="question-badge">Input Needed</span>
+          </div>
           <span className="question-interactive-sub">The agent is waiting for your choice</span>
         </header>
 

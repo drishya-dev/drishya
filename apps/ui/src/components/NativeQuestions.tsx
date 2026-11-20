@@ -54,40 +54,49 @@ export function NativeQuestions({
       aria-label="Agent needs your input"
       onSubmit={handleSubmit}
     >
-      <header>
-        <strong>Answer requested</strong>
-        <span>The connected agent is waiting</span>
+      <header className="native-questions-header">
+        <div className="question-header-lead">
+          <span className="question-status-beacon" aria-hidden="true" />
+          <span className="question-badge">Input Needed</span>
+        </div>
+        <span className="native-questions-sub">The connected agent is waiting</span>
       </header>
       <div className="native-question-list">
         {request.questions.map((q) => (
           <fieldset key={q.id} disabled={isBusy}>
             <legend>{q.question}</legend>
-            {q.options.map((option) => (
-              <label className="native-answer-option" key={option.id}>
-                <input
-                  type={q.multiple ? 'checkbox' : 'radio'}
-                  name={`${name}/${q.id}`}
-                  checked={answers[q.id]?.options.includes(option.id) ?? false}
-                  onChange={(e) =>
-                    setAnswers((old) => ({
-                      ...old,
-                      [q.id]: {
-                        options: q.multiple
-                          ? e.target.checked
-                            ? [...(old[q.id]?.options ?? []), option.id]
-                            : (old[q.id]?.options ?? []).filter((id) => id !== option.id)
-                          : [option.id],
-                        text: q.multiple ? old[q.id]?.text ?? '' : '',
-                      },
-                    }))
-                  }
-                />
-                <span>
-                  {option.label}
-                  <small>{option.description}</small>
-                </span>
-              </label>
-            ))}
+            {q.options.map((option) => {
+              const checked = answers[q.id]?.options.includes(option.id) ?? false;
+              return (
+                <label className={`native-answer-option${checked ? ' is-checked' : ''}`} key={option.id}>
+                  <input
+                    type={q.multiple ? 'checkbox' : 'radio'}
+                    name={`${name}/${q.id}`}
+                    value={option.id}
+                    checked={checked}
+                    onChange={(e) =>
+                      setAnswers((old) => ({
+                        ...old,
+                        [q.id]: {
+                          options: q.multiple
+                            ? e.target.checked
+                              ? [...(old[q.id]?.options ?? []), option.id]
+                              : (old[q.id]?.options ?? []).filter((id) => id !== option.id)
+                            : [option.id],
+                          text: q.multiple ? old[q.id]?.text ?? '' : '',
+                        },
+                      }))
+                    }
+                  />
+                  <span className="question-option-text">
+                    <span className="question-label">{option.label}</span>
+                    {option.description && (
+                      <span className="question-description">{option.description}</span>
+                    )}
+                  </span>
+                </label>
+              );
+            })}
             {q.allowText && (
               <label className="native-answer-text">
                 {q.options.length
