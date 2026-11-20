@@ -6,7 +6,7 @@ import type { GraphNode, RepoGraph } from '@drishya/contracts';
 import type { HeatCell } from '@drishya/scene';
 import { useApp } from '../state.ts';
 import { mapPalette, useResolvedTheme } from '../lib/theme.ts';
-import { groupMemberPaths, mapActivity, mapDetail, type MapGroup } from '../lib/map-detail.ts';
+import { groupMemberPaths, mapActivity, mapActivityTone, mapDetail, type MapGroup } from '../lib/map-detail.ts';
 import { MAP_REST_ALPHA, QUIET_EDGE_FLOOR, QUIET_NODE_FLOOR, quietEdgePoints, quietFactor, type QuietZone } from '../lib/map-quiet.ts';
 import { placeLabels, placeActivityLabels, type LabelRect, type LabelCandidate } from '../lib/map-labels.ts';
 import { SIDE_PANELS, FILE_READER_SELECTOR } from '../lib/reading-edges.ts';
@@ -324,7 +324,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
         }
       }
       const colours = mapPalette(c);
-      const highlights = activity.map(({node, cell}) => ({ ink: colours.tones[cell.tone], vertices: [{ ...project(node), size: (cell.active ? 7 : 5) * project(node).scale, alpha: .95 }] }));
+      const highlights = activity.map(({node, cell}) => ({ ink: colours.tones[mapActivityTone(cell)], vertices: [{ ...project(node), size: (cell.active ? 7 : 5) * project(node).scale, alpha: .95 }] }));
       renderer.current.draw(nodes, edges, colours.node, size.w, size.h, dpr, highlights);
       return;
     }
@@ -408,7 +408,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     for (const { node, cell } of activity) {
       const p = project(node);
       g.globalAlpha = .95;
-      g.fillStyle = colours.tones[cell.tone];
+      g.fillStyle = colours.tones[mapActivityTone(cell)];
       g.beginPath(); g.arc(p.x, p.y, cell.active ? 3.5 : 2.5, 0, Math.PI * 2); g.fill();
     }
     g.globalAlpha = 1;
@@ -666,7 +666,8 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       })}
       {activityLabels.map(label => {
         const item = activity.find(a => a.node.id === label.id)!;
-        return <button key={label.id} className="map-activity-chip" data-path={label.id} data-tone={item.cell.tone} title={`${item.cell.tone} · ${item.node.path}`} aria-label={`${item.cell.tone} ${item.node.path}`} style={{left:0,top:0,transform:`translate3d(${label.rect.left}px,${label.rect.top}px,0)`,width:label.rect.right-label.rect.left}} onClick={() => set({filePanel:item.node.id,currentFile:undefined})}><FileIcon path={item.node.path}/><span>{label.text}</span></button>;
+        const tone = mapActivityTone(item.cell), caption = tone === 'test' ? 'test activity' : tone;
+        return <button key={label.id} className="map-activity-chip" data-path={label.id} data-tone={tone} title={`${caption} · ${item.node.path}`} aria-label={`${caption} ${item.node.path}`} style={{left:0,top:0,transform:`translate3d(${label.rect.left}px,${label.rect.top}px,0)`,width:label.rect.right-label.rect.left}} onClick={() => set({filePanel:item.node.id,currentFile:undefined})}><FileIcon path={item.node.path}/><span>{label.text}</span></button>;
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} aria-label={`${node.path} · ${node.members.length} grouped files; zoom to reveal`} onPointerEnter={() => revealGroup(node, x, y)} onPointerLeave={() => setTip(current => current?.node.id === node.id ? undefined : current)} onFocus={() => revealGroup(node, x, y)} onBlur={() => setTip(current => current?.node.id === node.id ? undefined : current)} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>

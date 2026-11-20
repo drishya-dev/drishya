@@ -51,3 +51,12 @@ it('selects bounded evidence-backed activity identically regardless of input ord
   expect(mapActivity(graph, [])).toEqual([]);
   expect(mapActivity(graph, [{...cells[0]!,heat:0,active:false}])).toEqual([]);
 });
+
+import * as detailPaint from '../src/lib/map-detail.ts';
+it('does not turn the heat model default test tone into a claimed passing outcome',()=>{
+ expect(detailPaint.mapActivityTone).toBeTypeOf('function');
+ expect(detailPaint.mapActivityTone({tone:'pass'})).toBe('test');
+ expect(detailPaint.mapActivityTone({tone:'fail'})).toBe('fail');
+ expect(detailPaint.mapActivityTone({tone:'read'})).toBe('read');
+ expect(detailPaint.mapActivityTone({tone:'write'})).toBe('write');
+});

@@ -38,6 +38,6 @@ function readPalette(canvas: HTMLCanvasElement) {
   return {
     edge: colour('--graph-edge') || colour('--line'), node: colour('--graph-node') || colour('--line-3'), active: colour('--t1'),
     focus: colour('--focus'), text: colour('--t1'), background: colour('--bg'),
-    tones: { read: colour('--source'), search: colour('--focus'), write: colour('--edited'), fail: colour('--fail'), pass: colour('--pass') },
+    tones: { test: colour('--focus'), read: colour('--source'), search: colour('--focus'), write: colour('--edited'), fail: colour('--fail'), pass: colour('--pass') },
   };
 }

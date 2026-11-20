@@ -95,3 +95,8 @@ export function mapActivity(graph: RepoGraph | undefined, heat: readonly import(
     .sort((a, b) => Number(b.active) - Number(a.active) || b.heat - a.heat || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
     .slice(0, 3).map(cell => ({ node: byId.get(cell.path)!, cell }));
 }
+
+/** Heat's default test 'pass' also includes unreported outcomes. It proves test activity, not a pass. */
+export function mapActivityTone(cell: Pick<import('@drishya/scene').HeatCell, 'tone'>): Exclude<import('@drishya/scene').HeatCell['tone'], 'pass'> | 'test' {
+  return cell.tone === 'pass' ? 'test' : cell.tone;
+}
