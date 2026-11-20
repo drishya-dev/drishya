@@ -9,4 +9,3 @@ it('places long file chips only wholly inside genuine free gutters and outside e
  const [a,b]=placed;expect(a!.rect.left<b!.rect.right&&b!.rect.left<a!.rect.right&&a!.rect.top<b!.rect.bottom&&b!.rect.top<a!.rect.bottom).toBe(false);
  expect(placeActivityLabels(candidates,{width:600,height:900},[{left:0,top:0,right:600,bottom:900}],s=>s.length*7)).toEqual([]);
 });
-

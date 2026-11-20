@@ -131,4 +131,3 @@ try {
   if (resolve(scratch).startsWith(resolve(tmpdir()) + sep)) rmSync(scratch, { recursive: true, force: true });
 }
 process.exit(failed ? 1 : 0);
-

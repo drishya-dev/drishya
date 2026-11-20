@@ -9,7 +9,7 @@ import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 import { HarnessController } from '../../apps/daemon/src/controller.ts';
 
-let dir: string, app: App, server: RunningServer;
+let dir: string, app: App, server: RunningServer, recordingId: string;
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-map-quiet-'));
   const root = join(dir, 'dense-repository'); mkdirSync(root);
@@ -29,7 +29,7 @@ test.beforeAll(async () => {
   writeFileSync(transport, `import {createInterface} from 'node:readline';
 const send=v=>process.stdout.write(JSON.stringify(v)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{const v=JSON.parse(line);if(v.type==='control_request')send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[],commands:[]}}});});`);
-  app = new App(join(dir, 'store')); await app.ingest.importSource('claude-code', journal);
+  app = new App(join(dir, 'store')); recordingId = (await app.ingest.importSource('claude-code', journal)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-map-quiet', controllerFactory: (a, w) => new HarnessController(a, w, { resolveExecutable: () => process.execPath, launch: ((_bin: string, _args: string[], opts: any) => spawn(process.execPath, [transport], opts)) as typeof spawn }) });
 });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe test cleanup'); rmSync(dir, { recursive: true, force: true }); } });
@@ -37,7 +37,8 @@ test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) 
 async function openMap(page: import('@playwright/test').Page, flat = false) {
   if (flat) await page.addInitScript(() => localStorage.setItem('drishya.mapDepth', 'false'));
   await page.goto(server.launchUrl);
-  await page.locator('.mh-session-open').filter({ hasText: 'Quiet zone synthetic session' }).click();
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/#/r/${recordingId}`);
   await expect(page.getByRole('region', { name: 'Harness prompt' })).toBeVisible();
   const rail = page.getByRole('complementary', { name: 'Repository files' });
   if (!await rail.isVisible()) await page.getByRole('button', { name: 'Show files', exact: true }).click();
