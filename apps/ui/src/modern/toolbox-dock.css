@@ -16,6 +16,8 @@
   inset: auto;
   flex: none;
   box-sizing: border-box;
+  display: flex !important;
+  flex-direction: column;
   height: auto;
   min-height: 0;
   max-height: 100%;
@@ -29,6 +31,10 @@
 
 .toolbox-rail > .modern-tool-station {
   pointer-events: auto;
+}
+
+:root[data-ui-version=modern] .catalog-toggle {
+  display: none !important;
 }
 
 :root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .modern-tool-station.toolbox-minimized {
@@ -68,6 +74,7 @@
     bottom: max(96px, calc(var(--composer-gap, 0px) + var(--composer-raised-gap, 0px) + 48px));
   }
   :root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .workbench-station.modern-tool-station {
+    display: flex !important;
     max-width: 100%;
   }
 }
