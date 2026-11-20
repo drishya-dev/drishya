@@ -199,3 +199,33 @@ test('MAP-3 mounts a real filename/type chip in a free gutter and suppresses it 
  await page.setViewportSize({width:600,height:900});
  await expect(chip).toHaveCount(0);
 });
+
+test('MAP-3 preserves static, reduced-motion, visibility and low-resource map guards', async ({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.addInitScript(()=>{localStorage.setItem('drishya.mapDepth','true');localStorage.setItem('drishya.mapOrbit','true');});
+ await openMap(page);const map=page.locator('.map');
+ await expect(map).toHaveAttribute('data-map-depth','spatial-3d');
+ const yaw=()=>map.getAttribute('data-map-yaw');
+ const initial=await yaw();await expect.poll(yaw).not.toBe(initial);
+ const holds=async()=>{await page.waitForTimeout(150);const before=await yaw();await page.waitForTimeout(250);expect(await yaw()).toBe(before);};
+ await page.emulateMedia({reducedMotion:'reduce'});await holds();
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ const reduced=await yaw();await expect.poll(yaw).not.toBe(reduced);
+ // Exercise the visibility event boundary without depending on a headed window manager.
+ await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
+ await holds();
+ await page.evaluate(()=>{delete (document as unknown as Record<string,unknown>).visibilityState;document.dispatchEvent(new Event('visibilitychange'));});
+ const hidden=await yaw();await expect.poll(yaw).not.toBe(hidden);
+ await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+ const settings=page.getByRole('dialog',{name:'Workspace settings'});
+ await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+ await settings.getByRole('checkbox',{name:/Slow background orbit/}).uncheck();
+ await page.keyboard.press('Escape');await holds();
+ await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+ await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+ await settings.getByRole('checkbox',{name:/Low resource mode/}).check();
+ await expect(map).toHaveCount(0);await expect(page.locator('.map-activity-chip')).toHaveCount(0);
+ await settings.getByRole('checkbox',{name:/^Repository map/}).check();
+ await page.keyboard.press('Escape');await expect(map).toHaveAttribute('data-map-depth','flat');
+ await holds();
+});
