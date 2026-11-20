@@ -68,12 +68,16 @@ for (const width of [1440, 600]) {
     await expect(card).toContainText(question);
     await expect(card).toContainText('Zero-downtime');
     await expect(card).toContainText('Lock and copy');
-    // Notice badge telling user to answer in Claude Code
+    // Notice badge and clear banner telling user to answer in Claude Code terminal
+    await expect(card.locator('.question-terminal-banner')).toContainText('This question is waiting in your Claude Code terminal. Answer it there.');
     await expect(card.locator('.question-answer-elsewhere-badge')).toHaveText('Answer in Claude Code');
     await expect(card.locator('.question-state')).toContainText('Waiting for your answer in Claude Code');
     // Options MUST NOT look clickable (no radio/checkbox marks)
     await expect(card.locator('.question-mark')).toHaveCount(0);
     await expect(card.locator('input')).toHaveCount(0);
+
+    // Composer tells user how to answer questions from Drishya
+    await expect(page.locator('.composer-terminal-notice')).toContainText('This question is waiting in your Claude Code terminal. To answer agent questions directly here in Drishya, send your prompts from this composer.');
 
     await page.screenshot({ path: resolve(`.local/question-card-readonly-${width}.png`) });
   });

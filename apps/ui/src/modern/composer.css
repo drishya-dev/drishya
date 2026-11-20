@@ -9,6 +9,14 @@
 :root[data-ui-version=modern] .modern-native-composer .composer-setup label { display:inline-flex; align-items:center; gap:6px; color:var(--t3); font-size:var(--text-2xs); }
 :root[data-ui-version=modern] .modern-native-composer .composer-setup .cli-setup { flex:1 1 100%; }
 
+.composer-terminal-notice {
+  display:flex; align-items:center; gap:8px; padding:6px 12px; margin:4px 10px 4px;
+  border-radius:var(--round-md); background:color-mix(in srgb,var(--focus, #4d90fe) 9%,var(--s2));
+  border:1px solid color-mix(in srgb,var(--focus, #4d90fe) 24%,var(--line)); color:var(--t2);
+  font:var(--text-2xs)/1.45 var(--sans);
+}
+.composer-terminal-notice svg { flex-shrink:0; color:var(--focus, #4d90fe); }
+
 /* Attachments: images are square thumbnails in one strip above the text; the strip scrolls sideways when there are many. */
 :root[data-ui-version=modern] .modern-native-composer .prompt-attachments {
   display:flex; flex-wrap:nowrap; align-items:center; gap:8px; max-height:none; margin:0; padding:10px 15px 2px; overflow-x:auto; overflow-y:hidden; scrollbar-width:thin;

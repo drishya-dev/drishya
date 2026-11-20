@@ -249,6 +249,13 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
   if (waiting && !matchingRequest) {
     return (
       <div className="question-card question-card-readonly" role="group" aria-label="Question to you">
+        <div className="question-terminal-banner" role="status">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="2" y="3" width="12" height="10" rx="2" />
+            <path d="m5 7 2 1.5-2 1.5M9 10h2" />
+          </svg>
+          <span>This question is waiting in your {harnessLabel} terminal. Answer it there.</span>
+        </div>
         {questions.map((item, index) => (
           <section key={`${item.id ?? item.question}/${index}`} className="question">
             {item.header && <small className="question-header">{item.header}{item.multiSelect ? ' · choose any' : ''}</small>}

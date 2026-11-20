@@ -70,6 +70,7 @@ import { ImportContext } from './ImportContext.tsx';
 import { useNarrowWorkspace } from '../lib/responsive-workspace.ts';
 import { sendWaitReason } from '../lib/send-wait.ts';
 import { openChanges } from '../lib/open-changes.ts';
+import { isQuestionTool } from '../lib/ask-question.ts';
 
 interface Connection {
   submitting?: boolean; submit: (prompt: string, exclusive: boolean, attachments?: PromptAttachment[], options?: TurnOptions) => Promise<void>;
@@ -678,10 +679,15 @@ export function PromptComposer() {
   const id = useApp(s => s.recordingId);
   const recording = useApp(s => s.recording);
   const connection = useApp(s => s.connection);
+  const projection = useApp(s => s.projection);
   const { workspace, controller, submitting, error: connectionError, approve, refresh, submit, inspect, acknowledged, acknowledge } = useSessionWorkspace();
   // 'auto' collapses an idle composer to its pill so it never covers the newest work; the person's own open/close choice always wins.
   const [choice,setChoice]=useWorkspaceState<'auto'|'open'|'closed'>('composer/choice','auto');
   const now = useNowText();
+  const liveNow = now && ['running', 'asking', 'working'].includes(now.tone) ? now : undefined;
+  const harnessName = recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness';
+  const hasOpenQuestion = (liveNow?.tone === 'asking') || (projection?.operations.some(op => op.status === 'running' && isQuestionTool(op.tool)) ?? false);
+  const isTerminalQuestionWaiting = hasOpenQuestion && (!controller?.runId || !controller?.inputRequests?.length);
   useEffect(()=>{if(controller?.inputRequests?.length)setChoice('open');},[controller?.inputRequests?.[0]?.id]);
   const [options, setOptions] = useState<TurnOptions>({});
   useEffect(() => { setOptions({}); }, [id]);
@@ -716,7 +722,7 @@ export function PromptComposer() {
   const [confirmSend, setConfirmSend] = useState(false);
   const [attachments, setAttachments] = useState<PromptAttachment[]>([]);
   // Idle means nothing to send and nothing asking for the person; any request, run, failure or draft opens it.
-  const needsAttention = !!controller?.inputRequests?.length || ['connecting', 'running', 'approval', 'failed'].includes(controller?.state ?? '') || !!error || !!controller?.error;
+  const needsAttention = !!controller?.inputRequests?.length || isTerminalQuestionWaiting || ['connecting', 'running', 'approval', 'failed'].includes(controller?.state ?? '') || !!error || !!controller?.error;
   const collapsed = choice === 'closed' || (choice === 'auto' && !prompt.trim() && !attachments.length && !needsAttention);
   const prepareCollapse = useSurfaceReflow(element, collapsed, id);
   const attachmentRef = useRef(attachments); attachmentRef.current = attachments;
@@ -868,7 +874,6 @@ export function PromptComposer() {
   const quietStatus = statusLabel === 'Ready' || statusLabel === 'Workspace access required';
   // UI-28: a person reads the composer's status only when something is happening or wrong. 'Ready', 'Checking…' and the setup states say
   // nothing here (setup has its own row), and the line "replied 3 m ago" / "live" is not shown: only open work or a question to the person.
-  const liveNow = now && ['running', 'asking', 'working'].includes(now.tone) ? now : undefined;
   const calm = quietStatus || statusLabel === 'Checking…' || statusLabel === 'CLI unavailable';
   const stateText = quietStatus && liveNow ? liveNow.text : calm ? '' : statusLabel;
   const act = async (fn: () => Promise<unknown>) => {
@@ -884,7 +889,6 @@ export function PromptComposer() {
   const modelId = options.model ?? (reported && (settingsModels.some(model => model.id === reported) || !nativeDefault) ? reported : nativeDefault?.id);
   const modelEfforts = settingsModels.find(model => model.id === modelId)?.efforts ?? [];
   const modelLabel = settingsModels.find(model => model.id === modelId)?.name ?? modelId ?? 'Default model';
-  const harnessName = recording?.harness === 'codex' ? 'Codex' : 'Claude Code';
   const permissions = controller?.settings?.permissions ?? [];
   const currentPermission = nativeCurrentPermission(recording?.harness, controller?.settings?.sandbox);
   const permissionId = options.permission ?? currentPermission;
@@ -905,7 +909,7 @@ export function PromptComposer() {
   if (recording?.harness === 'antigravity') return <div className="prompt-composer open composer-readonly" role="status">Read-only: Antigravity cannot be steered from Drishya</div>;
   if (workspace && !workspace.root) return <section ref={element} className="prompt-composer open composer-readonly" aria-label="Harness prompt"><div><strong>{recording?.harness === 'codex' ? 'Codex' : 'Claude Code'} recording</strong><span>Read-only here · no workspace path was recorded.</span></div><button className="btn ghost" onClick={() => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); }}>Choose session</button></section>;
   return <section ref={element} className={`prompt-composer open${modern ? ' modern-native-composer' : ''}${modern && collapsed?' composer-minimized':''}`} aria-label="Harness prompt" aria-keyshortcuts="Control+Shift+Enter Meta+Shift+Enter">
-    {modern && <button type="button" className="composer-minimize" data-now={collapsed&&liveNow?liveNow.tone:undefined} title={collapsed&&liveNow?liveNow.basis:statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setChoice(collapsed?'open':'closed');if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':liveNow?liveNow.text:'Ask your agent…':'⌄'}</span></button>}
+    {modern && <button type="button" className="composer-minimize" data-now={collapsed&&liveNow?liveNow.tone:undefined} title={collapsed&&liveNow?liveNow.basis:statusLabel} aria-label={collapsed?'Expand prompt':'Minimize prompt'} aria-expanded={!collapsed} onClick={()=>{prepareCollapse();setChoice(collapsed?'open':'closed');if(collapsed)requestAnimationFrame(()=>input.current?.focus({preventScroll:true}));}}><span data-surface-label={collapsed?'':undefined}>{collapsed?isTerminalQuestionWaiting?'Answer waiting in terminal':controller?.inputRequests?.length?'Answer waiting':controller?.state==='approval'?'Approval waiting':unavailable?'Connection unavailable':error||controller?.error||controller?.state==='failed'?'Needs attention':running?'Agent working…':controller&&!controller.available?'CLI unavailable':liveNow?liveNow.text:'Ask your agent…':'⌄'}</span></button>}
     {modern && collapsed && running && <button type="button" className="composer-mini-stop" aria-label="Stop turn" title="Stop this turn" disabled={busy} onClick={() => void act(() => workspaceApi.stop(id, controller.runId!))}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1" /></svg></button>}
     {modern ? <div className="modern-composer-top"><div className="modern-composer-target"><span className="modern-composer-identity" title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z" /></svg></span><span className="modern-composer-location" title={workspace?.root}><span>{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Checking workspace…'}</span></span></div>{stateText&&<span role="status" className="modern-composer-state" data-now={quietStatus&&liveNow?liveNow.tone:undefined} title={quietStatus&&liveNow?liveNow.basis:statusLabel}>{stateText}</span>}</div> : <>
     <div className="composer-target"><span title={`${workspace?.root ?? 'Workspace unavailable'}\nRecording: ${id}`}><strong>{recording?.harness === 'codex' ? 'Codex' : recording?.harness === 'claude-code' ? 'Claude Code' : recording?.harness ?? 'Native harness'}</strong><span className="composer-workspace">{workspace?.root?.replace(/\\/g, '/').split('/').at(-1) ?? 'Selected session'}</span><code>{id.slice(-8)}</code></span><small role="status">{statusLabel}</small></div></>}
@@ -915,8 +919,17 @@ export function PromptComposer() {
       <input hidden ref={fileInput} type="file" multiple aria-label="Choose prompt files" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <input hidden ref={folderInput} type="file" multiple {...{ webkitdirectory: '' }} aria-label="Choose prompt folder" onChange={e => { void attach([...e.currentTarget.files ?? []]); e.currentTarget.value = ''; }} />
       <form onDragOver={e => { if (e.dataTransfer.types.includes('Files')) e.preventDefault(); }} onDrop={e => { if (e.dataTransfer.files.length) { e.preventDefault(); void attach([...e.dataTransfer.files]); } }} onSubmit={e => { e.preventDefault(); if (running || cannotSend) return; if (!exclusive) { setConfirmSend(true); return; } setConfirmSend(false); void act(async () => { await submit(prompt, exclusive, attachments, options); setPrompt(''); attachmentRef.current = []; setAttachments([]); setPreview(undefined); rejectedFiles.current = []; setCanRetryFiles(false); setConfirmSend(false); }); }}>
+        {isTerminalQuestionWaiting && (
+          <div className="composer-terminal-notice" role="note">
+            <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="8" cy="8" r="6" />
+              <path d="M8 7v4M8 5v.01" />
+            </svg>
+            <span>This question is waiting in your {harnessName} terminal. To answer agent questions directly here in Drishya, send your prompts from this composer.</span>
+          </div>
+        )}
         {!!attachments.length && <div className="prompt-attachments" aria-label="Prompt attachments">{attachments.map((a, index) => <span className="attachment-chip" key={`${index}/${a.name}`} title={a.name}>{a.type === 'image' && <img alt={`Preview ${a.name}`} src={`data:${a.mime};base64,${a.data}`} />}<button type="button" className="attachment-preview" onClick={() => setPreview(a)} aria-label={`Preview attachment ${a.name}`}>{a.name}</button><button type="button" disabled={!!running || busy || loadingFiles} aria-label={`Remove attachment ${a.name}`} onClick={() => { attachmentRef.current = attachmentRef.current.filter((_, i) => i !== index); setAttachments(attachmentRef.current); if (preview === a) setPreview(undefined); setConfirmSend(false); }}>×</button></span>)}</div>}
-        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setConfirmSend(false); }} />
+        <textarea ref={input} aria-label="Prompt for selected harness session" placeholder={isTerminalQuestionWaiting ? `Answer the current question in your ${harnessName} terminal, or draft your next prompt…` : running ? 'Draft your next prompt…' : document.documentElement.dataset.uiVersion === 'modern' ? 'Ask your agent to build, investigate, or continue…' : 'Ask your agent…'} rows={1} aria-invalid={overLimit || undefined} aria-describedby="prompt-size-status" onPaste={e => { const files = pastedFiles(e.clipboardData); if (files.length) { e.preventDefault(); void attach(files); } }} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); e.currentTarget.form?.requestSubmit(); } }} value={prompt} maxLength={65_536} disabled={busy} onChange={e => { setPrompt(e.target.value); setConfirmSend(false); }} />
       <small id="prompt-size-status" className={sizeNote.over ? 'bad' : sizeNote.quiet ? 'sr-only' : 'muted'} role={sizeNote.over ? 'alert' : undefined}>{sizeNote.text}</small>
         <div className="composer-actions">{modern ? <div className="modern-composer-input-tools">
           <ComposerMenu label="Attach" className="composer-attach" disabled={!!running || busy || loadingFiles} title="Attach images, files or a folder" trigger={<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>} items={[
