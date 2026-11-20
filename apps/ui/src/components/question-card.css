@@ -26,7 +26,7 @@
   overflow: visible !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
-  padding: 16px 20px !important;
+  padding: 20px !important;
 }
 
 .question-card {display:flex;flex-direction:column;gap:12px;padding:0;min-width:0;}
