@@ -370,13 +370,26 @@ test('UI-34: Jet Black resolves azure accent, hover, pressed and focus contrast 
 
 for(const width of [600,1440])test(`UI-40 Home and Git graph paint at ${width}px on every palette`,async({page})=>{
  await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
- const w=await freshWorkspace();await openSession(page,w);await page.setViewportSize({width,height:900});
+ const w=await freshWorkspace();
+ const git=(...args:string[])=>execFileSync('git',args,{cwd:w.root,windowsHide:true,encoding:'utf8'}).trim();
+ const main=git('branch','--show-current');
+ git('add','.');git('commit','-m','Adjust fixture value');
+ git('checkout','-b','feature/palette');writeFileSync(join(w.root,'feature.ts'),'export const feature = true;\n');git('add','.');git('commit','-m','Palette feature');
+ git('checkout',main);writeFileSync(join(w.root,'main.ts'),'export const main = true;\n');git('add','.');git('commit','-m','Main work');git('merge','--no-ff','feature/palette','-m','Merge palette feature');
+ await openSession(page,w);await page.setViewportSize({width,height:900});
  await page.goto(w.server.launchUrl);await expect(page.locator('.home')).toBeVisible();
  const found:string[]=[];await everyPalette(page,'Home',found,'.home');
  await page.goto(`${w.server.url}/?experience=modern&motion=0#/r/${w.id}`);await expect(page.locator('.viewer')).toBeVisible();
  await openGitDestination(page);const graph=page.getByRole('dialog',{name:'Git graph',exact:true});
  const approve=graph.getByRole('button',{name:'Approve read-only Git',exact:true});await expect(approve.or(graph.locator('.thread-graph'))).toBeVisible();if(await approve.isVisible())await approve.click();
- await expect(graph.locator('.thread-commit')).toHaveCount(1);
+ await expect(graph.locator('.thread-commit')).toHaveCount(5);
  await everyPalette(page,'Git graph',found,'[role="dialog"]');
+ for(const palette of ['neutral','chalk','slate','aubergine']){
+  await page.evaluate(v=>{document.documentElement.dataset.palette=v;document.documentElement.dataset.theme=v==='chalk'?'light':'dark';},palette);await settled(page);
+  const actual=await graph.locator('.atlas-eyebrow').first().evaluate(el=>getComputedStyle(el).color);
+  const expected=await page.evaluate(()=>{const probe=document.createElement('i');probe.style.color='var(--focus)';document.body.append(probe);const ink=getComputedStyle(probe).color;probe.remove();return ink;});
+  expect(actual,`${palette}: Git controls use the palette accent rather than read-evidence ink`).toBe(expected);
+ }
+
  expect(found).toEqual([]);
 });

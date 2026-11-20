@@ -37,3 +37,11 @@ The resumed private survey corrected two verifier mistakes: it clears scratch re
 ### Genuine-session survey result
 
 Scratch imports: Claude `rec_50c3031b`, 7,879,647 bytes / 278 operations / 10 captured files; Codex `rec_674a4957`, 4,624,942 bytes / 657 operations / 20 files. At 600 and 1440 px, seven palettes across the available required surfaces yielded **182 painted-screen measurements, zero text-contrast failures**. Home, History, Settings, navigation dialog and Changes were checked in both harness contexts at both widths. Files was checked at 600; both 1440 Files journeys were unavailable and remain open. Git showed 50 commits for Codex at 1440; the other selected Git views were empty. A follow-up repository-backed survey is covering those gaps. Private screenshots and detailed count-only JSON stay in `.local/ui-40/`.
+
+### Final focused corrections (20 November)
+
+A new actual-paint assertion reproduced neutral Git controls borrowing read-evidence blue instead of the palette accent. The shared interactive-chrome selectors now cover candidate palettes, preserving Paper's existing special handling. A five-commit synthetic fork/merge scene replaces the one-commit graph comparison. The gallery was regenerated from the passing journeys.
+
+Exact Paper/Midnight colour expectations in three older specs were updated to their planned new values, without weakening contrast or geometry assertions. Fresh monorepo typecheck, all five palette/paint/preference units, and **23 focused browser tests passed with one worker**, including all palette paint, keyboard/preview/persistence/geometry cases and the three corrected older journeys. The control-accent test was watched fail before the fix.
+
+Frozen combined gate (before the final targeted corrections): typecheck/build/package passed; security 700 passed / 5 skipped; parallel browser 959 passed / 27 skipped / 8 failed at 3 workers; serial 66 passed / 1 skipped at 1 worker. Three parallel failures were the corrected colour expectations; the remaining five and seven full-unit failures still need clean-main controls. This is not a green full gate, and later deltas are verified by targeted checks rather than attributed to the frozen run.
