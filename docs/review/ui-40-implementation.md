@@ -27,3 +27,9 @@ Regenerate synthetic frames with `DRISHYA_PALETTE_FRAMES=1` and the targeted `pa
 ## Approval
 
 Yash's actual decision: **not received**. Keep the issue acceptance line open and this PR in draft. Next action is review of the four candidates on the actual-product frames and the completed real-session evidence; record his explicit selection before merging.
+
+## 20 November continuation
+
+Author review confirms that candidate CSS remains token-owned, theme IDs are parsed through the existing preference path, and Appearance changes do not alter Settings category/mount ownership. Synthetic review materials contain only the allowlisted fixture frames. Independent review was requested from CODEOWNERS maintainer `yashdoke7` on draft PR #559. Yash's palette decision is still absent.
+
+The resumed private survey corrected two verifier mistakes: it clears scratch reading-state recovery between surfaces, and waits only for running finite animations with a bounded settle (a paused animation's completion promise must not hold the verifier forever). No product behavior was changed for these verifier issues. The first chosen real Claude session has no Git commits; populated genuine Git acceptance remains open until checked on a repository-backed recording.
