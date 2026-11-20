@@ -88,6 +88,26 @@
 :root[data-ui-version=modern] .connected-workspace .history .op[data-diff] { flex: 0 1 min(var(--reading-width,440px),100%); max-width: 100%; }
 /* Wide patches begin their own row without changing source type or reading motion. */
 :root[data-ui-version=modern] .connected-workspace .history .op.op-edit.shape-wide { flex: 0 0 100%; }
+/* Expanded operation cards: clean bounded measure, unified scrolling without nested scroll traps */
+:root[data-ui-version=modern] .connected-workspace .history .op.expanded {
+  flex: 1 1 100%;
+  max-width: min(100%, 780px);
+  margin-inline: auto;
+}
+:root[data-ui-version=modern] .history .op.expanded .op-expanded {
+  max-height: min(65vh, 650px);
+  overflow: auto;
+  scrollbar-width: thin;
+  padding: 12px 14px 16px;
+  border-top: 1px solid var(--line);
+}
+:root[data-ui-version=modern] .history .op.expanded .diff-scroll {
+  max-height: none !important;
+  overflow: visible !important;
+}
+:root[data-ui-version=modern] .history .op.expanded .material-context {
+  margin: 6px 0 10px;
+}
 /* Added/removed counts sit beside the title, in the mono face used by the code. */
 .op-stat { flex: none; display: inline-flex; gap: 7px; margin: 0 4px 0 auto; font: var(--weight-medium) var(--text-2xs)/1 var(--mono); letter-spacing: 0; }
 .op-stat .add { color: var(--pass); font-weight: var(--weight-medium); }
