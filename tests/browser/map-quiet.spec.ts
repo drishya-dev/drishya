@@ -183,11 +183,18 @@ test('MAP-3 mounts a real filename/type chip in a free gutter and suppresses it 
  const chip=page.locator('.map-activity-chip[data-path="client/src/file3.ts"]');
  await expect(chip).toBeVisible();await expect(chip.locator('.file-format')).toHaveCount(1);
  await expect(chip).toHaveAttribute('data-tone','read');
+ const accessibleChip=page.getByRole('button',{name:'read client/src/file3.ts',exact:true});
+ await expect(accessibleChip).toBeVisible();
  await page.getByLabel('More workspace options',{exact:true}).click();
  await expect(chip).toBeHidden();
  await page.keyboard.press('Escape');
  await expect(chip).toBeVisible();
  expect(await chip.locator('span').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+
+ await accessibleChip.focus();await expect(accessibleChip).toBeFocused();
+ await accessibleChip.press('Enter');
+ await expect(page.locator('.file-workspace')).toBeVisible();
+ await page.keyboard.press('Escape');await expect(chip).toBeVisible();
 
  await page.setViewportSize({width:600,height:900});
  await expect(chip).toHaveCount(0);

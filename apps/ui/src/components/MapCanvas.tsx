@@ -601,7 +601,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       }}
       onPointerLeave={() => explore && (setTip(undefined), set({ hoveredPath: undefined }))}
       onPointerCancel={() => { drag.current = undefined; holdOrientation(); }}
-      aria-hidden={!explore}
+      aria-hidden={!explore && activityLabels.length === 0}
     >
       <canvas ref={canvas} style={{ width: size.w, height: size.h, display: spatialActive ? 'none' : 'block' }} />
       <canvas ref={spatialCanvas} data-spatial-renderer="webgl" style={{ width: size.w, height: size.h, display: spatialActive ? 'block' : 'none' }} />
