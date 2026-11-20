@@ -139,19 +139,21 @@
 .source-snapshot {flex:1;min-height:0;overflow:auto;font:var(--text-xs)/1.7 var(--mono);}
 @media(max-width:700px) {.source-snapshot-pair {grid-template-columns:1fr;grid-template-rows:1fr 1fr;}}
 
-.native-questions {margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px;min-width:0;}
+.native-turn-details:has(.native-questions) {padding:8px 14px 10px;border:1px solid var(--line-2);}
+.native-questions {margin:6px 0 0;border-top:1px solid var(--line);padding-top:6px;min-width:0;}
 .native-questions>header,.native-questions>footer {display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;}
 .native-questions>header strong {color:var(--t1);font:var(--weight-medium) var(--text-xs)/1.5 var(--sans);}
 .native-questions>header span {color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);}
 .native-question-list {max-height:min(340px,36dvh);overflow:auto;}
-.native-question-list fieldset {border:0;margin:0;padding:10px 0;min-width:0;}
+.native-question-list fieldset {border:0;margin:0;padding:6px 0;min-width:0;}
 .native-question-list legend {padding:0;color:var(--t1);font:var(--weight-medium) var(--text-xs)/1.6 var(--sans);overflow-wrap:anywhere;}
-.native-answer-option {display:flex;align-items:flex-start;gap:9px;padding:8px;border-radius:var(--round-md);color:var(--t1);font:var(--text-xs)/1.5 var(--sans);cursor:pointer;}
+.native-answer-option {display:flex;align-items:flex-start;gap:8px;padding:6px 8px;border-radius:var(--round-md);color:var(--t1);font:var(--text-xs)/1.5 var(--sans);cursor:pointer;}
 .native-answer-option:has(input:checked) {background:var(--s3);}
 .native-answer-option input {margin:3px 0 0;accent-color:var(--focus);flex:none;}
 .native-answer-option span {min-width:0;overflow-wrap:anywhere;}.native-answer-option small {display:block;color:var(--t3);font:var(--text-2xs)/1.5 var(--sans);margin-top:2px;}
-.native-answer-text {display:block;margin:6px 0;color:var(--t3);font:var(--text-2xs)/1.6 var(--sans);}
-:root[data-experience=classic] .prompt-composer .native-questions textarea {width:100%;min-height:56px;height:56px;max-height:120px;padding:8px;margin-top:4px;border:1px solid var(--line-2);border-radius:var(--round-md);background:var(--bg);color:var(--t1);font:var(--text-xs)/1.6 var(--sans);resize:vertical;}
+.native-answer-text {display:block;margin:4px 0;color:var(--t3);font:var(--text-2xs)/1.6 var(--sans);}
+.native-questions textarea {width:100%;box-sizing:border-box;min-height:44px;height:44px;max-height:120px;padding:6px 8px;margin-top:4px;border:1px solid var(--line-2);border-radius:var(--round-sm);background:var(--bg);color:var(--t1);font:var(--text-xs)/1.5 var(--sans);resize:vertical;}
+.native-questions textarea:focus {outline:none;border-color:var(--focus);}
 @media(hover:hover) {.native-answer-option:hover {background:var(--s2);}}
 
 @media(max-width:700px) {.native-turn-details:has(.native-questions) {bottom:calc(100% + 54px);max-height:min(48dvh,max(100px,calc(100dvh - var(--composer-gap,180px) - 180px)));}}

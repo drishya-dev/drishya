@@ -99,6 +99,7 @@ export function NativeQuestions({
                   rows={2}
                   maxLength={4000}
                   aria-label={`Answer: ${q.question}`}
+                  placeholder="Type your answer…"
                   value={answers[q.id]?.text ?? ''}
                   onChange={(e) =>
                     setAnswers((old) => ({
