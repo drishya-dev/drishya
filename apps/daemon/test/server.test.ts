@@ -69,6 +69,10 @@ it('bounds and validates paged history requests before reduction', async () => {
   const usage = await call('/v1/storage', { headers: auth() });
   expect(usage.body.bytes).toBeGreaterThan(0);
   expect(usage.body.automaticDeletion).toBe(false);
+  const details = await call('/v1/storage?details=1', { headers: auth() });
+  expect(details.body.sessions.find((r: { id: string }) => r.id === recId).rowBytes).toBeGreaterThan(0);
+  expect(details.body.complete).toBe(true);
+  expect((await call('/v1/storage?details=invalid', { headers: auth() })).status).toBe(400);
 }, WORKER_COLD_START);
 
 it('validates and authenticates captured command queries before worker reduction',async()=>{
