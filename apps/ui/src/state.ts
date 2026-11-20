@@ -1,3 +1,5 @@
+import {parseThemePreference, type ThemePreference} from './lib/theme-preference.ts';
+export type {ThemePreference} from './lib/theme-preference.ts';
 import {setCheckoutContext, wholeHistoryArrived} from './api.ts';
 import { probeStage } from './lib/live-probe.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
@@ -383,16 +385,10 @@ export function setMapVisible(on: boolean) {
   }
 }
 
-/** Jet (stored as 'dark') is the signature default: matte black and champagne gold. Midnight is the cooler option. */
-export type ThemePreference = 'midnight' | 'dark' | 'light' | 'system';
-
-/** Release 1 ships Jet Black ('dark'), Daylight ('light') and Midnight. Retired presets fall back to Jet Black, or Daylight for the light one (Royal).
- *  The map lives inside the function: the store above calls it while this module is still initialising, before a module-level constant exists. */
+/** Preserve saved IDs and the Jet Black default; new palettes remain review candidates. */
 function storedTheme(): ThemePreference {
   try {
-    const retired: Record<string, ThemePreference> = { mocha: 'dark', nord: 'dark', gruvbox: 'dark', tokyo: 'light' };
-    const value = localStorage.getItem('drishya.theme');
-    return ['midnight','light','system'].includes(value ?? '') ? value as ThemePreference : retired[value ?? ''] ?? 'dark';
+    return parseThemePreference(localStorage.getItem('drishya.theme'));
   } catch {
     return 'dark';
   }

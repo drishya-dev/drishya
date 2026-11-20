@@ -22,7 +22,7 @@
 :root[data-ui-version=modern][data-experience=classic][data-palette] .tk-fn {color:var(--syntax-function);}
 :root[data-ui-version=modern][data-experience=classic][data-palette] .tk-property {color:var(--syntax-property);}
 :root[data-ui-version=modern][data-experience=classic][data-palette] .tk-num {color:var(--syntax-number);}
-:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-com {color:var(--text-muted);}
+:root[data-ui-version=modern][data-experience=classic][data-palette] .tk-com {color:var(--syntax-comment);}
 :root[data-ui-version=modern] ::selection {background:color-mix(in srgb,var(--focus) 25%,var(--s1));color:var(--t1);}
 :root[data-ui-version=modern] .theme-options {grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;}
 /* Preview the actual canvas, two raised materials and the accent in every card. */
@@ -62,3 +62,6 @@
 :root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .commit-row[aria-pressed=true] { box-shadow:inset 2px 0 var(--focus); }
 :root[data-ui-version=modern][data-experience=classic][data-palette=jet] .history article.op[data-search-hit],
 :root[data-ui-version=modern][data-experience=classic][data-palette=midnight] .history article.op[data-search-hit] { box-shadow:0 0 0 1px var(--focus); }
+
+/* UI-40: previews inherit the very same palette declarations as the product root. */
+:root[data-ui-version=modern] .theme-option { --swatch-bg:var(--bg); --swatch-node:var(--s1); --swatch-raised:var(--s2); --swatch-accent:var(--focus); --swatch-border:var(--line-3); }
