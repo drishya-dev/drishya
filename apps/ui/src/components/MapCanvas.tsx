@@ -460,7 +460,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
   useLayoutEffect(() => {
     const map = wrap.current, viewer = map?.closest('.viewer');
     if (!map || !viewer || explore) { setActivityObstacles(undefined); return; }
-    const selector = `${SIDE_PANELS}, ${FILE_READER_SELECTOR}, .history-transport, .modern-replay-transport, .catalog-toggle, .history-inner, .prompt-rail, .workspace-header, .workspace-bar, .workspace-navigation, .workbench-station, .modern-toolbox, .folder-explorer, .prompt-composer, .map-reader, .reading-window, [role="dialog"], .follow-pill`;
+    const selector = `${SIDE_PANELS}, ${FILE_READER_SELECTOR}, .history-transport, .modern-replay-transport, .catalog-toggle, .history-inner, .prompt-rail, .workspace-header, .workspace-bar, .workspace-navigation, .workbench-station, .modern-toolbox, .folder-explorer, .prompt-composer, .map-reader, .reading-window, [role="dialog"], [role="menu"], [popover]:popover-open, details[open] > :not(summary), .search, .follow-pill`;
     const watched = new Set<Element>();
     const resize = new ResizeObserver(() => measure());
     const measure = () => {
@@ -481,9 +481,10 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
     const observer = new MutationObserver(records => {
       if (records.some(r => !map.contains(r.target))) measure();
     });
-    measure(); observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden']});
+    measure(); observer.observe(document.body, {childList:true,subtree:true,attributes:true,attributeFilter:['style','class','hidden','open']});
     window.addEventListener('scroll', measure, true);
-    return () => {resize.disconnect();observer.disconnect();window.removeEventListener('scroll', measure, true);};
+    document.addEventListener('toggle', measure, true);
+    return () => {resize.disconnect();observer.disconnect();window.removeEventListener('scroll', measure, true);document.removeEventListener('toggle', measure, true);};
   }, [explore, size.w, size.h, readingRect]);
   const activityLabels = useMemo(() => {
     if (explore || !activityObstacles) return [];
@@ -665,7 +666,7 @@ export function MapCanvas({ graph, heat, passagePaths = [], readingRect }: { gra
       })}
       {activityLabels.map(label => {
         const item = activity.find(a => a.node.id === label.id)!;
-        return <button key={label.id} className="map-activity-chip" data-path={label.id} data-tone={item.cell.tone} title={`${item.cell.tone} · ${item.node.path}`} aria-label={`${item.cell.tone} ${item.node.path}`} style={{left:label.rect.left,top:label.rect.top,width:label.rect.right-label.rect.left}} onClick={() => set({filePanel:item.node.id,currentFile:undefined})}><FileIcon path={item.node.path}/><span>{label.text}</span></button>;
+        return <button key={label.id} className="map-activity-chip" data-path={label.id} data-tone={item.cell.tone} title={`${item.cell.tone} · ${item.node.path}`} aria-label={`${item.cell.tone} ${item.node.path}`} style={{left:0,top:0,transform:`translate3d(${label.rect.left}px,${label.rect.top}px,0)`,width:label.rect.right-label.rect.left}} onClick={() => set({filePanel:item.node.id,currentFile:undefined})}><FileIcon path={item.node.path}/><span>{label.text}</span></button>;
       })}
       {labels.map(({ node, x, y }) => node.members
         ? <button className="map-group" key={node.id} style={{ left: x + 12, top: y - 9, opacity: node.opacity ?? 1 }} aria-label={`${node.path} · ${node.members.length} grouped files; zoom to reveal`} onPointerEnter={() => revealGroup(node, x, y)} onPointerLeave={() => setTip(current => current?.node.id === node.id ? undefined : current)} onFocus={() => revealGroup(node, x, y)} onBlur={() => setTip(current => current?.node.id === node.id ? undefined : current)} onClick={() => zoomGroup(node)}><small>{node.path}</small><strong>{node.members.length}</strong></button>

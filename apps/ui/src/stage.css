@@ -662,3 +662,6 @@
 .map-activity-chip[data-tone=fail] { color:var(--fail); }
 .map-activity-chip:hover { background:var(--s2); }
 .map-activity-chip:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+
+/* An open menu or popover owns the foreground, including its finite entrance. */
+body:has(.workspace-menu[open], .prompt-menu[open], [popover]:popover-open, [role="menu"]:not([popover]):not([hidden])) .map-activity-chip { visibility:hidden; }

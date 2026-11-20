@@ -59,8 +59,8 @@ export function placeLabels(candidates: readonly LabelCandidate[], map: { width:
 export function placeActivityLabels(candidates: readonly LabelCandidate[], map: { width: number; height: number }, obstacles: readonly LabelRect[], measure: (text: string) => number): PlacedLabel[] {
   const placed: PlacedLabel[] = [];
   for (const candidate of candidates) {
-    // Include the existing 16 px file icon and its 6 px gap in the measured box.
-    const box = labelRect(candidate, text => measure(text) + 22);
+    // Include the 16 px icon, 6 px gap and two 1 px borders in the measured box.
+    const box = labelRect(candidate, text => measure(text) + 24);
     const width = box.right - box.left, height = box.bottom - box.top;
     const positions = [
       { left: candidate.x + 8, top: candidate.y - 9 },

@@ -27,3 +27,7 @@ UI-40 follows on its own branch and PR. Final palette selection remains awaiting
 ### 20 November focused rerun
 
 The first-map-test timeout occurred in Home's dynamically refreshed session entry, before entering the map. The map fixture now retains its imported recording ID and opens that known route after authenticated Home boot. No overlap, geometry or interaction assertion changed. Fresh rebuild plus `map-quiet`, `map-fit`, `workspace-map-limit`: **9 passed, 1 worker**. Six map unit files remain **30 passed**. Diff whitespace was normalized. Full batch validation follows on a separate local verification branch with UI-40; PR #555 stays focused. Independent maintainer review requested from `yashdoke7`.
+
+### Foreground and filename regression fixes
+
+A visible-chip test reproduced an open-menu protection gap, then reproduced a two-pixel short-filename clip after the menu fix. Both are fixed: menus/popovers join occlusion handling, foreground menus suppress chips, borders are included in measurement. Position changes use compositor transforms rather than left/top movement. Fresh typecheck, 30 map units and 9 map browser checks passed (one worker). These changes follow the frozen full-gate head and are covered by their targeted rerun, not claimed as part of its earlier results.
