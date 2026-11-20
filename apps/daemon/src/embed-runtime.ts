@@ -1,7 +1,8 @@
 import {spawn, execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {randomBytes} from 'node:crypto';
-import {mkdir, lstat, open, readFile, rename, rm, chmod} from 'node:fs/promises';
+import {mkdir, lstat, open, readFile, readdir, rename, rm, chmod} from 'node:fs/promises';
+import {rmSync} from 'node:fs';
 import {Socket} from 'node:net';
 import {dirname, join} from 'node:path';
 import type {Readable} from 'node:stream';
@@ -124,6 +125,32 @@ async function restrictWindowsDirectory(directory: string): Promise<void> {
   const reason = privateDacl(await read('icacls verify'), sid);
   if (reason) throw new EmbedError('DISCOVERY_UNSAFE', reason);
 }
+const processAlive = (pid: number) => {
+  try {process.kill(pid, 0); return true;} catch (e) {return (e as {code?: string}).code === 'EPERM';}
+};
+/**
+ * The worker entries whose process is still running. An entry whose process is gone (a worker killed without time to
+ * clean up, which on Windows is every kill) is skipped and its file removed. A hint only: a live entry grants nothing.
+ */
+export async function liveEmbedWorkers(home: string): Promise<{pid: number; port: number; instanceId: string}[]> {
+  const directory = join(home, 'embed-discovery');
+  const live: {pid: number; port: number; instanceId: string}[] = [];
+  for (const name of await readdir(directory).catch(() => [] as string[])) {
+    if (!/^[a-f0-9]{32}\.json(\.tmp)?$/.test(name)) continue;
+    const path = join(directory, name);
+    try {
+      const v = JSON.parse(await readFile(path, 'utf8')) as {pid?: unknown; port?: unknown; instanceId?: unknown};
+      if (name.endsWith('.tmp') || !Number.isInteger(v.pid) || !Number.isInteger(v.port) || typeof v.instanceId !== 'string') throw new Error('stale');
+      if (processAlive(v.pid as number)) live.push({pid: v.pid as number, port: v.port as number, instanceId: v.instanceId});
+      else await rm(path, {force: true});
+    } catch {
+      // Unreadable or half-written: only an old one is a leftover; a fresh .tmp may be a worker mid-write.
+      const old = await lstat(path).then(i => Date.now() - i.mtimeMs > 60_000, () => false);
+      if (old) await rm(path, {force: true});
+    }
+  }
+  return live;
+}
 export async function discoveryEntry(home: string, port: number): Promise<() => Promise<void>> {
   const directory = join(home, 'embed-discovery');
   await mkdir(directory, {recursive: true, mode: 0o700});
@@ -135,12 +162,16 @@ export async function discoveryEntry(home: string, port: number): Promise<() => 
     if (info.uid !== process.getuid?.()) throw new EmbedError('DISCOVERY_UNSAFE');
     await chmod(directory, 0o700);
   }
+  await liveEmbedWorkers(home);
   const instanceId = randomBytes(16).toString('hex');
   const path = join(directory, instanceId + '.json'), temporary = path + '.tmp';
   const handle = await open(temporary, 'wx', 0o600);
   try {await handle.writeFile(JSON.stringify({version: 1, pid: process.pid, port, instanceId}) + '\n');}
   finally {await handle.close();}
   try {await rename(temporary, path);} catch (e) {await rm(temporary, {force: true}); throw e;}
+  // Every way out removes the entry: an orderly stop, a failed start, and a crash that still runs 'exit' handlers.
+  // A kill that runs nothing leaves it behind; the next start or launch prunes it, as its process is gone.
+  process.once('exit', () => {try {rmSync(path, {force: true});} catch { /* nothing more to do while exiting */ }});
   return async () => {await rm(path, {force: true});};
 }
 
@@ -156,24 +187,29 @@ export interface EmbedSupervisor {
   readonly pid: number | undefined;
 }
 /** Each host owns its worker; discovery files never authorize reuse of an unrelated server. */
-export function embedSupervisor(entry = process.argv[1]!, env = process.env, options: {detached?: boolean} = {}): EmbedSupervisor {
+export function embedSupervisor(entry = process.argv[1]!, env = process.env,
+  options: {detached?: boolean; requestIdleMs?: number; requestMaxMs?: number} = {}): EmbedSupervisor {
+  // A first import of a large journal takes minutes. The worker says it is still working every few seconds; a request is
+  // abandoned only when it goes quiet for the idle period, or after the ceiling, with an error that says what happened.
+  const idleMs = options.requestIdleMs ?? 60_000, maxMs = options.requestMaxMs ?? 15 * 60_000;
   const child = spawn(process.execPath, [entry, 'embed-worker', ...(options.detached ? ['--detached'] : [])],
     {stdio: ['ignore', 'ignore', 'ignore', 'overlapped'], windowsHide: true, env, detached: !!options.detached});
   const channel = child.stdio[3] as Socket;
   let nextId = 0, ended = false;
-  const pending = new Map<string, {resolve: (v: EmbedLaunch) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout>}>();
+  const pending = new Map<string, {resolve: (v: EmbedLaunch) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout>; ceiling: ReturnType<typeof setTimeout>}>();
   const fail = () => {
     ended = true;
-    for (const p of pending.values()) {clearTimeout(p.timer); p.reject(new EmbedError('EMBED_UNAVAILABLE'));}
+    for (const p of pending.values()) {clearTimeout(p.timer); clearTimeout(p.ceiling); p.reject(new EmbedError('EMBED_UNAVAILABLE'));}
     pending.clear();
   };
   const stop = () => {fail(); channel.destroy(); if (child.exitCode === null) child.kill();};
   child.on('error', fail); child.on('exit', fail); channel.on('error', fail); channel.on('close', fail);
   jsonLines(channel, 8192, value => {
-    const r = value as {version?: unknown; requestId?: unknown; result?: EmbedLaunch; error?: {code?: unknown; detail?: unknown}};
+    const r = value as {version?: unknown; requestId?: unknown; progress?: unknown; result?: EmbedLaunch; error?: {code?: unknown; detail?: unknown}};
     if (!r || r.version !== 1 || typeof r.requestId !== 'string') return stop();
     const p = pending.get(r.requestId); if (!p) return;
-    pending.delete(r.requestId); clearTimeout(p.timer);
+    if (r.progress === true) {clearTimeout(p.timer); p.timer = setTimeout(stop, idleMs); return;}
+    pending.delete(r.requestId); clearTimeout(p.timer); clearTimeout(p.ceiling);
     if (r.error) p.reject(new EmbedError(typeof r.error.code === 'string' && /^[A-Z_]{1,64}$/.test(r.error.code) ? r.error.code : 'EMBED_UNAVAILABLE', safeDetail((r.error as {detail?: unknown}).detail)));
     else if (validLaunch(r.result)) p.resolve(r.result!);
     else {p.reject(new EmbedError('EMBED_UNAVAILABLE')); stop();}
@@ -185,15 +221,20 @@ export function embedSupervisor(entry = process.argv[1]!, env = process.env, opt
       if (ended || pending.size >= 32) return Promise.reject(new EmbedError('EMBED_UNAVAILABLE'));
       const requestId = String(++nextId);
       return new Promise((resolve, reject) => {
-        const timer = setTimeout(stop, 60_000);
-        pending.set(requestId, {resolve, reject, timer});
+        const timer = setTimeout(stop, idleMs);
+        const ceiling = setTimeout(() => {
+          // Still working, only slowly: say so, and let the next try continue from what is already imported.
+          const p = pending.get(requestId); if (!p) return;
+          pending.delete(requestId); clearTimeout(p.timer); p.reject(new EmbedError('IMPORT_IN_PROGRESS')); stop();
+        }, maxMs);
+        pending.set(requestId, {resolve, reject, timer, ceiling});
         channel.write(JSON.stringify({version: 1, requestId, action: 'open', ...value}) + '\n', error => {if (error) stop();});
       });
     },
     release() {
       if (!options.detached) throw new Error('only a detached worker can be released');
       ended = true;
-      for (const p of pending.values()) {clearTimeout(p.timer); p.reject(new EmbedError('EMBED_UNAVAILABLE'));}
+      for (const p of pending.values()) {clearTimeout(p.timer); clearTimeout(p.ceiling); p.reject(new EmbedError('EMBED_UNAVAILABLE'));}
       pending.clear();
       child.removeAllListeners(); channel.removeAllListeners(); channel.on('error', () => undefined);
       channel.destroy(); child.unref();
@@ -218,6 +259,9 @@ export function embedIdleMs(env: NodeJS.ProcessEnv = process.env): number {
   const n = Number(env.DRISHYA_EMBED_IDLE_MS);
   return Number.isInteger(n) && n >= 1000 && n <= 24 * 60 * 60 * 1000 ? n : 10 * 60 * 1000;
 }
+
+/** How often a worker with a request in flight tells its launcher it is still working. */
+const embedBeatMs = () => {const n = Number(process.env.DRISHYA_EMBED_BEAT_MS); return Number.isInteger(n) && n >= 50 && n <= 30_000 ? n : 5000;};
 
 /** Internal worker entry: only inherited fd 3 accepts commands. No HTTP mint endpoint. */
 export async function embedWorker(detached = false): Promise<void> {
@@ -258,14 +302,16 @@ export async function embedWorker(detached = false): Promise<void> {
   jsonLines(channel, 8192, value => {
     const v = value as Record<string, unknown>;
     if (!v || Array.isArray(v) || v.version !== 1 || typeof v.requestId !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(v.requestId)
-      || v.action !== 'open' || Object.keys(v).some(k => !['version','requestId','action','sessionId','nativeSessionId','latest','cwd'].includes(k)) || queued >= 32) {
+      || v.action !== 'open' || Object.keys(v).some(k => !['version','requestId','action','sessionId','nativeSessionId','latest','cwd','harness'].includes(k)) || queued >= 32) {
       channel.destroy(); if (!detached || !running) void close(); return;
     }
     queued++;
     work = work.then(async () => {
       if (closing) return;
+      // Tell the launcher the import is alive, so a large first import is not mistaken for a hang.
+      const beat = setInterval(() => {if (!closing && channelOpen) channel.write(JSON.stringify({version: 1, requestId: v.requestId, progress: true}) + '\n');}, embedBeatMs());
       try {
-        const input = selection(Object.fromEntries(['sessionId','nativeSessionId','latest','cwd'].filter(k => v[k] !== undefined).map(k => [k,v[k]])));
+        const input = selection(Object.fromEntries(['sessionId','nativeSessionId','latest','cwd','harness'].filter(k => v[k] !== undefined).map(k => [k,v[k]])));
         app ??= new App();
         if (!running) {
           running = await startServer({app, port: 0, embedCodes: codes});
@@ -277,7 +323,7 @@ export async function embedWorker(detached = false): Promise<void> {
         if (!closing && channelOpen) channel.write(JSON.stringify({version:1,requestId:v.requestId,result}) + '\n');
       } catch (error) {
         if (!closing && channelOpen) channel.write(JSON.stringify({version:1,requestId:v.requestId,error:embedFailure(error)}) + '\n');
-      } finally {queued--;}
+      } finally {clearInterval(beat); queued--;}
     });
   }, () => {channel.destroy(); if (!detached || !running) void close();});
 }

@@ -50,6 +50,11 @@ for (const width of [360, 600, 1440]) {
       // The brand is not a way to the session library here.
       await expect(page.getByRole('button', { name: 'Drishya' })).toHaveCount(0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      // The pane watches. Typing happens in the agent's own app, so there is no composer and no workspace-reading grant.
+      await expect(page.getByRole('status').filter({ hasText: "Type in your agent's app to continue" })).toBeVisible();
+      await expect(page.getByLabel('Prompt for selected harness session')).toHaveCount(0);
+      await expect(page.getByPlaceholder(/Ask your agent/)).toHaveCount(0);
+      await expect(page.getByText('Enable workspace reading')).toHaveCount(0);
       // Back, a stray route or a Home command all land on the same session.
       await page.evaluate(() => { location.hash = '#/'; });
       await expect(page).toHaveURL(`${server.url}/?embed=1#/r/${id}`);

@@ -21,9 +21,9 @@ export class EmbedError extends Error {
  * Exactly one selector: a Drishya recording ID, the harness's own session ID (EMBED refined: the
  * current session where the harness exposes it), or the newest session, optionally inside one checkout.
  */
-export interface EmbedSelection {sessionId?: string; nativeSessionId?: string; latest?: true; cwd?: string}
+export interface EmbedSelection {sessionId?: string; nativeSessionId?: string; latest?: true; cwd?: string; harness?: 'claude-code' | 'codex' | 'antigravity'}
 export interface EmbedLaunch {url: string; port: number; recordingId: string; mode: 'top-level'}
-const KEYS = ['sessionId', 'nativeSessionId', 'latest', 'cwd'];
+const KEYS = ['sessionId', 'nativeSessionId', 'latest', 'cwd', 'harness'];
 export function selection(value: unknown): EmbedSelection {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new EmbedError('INVALID_SELECTION');
   const v = value as Record<string, unknown>;
@@ -33,6 +33,7 @@ export function selection(value: unknown): EmbedSelection {
     || (v.nativeSessionId !== undefined && (typeof v.nativeSessionId !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9_-]{7,127}$/.test(v.nativeSessionId)))
     || (v.latest !== undefined && v.latest !== true)
     || Number(v.sessionId !== undefined) + Number(v.nativeSessionId !== undefined) + Number(v.latest === true) !== 1
+    || (v.harness !== undefined && (!['claude-code', 'codex', 'antigravity'].includes(v.harness as string) || v.sessionId !== undefined))
     || (v.cwd !== undefined && (typeof v.cwd !== 'string' || !isAbsolute(v.cwd) || v.cwd.length > 4096)))
     throw new EmbedError('INVALID_SELECTION');
   return v as EmbedSelection;
@@ -56,6 +57,7 @@ export async function openEmbed(app: App, baseUrl: string, codes: EmbedCodes, in
     const eligible = [];
     for (const source of sources) {
       if (v.nativeSessionId && !nativeIdMatches(source, v.nativeSessionId)) continue;
+      if (v.harness && source.harness !== v.harness) continue;
       if (cwd && (!source.cwd || await canonical(source.cwd).catch(() => undefined) !== cwd)) continue;
       eligible.push(source);
     }
@@ -85,6 +87,7 @@ export function embedFailure(error: unknown): {code: string; message: string; de
     : code === 'SESSION_NOT_FOUND' ? 'No session with this ID was found on this computer.'
     : code === 'CHECKOUT_MISMATCH' ? 'That session belongs to a different checkout.'
     : code === 'CHECKOUT_UNAVAILABLE' ? 'The checkout folder could not be read.'
+    : code === 'IMPORT_IN_PROGRESS' ? 'Drishya is still importing a large session. Try again in a minute; it continues where it stopped.'
     : code === 'INVALID_SELECTION' ? 'Give exactly one of a recording ID, a native session ID or --latest; --cwd must be absolute.'
     : code === 'DISCOVERY_UNSAFE' ? 'Drishya could not make its embed-discovery folder private to you, so it did not start.'
     : 'Drishya could not open this local view. Check the selector and local installation.', ...(detail ? {detail} : {})};

@@ -48,7 +48,7 @@ describe('every place a program is started', () => {
     expect(source).toContain('openBrowser(running.openUrl())');
     // EMBED: `drishya embed --open` opens its pane link, which carries a one-use 60-second code, never the token.
     expect(source).toContain('openBrowser(launched.url)');
-    expect(source.match(/openBrowser\(/g)).toHaveLength(3); // the two calls and the definition
+    expect(source.match(/openBrowser\(/g)).toHaveLength(4); // the three calls (serve, embed --open, open) and the definition
     expect(launchToken(undefined)).toBeUndefined();
     expect(launchToken('abcdefghijklmnopqrstuvwxyz0123456789_-ABCD')).toBeTruthy();
     for (const bad of ['short', 'a&calc.exe a&calc.exe', 'x'.repeat(16) + '&calc', 'x'.repeat(16) + '|dir', 'x'.repeat(16) + '%PATH%', 'x'.repeat(16) + '"', 'x'.repeat(16) + '^', 'x'.repeat(16) + ' ', 'x'.repeat(16) + '\n', 'x'.repeat(200), 'x'.repeat(16) + '$(id)', 'x'.repeat(16) + '`id`']) {

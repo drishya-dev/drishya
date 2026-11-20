@@ -1,8 +1,24 @@
 # Drishya in your agent app's side pane
 
-Type `/drishya` in a session, or ask the agent to "open this session in Drishya", and the agent opens that same session in Drishya, live, in its app's own browser or artifact pane. You keep working in the app you are already in.
+One small command opens the session you are in, live, beside your work. It makes no model call: no tokens, no subscription use, no API cost.
 
-Where it opens, in order:
+- **Claude Code** (terminal or desktop app): type `!drishya open`. The `!` runs a shell command directly, without the model.
+- **Codex**: type `!drishya open` where your Codex version has the `!` shell escape; otherwise run `drishya open` in a terminal next to it.
+- **Antigravity** and anything else: run `drishya open` in its terminal.
+
+`drishya open` picks this folder's newest session across Claude Code, Codex and Antigravity, starts a small local process if needed, opens the view and prints one line. Options: `--session <id>` for one exact session, `--harness claude-code|codex|antigravity` to prefer one agent, `--print` to print the link instead of opening it (see below).
+
+Requires Drishya 0.1.2 or later and Node 24. Install it once with `npm install -g drishya`, so the `drishya` command is on your path.
+
+## Which window it opens in
+
+`drishya open` opens your **system browser**. It has no way to place a page into an app's own pane. To get it into an app's pane without asking the agent, run `drishya open --print` and click the link it prints (it is valid once, for 60 seconds); an app that opens clicked `http://127.0.0.1` links in its own pane will show it there, and one that does not will use your system browser.
+
+## Optional extra: let the agent open it
+
+If you would rather say "open this in Drishya" or type `/drishya`, the agent can open the view in its app's own pane. This costs a short model turn each time; the command above does not.
+
+When the agent opens it, it goes to, in order:
 
 1. **Claude desktop app** (Code tab): its built-in browser pane.
 2. **Codex app**: its browser pane, where the agent can drive one.
@@ -12,9 +28,7 @@ Where it opens, in order:
 
 Everything stays on your computer. The pane is a page served by a small Drishya process on `127.0.0.1`; nothing is sent anywhere. Opening a pane only observes the session: it does not send prompts, approve anything or give Drishya access to your files.
 
-Requires Drishya 0.1.2 or later and Node 24. Install it once with `npm install -g drishya`, so the `drishya` command is on your path.
-
-## Turn it on (opt-in, per harness)
+## Agent route: turn it on (opt-in, per harness)
 
 Drishya never edits your harness settings. You add two things yourself, and remove them the same way.
 
@@ -86,6 +100,7 @@ The pane opens on Conversation, the narrowest complete way to read a session, an
 ## Commands
 
 ```sh
+drishya open [--session <id>] [--harness H] [--print] [--json]   # no agent, no model call
 drishya embed --session <harness-session-id> [--cwd DIR]   # this exact session
 drishya embed --latest --cwd DIR                            # newest session in this checkout
 drishya embed <rec_…>                                       # an imported Drishya recording

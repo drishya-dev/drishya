@@ -17,7 +17,8 @@ const repoRoot = resolve(fileURLToPath(new URL('../../..', import.meta.url)));
 const HELP = `drishya ${VERSION} — see what your coding agents did.
 
   drishya serve [--port 7878] [--no-open] [--dev]   start the local app
-  drishya embed --latest --cwd DIR [--open]          open this checkout's newest session in a side pane (prints a one-use link)
+  drishya open [--session ID] [--harness H] [--print]   open this folder's newest session in your browser: no agent, no model call
+  drishya embed [--json] --latest --cwd DIR [--open]          open this checkout's newest session in a side pane (prints a one-use link)
   drishya embed --session ID | <recording>           the same for one harness session ID or Drishya recording
   drishya embed-mcp                                  stdio MCP server with the drishya.open_view tool, for agents
   drishya sources [--json]                           list Claude Code and Codex sessions on this machine
@@ -42,6 +43,7 @@ export async function main() {
     return (await import('./embed-mcp.ts')).embedMcp();
   }
   if (cmd === 'embed') return embedCommand(rest);
+  if (cmd === 'open') return openCommand(rest);
   const { values, positionals } = parseArgs({
     args: rest,
     allowPositionals: true,
@@ -180,6 +182,45 @@ export async function main() {
  * has looked at it for ten minutes, so an agent's shell call returns at once. `--attach` keeps the worker tied to this
  * process (a host that owns its child), and `--open` hands the one-use link to the system browser instead of stdout.
  */
+/**
+ * `drishya open`: the one short command a person types, `!drishya open` inside a harness included. It resolves this folder's
+ * newest session across harnesses, starts a worker that outlives the command and idle-exits, and opens the view. It makes no
+ * model call: nothing here talks to an agent, only to the session files already on disk.
+ */
+async function openCommand(rest: string[]) {
+  const {EmbedError, embedFailure, selection} = await import('./embed-launch.ts');
+  let supervisor: import('./embed-runtime.ts').EmbedSupervisor | undefined;
+  let json = false;
+  try {
+    let parsed;
+    try {parsed = parseArgs({args: rest, allowPositionals: false, options: {session: {type: 'string'}, harness: {type: 'string'}, print: {type: 'boolean'}, json: {type: 'boolean'}}});}
+    catch {throw new EmbedError('INVALID_SELECTION');}
+    const {values} = parsed; json = !!values.json;
+    const input = selection(values.session !== undefined
+      ? {nativeSessionId: values.session, ...(values.harness ? {harness: values.harness} : {})}
+      : {latest: true, cwd: process.cwd(), ...(values.harness ? {harness: values.harness} : {})});
+    const runtime = await import('./embed-runtime.ts');
+    supervisor = runtime.embedSupervisor(undefined, process.env, {detached: true});
+    const launched = await supervisor.open(input);
+    supervisor.release();
+    void runtime.liveEmbedWorkers(dataDir());
+    const id = launched.recordingId.slice(0, 10);
+    if (values.print) {
+      // The link is single-use and expires in 60 seconds: for opening it by clicking, in an app that shows links in a pane.
+      process.stdout.write(json ? JSON.stringify(launched) + '\n' : `Drishya ${id}: open within 60 s  ${launched.url}\n`);
+      return;
+    }
+    openBrowser(launched.url);
+    process.stdout.write(json ? JSON.stringify({opened: 'system-browser', recordingId: launched.recordingId, port: launched.port}) + '\n' : `Drishya ${id}: opened in your browser.\n`);
+  } catch (error) {
+    await supervisor?.close();
+    await (await import('./embed-runtime.ts')).liveEmbedWorkers(dataDir()).catch(() => undefined);
+    const failure = embedFailure(error);
+    process.stdout.write(json ? JSON.stringify({error: failure}) + '\n' : `Drishya: ${failure.message}${failure.detail ? ` (${failure.detail})` : ''}\n`);
+    process.exitCode = 1;
+  }
+}
+
 async function embedCommand(rest: string[]) {
   const {EmbedError, embedFailure, selection} = await import('./embed-launch.ts');
   let supervisor: import('./embed-runtime.ts').EmbedSupervisor | undefined;
@@ -188,15 +229,16 @@ async function embedCommand(rest: string[]) {
     if (rest.some(arg => arg === '--frame-ancestor' || arg.startsWith('--frame-ancestor='))) throw new EmbedError('IFRAME_UNSUPPORTED');
     let parsed;
     try {
-      parsed = parseArgs({args: rest, allowPositionals: true, options: {latest: {type: 'boolean'}, cwd: {type: 'string'}, session: {type: 'string'}, open: {type: 'boolean'}, attach: {type: 'boolean'}}});
+      parsed = parseArgs({args: rest, allowPositionals: true, options: {latest: {type: 'boolean'}, cwd: {type: 'string'}, session: {type: 'string'}, open: {type: 'boolean'}, attach: {type: 'boolean'}, json: {type: 'boolean'}, harness: {type: 'string'}}});
     } catch { throw new EmbedError('INVALID_SELECTION'); }
     const {values, positionals} = parsed;
     if (positionals.length > 1 || (values.open && values.attach)) throw new EmbedError('INVALID_SELECTION');
     const input = selection({...(positionals[0] ? {sessionId: positionals[0]} : {}), ...(values.session !== undefined ? {nativeSessionId: values.session} : {}),
-      ...(values.latest ? {latest: true} : {}), ...(values.cwd !== undefined ? {cwd: values.cwd} : {})});
+      ...(values.latest ? {latest: true} : {}), ...(values.cwd !== undefined ? {cwd: values.cwd} : {}), ...(values.harness !== undefined ? {harness: values.harness} : {})});
     const runtime = await import('./embed-runtime.ts');
     supervisor = runtime.embedSupervisor(undefined, process.env, {detached: !values.attach});
     const launched = await supervisor.open(input);
+    void runtime.liveEmbedWorkers(dataDir());
     const cleaned = new URL(launched.url);
     cleaned.searchParams.delete('recording');
     cleaned.hash = '/r/' + encodeURIComponent(launched.recordingId);
@@ -210,6 +252,7 @@ async function embedCommand(rest: string[]) {
     process.stdout.once('error', () => {void stop();});
   } catch (error) {
     await supervisor?.close();
+    await (await import('./embed-runtime.ts')).liveEmbedWorkers(dataDir()).catch(() => undefined); // a worker killed on failure leaves its entry
     process.stdout.write(JSON.stringify({error: embedFailure(error)}) + '\n');
     process.exitCode = 1;
   }

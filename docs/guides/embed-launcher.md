@@ -2,6 +2,16 @@
 
 How the pane launch works underneath. For turning it on in Claude Code or Codex, read [embed.md](embed.md). The security contract is [embed-1-in-app.md](../review/embed-1-in-app.md); this page records where the implementation follows it and the one place the refined target (the agent opens the pane) changes it.
 
+## Five lines for a host app
+
+```sh
+drishya embed --json --latest --cwd "$PROJECT"     # one JSON line, then it returns; the worker keeps serving
+# -> {"url":"http://127.0.0.1:PORT/?embed=1&recording=rec_…#launch=<one-use code>","port":PORT,"recordingId":"rec_…","mode":"top-level"}
+# Load `url` once as a top-level page in your webview or browser tab (never an iframe). The code signs in once, for 60 s.
+# The page swaps it for an HttpOnly cookie and cleans the address bar. The view stops by itself 10 minutes after the pane closes.
+# On failure: exit 1 and {"error":{"code","message"}}. Add --session <id> for one exact session, --harness codex to prefer an agent.
+```
+
 ## Selectors
 
 Exactly one of:
@@ -10,9 +20,11 @@ Exactly one of:
 - `nativeSessionId` / `--session <id>`: the harness's own session ID. It matches a discovered journal whose first records state that ID, or whose name is `<id>.jsonl` (Claude Code) or `rollout-…-<id>.jsonl` (Codex). IDs are 8–128 characters of `A-Z a-z 0-9 _ -`; nothing path-shaped is accepted.
 - `latest: true` / `--latest`: the newest top-level session, by journal modification time, then stable identity.
 
+Optionally `harness` / `--harness` (`claude-code`, `codex` or `antigravity`) restricts `latest` and `nativeSessionId` to one agent. `drishya open` is `--latest --cwd <current folder>` with the system browser (or `--print`), with a plain-text one-line result instead of JSON.
+
 `cwd` / `--cwd` must be absolute. It is compared by canonical real path (case-folded on Windows); `latest` and `nativeSessionId` only consider journals in that exact checkout, and an explicit recording in another checkout is `CHECKOUT_MISMATCH`. Imports use the normal sealed ingest path, and passive following starts for the selected recording.
 
-Errors exit nonzero with one JSON line, `{ "error": { "code", "message" } }`, with fixed messages that never echo arguments, paths or content: `INVALID_SELECTION`, `CHECKOUT_UNAVAILABLE`, `CHECKOUT_MISMATCH`, `SESSION_NOT_FOUND`, `NO_SESSION`, `IFRAME_UNSUPPORTED`, `EMBED_UNAVAILABLE`. Every `--frame-ancestor` value is refused before storage or any process starts.
+Errors exit nonzero with one JSON line, `{ "error": { "code", "message"[, "detail"] } }`, with fixed messages that never echo arguments, paths or content: `INVALID_SELECTION`, `CHECKOUT_UNAVAILABLE`, `CHECKOUT_MISMATCH`, `SESSION_NOT_FOUND`, `NO_SESSION`, `IMPORT_IN_PROGRESS` (a large first import is still running; try again, it continues), `IFRAME_UNSUPPORTED`, `EMBED_UNAVAILABLE`. Every `--frame-ancestor` value is refused before storage or any process starts.
 
 ## Processes
 
@@ -22,9 +34,11 @@ Each launcher owns one worker: `node <cli> embed-worker` with a private duplex p
 - **`drishya embed --attach`** keeps the worker tied to the command, as in the original contract: a host app that owns its child keeps it running and stops it by closing the command. Parent loss closes the worker within a second.
 - **`drishya embed-mcp`** keeps one attached worker for the life of the MCP server, which is the life of the agent session. Repeated calls reuse it.
 
+A first import of a large journal can take minutes. While a request is in flight the worker sends a short progress line every 5 seconds, and the launcher waits as long as they keep coming (60 seconds of silence means a hung worker and fails as `EMBED_UNAVAILABLE`). After 15 minutes it stops waiting and answers `IMPORT_IN_PROGRESS`, "still importing a large session, try again".
+
 Concurrent launchers make separate workers on separate ephemeral loopback ports. None of them ever contacts, reuses or stops another Drishya, including a `drishya serve` on 7878. They share the store safely (appends skip duplicate observation IDs inside one transaction).
 
-`<Drishya home>/embed-discovery/<random>.json` holds only `version`, `pid`, `port`, `instanceId`. It is a hint, never a grant. The directory is owner-only (Windows: System32 `whoami` and `icacls` remove inheritance and every other account, including the explicit SYSTEM/Administrators entries a folder gets under a parent without inheritable entries, then read the DACL back as SDDL and fail closed with the failing step named in `detail`; POSIX 0700/0600 with an ownership check). A worker removes its own entry when it stops.
+`<Drishya home>/embed-discovery/<random>.json` holds only `version`, `pid`, `port`, `instanceId`. It is a hint, never a grant. The directory is owner-only (Windows: System32 `whoami` and `icacls` remove inheritance and every other account, including the explicit SYSTEM/Administrators entries a folder gets under a parent without inheritable entries, then read the DACL back as SDDL and fail closed with the failing step named in `detail`; POSIX 0700/0600 with an ownership check). A worker removes its own entry when it stops, including on a failed start; a worker killed without a chance to clean up leaves one behind, and the next worker start or launch skips and removes every entry whose process is gone.
 
 ## The browser exchange
 

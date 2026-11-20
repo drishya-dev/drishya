@@ -123,3 +123,22 @@ it('embed-refused-modes: iframe declarations exit before any storage or worker e
     expect(await readdir(dir)).toEqual([]);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+describe('drishya open takes no input a shell or a path could ride on', () => {
+  it('refuses unknown harnesses, a harness beside a recording id, positional arguments and unknown flags, before any storage', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'drishya-open-refused-'));
+    try {
+      const {selection} = await import('../../apps/daemon/src/embed-launch.ts');
+      for (const bad of [{latest: true, harness: 'bash'}, {latest: true, harness: '../codex'}, {sessionId: 'rec_00000000', harness: 'codex'}, {latest: true, harness: ['codex']}])
+        expect(() => selection(bad), JSON.stringify(bad)).toThrow();
+      expect(selection({latest: true, harness: 'codex'})).toEqual({latest: true, harness: 'codex'});
+      for (const args of [['open', 'extra'], ['open', '--frame-ancestor', 'https://host.invalid'], ['open', '--harness', 'bash'], ['open', '--session', '../x']]) {
+        const r = spawnSync(process.execPath, [cli, ...args], {env: {...process.env, DRISHYA_HOME: join(dir, 'absent')}, encoding: 'utf8', windowsHide: true, timeout: 30_000});
+        expect(r.status, args.join(' ')).toBe(1);
+        expect(r.stdout).toMatch(/^Drishya: /); // a plain sentence; never a stack, a path or an argument
+        expect(r.stdout).not.toContain(dir);
+      }
+      expect(await readdir(dir)).toEqual([]);
+    } finally { await rm(dir, {recursive: true, force: true}); }
+  });
+});

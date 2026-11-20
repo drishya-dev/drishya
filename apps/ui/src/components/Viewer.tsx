@@ -343,7 +343,7 @@ function WorkspaceViewer() {
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
       <ContextReportWatcher key={`context-report/${recordingId}`} />
-      <PromptComposer key={`composer/${recordingId}`} />
+      {isEmbedded() ? <p className="embed-note" role="status">Type in your agent's app to continue</p> : <PromptComposer key={`composer/${recordingId}`} />}
       <HistoryNoteHint />
       <DeveloperWorkspace />
       <Suspense fallback={null}>
