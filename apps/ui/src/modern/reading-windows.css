@@ -96,8 +96,7 @@
 }
 :root[data-ui-version=modern] .history .op.expanded .op-expanded {
   max-height: min(65vh, 650px);
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: auto;
   scrollbar-width: thin;
   padding: 12px 14px 16px;
   border-top: 1px solid var(--line);

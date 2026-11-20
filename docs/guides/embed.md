@@ -21,7 +21,12 @@ In `~/.claude/settings.json` (or `.claude/settings.json`):
   "hooks": {
     "UserPromptSubmit": [
       {
-        "command": "node ~/.claude/drishya-hook.mjs"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ~/.claude/drishya-hook.mjs"
+          }
+        ]
       }
     ]
   }
