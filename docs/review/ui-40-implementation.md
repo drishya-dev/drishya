@@ -1,6 +1,6 @@
 # UI-40 implementation and review
 
-Status: implementation in progress; **awaiting Yash approval**. Issue #552.
+Status: implementation and review materials prepared; **awaiting Yash approval and independent review**. Issue #552. Acceptance remains open.
 
 The four review candidates extend the existing semantic token owner: Neutral and Chalk (neutral dark/off-white pair), Smoked Slate and Aubergine. Jet Black remains the default. Saved dark/light/midnight/system and retired-theme fallbacks stay compatible. Paper has an off-white ground and stronger layered surfaces; Midnight's ground is deepened to meet the same separation gate. No dimensions or capture/schema/privacy behavior change.
 
@@ -53,3 +53,9 @@ The private verifier was closing the already-open desktop Files pane, and could 
 Frozen gate follow-up: the three intended-colour expectation failures are corrected and pass in the 23-test focused batch. Toolbox focus reproduced on clean main and passed alone. The other selected browser controls passed on clean main; all 10 passed on the final combined branch. Six affected daemon suites passed 94 tests on each clean-main and combined one-worker controls. Their original full-run timeouts/cleanup errors did not reproduce in isolation; causes remain unconfirmed. Final combined typecheck and 35 focused map/palette units passed. The full gate remains recorded as red, not replaced by these targeted results.
 
 Acceptance remaining: **Yash's actual palette selection and independent maintainer review**, including assessment of the non-reproducing full-gate failures. PR #559 remains draft. No merge, tag or publication was performed.
+
+### Final narrow source-reader confirmation
+
+The strengthened verifier also required the actual file evidence/source reader at 600 px, rather than only an open Files pane. The same genuine Claude `rec_14f29d5f` (28,184,536 bytes / 775 operations / 109 files) and Codex `rec_674a4957` (4,624,942 bytes / 657 operations / 20 files) passed all seven palettes: **14 painted measurements, zero contrast failures or unavailable journeys**. Together with the separate 14 wide-reader checks above, source reading is explicitly verified at both supported widths. These repeat part of the earlier survey and are not additional unique sessions. Real images and detailed count-only results remain ignored in `.local/ui-40/`.
+
+Next action: Yash reviews the committed synthetic comparison gallery and explicitly selects palettes; the maintainer reviews the diff and unresolved full-gate evidence before merge. No actual selection has been received, and no populated genuine Claude Git graph is claimed.
