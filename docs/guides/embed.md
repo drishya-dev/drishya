@@ -1,22 +1,49 @@
-# Drishya in your agent app's side pane
+# Drishya in your agent workspace
 
-One small command opens the session you are in, live, beside your work. It makes no model call: no tokens, no subscription use, no API cost.
+Open the session you are in, live, beside your work.
 
-- **Claude Code** (terminal or desktop app): type `!drishya open`. The `!` runs a shell command directly, without the model.
-- **Codex**: type `!drishya open` where your Codex version has the `!` shell escape; otherwise run `drishya open` in a terminal next to it.
+## Default: Zero-token quick open (No model calls, no rate limits)
+
+These routes run locally with **0 tokens, 0 subscription cost, and 0 latency**. They never hit model limits or API rate caps:
+
+### 1. In-harness shell escape: `!drishya open`
+Type `!drishya open` directly into your agent's prompt line:
+- **Claude Code** (terminal or desktop app): type `!drishya open`. The `!` runs the command locally and returns immediately to your chat.
+- **Codex**: type `!drishya open` where your version has shell escape; otherwise run `drishya open` in an adjacent terminal.
 - **Antigravity** and anything else: run `drishya open` in its terminal.
 
-`drishya open` picks this folder's newest session across Claude Code, Codex and Antigravity, starts a small local process if needed, opens the view and prints one line. Options: `--session <id>` for one exact session, `--harness claude-code|codex|antigravity` to prefer one agent, `--print` to print the link instead of opening it (see below).
+### 2. Zero-token `/drishya` hook (Type `/drishya` without calling the model)
+If you prefer typing `/drishya` naturally without spending model quota, configure a `UserPromptSubmit` hook. The hook catches `/drishya` before it ever reaches the LLM, executes `drishya open`, and blocks the prompt:
 
-Requires Drishya 0.1.2 or later and Node 24. Install it once with `npm install -g drishya`, so the `drishya` command is on your path.
+In `~/.claude/settings.json` (or `.claude/settings.json`):
+```json
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "command": "node ~/.claude/drishya-hook.mjs"
+      }
+    ]
+  }
+}
+```
+Copy [`drishya-hook.mjs`](drishya-hook.mjs) to your `~/.claude/` directory. When you submit `/drishya`, it launches your browser instantly with 0 tokens.
+
+---
+
+`drishya open` picks this folder's newest session across Claude Code, Codex, and Antigravity, starts a small background process if needed, opens the view and prints one line. Options: `--session <id>` for one exact session, `--harness claude-code|codex|antigravity` to prefer one agent, `--print` to print a one-time 60-second clickable link.
+
+Requires Drishya 0.1.2 or later and Node 24 (`npm install -g drishya`).
 
 ## Which window it opens in
 
-`drishya open` opens your **system browser**. It has no way to place a page into an app's own pane. To get it into an app's pane without asking the agent, run `drishya open --print` and click the link it prints (it is valid once, for 60 seconds); an app that opens clicked `http://127.0.0.1` links in its own pane will show it there, and one that does not will use your system browser.
+`drishya open` opens your **system browser**. It has no way to inject a page into a separate desktop app's internal split pane. To get it into an app's pane without asking the agent, run `drishya open --print` and click the link it prints (it is valid once, for 60 seconds); an app that opens clicked loopback links in its own pane will show it there.
 
-## Optional extra: let the agent open it
+---
 
-If you would rather say "open this in Drishya" or type `/drishya`, the agent can open the view in its app's own pane. This costs a short model turn each time; the command above does not.
+## When you need an in-app split pane: Let the agent open it
+
+Only use this if you specifically want the visualizer docked *inside* the desktop app's native split pane (e.g. Claude desktop app's browser pane) rather than an external browser window. **Note: this costs a short model turn each time.**
 
 When the agent opens it, it goes to, in order:
 
