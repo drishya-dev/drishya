@@ -141,12 +141,15 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="question-interactive-header">
-          <div className="question-header-lead">
-            <span className="question-status-beacon" aria-hidden="true" />
-            <span className="question-badge">Input Needed</span>
+        <header className="question-card-header">
+          <span className="question-status-beacon" aria-hidden="true" />
+          <div className="question-card-title-group">
+            <div className="question-card-title-row">
+              <strong className="question-card-title">Question to you</strong>
+              <span className="question-card-badge">Choice required</span>
+            </div>
+            <span className="question-card-sub">The connected agent is waiting for your choice</span>
           </div>
-          <span className="question-interactive-sub">The agent is waiting for your choice</span>
         </header>
 
         {matchingRequest.questions.map((q) => (
