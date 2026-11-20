@@ -16,8 +16,8 @@
 @media(forced-colors:active){.question-options li[data-chosen] .question-mark {background:Highlight;}}
 
 /* SHIP-5: Read-only CLI state: quiet list, no bullet circles, clear answer-elsewhere label */
-.question-terminal-banner {display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0 6px;border-radius:var(--radius-sm, 4px);background:color-mix(in srgb, var(--focus, #4d90fe) 9%, var(--s1));border:1px solid color-mix(in srgb, var(--focus, #4d90fe) 25%, var(--line));font:var(--text-xs)/1.45 var(--sans);color:var(--t1);}
-.question-terminal-banner svg {flex-shrink:0;color:var(--focus, #4d90fe);}
+.question-terminal-banner {display:flex;align-items:center;gap:8px;padding:8px 12px;margin:2px 0 6px;border-radius:var(--radius-sm, 4px);background:color-mix(in srgb, var(--focus) 9%, var(--s1));border:1px solid color-mix(in srgb, var(--focus) 25%, var(--line));font:var(--text-xs)/1.45 var(--sans);color:var(--t1);}
+.question-terminal-banner svg {flex-shrink:0;color:var(--focus);}
 .question-card-readonly .question-options-readonly {list-style:none;margin:4px 0 0;padding:0;display:grid;gap:4px;}
 .question-card-readonly .question-option-readonly {display:grid;grid-template-columns:minmax(0,1fr);row-gap:2px;padding:4px 0;color:var(--t2);cursor:default;}
 .question-card-readonly .question-option-readonly .question-description {grid-column:1;}
