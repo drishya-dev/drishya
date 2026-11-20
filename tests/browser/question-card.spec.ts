@@ -69,8 +69,11 @@ for (const width of [1440, 600]) {
     await expect(card).toContainText('Zero-downtime');
     await expect(card).toContainText('Lock and copy');
     // Notice badge and clear banner telling user to answer in Claude Code terminal
+    await expect(card.locator('.question-terminal-banner')).toBeVisible();
     await expect(card.locator('.question-terminal-banner')).toContainText('This question is waiting in your Claude Code terminal. Answer it there.');
+    await expect(card.locator('.question-answer-elsewhere-badge')).toBeVisible();
     await expect(card.locator('.question-answer-elsewhere-badge')).toHaveText('Answer in Claude Code');
+    await expect(card.locator('.question-state')).toBeVisible();
     await expect(card.locator('.question-state')).toContainText('Waiting for your answer in Claude Code');
     // Options MUST NOT look clickable (no radio/checkbox marks)
     await expect(card.locator('.question-mark')).toHaveCount(0);
@@ -139,6 +142,8 @@ for (const width of [1440, 600]) {
     const sendBtn = form.getByRole('button', { name: 'Send answer' });
     const stopBtn = form.getByRole('button', { name: 'Stop turn' });
 
+    await expect(sendBtn).toBeVisible();
+    await expect(stopBtn).toBeVisible();
     await expect(sendBtn).toBeDisabled();
     await expect(stopBtn).toBeEnabled();
 
