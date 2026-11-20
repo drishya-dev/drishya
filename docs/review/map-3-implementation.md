@@ -2,6 +2,8 @@
 
 Base: origin/main 30c83c9f. Issue #551. No additional agents/sessions.
 
+Current status after the resumed acceptance pass: visible genuine-session chips, keyboard/screen-reader exposure and resource preference guards are verified. A 5,000-file bulk-update probe produced one 525.2 MiB daemon RSS peak against the documented 512 MiB normal-workload ceiling. Resource acceptance is therefore **not certified**; this and the original full-gate uncertainty remain open before merge. The passing probes below do not override that outlier.
+
 - [x] Inspect current running product, fixed synthetic demo, 1440x900, motion=0, headless Chromium; baseline 3000 ms: TaskDuration 0.963 ms, ScriptDuration 0.090 ms, layouts 0, recalc 0. Screenshot in ignored .local/map-3/before.png. This is a static-scene baseline, not orbit acceptance.
 - [x] Reserve exact sections in #551 and #552; #549 remains open, no MapCanvas overlap. STORE-1 owns its Settings mount.
 - [x] map-detail.ts: consume scene.heat; active first, descending heat, path tie-break, cap three, threshold 0.04 for inactive entries; resolve only existing indexed nodes. No second history or clock.
@@ -9,7 +11,8 @@ Base: origin/main 30c83c9f. Issue #551. No additional agents/sessions.
 - [x] MapCanvas.tsx: static semantic point paint through both existing renderers; DOM chips use FileIcon and basename, original indexed coordinates. Hide in Explore (its labels own that mode). Protect history column/rail, dock, header, composer, reader/dialog and Files. Event/resize-driven geometry, no idle polling.
 - [x] map tests: selection/order/empty/unresolved, long filename and rectangle non-overlap; browser actual protected-rectangle assertions at 600/1440.
 - [x] Genuine Claude/Codex live/replay selection and occupied-layout suppression at both widths; targeted checks and reproducible static/orbit measurement (details below).
-- [ ] Independent maintainer review and assessment of full-gate uncertainty; visible genuine-session chip and physical resource/dense-map acceptance remain unproven.
+- [x] Visible genuine-session chips, icon/accessibility checks and supported narrow-window suppression; reduced-motion, visibility-event, explicit-static and low-resource guards.
+- [ ] Independent maintainer review and assessment of full-gate uncertainty; dense resource acceptance remains unproven after a measured RSS ceiling exceedance. Physical 8 GiB/integrated-GPU certification is a separate standing project release check, not a new MAP-3 requirement.
 
 Ruling: retain existing heat rank rather than call it a literal last-three chronological list. Scene heat is step-derived and already drives live/replay; threshold/cap are presentation bounds. Cost if wrong: a frequently touched file can outrank a newer isolated read; chips describe activity, never chronology.
 
@@ -64,3 +67,26 @@ The composer's heat tone `pass` is a default for non-error test activity, includ
 The same three-window probe completed on `3d1d6dfd` after the truth guard. Static medians: task 1.130 ms, script 0.033 ms per two seconds; zero RAF callbacks, renders, layouts and style recalculations in every static window. Intentional orbit: task 375.938 ms, script 19.748 ms; 26–27 renders and four point draws per render. The desktop update separated this run from the earlier paired measurements, so the lower task/script times are not attributed to the change. The repeat corroborates bounded rendering and idle counters only. Raw probes remain ignored in `.local/map-3/`.
 
 Draft #555 contains the implementation and evidence. Next action: independent maintainer review of placement, the heat-rank ruling and measured cost, plus assessment of the recorded full-gate failures. The task remains open for that review and the explicitly unproven acceptance above; no merge or publication is authorized by this handoff.
+
+### Resumed technical acceptance, 20 November
+
+The previous handoff stopped too early on checks that could be performed here. A new role-based regression reproduced a real accessibility defect: the map's inherited `aria-hidden` hid visible activity buttons. Commit `7ee9d00f` exposes the map when activity chips exist, and verifies keyboard focus, Enter opening captured file work and Escape returning to the map. UI typecheck and 31 map units passed; the nine map browser journeys passed at one worker. A separate resource-guard regression (`8e7c8d87`) passed at one worker: real reduced-motion emulation, a simulated document-visibility event boundary, the explicit static preference, low-resource map removal and explicitly re-enabled flat fallback. The initial guard verifier omitted navigation to the Reading tab; correcting that navigation required no product change or weaker assertion.
+
+**Visible genuine-session evidence:** scratch imports selected for actual current heat, rather than only total read/edit count. Claude `rec_4cb0f629`, 6,284,629 bytes / 291 operations / 119 captured files, with two locations resolved into its primary map; Codex `rec_366115a4`, 6,155,595 bytes / 177 operations / seven files and seven map nodes. No graph response, coordinate, heat or journal was modified. With ordinary Files-pane hiding and the supported flat-map preference, both show an accessible filename/type chip in live history and sampled replay at 1440 px. Across 16 private frames (live plus three replay samples, both widths, both harnesses), seven wide frames have a visible chip, each with its icon/accessibility exposure; all 16 have zero protected-UI overlaps. All eight 600 px frames suppress chips. One Codex wide replay sample also correctly suppresses them. Default spatial-mode suppression was checked separately in the earlier survey; these new visible frames are specifically flat-mode acceptance. Images and detailed counts remain ignored under `.local/map-3/`.
+
+**Additional clean-main controls:** on exact `30c83c9f`, the six original failing daemon suites passed 94/94 with six workers; MAP-3 passed the same 94/94 with six workers. This does not reproduce or establish the cause of the original full-run unit failures. At three browser workers, the selected original five failure cases produced seven passes / one failure on clean main: the exact 600x720 nested-checkout Explore control failure reproduced. It passed alone with one worker. This is a second demonstrated baseline flake, alongside the previously recorded Toolbox focus flake. MAP-3 passed all eight selected journeys at three workers. The remaining original command/timeline/minimize failures did not reproduce; their causes remain unconfirmed. No full gate was repeated and no assertion, timeout or tolerance was loosened.
+
+**5,000-file resource diagnostics:** the existing invented 10,101-observation workload, five 200-record appends, 1440x900, reduced motion and map enabled. A private copy of `bench-browser.ts` opens the known imported recording route to avoid the previously diagnosed Home-row race; all bounded file-spine/action-list and no-loss assertions are retained. Single runs with five bursts are not five independent repetitions.
+
+| Probe | Append-to-counter p95 ms | Peak daemon RSS MiB |
+|---|---:|---:|
+| Clean main, first isolated run | 265.0 | 447.4 |
+| MAP-3, first isolated run | 913.8 | 509.3 |
+| MAP-3, isolated repeat | 873.2 | **525.2** |
+| Clean main, isolated repeat | 1,021.2 | 452.6 |
+| Clean main, API-count diagnostic | 1,204.3 | 494.1 |
+| MAP-3, API-count diagnostic | 836.1 | 482.6 |
+
+An earlier MAP-3 run overlapped a guard test and is excluded from this comparison. Broad latency variation reproduces on clean main. The API-count diagnostics each made four graph and 36 file-roots requests, with nine vs eight history requests (main vs MAP-3); artifact requests varied 451 vs 510 and mounted DOM varied, so the counter latch does not prove all material was identically settled. The backend/package sources are unchanged. This does **not** establish the cause of the RSS outlier or rule out an indirect UI contribution. The 525.2 MiB sample is not discarded because a later run passed. Next technical action is a controlled memory/profile trace across the bulk-render/append boundary before certifying this workload; independent review remains required. Do not report the dense resource gate or full gate green.
+
+The final small-scene static/orbit repeat on `8e7c8d87` again recorded zero static RAF/render/layout/style-recalculation work in all three two-second windows (median task/script 1.009/0.037 ms). Orbit remained 26–27 renders per window and four point draws per render (median task/script 863.999/35.438 ms). This closes the final-revision idle counter check; it does not certify the separate dense-memory workload.
