@@ -1,4 +1,3 @@
-import { isEmbedded } from './lib/embed.ts';
 import {setCheckoutContext, wholeHistoryArrived} from './api.ts';
 import { probeStage } from './lib/live-probe.ts';
 // UI state. Durable data (projection, graph) is loaded once per recording; what is on screen is
@@ -30,7 +29,7 @@ function revisionsOf(recordings: RecordingSummary[]): Record<string, number> {
 export type HistoryMode = 'work' | 'conversation';
 export const HISTORY_MODE_SCOPE = '@home', HISTORY_MODE_KEY = 'history/mode';
 
-export type Screen = 'loading' | 'home' | 'viewer' | 'no-daemon' | 'signed-out' | 'error' | 'embed-missing';
+export type Screen = 'loading' | 'home' | 'viewer' | 'no-daemon' | 'signed-out' | 'error';
 
 interface State {
   source?: DataSource;
@@ -161,8 +160,7 @@ export const useApp = create<State>((set, get) => ({
   speed: 1,
   held: false,
   follow: true,
-  // EMBED: a side pane opens on Conversation, the narrowest complete reading; the switch still offers Work.
-  historyMode: isEmbedded() ? 'conversation' : 'work',
+  historyMode: 'work',
   hoverReading: (() => { try { return localStorage.getItem("drishya.hoverReading") !== "0"; } catch { return true; } })(),
   documentSize: (() => { try { const value = localStorage.getItem("drishya.documentSize"); return isDocumentSize(value) ? value : "standard"; } catch { return "standard"; } })(),
   reasoningDetail: storedPresentation('reasoningDetail') === 'hidden' ? 'hidden' : storedPresentation('reasoningDetail') === 'collapsed' ? 'collapsed' : 'expanded',

@@ -109,10 +109,6 @@ const RULES: Rule[] = [
   { id: 'databricks-token', possible: t => t.includes('dapi'), pattern: /\bdapi[0-9a-fA-F]{32}(?:-\d+)?\b/g, accept: (s) => looksSecret(s.slice(4)) },
   { id: 'linear-token', possible: t => t.includes('lin_api_'), pattern: /\blin_api_[A-Za-z0-9_-]{32,}(?![A-Za-z0-9_-])/g, accept: (s) => looksSecret(s.slice(8)) },
   { id: 'notion-token', possible: t => t.includes('secret_') || t.includes('ntn_'), pattern: /\b(?:secret_[A-Za-z0-9]{40,}|ntn_[A-Za-z0-9]{36,})\b/g, accept: (s) => { const b = s.startsWith('ntn_') ? s.slice(4) : s.slice(7); return looksSecret(b) && /[0-9]/.test(b) && /[A-Za-z]/.test(b); } },
-  // EMBED: a Drishya pane link (`…?embed=1&recording=…#launch=<code>`) reaches the agent's transcript when the agent opens
-  // its own pane. The code signs in once within 60 s, but a captured copy is still a credential. No policy bump: no
-  // released build minted these codes before this rule existed, so no older store can hold one.
-  { id: 'drishya-launch', possible: t => t.includes('launch='), pattern: /[#&]launch=([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/g, group: 1 },
   { id: 'jwt', pattern: /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}/g },
   { id: 'discord-token', possible: t => t.includes('.'), pattern: /(?<![A-Za-z0-9_.-])[A-Za-z0-9_-]{23,30}\.[A-Za-z0-9_-]{6}\.[A-Za-z0-9_-]{25,45}(?![A-Za-z0-9_-])/g, accept: looksDiscordBotToken },
   { id: 'bearer', pattern: /\b(?:Bearer|Token)\s+([A-Za-z0-9._~+/=-]{16,})/g, group: 1, accept: looksSecret },

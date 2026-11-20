@@ -1,5 +1,4 @@
 import {useSurfacePresence} from '../lib/surface-motion.ts';
-import {isEmbedded} from '../lib/embed.ts';
 import {setCheckoutContext} from '../api.ts'; import {plural} from '../lib/plural.ts';
 import './worktree-evidence.css';
 import {useInterfaceScale} from '../lib/interface-scale.ts';
@@ -508,7 +507,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         <div className="tree-evidence-filter-menu">{[{value:false,label:'All files'},{value:true,label:'Touched'}].map(option=><button key={option.label} type="button" aria-pressed={touchedOnly===option.value} onClick={event=>{setTouchedOnly(option.value);const menu=event.currentTarget.closest('details')!;menu.open=false;menu.querySelector('summary')?.focus();}}>{option.label}</button>)}<small>Activity in this session. Badges describe tool calls, not current Git status.</small></div>
       </details>
     </div>
-    {source?.kind === 'daemon' && !isEmbedded() && !id?.includes('+') && workspace?.root && !workspace.approved && <div className="workspace-grant-card"><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<RememberCheckbox checked={remember} disabled={approving} onChange={setRemember} />}</div>}
+    {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <div className="workspace-grant-card"><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<RememberCheckbox checked={remember} disabled={approving} onChange={setRemember} />}</div>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;

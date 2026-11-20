@@ -1,4 +1,3 @@
-import { isEmbedded } from '../lib/embed.ts';
 import { HistoryNoteHint, NotesEntry } from './StepNotes.tsx';
 import { ProductMenu } from './ProductMenu.tsx';
 import {Disclosure,useDisclosureChoice} from './Disclosure.tsx';
@@ -343,7 +342,7 @@ function WorkspaceViewer() {
       <NowWatcher key={`now/${recordingId}`} /><NotifyWatcher />
       <TurnsWatcher key={`turns/${recordingId}`} />
       <ContextReportWatcher key={`context-report/${recordingId}`} />
-      {isEmbedded() ? <p className="embed-note" role="status">Type in your agent's app to continue</p> : <PromptComposer key={`composer/${recordingId}`} />}
+      <PromptComposer key={`composer/${recordingId}`} />
       <HistoryNoteHint />
       <DeveloperWorkspace />
       <Suspense fallback={null}>
@@ -430,7 +429,7 @@ function StudioHeader({ scene, projection }: { scene: Scene; projection: Project
   const modern = document.documentElement.dataset.uiVersion === 'modern';
   const [menuOpen, setMenuOpen] = useState(false);
   return <header className={`studio-header crown${modern ? ' modern-session-header' : ''}`}>
-    {modern ? <div className="modern-identity">{isEmbedded() ? <span className="brand static" aria-label="Drishya"><BrandMark /><span>Drishya</span></span> : <button className="brand" aria-label="Drishya" title="All sessions" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}<SessionLine projection={projection} /></div>
+    {modern ? <div className="modern-identity"><button className="brand" aria-label="Drishya" title="All sessions" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button><SessionLine projection={projection} /></div>
       : <button className="brand" title="All recordings" onClick={() => source?.kind === 'bundle' ? location.assign(location.pathname + (location.hash.startsWith('#token=') ? location.hash : '')) : (useApp.setState({ screen: 'home', playing: false }), location.hash = '')}><BrandMark /><span>Drishya</span></button>}
     {!modern&&<div className="studio-session crown-title" tabIndex={modern?0:undefined}><span className={`studio-session-label${source?.sample ? " crown-sample" : ""}`}>{modern && recording?.workspaceRoot ? recording.workspaceRoot.replace(/\\/g, '/').split('/').at(-1) : source?.sample ? 'Synthetic workspace' : source?.kind === 'bundle' ? 'Offline session' : 'Local workspace'}</span><h1 title={projection.title || recording?.title}>{projection.title || recording?.title || 'Untitled session'}</h1>{connection === 'reconnecting' && <span role="status" className="tag warn">Reconnecting…</span>}{recording && !['following', 'idle'].includes(recording.health?.state ?? '') && <HealthTag r={recording} />}{recording?.privacyOutdated && <span className="tag warn">Older privacy policy</span>}</div>}
     {modern&&connection==='reconnecting'&&<span role="status" className="session-connection">Reconnecting…</span>}

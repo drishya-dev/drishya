@@ -440,6 +440,3 @@ button.md-path.md-file-reference { display: inline-flex; align-items: flex-start
 .command-material { display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:start;gap:6px;min-width:0;max-width:100%; }.command-material>code { min-width:0;white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;background:none;border:0;padding:0; }.command-wrapper { color:var(--t3); }.command-material>button { width:26px;height:26px;min-width:26px;border:0;border-radius:var(--round-sm);background:transparent;color:var(--t3);cursor:pointer; }.command-material>button:hover { background:var(--s3);color:var(--t1); }
 
 .fenced-material>header { flex-wrap:wrap; }.fenced-material>header button { min-height:28px;min-width:28px; }
-
-/* EMBED: the pane watches; the agent's own app is where you type. One quiet line where the composer would be. */
-.embed-note { position: fixed; bottom: calc(var(--transport-h) + 12px); left: 0; right: 0; margin: 0; padding: 0 16px; text-align: center; font-size: var(--text-2xs); color: var(--t4); pointer-events: none; z-index: 9; }

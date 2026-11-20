@@ -1,4 +1,3 @@
-import {isEmbedded} from '../lib/embed.ts';
 import {ToolOutput} from './ToolOutput.tsx';
 import {interfaceRem,useInterfaceScale} from '../lib/interface-scale.ts';
 import {currentReadingTarget} from '../lib/file-reading.ts';
@@ -194,7 +193,7 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
     if (!trailHidden && first) trail.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [trailHidden]);
   const close = () => useApp.getState().set({ filePanel: undefined, filePanelFocus: undefined, filePanelEvidence: undefined });
-  const readDiskAction=source?.kind === 'daemon' && !isEmbedded() && workspace?.root && diskPath!==undefined && !reason && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId || useApp.getState().source !== source) return; rememberCurrentFileOrigin(source,recordingId,diskPath,path); useApp.getState().set({ currentFile: checkoutId?path:diskPath, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>;
+  const readDiskAction=source?.kind === 'daemon' && workspace?.root && diskPath!==undefined && !reason && !recordingId.includes('+') && <button className="btn ghost" aria-label={workspace.approved ? 'Read file on disk' : 'Enable workspace reading'} title={`Read current file · ${workspace.root}`} onClick={() => { void (async () => { try { if (!workspace.approved) await approve(); if (useApp.getState().recordingId !== recordingId || useApp.getState().source !== source) return; rememberCurrentFileOrigin(source,recordingId,diskPath,path); useApp.getState().set({ currentFile: checkoutId?path:diskPath, filePanel: undefined }); } catch (error) { setDiskError((error as Error).message); } })(); }}>{modern ? 'Read on disk' : workspace.approved ? 'Read file on disk' : 'Enable workspace reading'}</button>;
   const content=<>
 
     <div className="file-reading-context">{(!modern||(embedded&&!reason))&&<EvidenceNavigation compact={modern} hideEmpty={modern} />}

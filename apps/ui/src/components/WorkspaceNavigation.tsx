@@ -1,4 +1,3 @@
-import { isEmbedded } from '../lib/embed.ts';
 import { openGitHistory } from './GitHistory.tsx';
 import { openReviewTool } from './ReviewInsights.tsx';
 import { openChanges } from '../lib/open-changes.ts';
@@ -113,7 +112,7 @@ export function WorkspaceNavigation() {
       }
       all.push({ key: 'files', group: 'Repository', name: 'Browse workspace files', detail: 'Open the workspace or session file tree', run: () => { useApp.getState().set({ foldersHidden: false, explore: false, currentFile: undefined, filePanel: undefined, selectedOp: undefined, follow: false, held: true }); requestAnimationFrame(() => document.querySelector<HTMLInputElement>('.folder-explorer input')?.focus({ preventScroll: true })); } });
     }
-    if (kind === 'daemon' && !isEmbedded()) all.push({ key: 'home', group: 'Workspace', name: 'Choose a session', detail: 'All local sessions across workspaces', run: () => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); } });
+    if (kind === 'daemon') all.push({ key: 'home', group: 'Workspace', name: 'Choose a session', detail: 'All local sessions across workspaces', run: () => { location.hash = ''; useApp.setState({ screen: 'home', playing: false }); } });
     all.sort((a, b) => GROUP_ORDER.indexOf(a.group) - GROUP_ORDER.indexOf(b.group));
     const needle = query.trim().toLowerCase();
     const result = all.filter(item => !needle || `${item.name} ${item.detail} ${item.keywords ?? ''} ${item.group}`.toLowerCase().includes(needle));

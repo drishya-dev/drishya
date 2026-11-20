@@ -62,18 +62,11 @@
 
 /* ── the card body ends on a whole line (components/CardBody.tsx) ──────────────────────── */
 .history .op:not(.expanded) .op-body[data-cut] {
-  overflow-y: auto !important;
-  scrollbar-width: thin;
-  overscroll-behavior-y: contain;
+  overflow: hidden !important;
   -webkit-mask-image: linear-gradient(#000 calc(var(--card-cut) - var(--card-cut-fade)), rgb(0 0 0 / .42) var(--card-cut), transparent var(--card-cut)) !important;
   mask-image: linear-gradient(#000 calc(var(--card-cut) - var(--card-cut-fade)), rgb(0 0 0 / .42) var(--card-cut), transparent var(--card-cut)) !important;
 }
-.history .op:not(.expanded):is(:hover, :focus-within) .op-body[data-cut],
-.history .op[data-hover-reading] .op-body[data-cut] {
-  overflow: auto !important;
-  -webkit-mask-image: none !important;
-  mask-image: none !important;
-}
+.history .op[data-hover-reading] .op-body[data-cut] { overflow: auto !important; -webkit-mask-image: none !important; mask-image: none !important; }
 /* An option (-n, --detach) stays whole: the browser would otherwise break it after its hyphen. */
 .cmd-option { white-space: nowrap; }
 

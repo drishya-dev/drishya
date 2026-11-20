@@ -125,12 +125,7 @@ describe('each opt-in, and exactly what it sends', () => {
     const client = /(?<![.\w])fetch\s*\(|\bhttps?\.(?:request|get)\s*\(|from 'node:https'|from 'node:tls'|from 'node:dgram'|from 'node:dns|from 'node:net'|\bnew WebSocket\b|\bXMLHttpRequest\b|net\.connect|net\.createConnection/;
     const walk = (dir: string) => { for (const e of readdirSync(dir, { withFileTypes: true })) { const p = join(dir, e.name); if (e.isDirectory()) { if (!['node_modules', 'dist', 'test'].includes(e.name)) walk(p); } else if (/\.ts$/.test(e.name) && client.test(readFileSync(p, 'utf8'))) offenders.push(p.slice(root.length + 1).replace(/\\/g, '/')); } };
     for (const dir of ['apps/daemon/src', 'packages']) walk(join(root, dir));
-    // EMBED, reviewed: the worker wraps the pipe it inherited on fd 3 in a net.Socket. It never connects anywhere.
-    const embed = readFileSync(join(root, 'apps/daemon/src/embed-runtime.ts'), 'utf8');
-    expect(embed.match(/new Socket\(/g)).toEqual(['new Socket(']);
-    expect(embed).toContain('new Socket({fd: 3,');
-    expect(embed).not.toMatch(/\.connect\(|createConnection|createServer|\blisten\(/);
-    expect(offenders.filter((file) => file !== 'apps/daemon/src/embed-runtime.ts')).toEqual([]);
+    expect(offenders).toEqual([]);
   });
 });
 

@@ -62,7 +62,7 @@ export function useHoverReading(history: RefObject<HTMLDivElement | null>) {
     const reset = () => { clearTimers(); for (const focus of [...focuses]) close(focus, true); };
     const permitted = () => {
       const state = useApp.getState();
-      return state.hoverReading && !state.lowResource && !state.explore && !state.selectedOp && !state.expandedOp && !state.settingsOpen && !state.searchOpen && !state.currentFile && !state.filePanel && innerWidth >= 600 && matchMedia('(hover: hover)').matches;
+      return state.hoverReading && !state.lowResource && !state.explore && !state.selectedOp && !state.expandedOp && !state.settingsOpen && !state.searchOpen && !state.currentFile && !state.filePanel && innerWidth > 820 && matchMedia('(hover: hover)').matches;
     };
     const containsPointer = (card: HTMLElement) => {
       if (!pointer) return false;

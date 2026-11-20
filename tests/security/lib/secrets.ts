@@ -37,8 +37,6 @@ export const CANARIES: Canary[] = [
   c('jwt', 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJjYW5hcnkifQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV'),
   c('discord-token', 'MTAxMjM0NTY3ODkwMTIzNDU2.GxYzAb.q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIu'),
   c('bearer', 'q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIu', 'Authorization: Bearer q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIu'),
-  // EMBED: a pane link an agent opened, as it lands in its transcript. The code is 43 base64url characters.
-  c('drishya-launch', 'q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIuYtReEwQ_-c', 'open http://127.0.0.1:51234/?embed=1&recording=rec_0123456789abcdef#launch=q7ZxW3rT9vB2nM5kL8jH4gF6dS1aP0oIuYtReEwQ_-c in the pane'),
   c('url-credentials', 'hunter2canaryPW', 'postgres://admin:hunter2canaryPW@db.internal.example:5432/app'),
   c('secret-assignment', 'x9Kq2Lm7Vb4Tn8Rw3Zc6Yp1', 'db_password = "x9Kq2Lm7Vb4Tn8Rw3Zc6Yp1"'),
   // The link the CLI prints (and opens) carries the launch token in its fragment, so an agent's shell output can hold it.
