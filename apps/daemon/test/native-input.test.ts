@@ -25,3 +25,8 @@ it('supports options without description, string options, and title as question'
   expect(codexStringSpec.questions[0]!.options.map(o=>o.label)).toEqual(['subtract','divide']);
   expect(inputAnswers(codexStringSpec,{q0:{options:['o1']}})).toEqual({fn:['divide']});
 });
+
+it('rejects malformed questions and missing Codex identities without inventing a reply key',()=>{
+ expect(()=>inputSpec('codex',{questions:[null]})).toThrow('Unsupported');
+ expect(()=>inputSpec('codex',{questions:[{question:'Which approach?',options:[]}]})).toThrow('identity');
+});

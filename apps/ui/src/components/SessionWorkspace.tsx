@@ -961,7 +961,7 @@ export function PromptComposer() {
       <div className="native-turn-details">
       {(error || connectionError || controller?.error) && <p className="bad small" role="alert">{error ?? connectionError ?? controller?.error}{connectionError && <button className="btn ghost small" disabled={busy} onClick={() => void act(refresh)}>Retry native connection</button>}</p>}
       {controller?.promptRedacted && <p className="muted small">Detected secrets were removed before sending this prompt.</p>}
-      {controller?.inputRequests?.map(request=><NativeQuestions key={`${controller.runId}/${request.id}`} request={request} busy={busy||connection!=='connected'} answer={answers=>void act(()=>workspaceApi.answer(id,controller.runId!,request.id,answers))} stop={()=>void act(()=>workspaceApi.stop(id,controller.runId!))}/>)}
+      {controller?.inputRequests?.map(request=><NativeQuestions key={`${controller.runId}/${request.id}`} request={request} busy={busy||connection!=='connected'} answer={async answers=>{await workspaceApi.answer(id,controller.runId!,request.id,answers);void refresh().catch(()=>undefined);}} stop={async()=>{await workspaceApi.stop(id,controller.runId!);void refresh().catch(()=>undefined);}}/>)}
       {controller?.approvals.map(p => <NativeApproval key={p.id} request={p} busy={busy} decide={allow=>void act(()=>workspaceApi.decide(id,controller.runId!,p.id,allow))}/>)}
       </div>
   </section>;

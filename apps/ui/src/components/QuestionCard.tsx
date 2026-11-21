@@ -153,11 +153,11 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
         </header>
 
         {matchingRequest.questions.map((q) => (
-          <fieldset key={q.id} className="question-fieldset" disabled={submitting}>
+          <fieldset key={q.id} className="question-fieldset" aria-label={q.question} disabled={submitting}>
             {q.header && <small className="question-header">{q.header}{q.multiple ? ' · choose any' : ''}</small>}
             <p className="question-text">{q.question}</p>
 
-            <div className="question-options-interactive" role={q.multiple ? 'group' : 'radiogroup'}>
+            <div className="question-options-interactive" role={q.multiple ? 'group' : 'radiogroup'} aria-label={q.question}>
               {q.options.map((option) => {
                 const checked = answers[q.id]?.options.includes(option.id) ?? false;
                 return (

@@ -139,6 +139,8 @@ for (const width of [1440, 600]) {
     // Interactive form in QuestionCard
     const form = page.locator('form.question-interactive').first();
     await expect(form).toBeVisible();
+    await expect(form.locator('fieldset')).toHaveAccessibleName(question);
+    await expect(form.locator('.question-status-beacon')).toHaveCSS('animation-name', 'none');
     const sendBtn = form.getByRole('button', { name: 'Send answer' });
     const stopBtn = form.getByRole('button', { name: 'Stop turn' });
 

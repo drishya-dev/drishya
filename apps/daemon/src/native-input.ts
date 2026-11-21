@@ -13,9 +13,10 @@ export function inputSpec(method:'codex'|'claude',raw:unknown):InputSpec {
   if(!Array.isArray(raw.questions)||raw.questions.length<1||raw.questions.length>4)throw new Error('Unsupported input question count; continue in the native harness.');
   const keys:string[]=[];
   const questions=raw.questions.map((q,index):NativeQuestion=>{
+    if(!object(q))throw new Error('Unsupported input question; continue in the native harness.');
     const questionText = (q.question ?? q.title) as string | undefined;
     if(!object(q)||!text(questionText,4000)||q.isSecret===true)throw new Error('Unsupported or sensitive input request; continue in the native harness.');
-    const key=method==='codex'?(q.id ?? questionText):questionText;
+    const key=method==='codex'?q.id:questionText;
     if(!text(key,4000)||keys.includes(key as string))throw new Error('Invalid native question identity.');keys.push(key as string);
     const options=q.options??[];
     if(!Array.isArray(options)||options.length>8)throw new Error('Unsupported native question options.');

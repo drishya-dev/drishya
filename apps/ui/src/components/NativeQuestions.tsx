@@ -17,6 +17,7 @@ export function NativeQuestions({
   const name = useId();
   const recordingId = useApp((s) => s.recordingId);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string>();
   const [answers, setAnswers] = useState<Record<string, { options: string[]; text?: string }>>({});
 
   const complete = request.questions.every(
@@ -29,9 +30,12 @@ export function NativeQuestions({
     e.preventDefault();
     if (!complete || isBusy) return;
     setSubmitting(true);
+    setError(undefined);
     try {
-      if (recordingId) recordQuestionReceipt(recordingId, request.id, answers);
       await answer(answers);
+      if (recordingId) recordQuestionReceipt(recordingId, request.id, answers);
+    } catch (err) {
+      setError((err as Error).message || 'Failed to send answer');
     } finally {
       setSubmitting(false);
     }
@@ -40,9 +44,12 @@ export function NativeQuestions({
   const handleStop = async () => {
     if (isBusy) return;
     setSubmitting(true);
+    setError(undefined);
     try {
-      if (recordingId) recordQuestionStop(recordingId, request.id);
       await stop();
+      if (recordingId) recordQuestionStop(recordingId, request.id);
+    } catch (err) {
+      setError((err as Error).message || 'Failed to stop turn');
     } finally {
       setSubmitting(false);
     }
@@ -66,10 +73,10 @@ export function NativeQuestions({
       </header>
       <div className="native-question-list">
         {request.questions.map((q) => (
-          <fieldset key={q.id} disabled={isBusy} className="question-fieldset">
+          <fieldset key={q.id} disabled={isBusy} className="question-fieldset" aria-label={q.question}>
             {q.header && <small className="question-header">{q.header}{q.multiple ? ' · choose any' : ''}</small>}
             <p className="question-text">{q.question}</p>
-            <div className="question-options-interactive" role={q.multiple ? 'group' : 'radiogroup'}>
+            <div className="question-options-interactive" role={q.multiple ? 'group' : 'radiogroup'} aria-label={q.question}>
               {q.options.map((option) => {
                 const checked = answers[q.id]?.options.includes(option.id) ?? false;
                 return (
@@ -134,6 +141,7 @@ export function NativeQuestions({
           </fieldset>
         ))}
       </div>
+      {error && <p className="bad small" role="alert">{error}</p>}
       <footer className="question-form-actions">
         <button
           type="button"

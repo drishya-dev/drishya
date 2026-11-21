@@ -151,9 +151,7 @@
   padding: 20px !important;
   border: 1px solid var(--line-2) !important;
   border-radius: var(--round-lg) !important;
-  box-shadow: 0 16px 40px -8px rgba(0, 0, 0, 0.7), 0 0 0 1px color-mix(in srgb, var(--line-2) 60%, transparent) !important;
   background: color-mix(in srgb, var(--s1) 96%, var(--bg)) !important;
-  backdrop-filter: blur(16px) !important;
 }
 .native-questions {margin:0;min-width:0;display:flex;flex-direction:column;}
 .native-turn-details > * + .native-questions {margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}

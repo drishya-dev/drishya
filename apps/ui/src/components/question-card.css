@@ -10,7 +10,6 @@
   border-radius: var(--round-lg) !important;
   border: 1px solid var(--line-2) !important;
   background: color-mix(in srgb, var(--s1) 96%, var(--bg)) !important;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px color-mix(in srgb, var(--line-2) 60%, transparent) !important;
 }
 
 :root[data-experience] .connected-workspace .history .op:not(.expanded):not([data-hover-reading]):has(.question-card) {
@@ -57,9 +56,7 @@
 
 /* Unified Header for both QuestionCard and NativeQuestions */
 .question-card-header {display:flex;align-items:flex-start;gap:10px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line);}
-.question-status-beacon {width:7px;height:7px;border-radius:50%;background:var(--focus);box-shadow:0 0 8px var(--focus);flex:none;margin-top:5px;animation:beacon-pulse 2.2s cubic-bezier(0.23, 1, 0.32, 1) infinite;}
-@keyframes beacon-pulse {0%, 100% {opacity:1;transform:scale(1);} 50% {opacity:0.4;transform:scale(0.8);}}
-@media (prefers-reduced-motion: reduce) {.question-status-beacon {animation:none;}}
+.question-status-beacon {width:7px;height:7px;border-radius:50%;background:var(--focus);flex:none;margin-top:5px;}
 .question-card-title-group {display:flex;flex-direction:column;gap:2px;min-width:0;flex:1;}
 .question-card-title-row {display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
 .question-card-title {font:var(--weight-medium) var(--text-sm)/1.4 var(--sans);color:var(--t1);letter-spacing:-0.01em;}
