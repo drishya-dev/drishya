@@ -9,7 +9,7 @@ import { App } from '../../apps/daemon/src/app.ts';
 import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
 import { HarnessController } from '../../apps/daemon/src/controller.ts';
 
-let dir: string, app: App, server: RunningServer;
+let dir: string, app: App, server: RunningServer, recordingId: string;
 test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-map-quiet-'));
   const root = join(dir, 'dense-repository'); mkdirSync(root);
@@ -29,7 +29,7 @@ test.beforeAll(async () => {
   writeFileSync(transport, `import {createInterface} from 'node:readline';
 const send=v=>process.stdout.write(JSON.stringify(v)+'\\n');
 createInterface({input:process.stdin}).on('line',line=>{const v=JSON.parse(line);if(v.type==='control_request')send({type:'control_response',response:{subtype:'success',request_id:v.request_id,response:{models:[],commands:[]}}});});`);
-  app = new App(join(dir, 'store')); await app.ingest.importSource('claude-code', journal);
+  app = new App(join(dir, 'store')); recordingId = (await app.ingest.importSource('claude-code', journal)).recordingId;
   server = await startServer({ app, port: 0, token: 'synthetic-map-quiet', controllerFactory: (a, w) => new HarnessController(a, w, { resolveExecutable: () => process.execPath, launch: ((_bin: string, _args: string[], opts: any) => spawn(process.execPath, [transport], opts)) as typeof spawn }) });
 });
 test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) { if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('unsafe test cleanup'); rmSync(dir, { recursive: true, force: true }); } });
@@ -37,7 +37,8 @@ test.afterAll(async () => { await server?.close(); await app?.close(); if (dir) 
 async function openMap(page: import('@playwright/test').Page, flat = false) {
   if (flat) await page.addInitScript(() => localStorage.setItem('drishya.mapDepth', 'false'));
   await page.goto(server.launchUrl);
-  await page.locator('.mh-session-open').filter({ hasText: 'Quiet zone synthetic session' }).click();
+  await expect(page.locator('.home')).toBeVisible();
+  await page.goto(`${server.url}/#/r/${recordingId}`);
   await expect(page.getByRole('region', { name: 'Harness prompt' })).toBeVisible();
   const rail = page.getByRole('complementary', { name: 'Repository files' });
   if (!await rail.isVisible()) await page.getByRole('button', { name: 'Show files', exact: true }).click();
@@ -151,4 +152,80 @@ test('beneath the reading column dots and import lines stay visible but transluc
     return max;
   });
   expect(exploring).toBeGreaterThan(110);
+});
+
+for (const width of [600, 1440]) test(`MAP-3 activity chips stay outside actual protected UI at ${width}px`, async ({page}) => {
+ await page.setViewportSize({width,height:900});
+ await page.addInitScript(()=>localStorage.setItem('drishya.mapOrbit','false'));
+ await openMap(page);
+ await page.waitForTimeout(400);
+ const check=async()=>expect(await page.evaluate(()=>{
+  const chips=[...document.querySelectorAll('.map-activity-chip')].map(e=>e.getBoundingClientRect());
+  const protectedBoxes=[...document.querySelectorAll('.history-inner,.prompt-rail,.workspace-header,.workspace-bar,.workbench-station,.folder-explorer,.prompt-composer,[role="dialog"]')].filter(e=>e.getClientRects().length).map(e=>e.getBoundingClientRect());
+  return chips.filter(a=>protectedBoxes.some(b=>a.left<b.right&&b.left<a.right&&a.top<b.bottom&&b.top<a.bottom)).length;
+ })).toBe(0);
+ await check();
+ await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'Workspace settings'})).toBeVisible();await check();
+ await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'Explore repository map',exact:true}).click();
+ await expect(page.locator('.map-activity-chip')).toHaveCount(0);
+});
+
+test('MAP-3 mounts a real filename/type chip in a free gutter and suppresses it when the gutter closes', async ({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.route('**/graph*',async route=>{
+  const response=await route.fetch();const graph=await response.json();
+  if(Array.isArray(graph.nodes))for(const node of graph.nodes)if(node.id==='client/src/file3.ts'){node.x=0;node.y=.75;}
+  await route.fulfill({response,json:graph});
+ });
+ await openMap(page,true);
+ const chip=page.locator('.map-activity-chip[data-path="client/src/file3.ts"]');
+ await expect(chip).toBeVisible();await expect(chip.locator('.file-format')).toHaveCount(1);
+ await expect(chip).toHaveAttribute('data-tone','read');
+ const accessibleChip=page.getByRole('button',{name:'read client/src/file3.ts',exact:true});
+ await expect(accessibleChip).toBeVisible();
+ await page.getByLabel('More workspace options',{exact:true}).click();
+ await expect(chip).toBeHidden();
+ await page.keyboard.press('Escape');
+ await expect(chip).toBeVisible();
+ expect(await chip.locator('span').evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);
+
+ await accessibleChip.focus();await expect(accessibleChip).toBeFocused();
+ await accessibleChip.press('Enter');
+ await expect(page.locator('.file-workspace')).toBeVisible();
+ await page.keyboard.press('Escape');await expect(chip).toBeVisible();
+
+ await page.setViewportSize({width:600,height:900});
+ await expect(chip).toHaveCount(0);
+});
+
+test('MAP-3 preserves static, reduced-motion, visibility and low-resource map guards', async ({page})=>{
+ await page.setViewportSize({width:1440,height:900});
+ await page.addInitScript(()=>{localStorage.setItem('drishya.mapDepth','true');localStorage.setItem('drishya.mapOrbit','true');});
+ await openMap(page);const map=page.locator('.map');
+ await expect(map).toHaveAttribute('data-map-depth','spatial-3d');
+ const yaw=()=>map.getAttribute('data-map-yaw');
+ const initial=await yaw();await expect.poll(yaw).not.toBe(initial);
+ const holds=async()=>{await page.waitForTimeout(150);const before=await yaw();await page.waitForTimeout(250);expect(await yaw()).toBe(before);};
+ await page.emulateMedia({reducedMotion:'reduce'});await holds();
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ const reduced=await yaw();await expect.poll(yaw).not.toBe(reduced);
+ // Exercise the visibility event boundary without depending on a headed window manager.
+ await page.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});
+ await holds();
+ await page.evaluate(()=>{delete (document as unknown as Record<string,unknown>).visibilityState;document.dispatchEvent(new Event('visibilitychange'));});
+ const hidden=await yaw();await expect.poll(yaw).not.toBe(hidden);
+ await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+ const settings=page.getByRole('dialog',{name:'Workspace settings'});
+ await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+ await settings.getByRole('checkbox',{name:/Slow background orbit/}).uncheck();
+ await page.keyboard.press('Escape');await holds();
+ await page.getByRole('button',{name:'Workspace settings',exact:true}).click();
+ await settings.getByRole('tab',{name:'Reading',exact:true}).click();
+ await settings.getByRole('checkbox',{name:/Low resource mode/}).check();
+ await expect(map).toHaveCount(0);await expect(page.locator('.map-activity-chip')).toHaveCount(0);
+ await settings.getByRole('checkbox',{name:/^Repository map/}).check();
+ await page.keyboard.press('Escape');await expect(map).toHaveAttribute('data-map-depth','flat');
+ await holds();
 });

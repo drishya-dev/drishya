@@ -85,3 +85,18 @@ export function mapDetail(graph: RepoGraph, zoom: number): ReturnType<typeof map
   }
   return { nodes, edges: [...coarse.edges.filter(e => !unchanged.has(e.from) || !unchanged.has(e.to)), ...fine.edges], depth: fine.depth };
 }
+
+/** Bounded presentation of the composer's step-derived heat, shared by live and replay.
+ * Inactive heat below .04 is cold; active locations always qualify. No clock or new history. */
+export function mapActivity(graph: RepoGraph | undefined, heat: readonly import('@drishya/scene').HeatCell[]) {
+  if (!graph) return [];
+  const byId = new Map(graph.nodes.map(node => [node.id, node]));
+  return heat.filter(cell => byId.has(cell.path) && (cell.active || cell.heat >= .04))
+    .sort((a, b) => Number(b.active) - Number(a.active) || b.heat - a.heat || (a.path < b.path ? -1 : a.path > b.path ? 1 : 0))
+    .slice(0, 3).map(cell => ({ node: byId.get(cell.path)!, cell }));
+}
+
+/** Heat's default test 'pass' also includes unreported outcomes. It proves test activity, not a pass. */
+export function mapActivityTone(cell: Pick<import('@drishya/scene').HeatCell, 'tone'>): Exclude<import('@drishya/scene').HeatCell['tone'], 'pass'> | 'test' {
+  return cell.tone === 'pass' ? 'test' : cell.tone;
+}

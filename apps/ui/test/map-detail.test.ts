@@ -38,3 +38,25 @@ it('excludes current private local caches without hiding recorded file evidence'
   expect(mapDetail({ ...graph, nodes: [...graph.nodes, cache] }, 6).nodes.some(n => n.id === cache.id)).toBe(false);
   expect(mapDetail({ ...graph, temporal: 'recorded' as RepoGraph['temporal'], nodes: [...graph.nodes, cache] }, 6).nodes.some(n => n.id === cache.id)).toBe(true);
 });
+
+import { mapActivity } from '../src/lib/map-detail.ts';
+import type { HeatCell } from '@drishya/scene';
+it('selects bounded evidence-backed activity identically regardless of input order, without changing map geometry', () => {
+  const cells: HeatCell[] = graph.nodes.slice(0, 5).map((n, i) => ({ path: n.id, heat: .8 - i * .1, tone: 'read', edited: false, active: i === 4 }));
+  cells.push({path:'unresolved.ts',heat:1,tone:'write',edited:true,active:true});
+  const chosen = mapActivity(graph, cells);
+  expect(chosen.map(x => x.node.id)).toEqual([cells[4]!.path, cells[0]!.path, cells[1]!.path]);
+  expect(mapActivity(graph, [...cells].reverse())).toEqual(chosen);
+  expect(chosen[0]!.node).toBe(graph.nodes[4]);
+  expect(mapActivity(graph, [])).toEqual([]);
+  expect(mapActivity(graph, [{...cells[0]!,heat:0,active:false}])).toEqual([]);
+});
+
+import * as detailPaint from '../src/lib/map-detail.ts';
+it('does not turn the heat model default test tone into a claimed passing outcome',()=>{
+ expect(detailPaint.mapActivityTone).toBeTypeOf('function');
+ expect(detailPaint.mapActivityTone({tone:'pass'})).toBe('test');
+ expect(detailPaint.mapActivityTone({tone:'fail'})).toBe('fail');
+ expect(detailPaint.mapActivityTone({tone:'read'})).toBe('read');
+ expect(detailPaint.mapActivityTone({tone:'write'})).toBe('write');
+});

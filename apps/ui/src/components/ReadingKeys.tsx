@@ -118,15 +118,15 @@ export function ReadingKeys(props: {
     const goTo = (event: Event) => {
       const target = (event as CustomEvent<ReadingTarget | undefined>).detail;
       if (!target || target.type !== 'operation' || !target.id || !readingValid()) return;
-      epoch++;
+      const requestEpoch=++epoch;
       chain = chain.then(async () => {
         try {
-          if (!readingValid()) return;
+          if (!readingValid() || requestEpoch!==epoch) return;
           useApp.getState().set({ follow: false });
           cursor = target;
           useApp.setState({ trailAt: target.id });
           await latest.current.navigate(target);
-          if (!readingValid()) return;
+          if (!readingValid() || requestEpoch!==epoch) return;
           focusMaterial(target.id);
           setNotice(card(target.id)?.getAttribute('aria-label') ?? 'Operation');
         } catch (error) { if (valid()) setNotice(`Reading navigation failed: ${(error as Error).message}`); }

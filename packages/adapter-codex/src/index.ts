@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import type { AdapterDescriptor, CompactionPayload, DiscoveredSource, Observation, ToolsSnapshotPayload, UsagePayload } from '@drishya/contracts';
 import {
   fileInfo,
+  discoveryTitle,
   headRecords,
   listFiles,
   parseMcpName,
@@ -390,7 +391,7 @@ async function discover(): Promise<DiscoveredSource[]> {
       bytes: info.bytes,
       modifiedAt: info.modifiedAt,
       cwd: typeof meta?.cwd === 'string' ? meta.cwd : undefined,
-      title: t ? sanitize(t.slice(0, 160)).value : undefined,
+      title: t ? discoveryTitle(t) : undefined,
       companions: [],
       ...(typeof meta?.id === 'string' ? { sessionId: meta.id } : {}),
       ...(typeof meta?.parent_thread_id === 'string' ? { parentSessionId: meta.parent_thread_id } : {}),

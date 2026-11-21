@@ -44,9 +44,17 @@ test.beforeAll(async()=>{
 });
 test.afterAll(async()=>{await server?.close();await app?.close();if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe temporary path');rmSync(dir,{recursive:true,force:true});}});
 test.beforeEach(async({page})=>{
+ if(process.env.DRISHYA_FOCUS_TRACE)await page.addInitScript(()=>{
+  const rows:unknown[]=[];Object.assign(window,{__focusTrace:rows});
+  const node=(el:EventTarget|null)=>el instanceof Element?`${el.tagName}.${el.className}`:String(el);
+  const record=(type:string,target:EventTarget|null,extra:object={})=>{rows.push({at:performance.now(),type,target:node(target),active:node(document.activeElement),...extra});if(rows.length>500)rows.shift();};
+  for(const type of ['focusin','focusout','keydown','toggle'])document.addEventListener(type,event=>record(type,event.target,{key:(event as KeyboardEvent).key,open:event.target instanceof HTMLDetailsElement?event.target.open:undefined}),true);
+  const focus=HTMLElement.prototype.focus;HTMLElement.prototype.focus=function(...args){record('focus-call',this,{stack:new Error().stack});focus.apply(this,args);record('focus-result',this);};
+ });
  await page.route('**/v1/working-locations',r=>r.request().method()==='GET'?r.fulfill({json:{version:1,sessions:[]}}):r.continue());
  await page.route('**/controller',r=>r.fulfill({json:{harness:'codex',available:false,output:'',tools:Array.from({length:300},(_,n)=>`runtime_tool_${n}${n===299?'_'+ 'long_name_'.repeat(20):''}`),inventory:'runtime',approvals:[],state:'idle'}}));
 });
+test.afterEach(async({page},info)=>{if(process.env.DRISHYA_FOCUS_TRACE){const rows=await page.evaluate(()=>Reflect.get(window,'__focusTrace'));writeFileSync(info.outputPath('focus-trace.json'),JSON.stringify(rows,null,2));}});
 
 async function open(page: Page, skin: string, harness: string, motion = false) {
   await page.goto(server.launchUrl);
@@ -80,6 +88,41 @@ async function assertDockBounds(dock: Locator) {
     );
   })).toBeLessThanOrEqual(1);
 }
+
+test('late tool-trail navigation yields focus to the search and its Escape summary',async({page})=>{
+  await page.setViewportSize({width:1440,height:900});
+  const dock=await open(page,'modern','codex');
+  const recorded=dock.locator('.tool-list');
+  const search=recorded.getByRole('searchbox',{name:'Search tools'});
+  await search.fill('Read');await recorded.locator('.tool-row').click();
+  const trail=dock.locator('.tool-trail');
+  await expect(trail.locator('.trail-count')).toContainText('of 3');
+  // Hold the real reader's two-frame material-arrival boundary. The tool event
+  // and selected operation still run; only its eventual focus is delayed.
+  await page.evaluate(()=>{
+    const original=window.requestAnimationFrame,held:FrameRequestCallback[]=[];let released=false;
+    window.requestAnimationFrame=callback=>{held.push(callback);return 0;};
+    Object.assign(window,{__releaseToolArrival:()=>{
+      if(released)return;released=true;
+      window.requestAnimationFrame=original;
+      held.forEach(callback=>original.call(window,callback));
+    },__heldToolArrival:held});
+    document.querySelector<HTMLButtonElement>('.tool-trail button[aria-label="Last use"]')!.click();
+  });
+  try {
+    await expect.poll(()=>page.evaluate(()=>Reflect.get(window,'__heldToolArrival').length)).toBeGreaterThan(0);
+    await search.focus();await search.press('Escape');
+    const summary=recorded.locator(':scope > summary');
+    await expect(recorded).not.toHaveAttribute('open','');await expect(summary).toBeFocused();
+    await page.evaluate(async()=>{
+      Reflect.get(window,'__releaseToolArrival')();
+      await new Promise<void>(done=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>done()))));
+    });
+    // The latest requested use remains selected, without reclaiming keyboard ownership.
+    await expect(trail.locator('.trail-count')).toHaveText('3 of 3');
+    await expect(summary).toBeFocused();
+  } finally {await page.evaluate(()=>Reflect.get(window,'__releaseToolArrival')?.());}
+});
 
 for (const skin of ['modern', 'clarity']) for (const width of [600, 1440]) {
   test(skin + ' Toolbox expands in place, stays centred and scrolls at ' + width, async ({ page }) => {
