@@ -1,3 +1,4 @@
+import {resolveThemePreference} from '../lib/theme-preference.ts';
 import {surfaceMotion,watchSurfaceMotion} from '../lib/surface-motion.ts';
 import { READING_SHORTCUTS } from './ReadingKeys.tsx';
 import { DOCUMENT_SIZES, type DocumentSize } from '../lib/document-limit.ts';
@@ -73,9 +74,9 @@ export function ProductShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const apply = () => {
       // data-theme stays the light/dark scheme; data-palette names the look within it.
-      const scheme = theme === 'light' || theme === 'system' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      const {scheme,palette} = resolveThemePreference(theme,matchMedia('(prefers-color-scheme: light)').matches);
       document.documentElement.dataset.theme = scheme;
-      document.documentElement.dataset.palette = scheme === 'light' ? 'paper' : theme === 'midnight' ? 'midnight' : 'jet';
+      document.documentElement.dataset.palette = palette;
     };
     apply();
     const preference = matchMedia('(prefers-color-scheme: light)');
@@ -95,7 +96,11 @@ const THEMES = [
 const MODERN_THEMES = [
   ['dark', 'Jet Black', 'Neutral graphite · azure'],
   ['midnight', 'Midnight', 'Midnight black · electric blue'],
-  ['light', 'Daylight', 'White · sky blue'],
+  ['light', 'Daylight', 'Warm off-white · sky blue'],
+  ['neutral', 'Neutral', 'Neutral dark · review candidate'],
+  ['chalk', 'Chalk', 'Neutral off-white · review candidate'],
+  ['slate', 'Smoked Slate', 'Cool slate · warm mineral accent · candidate'],
+  ['aubergine', 'Aubergine', 'Violet charcoal · bone accent · candidate'],
 ] as const;
 
 function Settings() {
@@ -114,7 +119,7 @@ function Settings() {
   return <ReadingDialog title="Workspace settings" close={() => useApp.setState({ settingsOpen: false })} className="settings-dialog">
     <SettingsSections categories={['Appearance', 'Reading', 'Links', 'Playback', 'Privacy', 'Keyboard']}>
     <section><h3>Appearance</h3><p className="muted">One theme across your sessions, repository and reading spaces.</p>
-      <div className="theme-options" aria-label="Colour theme">{(document.documentElement.dataset.uiVersion==='modern'?MODERN_THEMES:THEMES.slice(0,3)).map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
+      <div className="theme-options" aria-label="Colour theme">{(document.documentElement.dataset.uiVersion==='modern'?MODERN_THEMES:THEMES.slice(0,3)).map(([value, label, note]) => <button key={value} className={`theme-option theme-${value}`} data-palette={resolveThemePreference(value,false).palette} data-theme={resolveThemePreference(value,false).scheme} aria-pressed={theme === value} aria-label={label} onClick={() => setTheme(value)}><i aria-hidden="true"><b /><b /><b /></i>{label}<small>{note}</small></button>)}</div>
     </section>
     <section><h3>Reading and resources</h3>
       <label className="setting-row"><span>Low resource mode<small>Smaller material cache and history overscan. Turns map and motion off.</small></span><input type="checkbox" checked={low} onChange={(e) => setLowResource(e.target.checked)} /></label>

@@ -18,8 +18,8 @@ async function openSettings(page:Page){
 
 test('all Settings sections meet text and control floors on every palette',async({page})=>{
  await openSettings(page);const dialog=page.getByRole('dialog',{name:'Workspace settings'});
- for(const palette of ['jet','paper','midnight']){
-  await page.evaluate(value=>document.documentElement.dataset.palette=value,palette);
+ for(const palette of ['jet','paper','midnight','neutral','chalk','slate','aubergine']){
+  await page.evaluate(value=>{document.documentElement.dataset.palette=value;document.documentElement.dataset.theme=['paper','chalk'].includes(value)?'light':'dark';},palette);
   for(const section of sections){
    await dialog.getByRole('tab',{name:section,exact:true}).click();
    // Controls transition their colours (120 ms); measure the settled palette, not a frame between two of them.
@@ -72,4 +72,22 @@ test('Settings descriptions, keyboard rows and controls remain reachable at narr
   await page.screenshot({path:`.local/ui2-settings-${size.width}.png`});
  }
  await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);
+});
+
+for(const width of [600,1440])test(`UI-40 previews use product tokens and switching preserves geometry at ${width}px`,async({page})=>{
+ await page.setViewportSize({width,height:900});await openSettings(page);
+ const dialog=page.getByRole('dialog',{name:'Workspace settings'});
+ await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>undefined))));
+ const before=await dialog.boundingBox();
+ for(const [name,palette] of [['Neutral','neutral'],['Chalk','chalk'],['Smoked Slate','slate'],['Aubergine','aubergine']] as const){
+  const option=dialog.getByRole('button',{name,exact:true});await option.focus();await option.press('Enter');
+  await expect(page.locator('html')).toHaveAttribute('data-palette',palette);
+  await expect(option).toHaveAttribute('aria-pressed','true');
+  const paint=await option.evaluate(el=>({preview:getComputedStyle(el.querySelector('i')!).backgroundColor,root:getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),rect:el.getBoundingClientRect().toJSON()}));
+  const actual=await page.evaluate(()=>{const c=document.createElement('canvas').getContext('2d')!;c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg');c.fillRect(0,0,1,1);return [...c.getImageData(0,0,1,1).data].slice(0,3).join(', ');});
+  expect(paint.preview).toBe(`rgb(${actual})`);
+  await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>undefined))));
+  expect(await dialog.boundingBox()).toEqual(before);
+ }
+ await page.reload();await expect(page.locator('html')).toHaveAttribute('data-palette','aubergine');
 });
