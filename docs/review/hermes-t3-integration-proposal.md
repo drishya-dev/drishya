@@ -1,12 +1,12 @@
 # Hermes Agent and T3 Code: proposed integration and delivery plan
 
-**Status:** proposed; awaiting Yash's design review. **Date:** 19 November 2026. **Requested by:** Harsh Jain. **Scope of this PR:** documentation and review only.
+**Status:** reviewed planning direction; gated feasibility only. **Proposed:** 19 November 2026. **Self-review:** 21 November 2026. **Requested by:** Harsh Jain. **Scope of this PR:** documentation and review only.
 
-This document proposes how Drishya can read Hermes sessions and run inside T3 Code while retaining one local capture, evidence and rendering system. It does not certify either integration, assign unaccepted implementation work, promise dates or authorize publication. Approval of this proposal opens the bounded feasibility work below; production implementation follows separate issues and reviewed PRs after the findings are accepted.
+This document sets the planning direction for reading Hermes sessions and running Drishya inside T3 Code while retaining one local capture, evidence and rendering system. It does not certify either integration, assign unaccepted implementation work, promise dates or authorize publication. Review permits the bounded feasibility work below; production implementation follows separate issues and reviewed PRs after the findings are accepted.
 
-## 1. Decision requested
+## 1. Review disposition
 
-Yash: review the requirements, tradeoffs and stop conditions, then record approve, changes requested or defer against the decision table in section 12. Harsh's request to prepare this proposal is not recorded as both-builder agreement to any new schema or security exception.
+On 21 November, Harsh instructed Codex to self-review and merge this documentation PR, reporting Yash's delegation. Codex reviewed it against current main and the active integration work; the resulting dispositions are recorded in section 12. This is author self-review on Harsh's behalf, not a GitHub approval authored by Yash or a claim of new independent review. It records no both-builder agreement to any new schema or security exception.
 
 Recommended order:
 1. Audit and reuse the existing embed work; prove a T3 **local desktop** host prototype.
@@ -30,6 +30,7 @@ The four already-claimed MAP-3, UI-40, AG-3 and STORE-1 tasks retain their scope
 | E6 | Drishya already has an agreed [EMBED-1 contract](embed-1-in-app.md). [PR #549](https://github.com/drishya-dev/drishya/pull/549), head `4787bd7f778b878da0c164870cd791ebeeb5a012`, was open and unmerged when checked. | That embed implementation is on main or that T3 maintainers have accepted an integration. |
 | E7 | At Drishya main `30c83c9f71b7d0025c34927730d1c8bc5b5c1acc`, [Adapter](../../packages/capture-core/src/index.ts), [JSONL cursor](../../packages/capture-core/src/jsonl.ts) and [ingest](../../packages/ingest/src/index.ts) remain source/path and record-reader oriented. The JSONL default record cap is 16 MiB. | That a database containing many sessions can be registered as one existing journal, or that a large whole-session export fits this contract. |
 | E8 | SQLite WAL supports snapshots, but long reads can delay checkpoint progress; read-only WAL access has side-file conditions. [SQLite WAL documentation](https://sqlite.org/wal.html). | Literal zero overhead, safe copying of only a running database's main file, or permission to mark a changing database immutable. |
+| E9 | On 21 November, main was `3d35036de1678d23d00be93e90bba2437a6faaaa`. #549 had merged, then was [reverted](https://github.com/drishya-dev/drishya/commit/bcd7381945bc7855fec7122563c74da524c207e7). The corrected restoration is draft [PR #563](https://github.com/drishya-dev/drishya/pull/563), head `5c310bc9e4bddbfcc2603eefe0132ec78dc5e9d0`, tracking [#562](https://github.com/drishya-dev/drishya/issues/562). | Embed availability on main, completed native hook/MCP invocation or actual T3 guest acceptance. #563 explicitly leaves native/desktop-host acceptance open. |
 
 Native Hermes and T3 runtime behaviour, supported version ranges, performance and physical platform coverage are **unverified in this proposal**. No marketplace, partnership, remote-access or universal compatibility claim follows from these sources. No external maintainer has been contacted.
 
@@ -124,7 +125,7 @@ The [EMBED-1 contract](embed-1-in-app.md) remains authoritative; this proposal a
 
 ### Delivery and acceptance
 
-- **T0 — dependency audit:** inspect the then-current #549 outcome and accepted guides; list existing functionality versus actual T3 gaps. No cherry-picking an unreviewed security implementation into a new integration branch.
+- **T0 — dependency audit:** inspect #563/#562 and the outcome of #549's merge/revert, then the accepted launcher guides. List existing functionality versus actual T3 gaps. Source audit and exact-session mapping research can proceed, but a runnable host prototype depends on a reviewed embed base. No cherry-picking an unreviewed security implementation into a new integration branch.
 - **T1 — local prototype:** on a pinned disposable T3 checkout, prove exact selection, private launch, navigation restrictions and guest lifecycle. No upstream publication/contact in this phase.
 - **T2 — reviewable host patch:** produce a small local patch plus install/uninstall/version guide, packaged-install tests and compatibility matrix. Builders decide whether/when to approach T3 maintainers under their contribution policy.
 - **T3 — acceptance:** genuine supported Claude Code, Codex and Antigravity sessions, live/replay at 360/600/1440; multiple sessions in the same checkout; provider switch; restart; expired/replayed launch; full screen/Escape; reduced motion; guest crash; host closure; missing session/daemon; unsupported remote/web clients; hostile navigation; secret-leak inspection. Exclude phone tests.
@@ -213,7 +214,7 @@ All implementation owners below are **to be claimed after review**, not assigned
 
 | Package | Deliverable | Depends on / exit |
 |---|---|---|
-| P0: design review | Yash/Harsh decisions recorded against section 12 | This docs PR; no runtime work. |
+| P0: design review | Delegated author self-review and dispositions recorded in section 12 | This docs PR; no runtime work or schema/security exception. |
 | P1: T3 feasibility | Pinned local prototype findings, exact-thread mapping and leak/lifecycle results | Current embed implementation reviewed; T1 stop condition resolved. |
 | P2: Hermes feasibility | Genuine source/export capability matrix, identity/mutation/WAL findings and proposed budgets | Authorized local Hermes profile and throwaway task. Independent of P1. |
 | P3: T3 host delivery | Focused host patch, guide and tested compatibility matrix | Accepted P1; upstream outreach remains builder-owned. |
@@ -223,10 +224,10 @@ All implementation owners below are **to be claimed after review**, not assigned
 
 Proposed code areas, **not files changed by this PR**:
 
-- T3: verify #549's launcher/auth/MCP/runtime, bootstrap and embed view; existing `docs/guides/embed*.md` locations may only exist on that PR until merged. Host-side source areas are E5; exact IPC/preview patch follows T1.
+- T3: verify the corrected launcher/auth/MCP/runtime, bootstrap and embed view in #563; #549 is historical and reverted. `docs/guides/embed*.md` locations are candidate-branch documentation until a reviewed restoration lands. Host-side source areas are E5; exact IPC/preview patch follows T1.
 - Hermes: a focused `packages/adapter-hermes/` following existing package conventions; the shared reader seam in `packages/capture-core/` and `packages/ingest/` only after H2; registration, CLI discovery/allowlisting and targeted privacy/security tests.
 - Verification: adapter/ingest/store/daemon units, `scripts/real-cases/`, relevant browser/security specs and synthetic fixtures. UI-specific code stays small and capability-driven.
-- Coordinate overlapping privacy/server/API/state files with #549, STORE-1 and other active PRs. No broad Settings, controller or rendering refactor.
+- Coordinate overlapping privacy/server/API/state files with #563/#562, STORE-1 and other active PRs. No broad Settings, controller or rendering refactor.
 
 Every implementation issue must copy its bounded requirements and acceptance IDs, identify supported versions, list dependencies, and use a draft PR while incomplete. Keep independent features in separate commits/PRs with agent co-author trailers. No automatic merge, tag or publish.
 
@@ -259,14 +260,14 @@ Document exact tested versions and known limitations, with an opt-in local diagn
 
 ## 12. Review decisions and unresolved questions
 
-| Decision | Proposed answer | Review status |
+| Decision | Direction | Review disposition, 21 November |
 |---|---|---|
-| D1: scope/order | T3 local desktop hosting; Hermes selected coding-session import, then conditional live. | Pending Yash review |
-| D2: existing embed/security contract | Reuse EMBED-1/#549, retain top-level guest/local-only boundaries and private handoff. | Pending confirmation that no new exception is needed |
-| D3: Hermes evidence policy | Visible conversation by default; no messaging discovery, archived-history exposure, historical-byte invention or controller. | Pending Yash review |
-| D4: architecture/compatibility | No public SDK; review source-reader/identity/mutation design after P2. Both builders approve schema changes separately. | Pending Yash review |
-| D5: execution authorization | Approval opens P1/P2 feasibility issues only. Findings/budgets are reviewed before P3–P5 implementation. | Pending Yash review |
-| D6: external coordination/release | Builders own T3/Hermes outreach and support promises; no release date or upstream acceptance assumed. | Pending Yash review |
+| D1: scope/order | T3 local desktop hosting; Hermes selected coding-session import, then conditional live. | Accepted for bounded feasibility under the delegated self-review. |
+| D2: existing embed/security contract | Reuse EMBED-1 and the reviewed restoration of #563, retaining top-level guest/local-only boundaries and private handoff. | Boundary retained; no exception approved. Runnable T3 prototype waits for an accepted embed base. |
+| D3: Hermes evidence policy | Visible conversation by default; no messaging discovery, archived-history exposure, historical-byte invention or controller. | Accepted as feasibility constraints; source/runtime semantics remain unverified. |
+| D4: architecture/compatibility | No public SDK; review source-reader/identity/mutation design after P2. Both builders approve schema changes separately. | Gate retained. Reader design and any schema change are not approved by this merge. |
+| D5: execution authorization | Review opens P1/P2 feasibility issues only. Findings/budgets are reviewed before P3–P5 implementation. | Accepted planning scope. This turn does not start runtime work or claim feasibility complete. |
+| D6: external coordination/release | Builders own T3/Hermes outreach and support promises; no release date or upstream acceptance assumed. | Ownership retained; no external outreach, release or partnership authorized here. |
 
 Questions that feasibility must answer, not guesses to resolve by implementation:
 
@@ -276,4 +277,4 @@ Questions that feasibility must answer, not guesses to resolve by implementation
 - What per-machine/session/concurrency budgets can both builders accept from the measured results?
 - Which signed-in accounts and physical platforms are available for acceptance?
 
-**Review completion:** each D row has a recorded decision or named blocker; requirements remain testable; no source claim is represented as runtime proof. A merged design PR records the agreed direction, not that Hermes or T3 support has shipped.
+**Review completion:** each D row has a disposition or named dependency. The self-review found stale embed dependencies and corrected them to #563/#562; existing source pins and the bounded-reader, identity, mutation, privacy and release gates remain intact. Documentation validation is rerun before merge. A merged design PR records reviewed planning direction, not that Hermes or T3 support has shipped.
