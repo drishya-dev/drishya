@@ -431,7 +431,7 @@ test("UI-32b Toolbox centers on viewport Y axis and Follow controls never shift 
     await expect(dock).toBeVisible();
     await assertDockBounds(dock);
 
-    const before = await snapshot();
+    let before = await snapshot();
     if (width >= 1020) {
       expect(Math.abs(before.station!.midY - height / 2), `${width}x${height} centered on Y axis`).toBeLessThanOrEqual(1);
     } else {
@@ -447,7 +447,17 @@ test("UI-32b Toolbox centers on viewport Y axis and Follow controls never shift 
       await assertDockBounds(dock);
     }
 
-    // Toggling Follow latest off/on must not move history scroll, passages, Toolbox or chrome.
+    // Toggling Follow latest off/on must not move history scroll, passages, Toolbox or chrome. Take the baseline once the
+    // opening has finished: after the first paint the session starts watching and reloads its projection, and on a loaded
+    // runner that second paint landed between this baseline and the toggle (scrollTop 2701 then 2648, 18 Nov).
+    let steady = "";
+    await expect.poll(async () => {
+      const sample = JSON.stringify(await snapshot());
+      const same = sample === steady;
+      steady = sample;
+      return same;
+    }, { intervals: [300], timeout: 15_000, message: "layout steady across two samples 300 ms apart" }).toBe(true);
+    before = JSON.parse(steady) as typeof before;
     await page.locator(".workspace-follow").click();
     await expect(page.locator(".follow-pill")).toBeVisible();
     await page.waitForTimeout(150);

@@ -1,16 +1,19 @@
 name: ci
 
-# SHIP-16. Windows, Linux and macOS on Node 24 with a frozen install. docs/CI_POLICY.md has the cost rules.
-#
-# While the repository is private, hosted minutes are metered, so a push or a pull request starts this workflow
-# but every job is skipped (a skipped job uses no runner and no minutes); only a builder's manual dispatch runs it.
-# The moment the repository is public the same triggers run it for free, with no edit here: each job's `if` reads
-# `github.event.repository.private`.
+# CI-2. What runs where, and why, is in docs/decisions/log.md ("CI runs by event"). In short:
+#   pull request  check on all three systems; the whole browser suite on Linux in four shards; on Windows and macOS the specs
+#                 that name a changed file plus a short smoke list. Browser jobs are skipped when only docs changed.
+#   push to main  check on all three; the whole browser suite on all three, three shards each.
+#   nightly       the same as a push to main, against main's head, so a timing fault on one system shows within a day.
+#   dispatch      the same as main, on any branch; `checks_only` skips the browser jobs.
+# release.yml has its own verify job and is not touched by this file.
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '23 1 * * *'
   workflow_dispatch:
     inputs:
       checks_only:
@@ -21,16 +24,74 @@ on:
 permissions:
   contents: read
 
+# A newer commit on a pull request replaces its older run. Runs on main queue instead of cancelling each other, so every
+# merged commit gets its whole-suite result (a waiting run is still replaced by a newer one).
 concurrency:
-  group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.event.pull_request.number || github.ref }}-${{ github.event_name }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
-# Actions are pinned to a full commit (the same ones release.yml uses), not a movable tag.
+env:
+  # Windows and macOS pull-request jobs: one spec per key flow (Home, opening and paging a session, live follow, the file
+  # reader, Changes, hostile content, the feedback link). Keep this short; the whole suite runs on Linux for every PR.
+  SMOKE_SPECS: >-
+    home-opening.spec.ts home-current.spec.ts b4-history.spec.ts live-sync.spec.ts b2-live.spec.ts
+    files-4-reader-review.spec.ts git-changes.spec.ts security-injected.spec.ts feedback-link.spec.ts
+  # More affected specs than this and the Windows/macOS PR job runs the smoke list plus the spec files the PR edits: the change
+  # named so much that Linux's whole suite is the useful signal, and main runs everything on all three after the merge.
+  MAX_AFFECTED_SPECS: 30
+
+# Actions are pinned to a full commit, not a movable tag.
 jobs:
+  changes:
+    name: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ steps.scope.outputs.code }}
+      whole: ${{ steps.scope.outputs.whole }}
+      systems: ${{ steps.scope.outputs.systems }}
+      shards: ${{ steps.scope.outputs.shards }}
+      total: ${{ steps.scope.outputs.total }}
+      specs: ${{ steps.scope.outputs.specs }}
+    steps:
+      # A pull request checks out its merge commit; its first parent is main as the PR would land on it.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+      - id: scope
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          CHECKS_ONLY: ${{ inputs.checks_only }}
+        run: |
+          if [ "$EVENT" != pull_request ]; then
+            code=true; [ "$CHECKS_ONLY" = true ] && code=false
+            { echo "code=$code"; echo "whole=true"; echo "specs="; echo 'systems=["ubuntu-latest","windows-latest","macos-latest"]'; echo 'shards=[1,2,3]'; echo total=3; } >> "$GITHUB_OUTPUT"
+            echo "$EVENT: whole suite on all three systems (browser: $code)"; exit 0
+          fi
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          echo "changed files: $(wc -l < "$RUNNER_TEMP/changed.txt")"
+          if grep -qvE '^docs/|\.md$' "$RUNNER_TEMP/changed.txt"; then code=true; else code=false; fi
+          specs=""
+          if [ "$code" = true ]; then
+            specs=$(node scripts/check-affected.ts --base HEAD^1 --print-specs)
+            count=$(echo "$specs" | wc -w)
+            if [ "$count" -gt "$MAX_AFFECTED_SPECS" ]; then
+              # Too many to map usefully: keep the spec files the PR itself edits, up to the same limit.
+              specs=$(grep -E '^tests/browser/[^/]+\.spec\.ts$' "$RUNNER_TEMP/changed.txt" | xargs -r -n1 basename | head -n "$MAX_AFFECTED_SPECS" | tr '\n' ' ')
+              echo "::notice::$count specs name this change; Windows and macOS run the smoke list and the $(echo $specs | wc -w) edited specs (Linux runs the whole suite)."
+            fi
+          fi
+          { echo "code=$code"; echo "whole=false"; echo "specs=$specs"; echo 'systems=["ubuntu-latest"]'; echo 'shards=[1,2,3,4]'; echo total=4; } >> "$GITHUB_OUTPUT"
+          echo "browser: $code; affected specs: ${specs:-none}"
+
   check:
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.repository.private == false }}
     name: check (${{ matrix.os }})
-    timeout-minutes: 45
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -59,19 +120,26 @@ jobs:
       - run: pnpm demo:bundle && git diff --exit-code -- apps/ui/public/demo/bundle.json
         shell: bash
 
+  # The whole browser suite, split by Playwright's --shard. Linux runs it for every PR that touches code; Windows and macOS
+  # run it on main, nightly and dispatch. Each shard runs both passes of scripts/test-browser.ts (parallel, then the
+  # timing-sensitive specs on one worker). macOS keeps one worker: two produced load-timing failures there (17 Nov).
+  # Shards per system: four on a pull request (Linux only), three on main and nightly. The organization runs at most 20 jobs at
+  # once (five on macOS); three shards on each system keep a main run to 14 jobs, so a pull request opened meanwhile mostly
+  # still finds runners. Measured times are in the CI-2 pull request.
   browser:
-    if: ${{ (github.event_name == 'workflow_dispatch' || github.event.repository.private == false) && !inputs.checks_only }}
-    name: browser (${{ matrix.os }})
-    # macOS runs one browser at a time: its hosted runner is the smallest, and two workers there produced
-    # load-timing failures in a different spec on most runs (17 Nov, before 0.1.0). Slower, but a red run means a bug.
-    timeout-minutes: ${{ matrix.os == 'macos-latest' && 120 || 75 }}
-    env:
-      DRISHYA_WORKERS: ${{ matrix.os == 'macos-latest' && 1 || 2 }}
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' }}
+    name: browser (${{ matrix.os }}, ${{ matrix.shard }}/${{ needs.changes.outputs.total }})
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # Linux only on a pull request, all three otherwise (the changes job decides).
+        os: ${{ fromJSON(needs.changes.outputs.systems) }}
+        shard: ${{ fromJSON(needs.changes.outputs.shards) }}
     runs-on: ${{ matrix.os }}
+    env:
+      DRISHYA_WORKERS: ${{ matrix.os == 'macos-latest' && 1 || 2 }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -82,14 +150,88 @@ jobs:
           node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Linux needs Chromium's system libraries as well as the browser; the flag is harmless elsewhere.
-      - run: pnpm exec playwright install --with-deps chromium
-      - run: pnpm test:browser
+      - name: Playwright browser location
+        shell: bash
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/ms-playwright" >> "$GITHUB_ENV"
+      # Downloading Chromium took 3.5 minutes on Windows; the cache is keyed on the lockfile, so a Playwright upgrade refetches.
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      # Linux needs Chromium's system libraries as well as the browser; the flag is harmless elsewhere. The suite runs
+      # headless only, so the headless shell is enough.
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm test:browser --shard=${{ matrix.shard }}/${{ needs.changes.outputs.total }}
       # Keep Playwright's page snapshot when a browser test fails, so a CI-only failure can be
       # diagnosed. The browser tests use synthetic data only.
       - if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: playwright-results-${{ matrix.os }}
+          name: playwright-results-${{ matrix.os }}-${{ matrix.shard }}
           path: test-results/
           retention-days: 7
+
+  # Pull requests only: Windows and macOS run the specs that name a changed file (scripts/check-affected.ts --print-specs)
+  # plus the smoke list, so a platform fault in what the PR touched shows before merge without a two-hour wait.
+  browser-pr:
+    needs: changes
+    if: ${{ needs.changes.outputs.code == 'true' && needs.changes.outputs.whole != 'true' }}
+    name: browser smoke (${{ matrix.os }})
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      DRISHYA_WORKERS: ${{ matrix.os == 'macos-latest' && 1 || 2 }}
+      AFFECTED_SPECS: ${{ needs.changes.outputs.specs }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Playwright browser location
+        shell: bash
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=$RUNNER_TEMP/ms-playwright" >> "$GITHUB_ENV"
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - name: pnpm test:browser (smoke and affected specs)
+        shell: bash
+        run: |
+          specs=$(printf '%s\n' $SMOKE_SPECS $AFFECTED_SPECS | sort -u | tr '\n' ' ')
+          echo "specs: $specs"
+          pnpm test:browser $specs
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-results-${{ matrix.os }}-pr
+          path: test-results/
+          retention-days: 7
+
+  # One stable name for branch protection: green only when every job above passed or was skipped on purpose.
+  ci:
+    name: ci
+    needs: [changes, check, browser, browser-pr]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - shell: bash
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          # Allow-list, not deny-list: a job GitHub never gave a runner reports "abandoned" (18 Nov), and any result other than
+          # a pass or an on-purpose skip must fail the gate.
+          for result in $RESULTS; do
+            case "$result" in success|skipped) ;; *) echo "::error::a required job ended as $result"; exit 1;; esac
+          done

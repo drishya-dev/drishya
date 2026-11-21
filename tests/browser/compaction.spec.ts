@@ -32,6 +32,9 @@ test.beforeEach(async()=>{
   livePath=join(dir,'codex.jsonl');server=await startServer({app,port:0,token:'synthetic-compaction-browser'});
 });
 test.afterEach(async()=>{await server?.close();await app?.close();if(dir&&resolve(dir).startsWith(resolve(tmpdir())+sep))rmSync(dir,{recursive:true,force:true});});
+// Closing the 350-line summary reader leaves history at its open height for a moment; when it collapses, the passages below
+// remount and an element mid-scroll is detached (macOS, Ubuntu and Windows runners, 18 Nov). Scroll once history has settled.
+async function reveal(target:import('@playwright/test').Locator){await expect(async()=>{await target.scrollIntoViewIfNeeded({timeout:2_000});await expect(target).toBeInViewport({timeout:1_000});}).toPass({timeout:15_000});}
 async function open(page:import('@playwright/test').Page,id:string,step?:number,motion:0|1=0){await page.goto(server.launchUrl);await page.locator('.home').waitFor();await page.goto(`${server.url}/?experience=modern&motion=${motion}${step===undefined?'':`&at=${step}`}#/r/${id}`);await page.locator('.viewer').waitFor();}
 for(const width of [600,1440]) test(`captured metrics, summaries and categories at ${width}px`,async({page})=>{
   await page.setViewportSize({width,height:1000});await open(page,claude);
@@ -50,8 +53,8 @@ for(const width of [600,1440]) test(`captured metrics, summaries and categories 
   await expect(boundary).toContainText('Synthetic retained line 1');await expect(boundary).toContainText('200 of 350');
   await boundary.getByRole('button',{name:'Next lines',exact:true}).click();await expect(boundary).toContainText('Synthetic retained line 350');
   await page.keyboard.press('Escape');await expect(summary).toBeFocused();await expect(boundary.locator('.context-summary-reader')).toHaveCount(0);
-  const nearby=page.getByText('Summary recorded nearby · link not recorded',{exact:false});await nearby.scrollIntoViewIfNeeded();await expect(nearby).toBeVisible();
-  const report=page.getByRole('region',{name:'Context report'});await report.scrollIntoViewIfNeeded();await expect(report).toContainText('Memory files');await expect(report).toContainText('Unknown recorded row');await expect(report).toContainText('Report from');
+  const nearby=page.getByText('Summary recorded nearby · link not recorded',{exact:false});await reveal(nearby);
+  const report=page.getByRole('region',{name:'Context report'});await reveal(report);await expect(report).toContainText('Memory files');await expect(report).toContainText('Unknown recorded row');await expect(report).toContainText('Report from');
   await page.screenshot({path:resolve(`.local/content12-synthetic-report-${width}.png`)});
   await page.getByLabel('More workspace options',{exact:true}).click();if (!await page.locator('.usage-peek').evaluate(el => (el as HTMLDetailsElement).open)) await page.locator('.usage-peek>summary').click();await expect(page.locator('.usage-peek').getByRole('region',{name:'Context',exact:true})).toContainText('80,000');await expect(page.locator('.usage-peek').getByRole('region',{name:'Context',exact:true}).locator('[title^="Computed"]')).toHaveCount(1);
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);

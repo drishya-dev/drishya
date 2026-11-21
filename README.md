@@ -133,7 +133,7 @@ Where an agent did not record its reasoning, Drishya says *Reasoning not recorde
     <td><img src="docs/readme/agents/codex.svg" width="32" alt=""></td><td><b>Codex</b></td><td align="center">✓</td><td align="center">✓</td><td align="center">✓</td>
   </tr>
   <tr>
-    <td><img src="docs/readme/agents/antigravity.svg" width="32" alt=""></td><td><b>Antigravity</b></td><td align="center">–</td><td align="center">✓</td><td align="center">–</td>
+    <td><img src="docs/readme/agents/antigravity.svg" width="32" alt=""></td><td><b>Antigravity</b></td><td align="center">✓</td><td align="center">✓</td><td align="center">–</td>
   </tr>
 </table>
 
@@ -180,7 +180,7 @@ No sessions yet? Open `http://127.0.0.1:7878/?demo` for a sample.
 <summary>Requirements</summary>
 <br>
 
-- **Node.js 24** (`>=24 <25`). Drishya uses Node's built-in SQLite and has no runtime dependencies.
+- **Node.js 24 or newer** (`>=24`). Drishya uses Node's built-in SQLite and has no runtime dependencies.
 - A desktop browser, at least 600 px wide.
 - `git`, for Files and Changes. The GitHub CLI (`gh`) is optional, for pull requests.
 - To send prompts: `claude` or `codex` installed and signed in.

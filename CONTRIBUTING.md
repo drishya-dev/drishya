@@ -16,7 +16,7 @@ Before starting, search the [Product Work History](docs/PRODUCT_WORK_HISTORY.md)
 
 ## Run it
 
-You need **Node.js 24** (`>=24 <25`), Git, and a desktop browser at least 600 px wide. Drishya was built and tested on Windows 11; Linux and macOS reports are welcome.
+You need **Node.js 24 or newer** (`>=24`), Git, and a desktop browser at least 600 px wide. Drishya was built and tested on Windows 11; Linux and macOS reports are welcome.
 
 ```bash
 corepack pnpm install --frozen-lockfile
@@ -36,7 +36,9 @@ For development, `corepack pnpm ui:dev` serves the UI with hot reload and `corep
 | `corepack pnpm test:browser` | The full browser suite; it builds the UI and the site first |
 | `corepack pnpm package:verify` | Builds the installable package and verifies it; run it when you touch ingest, the store or packaging |
 
-CI is described in [`docs/CI_POLICY.md`](docs/CI_POLICY.md). A change that adds or alters behaviour needs a test that fails without it. The event schema is the seam between capture and rendering: changes to it need agreement from both maintainers and the `schema` label.
+**Windows: the test stand-in and antivirus.** So that the browser suite does not depend on which agents your machine has installed, it puts stand-in `claude.exe` and `codex.exe` first on its `PATH`. On Windows these are one tiny program, compiled on the spot with the .NET Framework compiler (`csc.exe`) into a `%TEMP%\drishya-native-cli-*` folder. It answers only the readiness probes Drishya makes (`claude --help`, `claude auth`, `codex app-server`, `codex login`), exits with an error for anything else, and its file properties name it "Drishya test stub". Some antivirus products (McAfee, for one) quarantine a freshly compiled executable anyway. The suite checks that the stand-in runs before using it. If it does not run, the browser suite uses whichever `claude` and `codex` your machine has, and the stand-in's own unit test skips outside CI. To run with the stand-in, allow `claude.exe` and `codex.exe` inside `%TEMP%\drishya-native-cli-*` folders in your antivirus, or restore them from quarantine. Each run removes its folder when it ends, and the next run removes any such folder older than a day (for example after an interrupted run).
+
+CI runs by event (pull request, push to `main`, nightly, release) are listed in [the decisions log](docs/decisions/log.md); the cost history is in [`docs/CI_POLICY.md`](docs/CI_POLICY.md). A change that adds or alters behaviour needs a test that fails without it. The event schema is the seam between capture and rendering: changes to it need agreement from both maintainers and the `schema` label.
 
 ## Real sessions: the rule for anything that shows captured content
 
