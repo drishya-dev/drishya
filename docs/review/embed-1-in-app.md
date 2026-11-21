@@ -3,6 +3,8 @@
 14 November 2026 · Contract for EMBED-2a (Codex) and EMBED-2b (Antigravity).
 Yash reports both builders agree to the direction below, including the 360 px embed-only minimum and top-level-only Release 1. This is a design contract, not evidence that an integration has shipped.
 
+**Refined 18 Nov (EMBED, 0.1.2):** the agent opens the pane itself, so the one-use link may appear in its tool result (still single-use, 60 s, recording-bound, and stripped from captured journals), and `drishya embed` defaults to a detached, self-stopping worker. Everything else here stands. See the [decisions log](../decisions/log.md) and [embed-launcher.md](../guides/embed-launcher.md).
+
 ## 1. One session, one click
 
 - Run locally on the computer holding the journals; never proxy the daemon to a remote client.

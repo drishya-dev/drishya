@@ -20,6 +20,7 @@ describe('every place a program is started', () => {
     expect(importers).toEqual([
       'apps/daemon/src/commands.ts', //            opens the launch link in the default browser
       'apps/daemon/src/controller.ts', //          the native harness the person chose to continue, behind consent
+      'apps/daemon/src/embed-runtime.ts', //       EMBED: this same CLI as a worker on a private fd-3 pipe; System32 whoami/icacls plus fixed encoded PowerShell calling .NET for the folder ACL
       'apps/daemon/src/git-history.ts', //         `git patch-id` on a diff Git itself produced (stdin)
       'apps/daemon/src/git-review.ts', //          the read-only Git reader
       'apps/daemon/src/github-links.ts', //        the person's own `gh`, only after opt-in
@@ -45,7 +46,9 @@ describe('every place a program is started', () => {
   it('the browser opener runs only the one-time launch link (SEC-4), whose characters are URL-safe', () => {
     const source = readFileSync(join(root, 'apps/daemon/src/commands.ts'), 'utf8');
     expect(source).toContain('openBrowser(running.openUrl())');
-    expect(source.match(/openBrowser\(/g)).toHaveLength(2); // the call and the definition
+    // EMBED: `drishya embed --open` opens its pane link, which carries a one-use 60-second code, never the token.
+    expect(source).toContain('openBrowser(launched.url)');
+    expect(source.match(/openBrowser\(/g)).toHaveLength(4); // the three calls (serve, embed --open, open) and the definition
     expect(launchToken(undefined)).toBeUndefined();
     expect(launchToken('abcdefghijklmnopqrstuvwxyz0123456789_-ABCD')).toBeTruthy();
     for (const bad of ['short', 'a&calc.exe a&calc.exe', 'x'.repeat(16) + '&calc', 'x'.repeat(16) + '|dir', 'x'.repeat(16) + '%PATH%', 'x'.repeat(16) + '"', 'x'.repeat(16) + '^', 'x'.repeat(16) + ' ', 'x'.repeat(16) + '\n', 'x'.repeat(200), 'x'.repeat(16) + '$(id)', 'x'.repeat(16) + '`id`']) {

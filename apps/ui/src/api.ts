@@ -1,3 +1,4 @@
+import { consumeEmbedLaunch } from './lib/embed.ts';
 import { probeNotice } from './lib/live-probe.ts';
 import { resolveHunkLines } from '../../../packages/projection/src/patch.ts';
 import {queuePage} from '../../../packages/scene/src/queued-inputs.ts';
@@ -258,7 +259,11 @@ export const recordedUsageApi = {
  */
 export async function signIn(): Promise<'ok' | 'no-daemon' | 'signed-out'> {
   const token = new URLSearchParams(location.hash.slice(1)).get('token');
+  const launch = consumeEmbedLaunch();
   try {
+    // EMBED: a pane exchanges its one-use code for the ordinary session cookie. Nothing is kept on failure, and a pane
+    // reloaded after its code was used may still hold a valid cookie, so the check below decides.
+    if (launch) await req('/v1/embed/session', { method: 'POST', json: launch }).catch((e) => { if (!(e instanceof HttpError && e.status === 401)) throw e; });
     if (token) {
       await req('/v1/session', { method: 'POST', headers: { authorization: `Bearer ${token}` } });
       history.replaceState(null, '', location.pathname + location.search); // the token leaves the address bar

@@ -1,3 +1,4 @@
+import type { EmbedCodes } from './embed-auth.ts';
 import {queuedInputChunk} from './queued-inputs.ts';
 import {recordedFileRoots,withFileRootDiskState} from './file-roots.ts';
 import { HistoryLoading } from './history.ts';
@@ -42,6 +43,8 @@ export interface RecordingsTiming {
 }
 
 export interface ServerOptions {
+  /** Set only by the local embed worker; ordinary `serve` has no embed exchange endpoint. */
+  embedCodes?: EmbedCodes;
   /** In-process benchmark observer only; no endpoint, headers or persistence are added. */
   recordingsTiming?: (sample: RecordingsTiming) => void;
   port?: number;
@@ -105,6 +108,8 @@ export interface RunningServer {
    * It carries a one-time code that signs in exactly once and expires in two minutes, never the token.
    */
   openUrl(): string;
+  /** EMBED: open change streams and the last request time, so a detached embed worker can stop when nobody is looking. */
+  activity(): { viewers: number; lastRequestAt: number };
   app: App;
   server: Server;
   close(): Promise<void>;
@@ -241,8 +246,23 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     return sessionsOf(req).find((sid) => sessionValid(sid, true));
   };
 
+  // Both sign-in routes share one expiry, cap and cookie policy.
+  const issueSession = (res: ServerResponse) => {
+    const t = now();
+    for (const [sid, session] of sessions) if (sessionExpired(session, t)) revokeSession(sid);
+    while (sessions.size >= maxSessions) {
+      const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
+      revokeSession(oldest[0]);
+    }
+    const sid = randomBytes(24).toString('hex');
+    sessions.set(sid, { created: t, lastSeen: t });
+    res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
+  };
+
   const inFlight = new Set<Promise<void>>();
+  let lastRequestAt = Date.now();
   const handleRequest = async (req: IncomingMessage, res: ServerResponse) => {
+    lastRequestAt = Date.now();
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
     try {
       // DNS-rebinding and cross-site defences: the Host must be us, and so must any Origin.
@@ -256,16 +276,22 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       if (url.pathname === '/v1/session' && req.method === 'POST') {
         const bearer = /^Bearer\s+(\S+)$/.exec(req.headers.authorization ?? '')?.[1];
         if (!bearer || !(safeEqual(bearer, token) || consumeLaunchCode(bearer))) throw new HttpError(401, 'invalid launch token');
-        const t = now();
-        for (const [sid, session] of sessions) if (sessionExpired(session, t)) revokeSession(sid);
-        while (sessions.size >= maxSessions) {
-          const oldest = [...sessions].sort((a, b) => a[1].lastSeen - b[1].lastSeen)[0]!;
-          revokeSession(oldest[0]);
-        }
-        const sid = randomBytes(24).toString('hex');
-        sessions.set(sid, { created: t, lastSeen: t });
-        res.setHeader('set-cookie', `drishya_session=${sid}; Max-Age=${Math.floor(maxAgeMs / 1000)}; HttpOnly; SameSite=Strict; Path=/`);
+        issueSession(res);
         return json(res, { ok: true });
+      }
+      // EMBED: a one-use code bound to one recording signs a harness pane in. The Host/Origin gate above has already run.
+      if (url.pathname === '/v1/embed/session' && req.method === 'POST') {
+        if (!opts.embedCodes) throw new HttpError(404, 'embed launch is not enabled');
+        res.setHeader('cache-control', 'no-store');
+        if (url.search || req.headers.authorization) throw new HttpError(400, 'JSON launch exchange required');
+        if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '')) throw new HttpError(415, 'a JSON launch body is required');
+        const body = await readJson(req, 2048) as Record<string, unknown> | null;
+        if (!body || Array.isArray(body) || Object.keys(body).sort().join(',') !== 'code,recordingId'
+          || typeof body.code !== 'string' || typeof body.recordingId !== 'string'
+          || !app.store.getRecording(body.recordingId) || !opts.embedCodes.consume(body.code, body.recordingId))
+          throw new HttpError(401, 'invalid or expired launch');
+        issueSession(res);
+        return json(res, { ok: true, recordingId: body.recordingId });
       }
       const auth = authed(req);
       if (!auth) throw new HttpError(401, 'not signed in to this Drishya launch — open the link printed by `drishya serve`');
@@ -789,9 +815,11 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     // The token travels in the fragment, which browsers never send to a server or a log.
     launchUrl: `${url}/#token=${token}`,
     openUrl: () => `${url}/#token=${issueLaunchCode()}`,
+    activity: () => ({ viewers: clients.size, lastRequestAt }),
     app,
     server,
     close: async () => {
+      opts.embedCodes?.clear();
       await controller.close();
       await new Promise<void>((ok) => {
         for (const c of clients.keys()) {
