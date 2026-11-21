@@ -7,6 +7,7 @@ import { basename, dirname, join } from 'node:path';
 import type { AdapterDescriptor, CheckpointPayload, CompactionPayload, DiscoveredSource, ExternalChangePayload, Observation, ToolsSnapshotPayload } from '@drishya/contracts';
 import {
   fileInfo,
+  discoveryTitle,
   headAndTailRecords,
   listFiles,
   parseMcpName,
@@ -23,7 +24,7 @@ import {
   type ToolIntent,
   type ToolOutcome,
 } from '@drishya/capture-core';
-import { imageCandidate, isDeniedPath, sanitize } from '@drishya/privacy';
+import { imageCandidate, isDeniedPath } from '@drishya/privacy';
 import { recordedQueueOperation } from './queued-input.ts';
 
 export const descriptor: AdapterDescriptor = {
@@ -466,7 +467,7 @@ async function discover(): Promise<DiscoveredSource[]> {
       bytes: info.bytes,
       modifiedAt: info.modifiedAt,
       cwd,
-      title: typeof rawTitle === 'string' ? sanitize(rawTitle.slice(0, 160)).value : undefined,
+      title: typeof rawTitle === 'string' ? discoveryTitle(rawTitle) : undefined,
       companions: set.companions.map((c) => c.path),
     });
   }
