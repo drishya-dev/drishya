@@ -20,12 +20,12 @@ it('iframe declarations fail before storage or child startup',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'drishya-embed-refused-'));
  try {
   for(const origin of ['https://host.invalid','*','null','file://','broken','https://one.invalid https://two.invalid']) {
-   const r=spawnSync(process.execPath,[entry,'embed','--frame-ancestor',origin],{env:{...process.env,DRISHYA_HOME:join(dir,'absent')},encoding:'utf8',windowsHide:true});
+   const r=spawnSync(process.execPath,[entry,'embed','--frame-ancestor',origin],{env:{...process.env,DRISHYA_HOME:join(dir,'absent')},encoding:'utf8',windowsHide:true,timeout:5_000});
    expect(r.status).toBe(1);expect(JSON.parse(r.stdout).error.code).toBe('IFRAME_UNSUPPORTED');
   }
   expect(await readdir(dir)).toEqual([]);
  }finally{await rm(dir,{recursive:true,force:true});}
-});
+},30_000); // Six cold CLI starts can exceed Vitest's 5s default on hosted Windows.
 it('inherited worker opens/reuses only its own instance with credential-free private discovery',async()=>{
  const home=await mkdtemp(join(tmpdir(),'drishya-embed-worker-'));
  let supervisor:ReturnType<typeof embedSupervisor>|undefined;

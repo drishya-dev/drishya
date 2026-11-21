@@ -24,3 +24,7 @@ Windows embed tests also failed with `DISCOVERY_UNSAFE (icacls remove: exit 1332
 ## Remaining acceptance limits
 
 This is a draft restoration, not a merge authorization or full-gate claim. The full batch gate was not run here. Genuine existing recordings were read-only imported and displayed; no fresh signed-in native `/drishya` hook/MCP invocation or actual desktop-host pane integration was performed. Claude's native executable is unavailable on this machine. The import and browser evidence must not be described as proof of those native integrations. Maintainer review and hosted cross-platform CI remain before merge.
+
+## Hosted Windows follow-up
+
+The initial Windows check (run 44873373918) passed 1923 tests but timed out the iframe-refusal test at 5312 ms against Vitest's 5000 ms default. That test serially starts six cold CLI processes; it is not a runtime refusal failure. It now has a 30-second test bound and each child a five-second bound. Local focused coverage was rerun before pushing this adjustment.
