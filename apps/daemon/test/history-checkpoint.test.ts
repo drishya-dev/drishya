@@ -38,10 +38,10 @@ const wholeReady = (a: App, id: string) => new Promise<void>((done, fail) => {
 });
 
 /** A recording whose whole fold has been written, then the daemon stopped. */
-async function remembered() {
+async function remembered(turnCount=8) {
   const dir = mkdtempSync(join(tmpdir(), 'drishya-fold-restart-')); dirs.push(dir);
   const journal = join(dir, 'session.jsonl');
-  writeFileSync(journal, turns(0, 8));
+  writeFileSync(journal, turns(0, turnCount));
   const home = join(dir, 'data');
   const first = new App(home);
   const { recordingId } = await first.ingest.importSource('claude-code', journal);
@@ -96,6 +96,25 @@ describe('the remembered fold', { timeout: 60_000 }, () => {
     expect(grown.projection.prose.some((p) => p.text === 'answer 8')).toBe(true);
   });
 
+  it('resumes a compressed fold, appends and equals a fresh rebuild',async()=>{
+    const f=await remembered(64);
+    const db=new DatabaseSync(join(f.home,'history','index.db'));
+    try{
+      const row=db.prepare('SELECT state FROM folds WHERE id=?').get(f.recordingId) as {state:Uint8Array};
+      expect(Buffer.from(row.state.subarray(0,4)).toString()).toBe('DRF1');
+    }finally{db.close();}
+    appendFileSync(f.journal,turns(64,65));
+    const again=reopen(f.home);
+    await again.ingest.sync(f.recordingId);
+    const resumed=await again.history.page(f.recordingId,{tailFirst:true,count:64});
+    expect(resumed.partial).toBeUndefined();
+    expect(resumed.projection.prose.some(p=>p.text==='answer 64')).toBe(true);
+    await again.history.forget(f.recordingId);
+    const rebuilt=await again.history.page(f.recordingId,{count:64});
+    expect(JSON.stringify(resumed.projection)).toBe(JSON.stringify(rebuilt.projection));
+    expect(JSON.stringify(resumed.scene)).toBe(JSON.stringify(rebuilt.scene));
+  });
+
   const stale = (what: string, change: (db: DatabaseSync, f: Awaited<ReturnType<typeof remembered>>) => void) => it(`is not used when ${what}: the view is folded again`, async () => {
     const f = await remembered();
     const goodKey = folds(f.home)[0]!.key;
@@ -128,6 +147,7 @@ describe('the remembered fold', { timeout: 60_000 }, () => {
   stale('the adapters differ', keyPart(5, 'another'));
   stale('the recordings read differ', keyPart(6, ['rec_other']));
   stale('its bytes are damaged', (db) => { db.prepare('UPDATE folds SET state=?').run(new Uint8Array([1, 2, 3])); });
+  stale('its compressed bytes are damaged', (db) => { db.prepare('UPDATE folds SET state=?').run(Buffer.from('DRF1')); });
   stale('its head is damaged', (db) => { db.prepare("UPDATE folds SET meta='not json'").run(); });
   stale('the recording has fewer rows than were folded', (db) => {
     const row = db.prepare('SELECT meta FROM folds').get() as { meta: string };

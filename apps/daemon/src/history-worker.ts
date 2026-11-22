@@ -33,6 +33,7 @@ import { turnLedgers } from '../../../packages/scene/src/turns.ts';
 import { contextReportCandidates } from './context-report-turns.ts';
 import { SqliteBlobStore, Store, type LineageSeen } from '@drishya/store';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
+import {encodeCheckpoint,decodeCheckpoint} from './history-checkpoint.ts';
 
 const source = new Store(workerData.dir, { readOnly: true });
 const dir = join(workerData.dir, 'history');
@@ -176,7 +177,7 @@ function saveCheckpoint(force = false): boolean {
   if (!r || (!force && (r.rows < TAIL_FIRST_OBSERVATIONS || (r.saved > 0 && r.rows - r.saved < CHECKPOINT_MIN_GAIN)))) return false;
   const checkpoint = r.fold.checkpoint();
   const meta = JSON.stringify({ head: checkpoint.head, blobs: checkpoint.blobs, sequence: r.sequence, rows: r.rows, ancestors: r.ancestors, lineage: r.lineage?.exportSeen() });
-  db.prepare('INSERT INTO folds VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET key=excluded.key, meta=excluded.meta, state=excluded.state').run(r.id, checkpointKey(r.ids), meta, checkpoint.state);
+  db.prepare('INSERT INTO folds VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET key=excluded.key, meta=excluded.meta, state=excluded.state').run(r.id, checkpointKey(r.ids), meta, encodeCheckpoint(checkpoint.state));
   r.saved = r.rows;
   return true;
 }
@@ -207,7 +208,9 @@ function resume(id: string, ctx: Pick<Lookup, 'ids' | 'counts'>): boolean {
   if (ctx.ids.length > 1 && (!lineage || !meta.lineage)) return reject();
   const reader = lineage ? source.lineageReader(lineage, meta.lineage) : undefined;
   if (meta.blobs.some((sha) => !source.blobs.has(sha) && !blobs.has(sha))) return reject();
-  const fold = ProjectionFold.restore({ head: meta.head, state: Buffer.from(row.state.buffer, row.state.byteOffset, row.state.byteLength), blobs: meta.blobs }, ioFor(ctx.ids), { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
+  let state:Buffer;
+  try{state=decodeCheckpoint(Buffer.from(row.state.buffer,row.state.byteOffset,row.state.byteLength));}catch{return reject();}
+  const fold = ProjectionFold.restore({ head: meta.head, state, blobs: meta.blobs }, ioFor(ctx.ids), { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
   if (!fold) return reject();
   capturedBlobs.clear();
   resident = { id, ids: ctx.ids, fold, lineage: reader, sequence: meta.sequence, rows: meta.rows, ancestors: meta.ancestors, saved: meta.rows };
