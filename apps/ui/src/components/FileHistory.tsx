@@ -150,19 +150,25 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
   const selectionPending = !!source?.fileOperations && !!first && !timeline?.positions[first.operation.id] && response?.requestedSelection !== first.operation.id;
   // Crossing onto a neighbouring page of the newest-first action list: Previous goes to older items (higher start), Next goes to newer items (lower start).
   const pendingStep = useRef<'first' | 'last' | (FileStepTarget & { direction: 'previous' | 'next' }) | undefined>(undefined);
+  // Several activations may arrive before React commits the chosen material.
+  // Advance from the last accepted input rather than replaying one stale step.
+  const inputSelection=useRef(first);inputSelection.current=first;
   const previousStep = useRef<HTMLButtonElement>(null), nextStep = useRef<HTMLButtonElement>(null);
   const stepped = useRef<'previous' | 'next' | undefined>(undefined);
   const stepTo = (side: 'previous' | 'next') => {
     if (selectionPending) return;
-    const exact = selectedStep ? selectedStep[side] : globalPosition === undefined ? (side === 'next' ? timeline?.first : timeline?.last) : undefined;
+    const current=inputSelection.current;
+    const currentSelected=timeline?.selected && timeline.selected.operationId===current?.operation.id?timeline.selected:undefined;
+    const position=currentSelected?.position ?? (current&&timeline?.positions[current.operation.id]);
+    const exact = currentSelected ? currentSelected[side] : position === undefined ? (side === 'next' ? timeline?.first : timeline?.last) : undefined;
     if (exact) {
       const loaded = steps.find(item => item.operation.id === exact.operationId);
-      if (loaded) { stepped.current = side; setLeft(loaded); }
+      if (loaded) { inputSelection.current=loaded;stepped.current = side; setLeft(loaded); }
       else { pendingStep.current = { ...exact, direction: side }; setStart(exact.start); }
       return;
     }
-    const target = stepper[side];
-    if (target) { stepped.current = side; setLeft(target); return; }
+    const target = timelineStep(steps,current)[side];
+    if (target) { inputSelection.current=target;stepped.current = side; setLeft(target); return; }
     if (side === 'next' && moreNewer) { pendingStep.current = 'first'; setStart(Math.max(0, start - pageSize)); }
     else if (side === 'previous' && moreOlder) { pendingStep.current = 'last'; setStart(start + pageSize); }
   };
@@ -171,7 +177,7 @@ function FileWorkspace({ path, projection,embedded=false,reason }: { path: strin
     if (!want || !page) return;
     if (typeof want === 'object') {
       const target = steps.find(item => item.operation.id === want.operationId);
-      if (target) { pendingStep.current = undefined; stepped.current = want.direction; setLeft(target); }
+      if (target) { inputSelection.current=target;pendingStep.current = undefined; stepped.current = want.direction; setLeft(target); }
       else pendingStep.current = undefined;
     }
     else if (steps.length) { pendingStep.current = undefined; stepped.current = want === 'first' ? 'next' : 'previous'; setLeft(want === 'first' ? steps[0] : steps.at(-1)); }
