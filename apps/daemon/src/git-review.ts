@@ -53,11 +53,18 @@ function runGit(root: string, args: string[], signal?: AbortSignal): Promise<str
   const env = { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_TERMINAL_PROMPT: '0', GIT_NO_LAZY_FETCH: '1' };
   // Ambient override variables must not redirect this reader to a different worktree/config.
   for (const key of Object.keys(env)) if (/^GIT_(?:DIR|WORK_TREE|COMMON_DIR|OBJECT_DIRECTORY|ALTERNATE_OBJECT_DIRECTORIES|NAMESPACE|SHALLOW_FILE|REPLACE_REF_BASE|GRAFT_FILE|INDEX_FILE|CONFIG.*|EXTERNAL_DIFF|DIFF_OPTS)$/.test(key)) delete (env as Record<string, string | undefined>)[key];
-  return new Promise((yes, no) => execFile(bin, ['--no-pager','--no-replace-objects','--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {
-    if (error && String(error.code) === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') no(new HttpError(413, 'Git output exceeds the inspection content limit.'));
-    else if (error) no(new HttpError(422, 'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
-    else yes(stdout);
-  }));
+  return new Promise((yes, no) => {
+    let result:{error:Error|null;stdout:string}|undefined;
+    const child=execFile(bin, ['--no-pager','--no-replace-objects','--no-optional-locks', '--literal-pathspecs', '-c', 'core.fsmonitor=false', '-c', 'diff.external=', ...args], { cwd: root, env, signal, timeout: 10_000, maxBuffer: 2 * 1024 * 1024, encoding: 'utf8', windowsHide: true }, (error, stdout) => {result={error,stdout};});
+    // Abort emits an error before the native process has necessarily exited.
+    // Joining the callback alone lets Windows checkout cleanup race that child.
+    child.once('close',()=>{
+      const error=result?.error;
+      if(error && String((error as NodeJS.ErrnoException).code)==='ERR_CHILD_PROCESS_STDIO_MAXBUFFER')no(new HttpError(413,'Git output exceeds the inspection content limit.'));
+      else if(error || !result)no(new HttpError(422,'Git inspection failed or exceeded its time/content limit. Check Git installation and repository state.'));
+      else yes(result.stdout);
+    });
+  });
 }
 
 type GitReader = typeof readGit;
@@ -108,16 +115,28 @@ export class GitReview {
   private read: GitReader;
   private historyService?:HistoryService;
   private github?:GithubLinks;
-  constructor(workspace: WorkspaceAccess, read: GitReader = readGit, historyService?:HistoryService, github?:GithubLinks) { this.workspace = workspace; this.read = read; this.historyService=historyService; this.github=github; }
+  private shutdown=new AbortController();
+  private closing:Promise<void>|undefined;
+  private removeCloseOwner:()=>void;
+  constructor(workspace: WorkspaceAccess, read: GitReader = readGit, historyService?:HistoryService, github?:GithubLinks) { this.workspace = workspace; this.read = read; this.historyService=historyService; this.github=github; this.removeCloseOwner=workspace.onClose(()=>this.close()); }
+  async close():Promise<void>{
+    this.closing??=(async()=>{
+      this.shutdown.abort();
+      await Promise.allSettled([...this.turns.values()].map(turn=>turn.tail));
+      this.removeCloseOwner();
+    })();
+    return this.closing;
+  }
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
   /** One Git read per recording at a time. Moving between the Git surfaces waits its turn instead of failing. */
   private async inTurn<T>(id:string,read:()=>Promise<T>):Promise<T> {
+    if(this.shutdown.signal.aborted)throw new HttpError(503,'Git inspection is closing.');
     const turn=this.turns.get(id)??{tail:Promise.resolve(),waiting:0};
     if(turn.waiting>=GIT_TURN_LIMIT)throw new HttpError(409,'Git inspection is already running.');
     turn.waiting++;this.turns.set(id,turn);
-    const run=turn.tail.then(read);
+    const run=turn.tail.then(()=>{if(this.shutdown.signal.aborted)throw new HttpError(503,'Git inspection is closing.');return read();});
     turn.tail=run.catch(()=>undefined);
     try{return await run;}
     finally{if(--turn.waiting===0)this.turns.delete(id);}
@@ -125,11 +144,12 @@ export class GitReview {
   private async readHistory<T>(id:string,inspect:(git:(args:string[])=>Promise<string>,root:string)=>Promise<T>):Promise<T> {
     if(!this.grants.has(id))throw new HttpError(403,'Approve read-only Git inspection separately.');
     return this.inTurn(id,async()=>{
-      const signal=AbortSignal.timeout(30_000);
+      const signal=AbortSignal.any([AbortSignal.timeout(30_000),this.shutdown.signal]);
       const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
       if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
       await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.
       const result=await inspect(git,root);
+      if(signal.aborted)throw new HttpError(409,'Git inspection expired or its consent was revoked.');
       if(!this.grants.has(id)||await this.workspace.root(id)!==root)throw new HttpError(403,'Git reading access changed. Approve this workspace again.');
       return result;
     });
@@ -214,7 +234,7 @@ export class GitReview {
     return this.inTurn(id, () => this.readSnapshot(id, start));
   }
   private async readSnapshot(id: string, start: number): Promise<GitSnapshot> {
-    const signal = AbortSignal.timeout(30_000);
+    const signal = AbortSignal.any([AbortSignal.timeout(30_000),this.shutdown.signal]);
     const root = await this.workspace.root(id);
     let overrides: string[] = [];
     const git: GitReader = (root, args) => this.read(root, [...overrides, ...args], signal);

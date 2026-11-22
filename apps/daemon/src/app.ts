@@ -26,6 +26,13 @@ export class App {
   readonly ingest: Ingestor;
   readonly history: HistoryService;
   private readonly discovery: DiscoveryService;
+  private closeOwners=new Set<()=>Promise<void>>();
+  private closing:Promise<void>|undefined;
+  /** Read-only services must finish before the store and scratch checkout go away. */
+  onClose(close:()=>Promise<void>):()=>void {
+    if(this.closing)throw new HttpError(503,'Application is closing.');
+    this.closeOwners.add(close);return()=>{this.closeOwners.delete(close);};
+  }
   private graphs = new Map<string, RepoGraph>();
   private probes = new Map<string, { at: number; generation: string }>();
   private readonly graphProbeMs: number;
@@ -288,10 +295,14 @@ export class App {
   }
 
   async close() {
-    await this.ingest.close();
-    await this.discovery.close();
-    await this.history.close();
-    this.store.close();
+    this.closing??=(async()=>{
+      await Promise.all([...this.closeOwners].map(close=>close()));
+      await this.ingest.close();
+      await this.discovery.close();
+      await this.history.close();
+      this.store.close();
+    })();
+    return this.closing;
   }
 }
 

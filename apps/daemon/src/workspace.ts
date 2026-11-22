@@ -106,6 +106,7 @@ export class WorkspaceAccess {
   private rootEpoch=new Map<string,number>();
   private contextIdentity=new Map<string,CheckoutIdentity>();
   constructor(app: App) { this.app = app; this.remembered=new CheckoutGrants(app.store); }
+  onClose(close:()=>Promise<void>):()=>void {return this.app.onClose(close);}
 
   private knownRecordingRoot(id:string) {
     try { return this.app.workspaceRecording(id).workspaceRoot; } catch { return undefined; }
