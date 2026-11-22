@@ -21,9 +21,9 @@ import { readBeforeWriteFor } from '../../../packages/scene/src/read-before-writ
 import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
+import type { AdapterDescriptor, ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, isBlobText } from '@drishya/contracts';
-import { buildTail, ChunkedFold, defaultAdapters } from '@drishya/ingest';
+import { buildTail, ChunkedFold } from '../../../packages/ingest/src/open-fold.ts';
 import { FOLD_FORMAT, ProjectionFold, REDUCER_VERSION, type FoldHead } from '@drishya/projection';
 import { compose, dwellFor, markers, stepOfObservation, type Marker } from '@drishya/scene';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
@@ -88,7 +88,9 @@ const ioFor = (ids: string[]) => ({
     return capturedBlobs.has(sha) && source.blobs.has(sha) ? { sha, bytes: Buffer.byteLength(text) } : blobs.put(text);
   },
 });
-const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
+// Metadata is already known by the owner. The read-only worker does not need
+// native journal parser modules on every cold start/replacement.
+const adapters = workerData.adapters as Record<string,AdapterDescriptor>;
 const HISTORY_VERSION = `h3-lineage-4096-${PRIVACY_POLICY_VERSION}`;
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 interface View { id: string; revision: string; projection: Projection; revisions: Record<string, number>; partial?: { observations: number } }
