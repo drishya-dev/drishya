@@ -14,7 +14,7 @@ if (!out.startsWith(root + sep)) throw new Error('package output must stay insid
 rmSync(out, { recursive: true, force: true });
 mkdirSync(resolve(out, 'apps/daemon/src'), { recursive: true });
 await build({
-  entryPoints: [resolve(root, 'apps/daemon/src/cli.ts'), resolve(root, 'apps/daemon/src/history-worker.ts')],
+  entryPoints: [resolve(root, 'apps/daemon/src/cli.ts'), resolve(root, 'apps/daemon/src/history-worker.ts'), resolve(root, 'apps/daemon/src/discovery-worker.ts')],
   outdir: resolve(out, 'apps/daemon/src'),
   entryNames: '[name]',
   // Keep chunks beside the entry: the source's import.meta.url-relative UI/fixture paths
