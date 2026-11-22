@@ -56,6 +56,13 @@ export interface Config {
 
 export interface StoredResultChunk { artifact?: import('@drishya/contracts').Artifact; available: boolean; reason?: string; fields?: ('text'|'structured')[]; field?: 'text'|'structured'; partial?: string; text?: string; start?: number; next?: number; totalBytes?: number; hasMore?: boolean }
 
+export interface StorageUsage {
+  bytes: number; budgetBytes: number; overBudget: boolean;
+  categories?: { captured: number; derived: number; database: number; other: number };
+  sessions?: { id: string; title: string; harness: string; rowBytes: number; capturedBytes: number; sharedCapturedBytes: number }[];
+  complete?: boolean;
+}
+
 export interface DataSource {
   webResult?(id:string,operationId:string,options:{start:number;count:number;q?:string;resultId?:string}):Promise<WebResultPage>;
   readingNotes?(id:string,start?:number):Promise<{bookmarks:{id:string;step:number;note:string;createdAt:string}[];total:number;start:number;count:number}>;
@@ -65,7 +72,7 @@ export interface DataSource {
   /** Built-in synthetic fixture only; never used to classify a user's replay bundle. */
   sample?: 'recorded' | 'growing';
   completeSample?(): void;
-  storage?(): Promise<{ bytes: number; budgetBytes: number; overBudget: boolean }>;
+  storage?(details?: boolean): Promise<StorageUsage>;
   config(): Promise<Config>;
   recordings(): Promise<ReaderRecording[]>;
   sources(): Promise<{ sources: DiscoveredSource[]; errors: DiscoveryError[] }>;
@@ -282,7 +289,7 @@ export const daemon: DataSource = {
   toolTrail:(id,filter,from,step)=>req(`/v1/recordings/${encodeURIComponent(id)}/tool-trail?${new URLSearchParams([...Object.entries(filter),...(from?.id?[['from',from.id]]:[]),...(from?.at===undefined?[]:[['at',String(from.at)]]),...(step===undefined?[]:[['step',String(step)]])].filter(([,value])=>value!==undefined&&value!=='').map(([key,value])=>[key,String(value)]))}`),
   screen:(id,step)=>req(`/v1/recordings/${encodeURIComponent(id)}/screen${step===undefined?'':`?step=${step}`}`),
   delegationThread:(id,operationId,start=0,step,taskStart=0)=>req(`/v1/recordings/${encodeURIComponent(id)}/delegation-thread/${encodeURIComponent(operationId)}?${new URLSearchParams({start:String(start),taskStart:String(taskStart),...(step===undefined?{}:{step:String(step)})})}`),
-  storage: () => req('/v1/storage'),
+  storage: (details = false) => req(`/v1/storage${details ? '?details=1' : ''}`),
   readingTarget: (id, query) => req(`/v1/recordings/${encodeURIComponent(id)}/reading-target?${new URLSearchParams(Object.entries(query).filter(([,value]) => value !== undefined).map(([key,value]) => [key, String(value)]))}`),
   fileEvidence: (id, paths, step) => req(`/v1/recordings/${encodeURIComponent(id)}/file-evidence?${new URLSearchParams([...paths.map(path => ['path', path]), ...(step === undefined ? [] : [['step', String(step)]])])}`),
   summary: (id, from = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/summary?from=${from}`),
@@ -323,7 +330,7 @@ export const daemon: DataSource = {
   sessionSegments: id=>req(`/v1/recordings/${encodeURIComponent(id)}/segments`),
   exportUrl: (id) => `/v1/recordings/${encodeURIComponent(id)}/export`,
   forget: async (id) => {
-    await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE' });
+    await req(`/v1/recordings/${encodeURIComponent(id)}`, { method: 'DELETE', json: {} });
   },
   boundary: async (id) => (await req<{ boundary: ReadingBoundary | null }>(`/v1/recordings/${encodeURIComponent(id)}/boundary`)).boundary,
   since: (id, after, page = 0) => req(`/v1/recordings/${encodeURIComponent(id)}/since?after=${after}&page=${page}`),

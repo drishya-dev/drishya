@@ -420,7 +420,9 @@ export class Store {
     this.blobs = new BlobStore(join(dataDir, 'blobs'));
     this.db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000; PRAGMA temp_store = FILE; PRAGMA cache_size = -8192;');
     if (!opts.readOnly) {
-      this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL;');
+      // Retain at most 16 MiB when a checkpointed WAL is reused. Readers may
+      // temporarily keep more live frames; never force their snapshot closed.
+      this.db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA journal_size_limit = 16777216;');
       this.migrate();
     }
   }
