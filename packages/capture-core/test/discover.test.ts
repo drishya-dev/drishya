@@ -23,6 +23,17 @@ it('keeps complete records in journal order when the whole source fits', async (
   expect(await tailRecords(file)).toEqual([{ type: 'custom-title', customTitle: 'First' }, { type: 'custom-title', customTitle: 'Latest' }]);
 });
 
+it('stops parsing after the caller has obtained its bounded discovery metadata',async()=>{
+  const rows=[{type:'session_meta'},{type:'user',text:'Synthetic prompt'},...Array.from({length:100},()=>({type:'tool-output',text:'x'.repeat(500)}))];
+  writeFileSync(file,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
+  const parse=vi.spyOn(JSON,'parse');
+  try {
+    const head=await headRecords(file,undefined,undefined,value=>(value as {type?:string})?.type==='user');
+    expect(head).toEqual(rows.slice(0,2));
+    expect(parse).toHaveBeenCalledTimes(2);
+  } finally {parse.mockRestore();}
+});
+
 it('bounds a discovery head buffer by the small source rather than the maximum read budget',async()=>{
   const text='{"type":"session_meta","payload":{"id":"synthetic"}}\n';writeFileSync(file,text);
   const allocations=vi.spyOn(Buffer,'alloc');
