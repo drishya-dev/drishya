@@ -22,7 +22,11 @@ for(const width of [600,1440])test(`remembered checkout and connection acknowled
     await expect(page.locator('.modern-composer-location')).toContainText('repository');
     const rail=page.getByRole('complementary',{name:'Repository files'});
     if(!await rail.isVisible())await page.getByRole('button',{name:'Show files',exact:true}).click();
-    const remember=rail.getByRole('checkbox',{name:'Remember for this checkout'});await expect(remember).toBeChecked();await expect(rail.locator('.workspace-grant-card .remember-check')).toBeVisible(); /* SHIP-6d: inside the card, one compact control */const card=await rail.locator('.workspace-grant-card').boundingBox(),box=await remember.locator('xpath=..').boundingBox();expect(box!.y).toBeGreaterThanOrEqual(card!.y);expect(box!.y+box!.height).toBeLessThanOrEqual(card!.y+card!.height+1);expect(box!.height).toBeLessThan(24);
+    const remember=rail.getByRole('checkbox',{name:'Remember for this checkout'});await expect(remember).toBeChecked();await expect(rail.locator('.workspace-grant-card .remember-check')).toBeVisible();
+    // The Files panel can translate/scale while opening: compare parent/child
+    // geometry in one frame, preserving the same containment and size bounds.
+    const {card,box}=await remember.evaluate(input=>({card:input.closest('.workspace-grant-card')!.getBoundingClientRect().toJSON(),box:input.parentElement!.getBoundingClientRect().toJSON()}));
+    expect(box.y).toBeGreaterThanOrEqual(card.y);expect(box.y+box.height).toBeLessThanOrEqual(card.y+card.height+1);expect(box.height).toBeLessThan(24);
     await rail.getByRole('button',{name:'Enable workspace reading',exact:false}).click();
     await expect(remember).toHaveCount(0);
     const composer=page.getByRole('region',{name:'Harness prompt'}),input=composer.getByRole('textbox',{name:'Prompt for selected harness session'});
