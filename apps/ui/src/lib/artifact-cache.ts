@@ -44,7 +44,7 @@ export class ArtifactCache {
           }
           resolve(slice);
         }, (error) => {
-          this.entries.delete(key);
+          if (this.entries.get(key)?.promise === promise) this.entries.delete(key);
           reject(error);
         }).finally(() => {
           this.active--;
@@ -64,6 +64,15 @@ export class ArtifactCache {
       if (entry.scope !== scope || !entry.bytes) continue;
       this.entries.delete(key);
       this.used[scope] -= entry.bytes;
+    }
+  }
+
+  /** Cache keys carry the exact physical or combined recording as a path segment. */
+  forgetRecording(id: string) {
+    for (const [key, entry] of this.entries) {
+      if (!key.split('/').some(part => part.split('+').includes(id))) continue;
+      this.entries.delete(key);
+      this.used[entry.scope] -= entry.bytes;
     }
   }
 

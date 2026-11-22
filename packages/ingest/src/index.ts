@@ -174,6 +174,8 @@ export class Ingestor extends EventEmitter {
   }
 
   private closed = false;
+  private pendingImports = new Set<{ id: string; cancelled: boolean }>();
+  private forgetting = new Set<string>();
   private legacyCodexRescan?: Promise<LegacyRescanResult>;
   private legacyClaudeRescan?: Promise<LegacyRescanResult>;
   private readonly now: () => Date;
@@ -272,14 +274,22 @@ export class Ingestor extends EventEmitter {
     const adapter = this.adapter(adapterId);
     this.restoreAdapterCheckpoints(adapter);
     const path = this.existingNativeSource(adapter, resolve(mainPath))?.sourcePath ?? resolve(mainPath);
-    await stat(adapter.readPath ? await adapter.readPath(path) : path); // fail early, before creating a recording
     const recordingId = recordingIdFor(adapterId, path);
-    const title = opts.title === undefined ? undefined : sanitize(opts.title).value;
-    this.store.upsertRecording({ id: recordingId, adapterId, harness: adapter.descriptor.harness, sourcePath: path, title });
-    this.store.upsertSource({ id: sourceIdFor(path), recordingId, path, role: 'main', cursor: initialCursor() });
-    const r = await this.sync(recordingId, { turnBytes: opts.turnBytes });
-    if (adapterId === 'claude-code') await this.refreshLineage(recordingId, opts.lineageSeen ?? new Set(), opts.lineageSources);
-    return { recordingId, ...r };
+    if (this.closed || this.forgetting.has(recordingId)) throw new Error('Recording import is unavailable while clearing or closing');
+    const attempt = { id: recordingId, cancelled: false };
+    this.pendingImports.add(attempt);
+    try {
+      await stat(adapter.readPath ? await adapter.readPath(path) : path); // fail early, before creating a recording
+      if (attempt.cancelled || this.closed) throw new Error('Recording import was cancelled by clearing or closing');
+      const title = opts.title === undefined ? undefined : sanitize(opts.title).value;
+      this.store.upsertRecording({ id: recordingId, adapterId, harness: adapter.descriptor.harness, sourcePath: path, title });
+      this.store.upsertSource({ id: sourceIdFor(path), recordingId, path, role: 'main', cursor: initialCursor() });
+      const r = await this.sync(recordingId, { turnBytes: opts.turnBytes });
+      if (attempt.cancelled) throw new Error('Recording import was cancelled by clearing');
+      if (adapterId === 'claude-code') await this.refreshLineage(recordingId, opts.lineageSeen ?? new Set(), opts.lineageSources);
+      if (attempt.cancelled) throw new Error('Recording import was cancelled by clearing');
+      return { recordingId, ...r };
+    } finally { this.pendingImports.delete(attempt); }
   }
 
   /**
@@ -909,19 +919,23 @@ export class Ingestor extends EventEmitter {
    * recording being deleted), then deletes its rows and the blobs only it used.
    */
   async forget(recordingId: string): Promise<{ blobsRemoved: number }> {
-    const run = this.live.get(recordingId);
-    if (run) this.endRun(run);
-    this.live.delete(recordingId);
-    await run?.current;
-    return this.locked(recordingId, async () => {
-      for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
-      for (const key of this.projectionCache.keys()) if (key.split('\u0000')[0]!.split('+').includes(recordingId)) this.projectionCache.delete(key);
-      this.workerOwnedRecordings.delete(recordingId);
-      this.dropFold(recordingId);
-      this.healthRecords.delete(recordingId);
-      this.lastEmitted.delete(recordingId);
-      return this.store.deleteRecording(recordingId);
-    });
+    this.forgetting.add(recordingId);
+    for (const attempt of this.pendingImports) if (attempt.id === recordingId) attempt.cancelled = true;
+    try {
+      const run = this.live.get(recordingId);
+      if (run) this.endRun(run);
+      this.live.delete(recordingId);
+      await run?.current;
+      return await this.locked(recordingId, async () => {
+        for (const s of this.store.getSources(recordingId)) this.parsers.delete(s.id);
+        for (const key of this.projectionCache.keys()) if (key.split('\u0000')[0]!.split('+').includes(recordingId)) this.projectionCache.delete(key);
+        this.workerOwnedRecordings.delete(recordingId);
+        this.dropFold(recordingId);
+        this.healthRecords.delete(recordingId);
+        this.lastEmitted.delete(recordingId);
+        return this.store.deleteRecording(recordingId);
+      });
+    } finally { this.forgetting.delete(recordingId); }
   }
 
   /** True when any stored observation was sealed under an older privacy policy; re-import to apply the current one. */
