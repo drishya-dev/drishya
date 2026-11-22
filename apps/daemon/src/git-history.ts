@@ -4,7 +4,7 @@ import {redactText} from '@drishya/privacy';
 import {HttpError} from './app.ts';
 import {executable} from './native-executable.ts';
 import {safeGitPath,gitDiffFlags} from './git-paths.ts';
-import {compareBranch} from './git-branches.ts';
+import {compareBranch,withAncestryReads} from './git-branches.ts';
 import type {GitReference,GitHistoryPage,GitCommitDetail,GitCommit,GitFile,GitOmission} from './git-types.ts';
 
 type Git=(args:string[])=>Promise<string>;
@@ -97,7 +97,8 @@ async function objectParents(git:Git,id:string):Promise<string[]> {
 }
 
 export interface GitHistoryQuery {start?:number;referenceStart?:number;reference?:string;query?:string;generation?:string}
-export async function gitHistory(git:Git,options:GitHistoryQuery={},cacheOptions:{root?:string;cache?:GitHistoryCache}={}):Promise<GitHistoryPage> {
+export async function gitHistory(read:Git,options:GitHistoryQuery={},cacheOptions:{root?:string;cache?:GitHistoryCache}={}):Promise<GitHistoryPage> {
+  const git=withAncestryReads(read);
   const {start=0,referenceStart=0,reference='all',query='',generation}=options;
   page(start);page(referenceStart);
   if(query.length>200||reference!=='all'&&!/^[a-f0-9]{64}$/.test(reference)||generation!==undefined&&!/^[a-f0-9]{64}$/.test(generation))throw invalid();

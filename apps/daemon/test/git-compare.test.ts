@@ -45,7 +45,9 @@ it('lists branches, remote-tracking branches and tags with the default base and 
 
 it('splits files into changed on both, only the compare side, and only the base side from the merge-base',async()=>{
   const before=snapshot();
-  const result=await gitCompare(read,{base:'refs/heads/main',head:'refs/heads/topic'});
+  const calls:string[][]=[];
+  const result=await gitCompare(args=>{calls.push(args);return read(args);},{base:'refs/heads/main',head:'refs/heads/topic'});
+  expect(calls.filter(args=>args[0]==='merge-base'&&args.length===3)).toHaveLength(1);
   expect(result.source).toBe('local');
   expect(result.mergeBase).toBe(git('merge-base','main','topic'));
   expect(result).toMatchObject({state:'known',ahead:2,behind:1});

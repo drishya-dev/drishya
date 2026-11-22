@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 import {redactText} from '@drishya/privacy';
 import {HttpError} from './app.ts';
 import {safeGitPath,gitDiffFlags} from './git-paths.ts';
-import {compareBranch} from './git-branches.ts';
+import {compareBranch,withAncestryReads} from './git-branches.ts';
 import {gitRefState} from './git-history.ts';
 import type {CompareFile,CompareFilePatch,CompareGroup,CompareRef,CompareRefs,CompareSide,CompareCommit,ComparePull,GitCompareResult} from './git-compare-types.ts';
 
@@ -88,7 +88,8 @@ async function commitsOf(git:Git,base:string,head:string):Promise<CompareCommit[
 }
 
 /** The comparison of two sides from their merge-base: files only the compare side changed, only the base side changed, and both. */
-export async function gitCompare(git:Git,query:{base:string;head:string}):Promise<GitCompareResult> {
+export async function gitCompare(read:Git,query:{base:string;head:string}):Promise<GitCompareResult> {
+  const git=withAncestryReads(read);
   if(!query.base||!query.head||query.base.length>300||query.head.length>300)throw invalid();
   const before=await gitRefState(git);
   const [base,head]=await Promise.all([resolveSide(git,before,query.base),resolveSide(git,before,query.head)]);
