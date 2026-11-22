@@ -454,11 +454,18 @@ async function page(id: string, query: HistoryQuery): Promise<HistoryPage> {
   const since = query.since === step && query.previousSince !== undefined ? query.previousSince : query.since;
   const scene = compose(full, { step, since, filter: query.filter, selectedOperationId: query.selectedOperationId });
   const count = Math.max(1, Math.min(64, Math.floor(query.count ?? 32)));
-  const opMap = new Map(historical.operations.map((op) => [op.id, op]));
   const proseMap = new Map(historical.prose.map((pr) => [pr.id, pr]));
+  const observationOps=new Set(query.observationId?historical.operations.filter(op=>op.observationIds.includes(query.observationId!)).map(op=>op.id):[]);
+  if(observationOps.size){
+    // Extracted calls replace their script wrapper in the visible passage. A
+    // wrapper receipt still navigates to that exact recorded descendant group.
+    const children=new Map<string,string[]>();
+    for(const op of historical.operations)if(op.parentOperationId){const ids=children.get(op.parentOperationId)??[];ids.push(op.id);children.set(op.parentOperationId,ids);}
+    for(const id of observationOps)for(const child of children.get(id)??[])observationOps.add(child);
+  }
   const promptTarget = query.promptStep === undefined ? undefined : scene.passages.find(p => p.turnStep !== undefined && p.turnStep >= query.promptStep! - 1)?.id;
   const target = scene.passages.findIndex((ps) => ps.id === promptTarget || ps.ops.some((op) => op.id === query.selectedOperationId ||
-    (query.observationId && opMap.get(op.id)?.observationIds.includes(query.observationId))) ||
+    observationOps.has(op.id)) ||
     ps.prose.some((pr) => query.observationId && proseMap.get(pr.id)?.observationIds.includes(query.observationId)));
   const anchor = query.anchorPassageId ? scene.passages.findIndex((ps) => ps.id === query.anchorPassageId) : -1;
   const start = Math.max(0, Math.min(Math.max(0, scene.passages.length - count), Math.floor(query.start ?? (anchor >= 0 ? anchor : target >= 0 ? target - Math.floor(count / 2) : scene.passages.length - count))));
