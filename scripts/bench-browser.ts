@@ -104,10 +104,13 @@ try {
     const before = Number((await page.locator('.reading-status').innerText()).match(/\d+/)?.[0]);
     const t0 = performance.now();
     const previousRecord = nextRecord;
+    const storedBefore=app.store.getRecording(imported.recordingId)!.observationCount;
     appendFileSync(journal, records(burst));
     if (!live) {
-      const synced = await app.ingest.sync(imported.recordingId);
-      assert.equal(synced.added, burst + Math.floor(nextRecord / 100) - Math.floor(previousRecord / 100));
+      await app.ingest.sync(imported.recordingId);
+      // Opening the UI also starts passive capture. Its turn may commit first;
+      // assert exact stored growth regardless of which turn imported the burst.
+      assert.equal(app.store.getRecording(imported.recordingId)!.observationCount-storedBefore, burst + Math.floor(nextRecord / 100) - Math.floor(previousRecord / 100));
     }
     await page.waitForFunction((old) => {
       const text = document.querySelector('.reading-status')?.textContent ?? '';
@@ -172,6 +175,7 @@ try {
         console.log(JSON.stringify({daemonPeakRssMiB:sampledPeakRssMiB,aggregatePeakRssMiB,limitMiB:512,overLimit:aggregatePeakRssMiB>512,
           phases:phases.map((phase,index)=>({...phase,peakRssMiB:Math.max(phase.rss,...rssSamples.filter(sample=>sample.at>=phase.at&&sample.at<(phases[index+1]?.at??Infinity)).map(sample=>sample.rss))/1048576})),
         }));
+        if(aggregatePeakRssMiB>512)process.exitCode=1;
       }
     } finally {
       try {disposeStubs();}finally {disposeHomes();}
