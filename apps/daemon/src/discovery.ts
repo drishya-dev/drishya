@@ -1,8 +1,10 @@
 import {Worker} from 'node:worker_threads';
+import {opendir} from 'node:fs/promises';
+import {join} from 'node:path';
 import type {DiscoveredSource} from '@drishya/contracts';
 import type {Adapter} from '../../../packages/capture-core/src/index.ts';
-import {claudeAdapter} from '../../../packages/adapter-claude/src/index.ts';
-import {codexAdapter} from '../../../packages/adapter-codex/src/index.ts';
+import {claudeAdapter,claudeHome} from '../../../packages/adapter-claude/src/index.ts';
+import {codexAdapter,codexHome} from '../../../packages/adapter-codex/src/index.ts';
 import {sanitize} from '@drishya/privacy';
 
 export interface DiscoveryResult {
@@ -57,14 +59,29 @@ export class DiscoveryService {
   }
 
   private async run(ids:string[]):Promise<DiscoveryResult[]>{
+    const empty:DiscoveryResult[]=[],admitted:string[]=[];
+    for(const id of ids){
+      const root=id==='claude-code'?join(claudeHome(),'projects'):join(codexHome(),'sessions');
+      let missing=false;
+      try{
+        const directory=await opendir(root);
+        try{missing=await directory.read()===null;}finally{await directory.close();}
+      }catch(error){missing=(error as NodeJS.ErrnoException).code==='ENOENT';}
+      // No journal can be parsed in an absent/empty directory. Recheck on every
+      // request so a newly recorded session is discovered without a restart.
+      // Other errors still go through the adapter's normal diagnostic boundary.
+      if(missing)empty.push({id,sources:[]});else admitted.push(id);
+    }
+    if(!admitted.length)return empty;
     const extension=import.meta.url.endsWith('.mjs')?'mjs':'ts';
-    const worker=new Worker(new URL(`./discovery-worker.${extension}`,import.meta.url),{workerData:{ids}});
+    const worker=new Worker(new URL(`./discovery-worker.${extension}`,import.meta.url),{workerData:{ids:admitted}});
     try{
-      return await new Promise<DiscoveryResult[]>((resolve,reject)=>{
+      const results=await new Promise<DiscoveryResult[]>((resolve,reject)=>{
         worker.once('message',resolve);
         worker.once('error',error=>reject(Error(sanitize(error.message).value)));
         worker.once('exit',code=>reject(Error(`Discovery worker exited before returning sources (${code})`)));
       });
+      return [...empty,...results];
     }finally{
       // Resolve callers only after the worker's heap and read handles are gone.
       await worker.terminate();

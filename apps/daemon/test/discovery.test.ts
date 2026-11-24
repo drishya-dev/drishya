@@ -2,6 +2,13 @@ import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+const workerStarts=vi.hoisted(()=>({count:0}));
+vi.mock('node:worker_threads',async importOriginal=>{
+  const actual=await importOriginal<typeof import('node:worker_threads')>();
+  return {...actual,Worker:class extends actual.Worker{
+    constructor(...args:ConstructorParameters<typeof actual.Worker>){super(...args);workerStarts.count++;}
+  }};
+});
 import {claudeAdapter} from '../../../packages/adapter-claude/src/index.ts';
 import {codexAdapter} from '../../../packages/adapter-codex/src/index.ts';
 import {App} from '../src/app.ts';
@@ -10,6 +17,7 @@ let dir:string,app:App;
 let previous:(string|undefined)[];
 const keys=['DRISHYA_CLAUDE_HOME','DRISHYA_CODEX_HOME'];
 beforeEach(()=>{
+  workerStarts.count=0;
   dir=mkdtempSync(join(tmpdir(),'drishya-discovery-worker-'));
   previous=keys.map(key=>process.env[key]);
   keys.forEach((key,index)=>{process.env[key]=join(dir,String(index));});
@@ -27,7 +35,34 @@ afterEach(async()=>{
   rmSync(dir,{recursive:true,force:true});
 });
 const marker='synthetic-discovery-thread-marker';
+
+it('avoids parser workers for empty roots and notices a later source fixture',async()=>{
+  rmSync(join(dir,'0','projects','synthetic'),{recursive:true});
+  expect(await app.ingest.discover('codex')).toEqual([]);
+  expect(await app.ingest.discover('claude-code')).toEqual([]);
+  expect(workerStarts.count).toBe(0);
+  const {codex}=journals();
+  const sources=await app.ingest.discover('codex');
+  expect(sources.map(source=>source.path)).toEqual([codex]);
+  expect(workerStarts.count).toBe(1);
+});
+
+it('avoids parser workers when the native discovery directory does not exist',async()=>{
+  rmSync(join(dir,'1','sessions'),{recursive:true});
+  expect(await app.ingest.discover('codex')).toEqual([]);
+  expect(workerStarts.count).toBe(0);
+});
+
+it('preserves adapter errors when the configured root cannot be read as a directory',async()=>{
+  rmSync(join(dir,'1','sessions'),{recursive:true});
+  writeFileSync(join(dir,'1','sessions'),'Synthetic file, not a source directory');
+  const report=await app.ingest.discoverReport('codex');
+  expect(report.sources).toEqual([]);
+  expect(report.errors).toMatchObject([{adapterId:'codex',code:'read-failed'}]);
+  expect(workerStarts.count).toBe(1);
+});
 function journals(){
+  mkdirSync(join(dir,'0','projects','synthetic'),{recursive:true});
   const codex=join(dir,'1','sessions','rollout-synthetic.jsonl');
   writeFileSync(codex,[{type:'session_meta',payload:{id:'synthetic-codex',cwd:'/synthetic/workspace',parent_thread_id:'synthetic-parent',agent_nickname:'Synthetic child'}},{type:'response_item',payload:{type:'message',role:'user',content:[{type:'input_text',text:marker}]}}].map(row=>JSON.stringify(row)).join('\n')+'\n');
   const claude=join(dir,'0','projects','synthetic','synthetic-claude.jsonl');

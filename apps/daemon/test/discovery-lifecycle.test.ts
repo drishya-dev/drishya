@@ -1,5 +1,9 @@
 import {afterEach,beforeEach,expect,it,vi} from 'vitest';
 const state=vi.hoisted(()=>({workers:[] as any[],startError:false}));
+vi.mock('node:fs/promises',async importOriginal=>({
+  ...await importOriginal<typeof import('node:fs/promises')>(),
+  opendir:async()=>({read:async()=>({name:'synthetic-entry'}),close:async()=>{}}),
+}));
 vi.mock('node:worker_threads',async()=>{
   const {EventEmitter}=await import('node:events');
   return {Worker:class extends EventEmitter{
@@ -15,7 +19,7 @@ import {codexAdapter} from '../../../packages/adapter-codex/src/index.ts';
 let service:DiscoveryService;
 beforeEach(()=>{state.workers=[];state.startError=false;service=new DiscoveryService([claudeAdapter,codexAdapter]);});
 afterEach(async()=>{await service.close();});
-const tick=()=>new Promise<void>(resolve=>queueMicrotask(resolve));
+const tick=()=>new Promise<void>(resolve=>setImmediate(resolve));
 
 it('coalesces same-adapter callers and batches adapters without mutating their owners',async()=>{
   const original=codexAdapter.discover;
