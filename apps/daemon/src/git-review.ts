@@ -21,12 +21,18 @@ const digest = (text: string) => createHash('sha256').update(text).digest('hex')
 /** Commands that read only Git's object store and refs. They never look at working-tree files, so no content filter can run. */
 const OBJECT_ONLY = new Set(['log', 'show', 'cat-file', 'rev-parse', 'for-each-ref', 'merge-base', 'symbolic-ref', 'rev-list', 'show-ref', 'ls-tree', 'config']);
 
-function subcommandOf(args: string[]): string {
+function readsOnlyGitMetadata(args: string[]): boolean {
   for (let i = 0; i < args.length; i++) {
     if (args[i] === '-c') { i++; continue; }
-    if (!args[i]!.startsWith('-')) return args[i]!;
+    const command = args[i]!;
+    if (command.startsWith('-')) continue;
+    if (command === 'remote') {
+      return args.length === i + 1 ||
+        (args.length === i + 3 && args[i + 1] === 'get-url' && !args[i + 2]!.startsWith('-'));
+    }
+    return OBJECT_ONLY.has(command);
   }
-  return '';
+  return false;
 }
 
 /**
@@ -43,7 +49,7 @@ async function filterOverrides(root: string, signal?: AbortSignal): Promise<stri
 
 /** Fixed argv without a shell. Any command that can touch working-tree files runs with the repository's content filters switched off (SEC-3). */
 export async function readGit(root: string, args: string[], signal?: AbortSignal): Promise<string> {
-  const overrides = OBJECT_ONLY.has(subcommandOf(args)) ? [] : await filterOverrides(root, signal);
+  const overrides = readsOnlyGitMetadata(args) ? [] : await filterOverrides(root, signal);
   return runGit(root, [...overrides, ...args], signal);
 }
 

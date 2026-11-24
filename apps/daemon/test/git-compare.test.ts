@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {afterAll,beforeAll,expect,it} from 'vitest';
 import {readGit} from '../src/git-review.ts';
-import {gitCompare,gitCompareFile,gitCompareRefs,githubCompareResult,githubRepoOf,resolvePulls} from '../src/git-compare.ts';
+import {gitCompare,gitCompareFile,gitCompareRefs,githubCompareResult,githubRepo,githubRepoOf,resolvePulls} from '../src/git-compare.ts';
 import {compareEvidence} from '../src/git-compare-evidence.ts';
 
 let dir:string,root:string,topicTip:string,mainTip:string;
@@ -135,6 +135,28 @@ it('reads GitHub remotes and turns GitHub compare JSON into the same result shap
   expect(result.files[1]!.patch).toContain('Commit changes\ndiff --git a/src/x.ts b/src/x.ts');
   expect(result.files[0]).toMatchObject({binary:true});
   expect(result.commits.map(item=>item.subject)).toEqual(['First','Second']);
+});
+
+it('resolves a GitHub origin with a single Git read and honors URL rewriting',async()=>{
+  const repo=mkdtempSync(join(dir,'origin-lookup-'));
+  git('init','-q',repo);
+  git('-C',repo,'remote','add','origin','fixture:owner/repo.git');
+  git('-C',repo,'config','url.https://github.com/.insteadOf','fixture:');
+  const calls:string[][]=[];
+  const resolved=await githubRepo(args=>{calls.push(args);return readGit(repo,args);});
+  expect(resolved).toBe('owner/repo');
+  expect(calls).toEqual([['remote','get-url','origin']]);
+});
+
+it('keeps the four-remote discovery bound when origin points elsewhere',async()=>{
+  const calls:string[][]=[];
+  const result=await githubRepo(async args=>{
+    calls.push(args);
+    if(args.length===1)return 'a\nb\nc\nd\norigin\n';
+    return args.at(-1)==='d'?'https://github.com/owner/repo.git':'https://example.invalid/local';
+  });
+  expect(result).toBeUndefined();
+  expect(calls.filter(args=>args[1]==='get-url').map(args=>args.at(-1))).toEqual(['origin','a','b','c']);
 });
 
 it('summarises which agents wrote a path from captured edits only',()=>{

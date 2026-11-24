@@ -203,8 +203,12 @@ export function githubRepoOf(url:string):string|undefined {
 
 /** The GitHub repository of the first remote that points at github.com; Git only, no network. */
 export async function githubRepo(git:Git):Promise<string|undefined> {
+  // Git resolves insteadOf rules here. Most repositories need only this read.
+  const origin=githubRepoOf(await git(['remote','get-url','origin']).catch(()=>''));
+  if(origin)return origin;
   const names=(await git(['remote']).catch(()=>'')).split('\n').map(name=>name.trim()).filter(Boolean);
-  for(const name of [...names.filter(name=>name==='origin'),...names.filter(name=>name!=='origin')].slice(0,4)){
+  const remaining=names.includes('origin')?3:4;
+  for(const name of names.filter(name=>name!=='origin').slice(0,remaining)){
     const repo=githubRepoOf(await git(['remote','get-url',name]).catch(()=>''));
     if(repo)return repo;
   }
