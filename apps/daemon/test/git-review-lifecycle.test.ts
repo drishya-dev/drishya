@@ -7,6 +7,35 @@ import {App} from '../src/app.ts';
 import {WorkspaceAccess} from '../src/workspace.ts';
 import {GitReview} from '../src/git-review.ts';
 
+it('joins sibling Git reads after their inspection has already rejected',async()=>{
+  const dir=mkdtempSync(join(tmpdir(),'drishya-git-sibling-')),root=join(dir,'repo');mkdirSync(root);
+  execFileSync('git',['init','-q'],{cwd:root,windowsHide:true});
+  const journal=join(dir,'source.jsonl');writeFileSync(journal,JSON.stringify({type:'session_meta',payload:{id:'synthetic-git-sibling',cwd:root}})+'\n');
+  const app=new App(join(dir,'data')),id=(await app.ingest.importSource('codex',journal)).recordingId;
+  const workspace=new WorkspaceAccess(app);await workspace.approve(id);
+  let release!:()=>void,fail!:()=>void;
+  const sibling=new Promise<string>(resolve=>{release=()=>resolve('synthetic sibling closed');});
+  const failed=new Promise<string>((_resolve,reject)=>{fail=()=>reject(Error('Synthetic first read failure'));});
+  const review=new GitReview(workspace,async(_root,args)=>args[0]==='rev-parse'?root:args[0]==='synthetic-failure'?failed:sibling);
+  await review.approve(id);
+  const outcome=review.inspect(id,git=>{
+    const reads=Promise.all([git(['synthetic-failure']),git(['synthetic-sibling'])]);
+    fail();return reads;
+  }).then(()=>undefined,error=>error);
+  expect((await outcome).message).toBe('Synthetic first read failure');
+  let closed=false;
+  const closing=app.close().then(()=>{closed=true;});
+  try{
+    await new Promise<void>(resolve=>setImmediate(resolve));
+    expect(closed,'failed inspection must not abandon its remaining native read').toBe(false);
+    expect(app.store.listRecordings().some(recording=>recording.id===id)).toBe(true);
+  }finally{
+    release();await closing;
+    if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe Git sibling fixture');rmSync(dir,{recursive:true,force:true});
+  }
+  expect(closed).toBe(true);
+});
+
 it('App close aborts and joins owned Git work before SQLite and checkout cleanup',async()=>{
   const dir=mkdtempSync(join(tmpdir(),'drishya-git-lifecycle-')),root=join(dir,'repo');mkdirSync(root);
   execFileSync('git',['init','-q'],{cwd:root,windowsHide:true});

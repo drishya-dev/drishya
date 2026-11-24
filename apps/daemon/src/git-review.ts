@@ -110,6 +110,7 @@ const GIT_TURN_LIMIT = 8;
 export class GitReview {
   private grants = new Set<string>();
   private turns = new Map<string, { tail: Promise<unknown>; waiting: number }>();
+  private reads = new Set<Promise<string>>();
   private historyCache = new GitHistoryCache(64);
   private workspace: WorkspaceAccess;
   private read: GitReader;
@@ -123,12 +124,23 @@ export class GitReview {
     this.closing??=(async()=>{
       this.shutdown.abort();
       await Promise.allSettled([...this.turns.values()].map(turn=>turn.tail));
+      // Promise.all can reject a turn before its sibling child processes close.
+      // Those reads still own checkout handles and must be joined separately.
+      await Promise.allSettled([...this.reads]);
       this.removeCloseOwner();
     })();
     return this.closing;
   }
   revoke(id: string) { this.grants.delete(id); }
   status(id: string) { return { approved: this.grants.has(id), scope: 'current-git' as const }; }
+  private ownedRead(root:string,args:string[],signal:AbortSignal):Promise<string>{
+    if(this.shutdown.signal.aborted)return Promise.reject(new HttpError(503,'Git inspection is closing.'));
+    const read=this.read(root,args,signal);
+    this.reads.add(read);
+    const settled=()=>{this.reads.delete(read);};
+    void read.then(settled,settled);
+    return read;
+  }
   async approve(id: string) { await this.workspace.root(id); this.grants.add(id); return this.status(id); }
   /** One Git read per recording at a time. Moving between the Git surfaces waits its turn instead of failing. */
   private async inTurn<T>(id:string,read:()=>Promise<T>):Promise<T> {
@@ -145,7 +157,7 @@ export class GitReview {
     if(!this.grants.has(id))throw new HttpError(403,'Approve read-only Git inspection separately.');
     return this.inTurn(id,async()=>{
       const signal=AbortSignal.any([AbortSignal.timeout(30_000),this.shutdown.signal]);
-      const root=await this.workspace.root(id),git=(args:string[])=>this.read(root,args,signal);
+      const root=await this.workspace.root(id),git=(args:string[])=>this.ownedRead(root,args,signal);
       if(await realpath(resolve((await git(['rev-parse','--show-toplevel'])).trim()))!==root)throw new HttpError(403,'The selected workspace must be the repository root.');
       await verifyOwnGitDir(root); // SEC-4: for the History/Compare/Graph surfaces — the toplevel check above does not see where Git keeps history, only the work tree.
       const result=await inspect(git,root);
@@ -237,7 +249,7 @@ export class GitReview {
     const signal = AbortSignal.any([AbortSignal.timeout(30_000),this.shutdown.signal]);
     const root = await this.workspace.root(id);
     let overrides: string[] = [];
-    const git: GitReader = (root, args) => this.read(root, [...overrides, ...args], signal);
+    const git: GitReader = (root, args) => this.ownedRead(root, [...overrides, ...args], signal);
     if (await realpath(resolve((await git(root, ['rev-parse', '--show-toplevel'])).trim())) !== root) throw new HttpError(403, 'The selected workspace must be the repository root.');
     await verifyOwnGitDir(root); // SEC-4: for the Snapshot surface — the toplevel check above does not see where Git keeps history, only the work tree.
     // Status/diff may invoke clean/process filters. Disable each configured driver
