@@ -24,7 +24,7 @@
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .stop-turn svg { width:13px; height:13px; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .prompt-attachments { padding:8px 15px 0; margin:0; }
 :root[data-ui-version=modern][data-experience=classic] .modern-native-composer .send-confirmation { margin:0 12px 12px; }
-:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-turn-details:has(>*) { padding:0 12px 10px; }
+:root[data-ui-version=modern][data-experience=classic] .modern-native-composer .native-turn-details:not(:has(.native-questions)):has(>*) { padding:0 12px 10px; }
 /* The original compact Toolbox, not the Legacy review desk in a new skin. */
 :root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .workbench-station.modern-tool-station:not(.toolbox-minimized) { padding:0; background:var(--modern-panel-material); border:1px solid var(--line-2); border-radius:var(--round-lg); box-shadow:0 10px 30px #0002,inset 0 1px #ffffff04; }
 :root[data-ui-version=modern][data-experience=classic] .toolbox-rail > .workbench-station.modern-tool-station.toolbox-minimized { padding:0; border:0; background:none; box-shadow:none; }

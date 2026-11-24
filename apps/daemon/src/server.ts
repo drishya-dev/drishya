@@ -19,7 +19,7 @@ import { recordingIdFor } from '@drishya/capture-core';
 import { SourceWatch, defaultWatchRoots, type ChangeEvent, type HealthEvent, type WatchRoot } from '@drishya/ingest';
 import { redactText } from '@drishya/privacy';
 import { App, HttpError, VERSION } from './app.ts';
-import { storageUsageReader } from './storage.ts';
+import { storageUsageReader, sessionStorageUsageReader } from './storage.ts';
 import { readPersistedOutput } from './persisted-output.ts';
 import {readWebResult} from './web-results.ts';
 import { readCheckpointFile } from './checkpoint-file.ts';
@@ -137,6 +137,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
   if (!['127.0.0.1', 'localhost', '::1'].includes(host)) throw new Error('Drishya binds to loopback only.');
   const app = opts.app ?? new App(opts.dataDir);
   const readStorageUsage = storageUsageReader(app.store.dataDir);
+  const readSessionStorageUsage = sessionStorageUsageReader(app.store);
   const workspace = new WorkspaceAccess(app);
   const github = new GithubLinks(app, opts.gh);
   const gitReview = new GitReview(workspace, undefined, app.history, github);
@@ -218,6 +219,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     for (const [res, client] of clients) sendToClient(res, client.auth, data);
   };
   const onChange = (ev: ChangeEvent) => {
+    readStorageUsage.invalidate(); readSessionStorageUsage.invalidate();
     broadcast(`event: change\ndata: ${JSON.stringify(ev)}\n\n`);
     // The client keeps its selected physical control id. An ancestor append still invalidates its historical view.
     for (const recording of app.store.listRecordings()) {
@@ -340,7 +342,12 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
     if (a === 'github' && id === 'status' && m === 'GET') return json(res, await github.status());
     if (a === 'github' && id === 'optin' && m === 'POST') { const body = await readJson(req, 1024) as { enabled?: unknown }; if (typeof body.enabled !== 'boolean') throw new HttpError(400, 'Send enabled: true or false.'); return json(res, await github.set(body.enabled)); }
     if (a === 'github' && id === 'item' && m === 'GET') return json(res, await github.item(url.searchParams.get('url') ?? ''));
-    if (a === 'storage' && m === 'GET') return json(res, await readStorageUsage());
+    if (a === 'storage' && m === 'GET') {
+      const details = url.searchParams.get('details');
+      if (details !== null && details !== '1') throw new HttpError(400, 'invalid storage details');
+      const usage = await readStorageUsage();
+      return json(res, details ? { ...usage, ...await readSessionStorageUsage() } : usage);
+    }
     if (a === 'working-locations' && m === 'GET') return json(res, readWorkingLocations(app));
     if (a === 'working-locations' && m === 'PUT') return json(res, saveWorkingLocations(app, await readJson(req,256*1024)));
     if (a === 'working-locations' && m === 'DELETE') {app.store.db.prepare("DELETE FROM meta WHERE key='ui-working-locations-v1'").run();return json(res,{cleared:true});}
@@ -494,6 +501,9 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
         app.recording(firstId);
         await controller.forget(firstId); workspace.revokeRecording(firstId); gitReview.revoke(firstId);
         const removed = await app.forget(firstId);
+        readStorageUsage.invalidate(); readSessionStorageUsage.invalidate();
+        lastDiscovery = undefined;
+        broadcast('event: sources\ndata: {}\n\n');
         return json(res, { ok: true, ...removed });
       }
       if (sub === 'history' && m === 'POST') {

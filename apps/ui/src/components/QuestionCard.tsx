@@ -141,17 +141,23 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
       >
-        <header className="question-interactive-header">
-          <strong>Question to you</strong>
-          <span className="question-interactive-sub">The agent is waiting for your choice</span>
+        <header className="question-card-header">
+          <span className="question-status-beacon" aria-hidden="true" />
+          <div className="question-card-title-group">
+            <div className="question-card-title-row">
+              <strong className="question-card-title">Question to you</strong>
+              <span className="question-card-badge">Choice required</span>
+            </div>
+            <span className="question-card-sub">The connected agent is waiting for your choice</span>
+          </div>
         </header>
 
         {matchingRequest.questions.map((q) => (
-          <fieldset key={q.id} className="question-fieldset" disabled={submitting}>
+          <fieldset key={q.id} className="question-fieldset" aria-label={q.question} disabled={submitting}>
             {q.header && <small className="question-header">{q.header}{q.multiple ? ' · choose any' : ''}</small>}
             <p className="question-text">{q.question}</p>
 
-            <div className="question-options-interactive" role={q.multiple ? 'group' : 'radiogroup'}>
+            <div className="question-options-interactive" role={q.multiple ? 'group' : 'radiogroup'} aria-label={q.question}>
               {q.options.map((option) => {
                 const checked = answers[q.id]?.options.includes(option.id) ?? false;
                 return (
@@ -249,6 +255,13 @@ export function QuestionCard({ op, liveRequest, onAnswer, onStop }: QuestionCard
   if (waiting && !matchingRequest) {
     return (
       <div className="question-card question-card-readonly" role="group" aria-label="Question to you">
+        <div className="question-terminal-banner" role="status">
+          <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="2" y="3" width="12" height="10" rx="2" />
+            <path d="m5 7 2 1.5-2 1.5M9 10h2" />
+          </svg>
+          <span>This question is waiting in your {harnessLabel} terminal. Answer it there.</span>
+        </div>
         {questions.map((item, index) => (
           <section key={`${item.id ?? item.question}/${index}`} className="question">
             {item.header && <small className="question-header">{item.header}{item.multiSelect ? ' · choose any' : ''}</small>}

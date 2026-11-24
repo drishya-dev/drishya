@@ -1,4 +1,5 @@
 import { antigravityNativeCases } from './real-cases/antigravity-native.ts';
+import { storageClearAcceptance } from './real-cases/storage-clear.ts';
 import { liveBatches } from './real-cases/live-batches.ts';
 import { personPrompts } from './real-cases/person-prompts.ts';
 import { midTurnPrompts } from './real-cases/mid-turn-prompts.ts';
@@ -61,9 +62,11 @@ cases.push(antigravityLive);
 cases.push(antigravityMedia);
 cases.push(...antigravityNativeCases);
 if (values.list || !positionals.length) {
+  console.log('storage-clear      claude-code+codex  genuine Settings clear/preserve/reimport at 600 and 1440 px (build UI first)');
   for (const c of cases) console.log(`${c.name.padEnd(18)} ${c.harnesses.join('+').padEnd(18)} ${c.about}`);
   process.exit(values.list ? 0 : 2);
 }
+if (positionals[0] === 'storage-clear') { await storageClearAcceptance(); process.exit(0); }
 const chosen = cases.find((c) => c.name === positionals[0]);
 if (!chosen) { console.error(`unknown case "${positionals[0]}"; try --list`); process.exit(2); }
 

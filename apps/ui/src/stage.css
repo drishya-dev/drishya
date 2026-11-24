@@ -249,6 +249,8 @@
 }
 .prompt-composer form, .prompt-composer .composer-actions, .prompt-composer textarea { min-width: 0; max-width: 100%; }
 .prompt-composer .composer-actions { flex-wrap: wrap; }
+.composer-terminal-notice { display: flex; align-items: center; gap: 8px; padding: 6px 12px; margin: 4px 0 6px; border-radius: var(--round-sm); background: color-mix(in srgb, var(--focus) 9%, var(--s2)); border: 1px solid color-mix(in srgb, var(--focus) 24%, var(--line)); color: var(--t2); font-size: var(--text-2xs); line-height: 1.45; }
+.composer-terminal-notice svg { flex-shrink: 0; color: var(--focus); }
 .prompt-attachments { display: flex; flex-wrap: wrap; gap: 5px; max-height: 88px; overflow: auto; padding: 3px 5px; }
 .attachment-chip { display: inline-flex; align-items: center; gap: 5px; min-width: 0; max-width: 220px; padding: 3px 6px; border: 1px solid var(--line-2); border-radius: var(--round-sm); font-size: var(--text-xs); background: var(--s2); }
 .attachment-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
