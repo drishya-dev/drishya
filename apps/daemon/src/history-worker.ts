@@ -43,7 +43,7 @@ try {
   db = new DatabaseSync(dbPath);
   db.exec('PRAGMA busy_timeout = 5000;');
   // Everything here is a rebuildable cache, so a commit need not reach the disk before returning.
-  db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
+  db.exec(`PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA journal_size_limit=16777216; PRAGMA foreign_keys=ON; PRAGMA cache_size=-8192;
     CREATE TABLE IF NOT EXISTS views(id TEXT PRIMARY KEY, revision TEXT NOT NULL, header TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS items(view_id TEXT NOT NULL REFERENCES views(id) ON DELETE CASCADE,
       kind TEXT NOT NULL, id TEXT NOT NULL, position INTEGER NOT NULL, body TEXT NOT NULL,

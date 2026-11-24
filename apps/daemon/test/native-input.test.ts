@@ -15,3 +15,18 @@ it('supports Claude multiple selections and rejects sensitive or unsupported que
   expect(()=>inputAnswers(spec,{q0:{options:[],text:'sk-proj-abcdefghijklmnopqrstuvw0123456789'}})).toThrow('protected');
   expect(()=>inputSpec('codex',{...raw,questions:[{...raw.questions[0],question:'sk-proj-abcdefghijklmnopqrstuvw0123456789'}]})).toThrow('protected');
 });
+it('supports options without description, string options, and title as question',()=>{
+  const claudeSpec=inputSpec('claude',{questions:[{question:'Confirm?',options:[{label:'Yes'},{label:'No'}]}]});
+  expect(claudeSpec.questions[0]!.options[0]!.description).toBe('');
+  expect(inputAnswers(claudeSpec,{q0:{options:['o0']}})).toEqual({'Confirm?':['Yes']});
+
+  const codexStringSpec=inputSpec('codex',{questions:[{id:'fn',title:'Which function?',options:['subtract','divide']}]});
+  expect(codexStringSpec.questions[0]!.question).toBe('Which function?');
+  expect(codexStringSpec.questions[0]!.options.map(o=>o.label)).toEqual(['subtract','divide']);
+  expect(inputAnswers(codexStringSpec,{q0:{options:['o1']}})).toEqual({fn:['divide']});
+});
+
+it('rejects malformed questions and missing Codex identities without inventing a reply key',()=>{
+ expect(()=>inputSpec('codex',{questions:[null]})).toThrow('Unsupported');
+ expect(()=>inputSpec('codex',{questions:[{question:'Which approach?',options:[]}]})).toThrow('identity');
+});
