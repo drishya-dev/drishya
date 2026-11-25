@@ -24,8 +24,8 @@ it('initialize result follows the MCP schema: experimental capabilities are obje
  await embedMcp(input,output,()=>fake());
  input.write(JSON.stringify({jsonrpc:'2.0',id:1,method:'initialize',params:{protocolVersion:'2025-06-18',capabilities:{experimental:{'drishya.privateLaunch':true}}}})+'\n');
  input.write(JSON.stringify({jsonrpc:'2.0',method:'notifications/initialized'})+'\n');
- input.write(JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{latest:true}}})+'\n');await tick();
- expect(JSON.parse(replies[1].result.content[0].text).singleUse).toBe(true);input.end();
+ input.write(JSON.stringify({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{sessionId:'rec_0000000000000000'}}})+'\n');await tick();
+ expect(JSON.parse(replies[1].result.content[0].text).code).toBe('HOST_HANDOFF_UNAVAILABLE');input.end();
 });
 it('lists one tool whose schema has no top-level combinator',async()=>{
  const c=await client(false,()=>fake());
@@ -35,37 +35,61 @@ it('lists one tool whose schema has no top-level combinator',async()=>{
  expect(tool.inputSchema.oneOf??tool.inputSchema.anyOf??tool.inputSchema.allOf).toBeUndefined();
  c.input.end();
 });
-it('an agent-driven pane receives the one-use link with its limits stated',async()=>{
- let closed=false;const c=await client(false,()=>fake(()=>{closed=true;}));
- c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{latest:true,cwd:process.cwd()}}});await tick();
- const body=JSON.parse(c.replies[1].result.content[0].text);
- expect(body.url).toBe(launchUrl);expect(body.singleUse).toBe(true);expect(body.expiresInSeconds).toBe(60);
- c.input.end();await tick();expect(closed).toBe(true);
+it('a host without private handoff gets no launch credential and starts no worker',async()=>{
+ let starts=0;const c=await client(false,()=>{starts++;return fake();});
+ c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{sessionId:'rec_0000000000000000'}}});await tick();
+ const result=c.replies[1].result;
+ expect(result.isError).toBe(true);
+ expect(JSON.parse(result.content[0].text).code).toBe('HOST_HANDOFF_UNAVAILABLE');
+ expect(JSON.stringify(result).includes(code)).toBe(false);
+ expect(starts).toBe(0);
+ c.input.end();
 });
-it('capable host receives private metadata, model content contains only cleaned route',async()=>{
- const c=await client(true,()=>fake());
- c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{latest:true}}});await tick();
+it('capable host receives private metadata and closes its owned worker when the client ends',async()=>{
+ let closed=false;const c=await client(true,()=>fake(()=>{closed=true;}));
+ c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{sessionId:'rec_0000000000000000'}}});await tick();
  const result=c.replies[1].result;expect(!JSON.stringify(result.content).includes(code)).toBe(true);
  expect(JSON.parse(result.content[0].text).url).toBe('http://127.0.0.1:42345/?embed=1#/r/rec_0000000000000000');
  expect(result._meta['drishya/privateLaunch'].url.endsWith(code)).toBe(true);
- c.input.end();
+ c.input.end();await tick();expect(closed).toBe(true);
 });
 it('systemBrowser hands the link to the opener and never to the model',async()=>{
  const opened:string[]=[];const c=await client(false,()=>fake(),opened);
  c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{nativeSessionId:'0123abcd-0000-4000-8000-000000000000',systemBrowser:true}}});await tick();
  expect(opened).toEqual([launchUrl]);
- const text=c.replies[1].result.content[0].text;expect(text.includes(code)).toBe(false);expect(JSON.parse(text).opened).toBe('system-browser');
+ const text=c.replies[1].result.content[0].text;expect(text.includes(code)).toBe(false);expect(JSON.parse(text).status).toBe('system-browser-requested');
  c.input.end();
+});
+it('closing the MCP channel cancels its active launch without opening a late browser',async()=>{
+ const opened:string[]=[];
+ let markStarted!:()=>void, finishLaunch!:(value:Awaited<ReturnType<EmbedSupervisor['open']>>)=>void;
+ const started=new Promise<void>(resolve=>{markStarted=resolve;});
+ const holding=new Promise<Awaited<ReturnType<EmbedSupervisor['open']>>>(resolve=>{finishLaunch=resolve;});
+ let closes=0;
+ const supervisor=fake(()=>{closes++;});
+ const completed=supervisor.open({sessionId:'rec_0000000000000000'});
+ supervisor.open=()=>{markStarted();return holding;};
+ const c=await client(false,()=>supervisor,opened);
+ c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'drishya.open_view',arguments:{sessionId:'rec_0000000000000000',systemBrowser:true}}});
+ await started;
+ c.input.end();
+ await new Promise(resolve=>setImmediate(resolve));
+ const closesBeforeLaunchSettles=closes;
+ finishLaunch(await completed);
+ await new Promise(resolve=>setImmediate(resolve));
+ expect(closesBeforeLaunchSettles).toBe(1);
+ expect(opened).toEqual([]);
 });
 it('unknown tools, uninitialized requests, unsafe args and malformed messages are refused',async()=>{
  const c=await client(false,()=>{throw new Error('must not start');});
  c.send({jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'wrong',arguments:{latest:true}}});
  c.send({jsonrpc:'2.0',id:3,method:'tools/call',params:{name:'drishya.open_view',arguments:{latest:true,command:'unsafe'}}});
  c.send({jsonrpc:'2.0',id:4,method:'tools/call',params:{name:'drishya.open_view',arguments:{nativeSessionId:'../../etc/passwd'}}});
- c.send({jsonrpc:'2.0',id:5,method:'tools/call',params:{name:'drishya.open_view',arguments:{latest:true,systemBrowser:'yes'}}});await tick();
+ c.send({jsonrpc:'2.0',id:5,method:'tools/call',params:{name:'drishya.open_view',arguments:{sessionId:'rec_0000000000000000',systemBrowser:'yes'}}});
+ c.send({jsonrpc:'2.0',id:6,method:'tools/call',params:{name:'drishya.open_view',arguments:{latest:true,systemBrowser:true}}});await tick();
  expect(c.replies[1].error.code).toBe(-32602);
- for(const i of [2,3,4]) expect(JSON.parse(c.replies[i].result.content[0].text).error??JSON.parse(c.replies[i].result.content[0].text).code).toBe('INVALID_SELECTION');
- c.input.write('not json\n');await tick();expect(c.replies[5].error.code).toBe(-32700);c.input.end();
+ for(const i of [2,3,4,5]) expect(JSON.parse(c.replies[i].result.content[0].text).code).toBe('INVALID_SELECTION');
+ c.input.write('not json\n');await tick();expect(c.replies[6].error.code).toBe(-32700);c.input.end();
 });
 it('tools are not listed before initialize',async()=>{
  const input=new PassThrough(),output=new PassThrough();const replies:any[]=[];

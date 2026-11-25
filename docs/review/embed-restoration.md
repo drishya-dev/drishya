@@ -28,3 +28,16 @@ This is a draft restoration, not a merge authorization or full-gate claim. The f
 ## Hosted Windows follow-up
 
 The initial Windows check (run 44873373918) passed 1923 tests but timed out the iframe-refusal test at 5312 ms against Vitest's 5000 ms default. That test serially starts six cold CLI processes; it is not a runtime refusal failure. It now has a 30-second test bound and each child a five-second bound. Local focused coverage was rerun before pushing this adjustment.
+
+## Exact selection and private handoff, 25 November 2026
+
+Updated the draft against main `4d87d40d`. A native ID now follows recorded identity when present, and multiple matches require an exact Drishya recording ID. The MCP tool accepts exact selection only. An ordinary MCP host receives no launch credential and starts no worker. A host that declares the private capability gets the credential only through the private handoff, or can request the system browser without receiving a credential. The latter reports an OS launch request, so a returned result does not imply the browser opened. Explicit `--latest` remains a separate terminal option.
+
+Channel loss now asks the owned worker to close without waiting on a pending launch first. A completed request cannot subsequently open a browser after its client closes. Windows invokes System32's opener with startup commands disabled. The Windows MCP setup shows the absolute Node and package paths as separate arguments. Launch codes remain one-use, recording-bound for the exchange and expire after 60 seconds. The ordinary session cookie retains the existing daemon API, workspace consent and controller boundaries.
+
+- Defect regressions reproduced contradictory/ambiguous identity, model-visible fallback, the delayed channel-close race and Windows opener resolution before the fixes. Both typechecks, the rebuilt UI, 31 focused units across five files with two unit workers, and 15 Edge embed browser checks with two workers passed. The 360 px cases were limited to desktop embed. There were no focused browser retries or skips.
+- Genuine display in scratch storage passed at 600 and 1440 px for Claude `rec_b4eb42b6` (108,711 bytes) and Codex `rec_f1c7bb44` (174,722 bytes), four checks per recording.
+- An ephemeral signed-in Codex 0.171.0-alpha.13 run issued one actual MCP tool call and got the expected private-handoff refusal. It used an exact synthetic recording ID and did not launch a browser. This proves the genuine runtime can reach the refusal path.
+- Independent review checked credential handling, exact identity, pending-close ownership, documentation and Windows invocation. The final re-review found no actionable issues in those changes.
+
+The Claude desktop app is signed out and a standalone Claude Code CLI was unavailable. A fresh native hook launch and successful OS browser navigation remain unverified. Keep the PR draft until a supported desktop host demonstrates private handoff, credential exclusion from host/model tools and persistence, and navigation, popup and guest close/reopen behaviour. The browser guest suite and display checks do not establish those outcomes.

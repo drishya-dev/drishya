@@ -6,8 +6,8 @@ Open the session you are in, live, beside your work.
 
 These routes open the view locally without a model call or model quota. Startup and importing a large session can take time.
 
-### 1. In-harness shell escape: `!drishya open`
-Type `!drishya open` directly into your agent's prompt line:
+### 1. In-harness shell escape
+`!drishya open` explicitly opens the newest recording in the current checkout. Pass `--session <native-id> --harness <harness>` to open an exact session:
 - **Claude Code** (terminal or desktop app): type `!drishya open`. The `!` runs the command locally and returns when the local launcher finishes.
 - **Codex**: type `!drishya open` where your version has shell escape; otherwise run `drishya open` in an adjacent terminal.
 - **Antigravity** and anything else: run `drishya open` in its terminal.
@@ -39,27 +39,17 @@ Copy [`drishya-hook.mjs`](drishya-hook.mjs) to your `~/.claude/` directory. Repl
 
 `drishya open` picks this folder's newest session across Claude Code, Codex, and Antigravity, starts a small background process if needed, opens the view and prints one line. Options: `--session <id>` for one exact session, `--harness claude-code|codex|antigravity` to prefer one agent, `--print` to print a one-time 60-second clickable link.
 
-Requires Drishya 0.1.2 or later and Node 24 (`npm install -g drishya`).
+Requires a Drishya build with embed support and Node 24 or newer. The restoration is still under review.
 
 ## Which window it opens in
 
-`drishya open` opens your **system browser**. It has no way to inject a page into a separate desktop app's internal split pane. To get it into an app's pane without asking the agent, run `drishya open --print` and click the link it prints (it is valid once, for 60 seconds); an app that opens clicked loopback links in its own pane will show it there.
+`drishya open` requests the **system browser**. A split pane requires a desktop host that implements a private launch handoff.
 
 ---
 
-## When you need an in-app split pane: Let the agent open it
+## Using an in-app split pane
 
-Only use this if you specifically want the visualizer docked *inside* the desktop app's native split pane (e.g. Claude desktop app's browser pane) rather than an external browser window. **Note: this costs a short model turn each time.**
-
-When the agent opens it, it goes to, in order:
-
-1. **Claude desktop app** (Code tab): its built-in browser pane.
-2. **Codex app**: its browser pane, where the agent can drive one.
-3. **Antigravity**: its attached browser.
-4. **Any other app with an agent-driven browser or webview** (for example a T3 Code preview).
-5. **Anywhere else**: the system browser.
-
-Everything stays on your computer. The pane is a page served by a small Drishya process on `127.0.0.1`; nothing is sent anywhere. Opening a pane only observes the session: it does not send prompts, approve anything or give Drishya access to your files.
+A compatible desktop host opens the view in its private top-level guest. Hosts without private handoff can request an ordinary system browser window. Host-specific acceptance is pending. The view runs on `127.0.0.1`. Opening it does not send prompts, approve requests or grant workspace access.
 
 ## Agent route: turn it on (opt-in, per harness)
 
@@ -67,7 +57,7 @@ Drishya never edits your harness settings. You add two things yourself, and remo
 
 ### 1. The tool: `drishya.open_view`
 
-A local MCP server the agent calls to get a link for the current session.
+A local MCP server the agent calls with the exact session ID to request a private pane or a system browser.
 
 **Claude Code** (also used by the Claude desktop app's Code tab):
 
@@ -75,7 +65,13 @@ A local MCP server the agent calls to get a link for the current session.
 claude mcp add --scope user drishya -- drishya embed-mcp
 ```
 
-On Windows: `claude mcp add --scope user drishya -- cmd /c drishya embed-mcp`.
+On Windows, pass the absolute Node executable and the installed package's absolute CLI path as separate arguments.
+
+```powershell
+claude mcp add --scope user drishya -- 'C:\Program Files\nodejs\node.exe' '<global npm root>\drishya\apps\daemon\src\cli.mjs' embed-mcp
+```
+
+Use the paths from `(Get-Command node).Source` and `npm root -g` on your machine.
 
 **Codex** (CLI and app):
 
@@ -91,7 +87,7 @@ command = "drishya"
 args = ["embed-mcp"]
 ```
 
-On Windows use `command = "cmd"` and `args = ["/c", "drishya", "embed-mcp"]`.
+On Windows, set `command` to the absolute Node executable and `args` to the absolute package CLI path followed by `embed-mcp`. Use single-quoted TOML strings for Windows paths.
 
 **Antigravity and other MCP clients**: add a stdio server named `drishya` that runs `drishya embed-mcp`.
 
@@ -102,7 +98,7 @@ A skill that tells the agent how to find the current session and where to open t
 - **Claude Code**: `~/.claude/skills/drishya/SKILL.md` (every project) or `.claude/skills/drishya/SKILL.md` (one project). Type `/drishya`.
 - **Codex**: your Codex skills folder, `~/.codex/skills/drishya/SKILL.md` or a project's `.agents/skills/drishya/SKILL.md`, as your Codex version supports. Invoke it as `/drishya` or `$drishya`.
 
-The skill also works without the tool: the agent then runs `drishya embed …` in its shell, which prints one line and returns at once.
+The skill also works without the tool. It uses `drishya embed … --open` to hand the exact session to the system browser.
 
 ### Turn it off
 
@@ -112,13 +108,13 @@ The skill also works without the tool: the agent then runs `drishya embed …` i
 
 - **Claude Code** gives the skill its session ID (`${CLAUDE_SESSION_ID}`), so the pane shows exactly this conversation.
 - **Codex** sets `CODEX_THREAD_ID` in the agent's shell, so the same holds.
-- Anywhere else, the newest session in the current checkout is used (`--latest --cwd`). It never picks a session from another checkout.
+- When the current session ID is unavailable, select the recording in Drishya. The separate terminal option `--latest` explicitly requests the newest recording.
 
 ## The link
 
-The agent receives a link like `http://127.0.0.1:<port>/?embed=1&recording=<id>#launch=<code>`. The code signs in **once**, for **that one session**, within **60 seconds**. The page removes it from the address bar before anything else runs and swaps it for the ordinary private session cookie. Because the link passes through the agent's conversation, Drishya also strips launch codes from every journal it records. If the agent opens the link late, or you reload a fresh pane, the page says the link was used: type `/drishya` again.
+A compatible desktop host receives the launch link through a private handoff. Its one-use code selects the recording and expires after **60 seconds**. The page removes the code from the address bar before exchanging it for the ordinary HttpOnly session cookie. To reopen a signed-out pane, start a fresh launch for the same session.
 
-When the agent cannot drive a pane, it asks the tool to open the system browser instead (`systemBrowser: true`, or `drishya embed --open`); the link then never reaches the agent at all.
+For hosts without private handoff, use the system browser (`systemBrowser: true` in the tool or `drishya embed --open` in a terminal). The tool returns a cleaned route. Host support requires a private guest that keeps the launch away from its model and browser tools.
 
 ## How long it runs
 

@@ -1,15 +1,15 @@
 # Embed launcher: reference for host apps
 
-How the pane launch works underneath. For turning it on in Claude Code or Codex, read [embed.md](embed.md). The security contract is [embed-1-in-app.md](../review/embed-1-in-app.md); this page records where the implementation follows it and the one place the refined target (the agent opens the pane) changes it.
+For setup in Claude Code or Codex, see [embed.md](embed.md). The [embed contract](../review/embed-1-in-app.md) defines the private handoff and host acceptance.
 
 ## Five lines for a host app
 
 ```sh
-drishya embed --json --latest --cwd "$PROJECT"     # one JSON line, then it returns; the worker keeps serving
+drishya embed --json --session "$NATIVE_SESSION_ID" --harness codex --cwd "$PROJECT"
 # -> {"url":"http://127.0.0.1:PORT/?embed=1&recording=rec_…#launch=<one-use code>","port":PORT,"recordingId":"rec_…","mode":"top-level"}
 # Load `url` once as a top-level page in your webview or browser tab (never an iframe). The code signs in once, for 60 s.
 # The page swaps it for an HttpOnly cookie and cleans the address bar. The view stops by itself 10 minutes after the pane closes.
-# On failure: exit 1 and {"error":{"code","message"}}. Add --session <id> for one exact session, --harness codex to prefer an agent.
+# On failure: exit 1 and {"error":{"code","message"}}. Use the selected provider and its native session ID.
 ```
 
 ## Selectors
@@ -54,17 +54,17 @@ A pane cookie is browser sign-in only. Workspace approval, controller consent an
 
 ## MCP: `drishya.open_view`
 
-Stdio JSON-RPC: `initialize` (answers protocol `2024-11-05`, `2025-03-26` or `2025-06-18`), `notifications/initialized`, `ping`, `tools/list`, `tools/call`. Clients see the tool as `drishya.open_view` (Codex) or `mcp__drishya__drishya_open_view` (Claude Code). Arguments: one selector, optional `cwd`, optional `systemBrowser: true`. The input schema has no top-level `oneOf` (several clients reject it); the server enforces one selector, and treats `null`, `''` and `latest: false` as absent.
+Stdio JSON-RPC: `initialize` (answers protocol `2024-11-05`, `2025-03-26` or `2025-06-18`), `notifications/initialized`, `ping`, `tools/list`, `tools/call`. Clients see the tool as `drishya.open_view` (Codex) or `mcp__drishya__drishya_open_view` (Claude Code). Give an exact `nativeSessionId` or `sessionId`, with optional `harness`, `cwd` and `systemBrowser: true`. The server rejects ambiguous native IDs and reserves explicit `latest` selection for the local CLI.
 
 What the tool returns:
 
-- **Default (the refined target):** the one-use launch link in the tool result, with `singleUse: true` and `expiresInSeconds: 60`, because the agent itself opens it in its pane. This is the one change from the contract, which kept the link out of model content. The EMBED (refined) task (14 Nov) accepts it on the condition that the code is single-use, short-lived and stripped from captured journals. The `drishya-launch` privacy rule removes `#launch=` / `&launch=` codes before anything is persisted.
-- **`systemBrowser: true`:** Drishya opens the system browser itself; the result carries only the cleaned `/?embed=1#/r/<id>` route.
+- **Host without private handoff:** the tool returns `HOST_HANDOFF_UNAVAILABLE` before creating a worker. Use the system browser fallback.
+- **`systemBrowser: true`:** Drishya asks the OS to open the link and reports `system-browser-requested`. The result carries the cleaned `/?embed=1#/r/<id>` route. If the OS does not open a window, use the exact recording ID with `drishya embed` in a local terminal.
 - **A host that keeps `_meta` private** declares `capabilities.experimental["drishya.privateLaunch"] = {}` at `initialize` (an object: MCP's schema requires one, and clients reject `true`). It then gets the link in `_meta["drishya/privateLaunch"]` and the cleaned route in content.
 
 ## Desktop host apps
 
-A host button follows the same path without the agent: spawn `node <cli> embed --attach --session <native id> --cwd <checkout>` (argv array, no shell), read the one JSON line privately, check the origin is `http://127.0.0.1:<port>` and the recording matches, and load the URL in its own sandboxed top-level guest with no Node access, popups or unexpected navigation. Keep the process for as long as the pane is open; close it to stop the view. Persist only the cleaned route. See the contract's §6 for T3 Code.
+A host button uses `node <cli> embed --attach --session <native id> --harness <harness> --cwd <checkout>`. Pass arguments as an array with the absolute CLI and checkout paths. Read the JSON privately, check the origin and selected recording, and load the URL in the host's sandboxed top-level guest with Node access, popups and unexpected navigation disabled. Keep the owned process while the pane is open. Persist only the cleaned route. See the contract's §6 for T3 Code.
 
 ## Windows discovery ACL
 

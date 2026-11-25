@@ -1,7 +1,5 @@
 // Minimal stdio MCP: no HTTP listener, SDK or native config writes.
-// EMBED refined: the agent itself opens the view in its pane, so a host without a private hand-off receives the
-// one-use launch link in the tool result. That link signs in once, for one recording, within 60 seconds, and the
-// privacy rules strip it from every journal Drishya captures (see `drishya-launch` in @drishya/privacy).
+// Only the host's private handoff or the OS browser opener receives the launch credential.
 import type {Readable, Writable} from 'node:stream';
 import {openBrowser} from './commands.ts';
 import {embedFailure, EmbedError, selection, type EmbedLaunch} from './embed-launch.ts';
@@ -11,14 +9,13 @@ export const OPEN_VIEW = 'drishya.open_view';
 const tool = {
   name: OPEN_VIEW, title: 'Open this session in Drishya',
   description: 'Open one local agent session in Drishya, a live view of what the agent read, ran and changed, beside the conversation. '
-    + 'Give exactly one of nativeSessionId (this harness session\'s own ID), sessionId (a Drishya recording ID) or latest: true; add cwd (the absolute checkout folder) to stay inside one checkout. '
-    + 'The result holds a single-use link that expires in 60 seconds: open it at once in your browser or artifact pane, never in a shared place. '
-    + 'With systemBrowser: true, Drishya opens it in the system browser itself. Observes only: it does not send prompts, approve anything or grant workspace access.',
+    + 'Give exactly one of nativeSessionId (this harness session\'s own ID) or sessionId (a Drishya recording ID). Pass the absolute checkout folder in cwd when it is known. '
+    + 'A compatible local host can open a private pane. With systemBrowser: true, Drishya hands off to the system browser. Launching does not send prompts, give approvals or grant workspace access.',
   // No top-level oneOf: several clients refuse combinators there. The server enforces exactly one selector.
   inputSchema: {type:'object',additionalProperties:false,properties:{
     nativeSessionId:{type:'string',description:'The harness\'s own session ID for this conversation, when it is known.'},
     sessionId:{type:'string',description:'A Drishya recording ID (rec_…).'},
-    latest:{type:'boolean',const:true,description:'The newest session, within cwd when cwd is given.'},
+    harness:{type:'string',enum:['claude-code','codex','antigravity'],description:'Harness for the native session ID, when known.'},
     cwd:{type:'string',description:'Absolute path of the checkout the session works in.'},
     systemBrowser:{type:'boolean',description:'Open the view in the system browser instead of returning the link.'}}},
   annotations: {readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:false},
@@ -32,10 +29,16 @@ export async function embedMcp(input: Readable = process.stdin, output: Writable
   let initialized = false, ready = false, privateHandoff = false, closed = false, queued = 0;
   let supervisor: EmbedSupervisor | undefined, work = Promise.resolve();
   const send = (value: unknown) => {if (!closed) output.write(JSON.stringify(value) + '\n');};
-  const close = async () => {closed = true; await work.catch(() => undefined); await supervisor?.close();};
-  input.on('end', () => {void close();}); input.on('error', () => {void close();}); output.on('error', () => {void close();});
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    // The pending import may need the owned worker to close before it can settle.
+    void supervisor?.close().catch(() => undefined);
+  };
+  input.on('end', close); input.on('close', close); input.on('error', close);
+  output.on('close', close); output.on('error', close);
   jsonLines(input, 8192, value => {
-    if (closed || queued >= 32) {void close(); return;}
+    if (closed || queued >= 32) {close(); return;}
     const r = value as {jsonrpc?: unknown;id?: unknown;method?: unknown;params?: Record<string, unknown>};
     if (!r || r.jsonrpc !== '2.0' || typeof r.method !== 'string' || (r.id !== undefined && typeof r.id !== 'string' && typeof r.id !== 'number')) {
       send({jsonrpc:'2.0',id:null,error:{code:-32600,message:'Invalid request'}}); return;
@@ -70,23 +73,23 @@ export async function embedMcp(input: Readable = process.stdin, output: Writable
           if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new EmbedError('INVALID_SELECTION');
           const {systemBrowser, ...rest} = raw as Record<string, unknown>;
           if (systemBrowser !== undefined && systemBrowser !== null && typeof systemBrowser !== 'boolean') throw new EmbedError('INVALID_SELECTION');
-          // Models fill unused options with null, '' or latest: false; those select nothing. Only the server decides validity.
+          // Older clients can still omit an unused selector by passing latest: false.
           for (const key of Object.keys(rest)) if (rest[key] === null || rest[key] === '' || (key === 'latest' && rest[key] === false)) delete rest[key];
+          if ('latest' in rest) throw new EmbedError('INVALID_SELECTION');
           const args = selection(rest);
+          if (!systemBrowser && !privateHandoff) throw new EmbedError('HOST_HANDOFF_UNAVAILABLE');
           supervisor ??= factory();
           const launched = await supervisor.open(args);
+          if (closed) return;
           const summary = {recordingId:launched.recordingId,port:launched.port,mode:launched.mode};
           if (systemBrowser) {
             open(launched.url);
-            return reply({content:[{type:'text',text:JSON.stringify({...summary,opened:'system-browser',url:clean(launched)})}]});
+            return reply({content:[{type:'text',text:JSON.stringify({...summary,status:'system-browser-requested',url:clean(launched),
+              message:'Drishya requested the system browser. If it did not open, use drishya embed with the exact recording ID in a local terminal.'})}]});
           }
-          if (privateHandoff) {
-            return reply({content:[{type:'text',text:JSON.stringify({...summary,url:clean(launched)})}],_meta:{'drishya/privateLaunch':launched}});
-          }
-          return reply({content:[{type:'text',text:JSON.stringify({...summary,url:launched.url,singleUse:true,expiresInSeconds:60,
-            next:'Open url now in your browser or artifact pane (or the system browser). It signs in once; call the tool again for a fresh link.'})}]});
+          return reply({content:[{type:'text',text:JSON.stringify({...summary,url:clean(launched)})}],_meta:{'drishya/privateLaunch':launched}});
         } catch (e) {reply({isError:true,content:[{type:'text',text:JSON.stringify(embedFailure(e))}]});}
       } finally {queued--;}
     }).catch(() => {send({jsonrpc:'2.0',id:r.id,error:{code:-32603,message:'Local launcher unavailable'}});});
-  }, () => {send({jsonrpc:'2.0',id:null,error:{code:-32700,message:'Invalid or oversized JSON message'}}); void close();});
+  }, () => {send({jsonrpc:'2.0',id:null,error:{code:-32700,message:'Invalid or oversized JSON message'}}); close();});
 }

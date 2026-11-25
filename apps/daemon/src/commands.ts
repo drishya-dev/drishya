@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, join, resolve, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { buildGraph } from '@drishya/indexer';
@@ -313,7 +313,10 @@ export function launchToken(value: string | undefined): string | undefined {
  * listener turns that into an uncaught exception that killed `drishya serve` right after it printed its link. Printing the link is enough.
  */
 export function openBrowser(url: string, launch: typeof spawn = spawn, platform: string = process.platform) {
-  const [cmd, args] = platform === 'win32' ? ['cmd', ['/c', 'start', '""', url.replace(/&/g, '^&')]] : platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
+  // Run the Windows system opener without checkout-relative resolution or shell startup commands.
+  const [cmd, args] = platform === 'win32'
+    ? [win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe'), ['/d', '/c', 'start', '""', url.replace(/&/g, '^&')]]
+    : platform === 'darwin' ? ['open', [url]] : ['xdg-open', [url]];
   try {
     const child = launch(cmd, args as string[], { stdio: 'ignore', detached: true });
     child.on('error', () => { /* no opener installed: the printed link is enough */ });

@@ -44,7 +44,7 @@ async function canonical(path: string): Promise<string> {
 }
 /** The harness's own ID: stated in the first records, or the journal's name (Claude `<id>.jsonl`, Codex `rollout-…-<id>.jsonl`). */
 export function nativeIdMatches(source: Pick<DiscoveredSource, 'sessionId' | 'path'>, id: string): boolean {
-  if (source.sessionId === id) return true;
+  if (source.sessionId) return source.sessionId === id;
   const name = basename(source.path);
   return name === `${id}.jsonl` || name.endsWith(`-${id}.jsonl`);
 }
@@ -61,7 +61,8 @@ export async function openEmbed(app: App, baseUrl: string, codes: EmbedCodes, in
       if (cwd && (!source.cwd || await canonical(source.cwd).catch(() => undefined) !== cwd)) continue;
       eligible.push(source);
     }
-    eligible.sort((a,b) => b.modifiedAt.localeCompare(a.modifiedAt) || recordingIdFor(a.adapterId,a.path).localeCompare(recordingIdFor(b.adapterId,b.path)));
+    if (v.nativeSessionId && eligible.length > 1) throw new EmbedError('SESSION_AMBIGUOUS');
+    if (v.latest) eligible.sort((a,b) => b.modifiedAt.localeCompare(a.modifiedAt) || recordingIdFor(a.adapterId,a.path).localeCompare(recordingIdFor(b.adapterId,b.path)));
     const source = eligible[0];
     if (!source) throw new EmbedError(v.nativeSessionId ? 'SESSION_NOT_FOUND' : 'NO_SESSION');
     recordingId = (await app.ingest.importSource(source.adapterId, source.path)).recordingId;
@@ -82,9 +83,10 @@ export function embedFailure(error: unknown): {code: string; message: string; de
   const detail = error instanceof EmbedError ? error.detail : undefined;
   // Fixed messages only: upstream errors may quote filenames, request bodies or credentials.
   return {code, message: code === 'IFRAME_UNSUPPORTED' ? 'Use a top-level pane or separate window.'
-    : code === 'HOST_HANDOFF_UNAVAILABLE' ? 'This host cannot privately open a pane. Use the local drishya embed command.'
+    : code === 'HOST_HANDOFF_UNAVAILABLE' ? 'This host cannot privately open a pane. Retry with systemBrowser enabled or open the exact session in a local terminal.'
     : code === 'NO_SESSION' ? 'No supported session was found for this checkout.'
     : code === 'SESSION_NOT_FOUND' ? 'No session with this ID was found on this computer.'
+    : code === 'SESSION_AMBIGUOUS' ? 'More than one recording matches this native session ID. Give the exact Drishya recording ID.'
     : code === 'CHECKOUT_MISMATCH' ? 'That session belongs to a different checkout.'
     : code === 'CHECKOUT_UNAVAILABLE' ? 'The checkout folder could not be read.'
     : code === 'IMPORT_IN_PROGRESS' ? 'Drishya is still importing a large session. Try again in a minute; it continues where it stopped.'

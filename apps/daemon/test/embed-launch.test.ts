@@ -82,6 +82,7 @@ it('the harness session ID selects that exact journal, and nothing path-shaped i
  expect(nativeIdMatches({path:'x.jsonl',sessionId:uuid},uuid)).toBe(true);
  expect(nativeIdMatches({path:join('p','other-'+uuid+'-x.jsonl')},uuid)).toBe(false);
  expect(nativeIdMatches({path:join('p','9'+uuid+'.jsonl')},uuid)).toBe(false);
+ expect(nativeIdMatches({path:join('p',uuid+'.jsonl'),sessionId:'different-native-id'},uuid)).toBe(false);
  for(const v of [{nativeSessionId:'../x/../../y'},{nativeSessionId:'short'},{nativeSessionId:uuid,latest:true},{nativeSessionId:uuid,sessionId:'rec_0123456789abcdef'}]) expect(()=>selection(v)).toThrow();
  const id='rec_00000000000000aa';let imported='';
  const app={store:{getRecording:(key:string)=>key===id?{id,workspaceRoot:tmpdir()}:undefined},ingest:{
@@ -92,6 +93,20 @@ it('the harness session ID selects that exact journal, and nothing path-shaped i
  await openEmbed(app,'http://127.0.0.1:42000',new EmbedCodes(),{nativeSessionId:uuid});
  expect(imported.endsWith(uuid+'.jsonl')).toBe(true);
  await expect(openEmbed(app,'http://127.0.0.1:42000',new EmbedCodes(),{nativeSessionId:'99999999-1111-4222-8333-444455556666'})).rejects.toMatchObject({code:'SESSION_NOT_FOUND'});
+});
+
+it('an exact native ID with multiple matching journals requires an unambiguous selector',async()=>{
+ const nativeSessionId='0123abcd-1111-4222-8333-444455556666';
+ let imports=0;
+ const app={ingest:{
+  discover:async()=>['first','second'].map((folder,index)=>({
+   adapterId:'claude-code',harness:'claude-code',path:join(folder,nativeSessionId+'.jsonl'),
+   sessionId:nativeSessionId,modifiedAt:`2026-11-18T1${index}:00:00Z`,
+  })),
+  importSource:async()=>{imports++;throw Error('ambiguous selection imported a journal');},
+ }} as unknown as App;
+ await expect(openEmbed(app,'http://127.0.0.1:42000',new EmbedCodes(),{nativeSessionId})).rejects.toMatchObject({code:'SESSION_AMBIGUOUS'});
+ expect(imports).toBe(0);
 });
 
 it('a released detached worker keeps serving its pane, then stops by itself and removes its discovery entry',async()=>{

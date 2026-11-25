@@ -120,7 +120,7 @@ export function App() {
       return (
         <div className="center notice">
           <h2>This link has been used</h2>
-          <p className="muted">A Drishya pane link opens once and expires after a minute. Run <code>/drishya</code> again, or <code>drishya embed --latest --cwd .</code> in the checkout, for a fresh one.</p>
+            <p className="muted">A Drishya pane link opens once and expires after a minute. Open this session again from the host or run <code>/drishya</code> again for a fresh link.</p>
           <button className="btn" onClick={() => location.reload()}>Retry</button>
         </div>
       );
