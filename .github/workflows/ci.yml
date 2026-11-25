@@ -82,7 +82,7 @@ jobs:
             count=$(echo "$specs" | wc -w)
             if [ "$count" -gt "$MAX_AFFECTED_SPECS" ]; then
               # Too many to map usefully: keep the spec files the PR itself edits, up to the same limit.
-              specs=$(grep -E '^tests/browser/[^/]+\.spec\.ts$' "$RUNNER_TEMP/changed.txt" | xargs -r -n1 basename | head -n "$MAX_AFFECTED_SPECS" | tr '\n' ' ')
+              specs=$(awk -F/ -v max="$MAX_AFFECTED_SPECS" '/^tests\/browser\/[^\/]+\.spec\.ts$/ && count < max { printf "%s%s", (count ? " " : ""), $3; count++ }' "$RUNNER_TEMP/changed.txt")
               echo "::notice::$count specs name this change; Windows and macOS run the smoke list and the $(echo $specs | wc -w) edited specs (Linux runs the whole suite)."
             fi
           fi

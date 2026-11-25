@@ -2,33 +2,34 @@
 
 What is planned for Drishya, in plain words. This is a direction, not a promise: dates are not committed, and the order can change as people use the release. Current work is tracked in [GitHub Issues](https://github.com/drishya-dev/drishya/issues); earlier work and the reasons behind it are in the [Product Work History](docs/PRODUCT_WORK_HISTORY.md).
 
-## Now: finishing release 0.1.0
+## Published release
 
-Drishya 0.1.0 is a desktop product for Claude Code, Codex and Antigravity. It observes sessions read-only, with an opt-in controller for sending prompts to Claude Code and Codex. It has been hand-tested on Windows 11 and Ubuntu under WSL2; macOS coverage is CI-only, with no physical Mac acceptance pass. The product is feature-complete. What remains is final release acceptance and publication:
+[Drishya 0.1.1](https://github.com/drishya-dev/drishya/releases/tag/v0.1.1) is the latest published release. Run `npx drishya serve` with Node.js 24 or newer. It observes Claude Code, Codex and Antigravity sessions live and in replay, with an opt-in prompt controller for Claude Code and Codex. The [first release notes](docs/release-notes-0.1.0.md) record the original platform checks.
 
-- **The pentest on the installer that ships (SEC-4b).** The findings from the first pass are fixed and covered by tests. The second pass repeats it on the installed build with the OWASP ZAP scan, full CodeQL and Semgrep, a second device and a second operating-system account, and the three systems. The report is in [`docs/review/sec-4-pentest.md`](docs/review/sec-4-pentest.md).
-- **Final-commit verification (SHIP-16).** CI and packaged install checks exist on Windows, Ubuntu and macOS, with hosted-browser exclusions recorded in [`playwright.config.ts`](playwright.config.ts). The final release commit still needs its own release dry run; physical Mac acceptance (MAC-1) remains unperformed. See the [release notes](docs/release-notes-0.1.0.md) for platform coverage.
-- **A final whole test** of the release candidate, then the packaged release with install guide and release notes (SHIP-9).
-- **Launch communication:** the README, website and GitHub issue feedback links are implemented (#524 and #522); README-3 and FEEDBACK-1 acceptance is recorded in the [Product Work History](docs/PRODUCT_WORK_HISTORY.md#readme-3). Launch posts remain separate work.
+- **Platform acceptance.** The first release was hand-tested on Windows 11 and Ubuntu under WSL2. Physical Mac, lower-resource machines and broader hands-on coverage remain open. See [MAC-1](docs/review/mac-1-acceptance.md) and [REL-2](docs/review/rel-2-physical-acceptance.md).
+- **Security follow-up.** The published release includes the fixes from the pre-release review. The [SEC-4b report](docs/review/sec-4-pentest.md) records what the installed-build testing and scans covered and which second-device, second-account and cross-platform checks remain.
 
-## Next release
+## Work on main since 0.1.1
 
-These were scoped during the first release and set aside on purpose. Each has a write-up in the Product Work History under its ID.
+- **Antigravity live acceptance (AG-3).** Genuine runs covered live, background command completion, exact child navigation and restart. [Acceptance record](docs/review/antigravity-ag3-live.md)
+- **Storage management (STORE-1).** Settings shows imported-session usage and clears selected imported data while preserving native journals. [Implementation and acceptance](docs/review/store-1-local-storage.md)
+- **Native question cards.** Terminal-started questions tell the user where to answer. Drishya-driven Codex answers were verified end to end. A fresh signed-in Claude Code answer remains open. [Issue #543](https://github.com/drishya-dev/drishya/issues/543)
 
-- **Fuller live Antigravity (AG-3 and AG-6).** An Antigravity session can be followed live today. The next step adds its background commands and subagent conversations as they happen, and the details its local database records (exit codes, applied diffs, branch, model, token use, durations).
-- **Drishya inside a harness (EMBED-2a and EMBED-2b).** An embed command and a view sized for a side pane, so a harness app can show Drishya beside the agent as a guest view. The design and security contract are settled in [`docs/review/embed-1-in-app.md`](docs/review/embed-1-in-app.md); the reference host is T3 Code.
-- **Lit files on the map (MAP-3).** The file the agent is on is pulled forward on the repository map with its name and type, while the rest of the map stays a quiet field. See [`docs/review/map-3-lit-files.md`](docs/review/map-3-lit-files.md).
-- **Storage management (STORE-1).** Settings shows what Drishya stores for each session and lets you clear chosen sessions' data. It never touches the harness's own journals.
-- **One-click setup for a repository (CONNECT-4).** A repository's permissions are asked for once, in one sheet, before its session opens, and remembered per checkout. See [`docs/review/connect-4-repository-setup-proposal.md`](docs/review/connect-4-repository-setup-proposal.md).
-- **More palettes (UI-40)** and a pass of motion evaluation on long live sessions (MOTION-3).
-- **Real signed-in acceptance** of the native controller across harnesses, multi-agent sessions and desktop computer use, and the physical platform checks that only a person on the machine can do.
+## Under review and in progress
+
+- **Antigravity metadata.** Further local-database enrichment (AG-6) is planned. Prompt presentation and workspace evidence are tracked in [#541](https://github.com/drishya-dev/drishya/issues/541).
+- **Drishya inside a harness.** The focused embed restoration needs fresh native invocation and genuine desktop-host pane acceptance. [Draft PR #563](https://github.com/drishya-dev/drishya/pull/563)
+- **Lit files on the map (MAP-3).** The change highlights files backed by recorded activity. The local full gate still has unresolved failures. [PR #555](https://github.com/drishya-dev/drishya/pull/555)
+- **Repository setup.** The open session should show Files and the map when its workspace is identified after first open. [Issue #542](https://github.com/drishya-dev/drishya/issues/542)
+- **More palettes (UI-40).** The palette candidates are under review and need Yash’s selection. [Draft PR #559](https://github.com/drishya-dev/drishya/pull/559)
+- **Additional acceptance.** Signed-in native controller journeys, desktop computer use, long-session motion and the physical platform checks remain separate acceptance work. Journals of 160 MB and above remain outside the documented performance range pending a new real-journal matrix. [Performance record](docs/PRODUCT_WORK_HISTORY.md#perf-3)
 
 ## Harnesses being explored
 
 Claude Code, Codex and Antigravity are supported. These are being looked at, with no date and no promise:
 
-- **T3 Code.** An open-source agent app with desktop, web and mobile clients. It is the first reference host for the embedded view above; we have only read its source, and nothing has been agreed with its maintainers.
-- **Hermes Agent.** Being explored as another source of sessions; nothing is built yet.
+- **T3 Code.** A potential desktop host for Drishya. Feasibility depends on exact native session mapping and a private guest handoff.
+- **Hermes Agent.** A potential source of coding sessions. Feasibility starts with selected-session import and requires genuine export, visibility and size evidence before any live integration. [Reviewed proposal for both integrations](docs/review/hermes-t3-integration-proposal.md)
 - **Cursor.** Considered earlier from sessions on one machine, not started.
 
 If you build or maintain a harness and want Drishya to read it, [open a harness integration issue](.github/ISSUE_TEMPLATE/harness-integration.yml). How an adapter is built is described in [`docs/CODEBASE.md`](docs/CODEBASE.md#adapters--how-to-add-a-harness).
