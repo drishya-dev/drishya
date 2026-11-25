@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Page, type Locator } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -259,24 +259,80 @@ test('a newer on-disk reading wins during the final peek tab exit', async ({page
 
 // MOTION-4b: the remaining surfaces. Each group shows an intermediate frame on the way in and on the way out, on the shared clock.
 type Frame = {present: boolean; visible: boolean; opacity: number | null};
+type FrameCapture = {frames: Frame[]; active: boolean; request: number};
 async function frames(page: Page, selector: string, act: () => Promise<unknown>, ms = 420): Promise<Frame[]> {
   await page.evaluate(sel => {
-    const w = window as unknown as {__frames: Frame[]; __sampling: boolean};
-    w.__frames = []; w.__sampling = true;
+    const w = window as unknown as {__surfaceFrames?: FrameCapture};
+    const capture: FrameCapture = {frames: [], active: true, request: 0};
+    w.__surfaceFrames = capture;
     let element: Element | null = document.querySelector(sel);
     const tick = () => {
+      if (!capture.active) return;
       // Bind to the first match and keep following that node, so a surface that leaves is not replaced by another match.
       if (!element) element = document.querySelector(sel);
-      w.__frames.push({present: !!element?.isConnected, visible: !!element?.isConnected && element.checkVisibility(), opacity: element?.isConnected ? Number(getComputedStyle(element).opacity) : null});
-      if (w.__sampling) requestAnimationFrame(tick);
+      capture.frames.push({present: !!element?.isConnected, visible: !!element?.isConnected && element.checkVisibility(), opacity: element?.isConnected ? Number(getComputedStyle(element).opacity) : null});
+      capture.request = requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+    capture.request = requestAnimationFrame(tick);
   }, selector);
-  await act();
-  await page.waitForTimeout(ms);
-  return page.evaluate(() => { const w = window as unknown as {__frames: Frame[]; __sampling: boolean}; w.__sampling = false; return w.__frames; });
+  let result: Frame[] = [];
+  try {
+    await act();
+    await page.waitForTimeout(ms);
+  } finally {
+    result = await page.evaluate(() => {
+      const capture = (window as unknown as {__surfaceFrames: FrameCapture}).__surfaceFrames;
+      capture.active = false;
+      cancelAnimationFrame(capture.request);
+      return capture.frames;
+    });
+  }
+  return result;
 }
 const travelled = (list: Frame[]) => list.some(frame => frame.visible && frame.opacity !== null && frame.opacity > .02 && frame.opacity < .98);
+
+async function reasoningSurface(page: Page, label: Locator) {
+  const id = await label.evaluate(element => element.closest<HTMLElement>('[data-prose-id]')!.dataset.proseId!);
+  const owner = await page.evaluate(id => `.prose-reasoning[data-prose-id="${CSS.escape(id)}"]`, id);
+  return {label: page.locator(`${owner} > .prose-label`), body: `${owner} > div`};
+}
+
+async function samplerCanary(page: Page) {
+  await page.setContent('<div class="prose-reasoning" data-prose-id="a"><button class="prose-label">A</button><div style="opacity:.25">Synthetic A</div></div><div class="prose-reasoning" data-prose-id="b"><button class="prose-label">B</button><div style="opacity:.75">Synthetic B</div></div>');
+  await page.evaluate(() => {
+    let queue: FrameRequestCallback[] = [];
+    window.requestAnimationFrame = callback => { queue.push(callback); return queue.length; };
+    // A queued callback can still be delivered after cancellation; the capture
+    // must reject it itself instead of reviving when a later capture starts.
+    (window as unknown as {flushFrames: () => void}).flushFrames = () => {
+      const pending = queue; queue = [];
+      for (const callback of pending) callback(performance.now());
+    };
+  });
+}
+
+test('a frame capture never revives the previous sampler', async ({page}) => {
+  await samplerCanary(page);
+  const flush = () => page.evaluate(() => (window as unknown as {flushFrames: () => void}).flushFrames());
+  expect((await frames(page, '[data-prose-id="a"] > div', flush, 0)).map(frame => frame.opacity)).toEqual([.25]);
+  expect((await frames(page, '[data-prose-id="b"] > div', flush, 0)).map(frame => frame.opacity)).toEqual([.75]);
+});
+
+test('reopening reasoning samples the selected owner instead of its expanded neighbour', async ({page}) => {
+  await samplerCanary(page);
+  const surface = await reasoningSurface(page, page.getByRole('button', {name:'A', exact:true}));
+  await page.evaluate(() => {
+    const owner = document.querySelector('[data-prose-id="a"]')!;
+    const body = owner.querySelector<HTMLElement>(':scope > div')!;
+    body.remove();
+    document.querySelector('[data-prose-id="b"] > div')!.setAttribute('style','opacity:1');
+    owner.querySelector('button')!.addEventListener('click', () => {
+      body.style.opacity = '.5'; owner.append(body);
+      (window as unknown as {flushFrames: () => void}).flushFrames();
+    });
+  });
+  expect(travelled(await frames(page, surface.body, () => surface.label.click(), 0))).toBe(true);
+});
 
 test('every pointer-opened disclosure, in the Toolbox too, fades in and out and keeps the dock in place', async ({page}) => {
   await page.setViewportSize({width:1440,height:900});
@@ -323,8 +379,11 @@ test('exposed reasoning unfolds and folds on the menu clock', async ({page}) => 
   await openRecording(page);
   const label = page.locator('.prose-reasoning .prose-label').first();
   await expect(label).toBeVisible();
-  const first = await frames(page, '.prose-reasoning > div', () => label.click());
-  const second = await frames(page, '.prose-reasoning > div', () => label.click());
+  // Keep both the trigger and sampled body bound to this prose, even when a
+  // neighbouring expanded reasoning body enters the virtual window.
+  const surface = await reasoningSurface(page, label);
+  const first = await frames(page, surface.body, () => surface.label.click());
+  const second = await frames(page, surface.body, () => surface.label.click());
   expect(travelled(first)).toBe(true);
   expect(travelled(second)).toBe(true);
   // One of the two was a close: the content stayed mounted while it faded, then left.
