@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 let dir: string, id: string, app: App, server: RunningServer;
 // A fresh app per test: workspace and Git grants persist on the server and would change what the next test opens.

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 // LINK-1: links in agent prose open in the browser, and hover or keyboard focus shows a card that says what the link is.
 let dir: string, root: string, id: string, app: App, server: RunningServer, sha: string, journalPath: string;

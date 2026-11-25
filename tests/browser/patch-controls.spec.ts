@@ -1,6 +1,6 @@
 import { readUncommitted } from './git-navigation.ts';
 import {execFileSync} from 'node:child_process';import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
-import {test,expect,type Page} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {test,expect,type Page} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,id:string,app:App,server:RunningServer,editId:string,readId:string,shortReadId:string;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-patch-controls-'));const root=join(dir,'repo');mkdirSync(root);

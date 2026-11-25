@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,id:string,root:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-file-roles-'));root=join(dir,'repo');mkdirSync(root);writeFileSync(join(root,'README.md'),'# Current document\n\nRead beside the agent.');writeFileSync(join(root,'other.txt'),'Current second file\n');

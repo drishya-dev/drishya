@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer } from '../../apps/daemon/src/server.ts';
+import { startServer } from './browser-server.ts';
 import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './history-gestures.ts';
 
 test('upward scrolling keeps visible material steady across delayed, variable-height pages', async ({ page }) => {

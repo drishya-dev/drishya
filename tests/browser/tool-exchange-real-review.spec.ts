@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { expect,test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer,type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer,type RunningServer } from './browser-server.ts';
 
 // Explicit opt-in to an existing local redacted store. No new journal import or native turn.
 const store=process.env.DRISHYA_REVIEW_STORE;

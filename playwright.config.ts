@@ -24,7 +24,7 @@ const hostedCiSkips = process.env.CI ? knownOnHostedCi.filter(entry => entry.pla
 export default defineConfig({
   testDir: './tests/browser',
   grepInvert: hostedCiSkips.length ? new RegExp(hostedCiSkips.join('|')) : undefined,
-  // SHIP-16: ready stand-in `claude` and `codex` on PATH (Linux and macOS), so the composer does not depend on the machine's installs.
+  // SHIP-16: ready POSIX stand-ins on PATH. On Windows the browser-server fixture supplies metadata probes.
   globalSetup: './tests/browser/global-setup.ts',
   timeout: 90_000,
   expect: { timeout: 10_000 },

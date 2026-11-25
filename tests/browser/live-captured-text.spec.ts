@@ -3,7 +3,7 @@ import {appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync} from '
 import {tmpdir} from 'node:os';
 import {join, resolve, sep} from 'node:path';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer, type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer, type RunningServer} from './browser-server.ts';
 
 // Regression fixtures are deliberately synthetic; genuine acceptance receipts stay in .local/.
 let dir: string, journal: string, app: App, server: RunningServer, id: string, serial: number;

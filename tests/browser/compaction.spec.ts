@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 let dir:string, app:App, server:RunningServer, claude:string, codex:string, missing:string, clean:string, zero:string, small:string, livePath:string;
 const at=(i:number)=>new Date(Date.UTC(2026,9,30,10,0,i)).toISOString();

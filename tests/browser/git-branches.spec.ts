@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {expect,test,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 import type {GitHistoryPage} from '../../apps/daemon/src/git-types.ts';
 
 const git=(root:string,...args:string[])=>execFileSync('git',args,{cwd:root,windowsHide:true,encoding:'utf8',stdio:['pipe','pipe','pipe']}).trim();

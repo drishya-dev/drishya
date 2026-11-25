@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {resolve,join,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 import {openSessionReview} from './session-review.ts';
 // READ-5 slice 1: the Changes view lists each file's captured edits as `turn N · +a −b → next test run ✓/✗`.
 let dir:string,app:App,server:RunningServer;

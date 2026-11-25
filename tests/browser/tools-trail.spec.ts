@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {resolve,join,sep} from 'node:path';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 // TOOLS-1: every available tool is listed, and a chosen tool can be walked through its uses. Synthetic sessions only here;
 // real sessions are checked with check:real (tools-available) and recorded in docs/review/tools-1-available-tools.md.

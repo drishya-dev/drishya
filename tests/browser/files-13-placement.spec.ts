@@ -1,6 +1,6 @@
 import{mkdtempSync,mkdirSync,writeFileSync,appendFileSync,rmSync}from'node:fs';
 import{tmpdir}from'node:os';import{join,resolve,sep}from'node:path';
-import{test,expect}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer}from'../../apps/daemon/src/server.ts';
+import{test,expect}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer}from'./browser-server.ts';
 for(const width of[600,1440])test(`search paths keep their identity and worktree arrivals keep folders open at ${width}`,async({page})=>{
  const dir=mkdtempSync(join(tmpdir(),'drishya-files13-')),main=join(dir,'main','drishya'),journal=join(dir,'session.jsonl'),app=new App(join(dir,'home'));let server:Awaited<ReturnType<typeof startServer>>|undefined;
  const names=['App.tsx','ArtifactReader.tsx','BeforeTurn.tsx','CapturedCommands.tsx'];let seq=0;

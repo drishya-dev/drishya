@@ -5,7 +5,7 @@ import {test,expect} from '@playwright/test';
 import type {Observation} from '../../packages/contracts/src/index.ts';
 import {PRIVACY_POLICY_VERSION} from '../../packages/privacy/src/index.ts';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,app:App,server:RunningServer;const ids=new Map<number,string>();
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-agent-inventory-'));app=new App(join(dir,'store'));

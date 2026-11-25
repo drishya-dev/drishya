@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {resolve,join,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 import {Store} from '../../packages/store/src/index.ts';
 import {defaultAdapters,Ingestor} from '../../packages/ingest/src/index.ts';
 import {sinceSnapshot} from '../../packages/scene/src/since.ts';

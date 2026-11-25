@@ -1,5 +1,5 @@
 import{mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,realpathSync}from'node:fs';import{join,resolve,sep}from'node:path';import{tmpdir}from'node:os';
-import{test,expect,type Locator}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer,type RunningServer}from'../../apps/daemon/src/server.ts';
+import{test,expect,type Locator}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer,type RunningServer}from'./browser-server.ts';
 let dir:string,app:App,server:RunningServer,id:string;
 async function approveSessionReading(files: Locator) {
   // These previews need current-session access to the synthetic workspace.

@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { deflateSync } from 'node:zlib';
 import { test, expect, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 function raster(width: number, height: number) {
   const chunk = (name: string, data: Buffer) => {

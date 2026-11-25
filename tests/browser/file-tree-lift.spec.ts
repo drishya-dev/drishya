@@ -5,7 +5,7 @@ import {join,resolve,sep} from 'node:path';
 import {buildSync} from 'esbuild';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 const helper=buildSync({entryPoints:[resolve('apps/ui/src/lib/file-tree-origin.ts')],bundle:true,format:'iife',globalName:'TreeOrigin',write:false}).outputFiles[0]!.text;
 test('tree origins use exact current visible rows; clipping, opacity, overlays and rapid scroll fall back',async({page})=>{

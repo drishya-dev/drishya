@@ -5,7 +5,7 @@ import { writeFileSync } from 'node:fs';
 import { pointAtHistory, beginReadingSamples, finishReadingSamples } from './history-gestures.ts';
 import { expect,test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer,type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer,type RunningServer } from './browser-server.ts';
 import {openSessionReview} from './session-review.ts';
 
 // Explicit opt-in to an existing local redacted store. No new journal import or native turn.

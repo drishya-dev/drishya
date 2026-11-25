@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer } from '../../apps/daemon/src/server.ts';
+import { startServer } from './browser-server.ts';
 
 const listFile = process.env.DRISHYA_REAL_SESSIONS;
 const sessions: [string, string][] = listFile && existsSync(listFile) ? Object.entries(JSON.parse(readFileSync(listFile, 'utf8')) as Record<string, string>) : [];

@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {resolve,join,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 // These integrated journeys deliberately wait for the shared History owner. Helpers remain independently tested.
 test.skip(!readFileSync(resolve('apps/ui/src/components/History.tsx'),'utf8').includes("from './BrowserEvidence.tsx'"), 'Requires Claude CONTENT-2 History integration');
 let dir:string,app:App,server:RunningServer,id:string;

@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 let directory: string, app: App, server: RunningServer, recording: string, fileRecording: string, linkRecording: string;
 test.beforeAll(async () => {

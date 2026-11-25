@@ -1,7 +1,7 @@
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
-import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,id:string,app:App,server:RunningServer;
 const output=Array.from({length:70},(_,i)=>`ordinary output ${i}`).join('\n')+'\n'+'FAIL src/source.test.ts\n  at run (src/source.ts:2:1)\nsrc/source.ts(2,4): error TS100\nhttps://example.invalid/src/source.ts:9\n../outside.ts:2\nRunning 1 test using 1 worker\n  x 1 src/source.test.ts:2:1 › diagnostic preview\n  1 failed\n';
 test.beforeAll(async()=>{

@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {resolve,join,sep} from 'node:path';
 import {test,expect,type Page,type Locator} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 // A just-opened session is still following the latest: late history pages and the catch-up scroll can land after the page looks ready
 // and clear an expansion made in that gap (slow runners, 600 px). Click only once the history has held still for three reads.
 const expandSteady=async(card:Locator)=>{const b=card.locator('.op-expand');await b.hover();let last='',same=0;await expect.poll(async()=>{const now=JSON.stringify([await b.boundingBox(),await card.page().locator('.history').evaluate(h=>[h.scrollTop,h.scrollHeight])]);same=now===last?same+1:0;last=now;return same>=3;},{intervals:[200],timeout:8000}).toBe(true);await b.click();};

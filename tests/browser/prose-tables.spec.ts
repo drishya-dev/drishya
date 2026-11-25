@@ -1,5 +1,5 @@
 import{mkdtempSync,writeFileSync,readFileSync,rmSync}from'node:fs';import{tmpdir}from'node:os';import{join,resolve,sep}from'node:path';
-import{test,expect}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer,type RunningServer}from'../../apps/daemon/src/server.ts';
+import{test,expect}from'@playwright/test';import{App}from'../../apps/daemon/src/app.ts';import{startServer,type RunningServer}from'./browser-server.ts';
 let app:App,server:RunningServer,dir:string,id:string;
 const table='| Code | Local | Web | Escaped |\n| --- | --- | --- | --- |\n| `node -v` | [file](sample.ts) | [site](https://example.com) | a\\|b |';
 const wide='| A | B | C | D | E | F |\n| --- | --- | --- | --- | --- | --- |\n| '+Array(6).fill('wide_'+'x'.repeat(100)).join(' | ')+' |';

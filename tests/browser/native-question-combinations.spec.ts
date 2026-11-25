@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {expect,test} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,root:string,id:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-question-combinations-'));root=join(dir,'repo');mkdirSync(root);const journal=join(dir,'session.jsonl'),timestamp='2026-10-26T00:00:00Z';writeFileSync(journal,[{timestamp,type:'session_meta',payload:{id:'native-question-combinations',cwd:root,cli_version:'synthetic'}},{timestamp,type:'event_msg',payload:{type:'user_message',message:'Synthetic connected-input acceptance'}}].map(row=>JSON.stringify(row)).join('\n')+'\n');app=new App(join(dir,'data'));id=(await app.ingest.importSource('codex',journal)).recordingId;server=await startServer({app,port:0});

@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 // TURN-1b: a finished turn folds to its prompt and ledger without moving what the reader is looking at.
 let dir: string, app: App, server: RunningServer, id: string;

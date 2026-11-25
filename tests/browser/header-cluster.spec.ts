@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 // UI-1, header option C: on desktop widths Workspace and Git join the header's one navigation
 // cluster (icons, names in aria-label); at the narrowest supported window (600 px) they keep their own row. Nothing overlaps at any width.

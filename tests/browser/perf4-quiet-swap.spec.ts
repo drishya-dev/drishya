@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer } from '../../apps/daemon/src/server.ts';
+import { startServer } from './browser-server.ts';
 
 // PERF-4: a large recording opens from its latest prompts; when the whole history is ready it replaces them once, and the
 // reader does not notice: the passage on screen stays at the same pixels, nothing is requested again, nothing arrives or

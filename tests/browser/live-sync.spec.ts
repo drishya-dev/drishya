@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer } from '../../apps/daemon/src/server.ts';
+import { startServer } from './browser-server.ts';
 
 test('opening starts independent capture and keeps refreshing with Follow off while notices arrive continuously', async ({ page }) => {
   const dir=mkdtempSync(join(tmpdir(),'drishya-live-sync-')),journal=join(dir,'session.jsonl');

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 import { fileEvidence } from '../../packages/scene/src/file-evidence.ts';
 let app: App, server: RunningServer, dir: string, journal: string, id: string;
 const base={sessionId:'files-evidence-browser',timestamp:'2026-10-20T10:00:00Z'};

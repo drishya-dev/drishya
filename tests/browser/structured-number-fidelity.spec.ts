@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,app:App,server:RunningServer;
 const row='{"id":9007199254740993,"amount":1.2300,"negative":-0,"large":1e400,"tiny":1e-400,"text":"9007199254740993"}',raw=`{"items":[${row}]}`;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-number-fidelity-'));app=new App(dir);server=await startServer({app,port:0});});

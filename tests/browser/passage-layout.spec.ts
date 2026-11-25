@@ -5,7 +5,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {snapshot,rowsOf,violations} from './passage-geometry.ts';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 // READ-4 guard. Passage layout is plain CSS wrap (flex-wrap in .ops-row) plus order wires drawn by FlowConnections.
 // This pins what must stay true at every supported desktop width: reading order is row-major, a wrapped row never

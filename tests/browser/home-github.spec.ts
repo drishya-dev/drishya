@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer } from '../../apps/daemon/src/server.ts';
+import { startServer } from './browser-server.ts';
 
 // Opt-in real redacted store: no native session is imported or resumed by this check.
 const store=process.env.DRISHYA_REVIEW_STORE;

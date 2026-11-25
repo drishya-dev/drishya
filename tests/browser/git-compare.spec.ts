@@ -4,7 +4,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {expect,test,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 import {openSessionReview} from './session-review.ts';
 
 // GIT-8 (named Changes by GIT-9): Changes replaces the header's old Changes view. A real repository with `main` and `topic`: one file both sides changed, one only
