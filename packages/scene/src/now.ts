@@ -1,4 +1,4 @@
-import { isPersonPrompt } from '@drishya/contracts';
+import { isPersonPrompt, isPersonTurn } from '@drishya/contracts';
 import type { OperationKind, Projection } from '@drishya/contracts';
 
 /** What the newest captured evidence says right now. Pure: no clock, so tests and replays are deterministic. */
@@ -55,7 +55,7 @@ export function nowFacts(projection: Projection, maxOpen = 3): NowFacts {
   let last: NowFacts['last'];
   for (let i = projection.timeline.length - 1; i >= 0 && !last; i--) {
     const item = projection.timeline[i]!;
-    if (item.type === 'turn') last = { sequence: item.sequence, time: item.time, what: isPersonPrompt(item.prompt) ? 'prompt' : 'other' };
+    if (item.type === 'turn') last = { sequence: item.sequence, time: item.time, what: isPersonTurn(item) ? 'prompt' : 'other' };
     else if (item.type === 'op-start') last = { sequence: item.sequence, time: item.time, what: 'tool-call' };
     else if (item.type === 'op-end') last = { sequence: item.sequence, time: item.time, what: 'tool-result' };
     else if (item.type === 'prose') {
@@ -68,7 +68,7 @@ export function nowFacts(projection: Projection, maxOpen = 3): NowFacts {
   let operations = 0, since: string | undefined;
   for (let i = projection.timeline.length - 1; i >= 0; i--) {
     const item = projection.timeline[i]!;
-    if (item.type === 'turn' && isPersonPrompt(item.prompt)) { since = item.time; break; }
+    if (item.type === 'turn' && isPersonTurn(item)) { since = item.time; break; }
     if (item.type === 'prose' && personProse.has(item.proseId)) { since = item.time; break; }
     if (item.type === 'op-start') operations++;
   }

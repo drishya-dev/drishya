@@ -226,6 +226,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   const files = useApp(s => s.historyPage?.partial ? undefined : s.projection?.files);
   const capturedRoot=useApp(s=>s.checkoutRoot??s.recording?.workspaceRoot);
   const sessionRoot=useApp(s=>s.recording?.workspaceRoot);
+  const harness = useApp(s => s.recording?.harness);
   const checkoutPrefix=useApp(s=>s.checkoutPrefix);
   const checkoutId=useApp(s=>s.checkoutId),readingId=checkoutId??id;
   const [switching,setSwitching]=useState(false);
@@ -271,6 +272,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
     if (returnFocus && narrow) document.querySelector<HTMLElement>(developerWorkspace ? '.developer-workspace [data-workspace-files-trigger]' : '.workspace-bar [data-workspace-files-trigger]')?.focus({ preventScroll: true });
   };
   const { workspace, approve } = useReadingWorkspace();
+  const antigravityWorkspaceUnavailable = harness === 'antigravity' && workspace && !workspace.root && !capturedRoot && !projection.workspaceRoot;
   const [query, setQuery] = useWorkspaceState('folders/query', '',readingId);
   const [approving,setApproving] = useState(false);
   const [remember,setRemember]=useState(true);
@@ -509,6 +511,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       </details>
     </div>
     {source?.kind === 'daemon' && !id?.includes('+') && workspace?.root && !workspace.approved && <div className="workspace-grant-card"><button className="workspace-grant" disabled={approving} onClick={() => {setApproving(true);void approve(document.documentElement.dataset.uiVersion==='modern'&&remember).catch(e => setError(e.message)).finally(()=>setApproving(false));}}>{approving?'Opening workspace…':'Enable workspace reading'}<small>Read current files in this folder</small></button>{document.documentElement.dataset.uiVersion==='modern'&&<RememberCheckbox checked={remember} disabled={approving} onChange={setRemember} />}</div>}
+    {antigravityWorkspaceUnavailable && <p className="muted small">Workspace unavailable. No workspace metadata could be read from this Antigravity recording.</p>}
     {error && <p className="bad small" role="alert">{error} <button className="btn small" onClick={() => setGraphRetry(n => n + 1)}>Retry file listing</button></p>}
     <div ref={treeElement} className="folder-tree virtual-folder-tree" role="tree" aria-label="Workspace files" onScroll={e => setTreeScroll(e.currentTarget.scrollTop)} onKeyDown={e => {
       if (!['ArrowDown', 'ArrowUp', 'ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
@@ -539,7 +542,7 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
         else if(modern&&workspace?.approved&&!useApp.getState().explore){window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath ?? row.path}}));if(narrow||innerWidth<=1100)useApp.setState({foldersHidden:true});}
         else useApp.getState().set({...(workspace?.approved ? { currentFile: checkoutId?row.path:currentPath ?? row.path } : { filePanel: row.path }),...(narrow ? {foldersHidden:true} : {})});
       }} onDoubleClick={()=>{const currentPath=row.unplaced ? undefined : currentWorkspacePath(row.path,fileRoots,workspace?.root);if(!row.folder&&currentPath!==undefined&&modern&&workspace?.approved&&!useApp.getState().developerWorkspace&&!useApp.getState().explore){if(source&&id)rememberCurrentFileOrigin(source,id,currentPath,row.path);window.dispatchEvent(new CustomEvent('drishya-preview-file',{detail:{path:currentPath,pin:true}}));}}}><span className="folder-disclosure" aria-hidden="true">{row.folder ? modern ? '›' : opened.has(row.path) ? '⌄' : '›' : ''}</span><FileIcon path={row.path} folder={row.folder} open={opened.has(row.path)} />{row.metadata?<span className="worktree-root-text" title={row.description}><FileRowName name={row.name} folder={row.folder}/><small className="muted">{row.metadata}</small></span>:<FileRowName name={row.name} folder={row.folder}/>}{row.count!==undefined&&<small className="muted" aria-hidden="true">{row.count}</small>}<FileEvidenceMarks evidence={row.folder?undefined:evidence.get(row.path)}/></button>)}
-      {!tree.length && (
+      {!tree.length && !antigravityWorkspaceUnavailable && (
         isGraphLoading ? (
           graphWait.isImmediate ? null : (
             graphWait.isLong

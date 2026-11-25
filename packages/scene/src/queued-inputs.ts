@@ -1,4 +1,4 @@
-import {isPersonPrompt, type OperationImage, type QueuePage, type QueueQuery, type QueueReceipt, type QueueTimelineItem, type TimelineItem} from '@drishya/contracts';
+import {isPersonTurn, type OperationImage, type QueuePage, type QueueQuery, type QueueReceipt, type QueueTimelineItem, type TimelineItem} from '@drishya/contracts';
 
 export interface QueueInputEvidence {text?: string; /** SHA-256 and UTF-8 byte length of complete sealed text. */ textFingerprint?: string; hasText?: boolean; sourceId: string; generation: number}
 /** Derived reading evidence only. afterStep is computed from the captured ordered stream. */
@@ -42,7 +42,7 @@ export function queuePage(timeline: TimelineItem[], owner: string, query: QueueQ
           row.receipt.changeObservationId = item.sourceObservationId;
         }
       }
-    } else if (item.type === 'turn' && isPersonPrompt(item.prompt)) {
+    } else if (item.type === 'turn' && isPersonTurn(item)) {
       const delivery=deliveries.get(item.id.startsWith('turn_') ? item.id.slice(5) : item.id);
       const identified=delivery?.nativeQueueId ? receipts.find(row=>row.item.agentId===item.agentId && row.item.sourceId===delivery.sourceId && row.item.generation===delivery.generation && row.item.nativeQueueId===delivery.nativeQueueId && !['removed','delivered'].includes(row.receipt.state)) : undefined;
       if (identified) {identified.receipt.state='delivered';identified.receipt.changeObservationId=delivery!.sourceObservationId;continue;}

@@ -1,4 +1,4 @@
-import { isPersonPrompt } from '@drishya/contracts';
+import { isPersonTurn } from '@drishya/contracts';
 import type { Operation, Projection } from '@drishya/contracts';
 import { operationObservations } from './operation-observations.ts';
 
@@ -38,7 +38,7 @@ export function sessionDiff(p: Projection, path: string, after = -1): SessionDif
   const base: Token[] = Array.from({ length: extent + deletedCount + 1 }, (_, base) => ({ base }));
   let current = [...base];
   const removed = new Map<number, DiffAttribution>();
-  const turns = p.timeline.filter(t => t.type === 'turn' && isPersonPrompt(t.prompt));
+  const turns = p.timeline.filter(t => t.type === 'turn' && isPersonTurn(t));
   const checks = p.operations.filter(o => (o.detail.kind === 'test' || o.detail.kind === 'shell') && !o.declined && starts.has(o.id)).sort((a, b) => starts.get(a.id)! - starts.get(b.id)!);
   for (const op of edits) {
     if (op.detail.kind !== 'edit') continue;

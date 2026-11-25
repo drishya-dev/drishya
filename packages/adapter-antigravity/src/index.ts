@@ -3,6 +3,7 @@ import { realpathSync, type Dirent } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 import type { AdapterDescriptor, DiscoveredSource, Observation } from '@drishya/contracts';
+import { antigravityRequest, ANTIGRAVITY_REQUEST_OPEN } from '@drishya/contracts';
 import { fingerprintOf, initialCursor, readJsonl, type Adapter, type ParseContext, type RawObservation, type RecordParser, type SourceCursor } from '@drishya/capture-core';
 import { sanitize } from '@drishya/privacy';
 import { defaultRoots, readableRoot, readablePath, conversationId, within, localPath } from './paths.ts';
@@ -109,12 +110,15 @@ export function createParser(ctx: ParseContext, summary?: Summary): RecordParser
   };
 }
 
-interface Scan { lastStep: number; title?: string; pathCounts: Map<string, number> }
+interface Scan { lastStep: number; title?: string; requestTitle?: string; pathCounts: Map<string, number> }
 interface Inspection { path?: string; signature: string; size: number; result: Scan; cursor: SourceCursor; restored?: boolean }
 function chooseSummary(id: string, captured: Summary | undefined, inspection: Scan): Summary {
   const workspaces = [...(captured?.workspaces ?? [])];
   workspaces.sort((a, b) => [...inspection.pathCounts].reduce((sum, [path, count]) => sum + (within(b, path) ? count : 0) - (within(a, path) ? count : 0), 0));
-  return { ...captured, id, workspaces, title: captured?.title ?? inspection.title };
+  // A prefix which could be a request envelope is not a captured title. The
+  // store and projection can derive a title from the complete prompt instead.
+  const fallbackTitle = inspection.title?.startsWith(ANTIGRAVITY_REQUEST_OPEN) ? undefined : inspection.title;
+  return { ...captured, id, workspaces, title: captured?.title ?? fallbackTitle };
 }
 async function scan(path: string, previous?: Inspection): Promise<{ result: Scan; cursor: SourceCursor }> {
   let cursor = previous?.cursor ?? initialCursor();
@@ -126,7 +130,13 @@ async function scan(path: string, previous?: Inspection): Promise<{ result: Scan
       if (record.type !== 'record') continue;
       const row = object(record.value);
       if (Number.isSafeInteger(row.step_index)) result.lastStep = Math.max(result.lastStep, Number(row.step_index));
-      if (!result.title && row.type === 'USER_INPUT' && row.source === 'USER_EXPLICIT') result.title = sanitize(text(row.content).slice(0, 160)).value;
+      if (!result.title && row.type === 'USER_INPUT' && row.source === 'USER_EXPLICIT') {
+        const content = text(row.content);
+        result.title = sanitize(content.slice(0, 160)).value;
+        const truncated = Array.isArray(row.truncated_fields) && row.truncated_fields.length > 0;
+        const request = truncated ? undefined : antigravityRequest(content);
+        if (request !== undefined) result.requestTitle = sanitize(request.slice(0, 160)).value;
+      }
       for (const value of Array.isArray(row.tool_calls) ? row.tool_calls : []) {
         const args = decodeArgs(object(value).args);
         for (const key of ['Path', 'AbsolutePath', 'TargetFile']) if (typeof args[key] === 'string') {
@@ -229,12 +239,13 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
       let location: ReturnType<typeof locate>;
       try { location = locate(path); } catch { return; }
       const state = object(checkpoint);
-      if (state.version !== 1 || state.conversation !== location.id || !Array.isArray(state.files) || state.files.length > 2) return;
+      if ((state.version !== 1 && state.version !== 2) || state.conversation !== location.id || !Array.isArray(state.files) || state.files.length > 2) return;
       for (const value of state.files) {
         const entry = object(value), cursor = object(entry.cursor), result = object(entry.result);
         if (entry.name !== 'transcript.jsonl' && entry.name !== 'transcript_full.jsonl') continue;
         const physical = join(location.root, 'brain', location.id, '.system_generated', 'logs', entry.name);
-        if (inspections.has(physical)) continue;
+        // A legacy clipped title cannot establish where the wrapper closes.
+        if (inspections.has(physical) || state.version === 1 && typeof result.title === 'string' && result.title.startsWith(ANTIGRAVITY_REQUEST_OPEN)) continue;
         if (typeof entry.signature !== 'string' || !/^\d+:\d+(?:\.\d+)?$/.test(entry.signature)
           || !Number.isSafeInteger(entry.size) || Number(entry.size) < 0 || Number(entry.signature.split(':')[0]) !== entry.size
           || !Number.isSafeInteger(cursor.offset) || Number(cursor.offset) < 0 || Number(cursor.offset) > Number(entry.size)
@@ -251,7 +262,8 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
         if (!valid) continue;
         inspections.set(physical, { signature: entry.signature, size: Number(entry.size), restored: true,
           cursor: { offset: Number(cursor.offset), generation: Number(cursor.generation), fingerprint: cursor.fingerprint, ...(cursor.inOversized === true ? { inOversized: true } : {}) },
-          result: { lastStep: Number(result.lastStep), title: typeof result.title === 'string' ? result.title.slice(0, 1000) : undefined, pathCounts: counts } });
+          result: { lastStep: Number(result.lastStep), title: typeof result.title === 'string' ? result.title.slice(0, 1000) : undefined,
+            requestTitle: state.version === 2 && typeof result.requestTitle === 'string' ? result.requestTitle.slice(0, 1000) : undefined, pathCounts: counts } });
       }
       if (!selected.has(location.id)) selected.set(location.id, path);
     },
@@ -262,9 +274,9 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
         if (!entry) return [];
         return [{ name, signature: entry.signature, size: entry.size,
           cursor: { offset: entry.cursor.offset, generation: entry.cursor.generation, fingerprint: entry.cursor.fingerprint, ...(entry.cursor.inOversized ? { inOversized: true } : {}) },
-          result: { lastStep: entry.result.lastStep, title: entry.result.title, pathCounts: [...entry.result.pathCounts] } }];
+          result: { lastStep: entry.result.lastStep, title: entry.result.title, requestTitle: entry.result.requestTitle, pathCounts: [...entry.result.pathCounts] } }];
       });
-      return { version: 1, conversation: id, files };
+      return { version: 2, conversation: id, files };
     },
     async readPath(path) { const { root, id } = locate(path); return (await choose(root, id))?.path ?? path; },
     async discover() {
@@ -306,11 +318,13 @@ export function createAntigravityAdapter(roots = defaultRoots()): Adapter & { di
             }
             seen.add(id);
             encrypted.delete(id); artifactOnly.delete(id); missingTranscript.delete(id);
-            const summary = chooseSummary(id, index.get(id), chosen.scan);
+            const captured = index.get(id);
+            const summary = chooseSummary(id, captured, chosen.scan);
             metadata.set(id, summary);
             const key = selected.get(id) ?? chosen.source; selected.set(id, key);
             const info = await stat(chosen.path);
-            sources.push({ adapterId: descriptor.id, harness: descriptor.harness, path: key, bytes: info.size, modifiedAt: info.mtime.toISOString(), sessionId: id, cwd: summary.workspaces[0], title: summary.title, parentSessionId: summary.parentSessionId, agentName: summary.agentName === undefined ? undefined : sanitize(summary.agentName).value, companions: [] });
+            const title = captured?.title === undefined ? chosen.scan.requestTitle ?? chosen.scan.title : antigravityRequest(captured.title) ?? captured.title;
+            sources.push({ adapterId: descriptor.id, harness: descriptor.harness, path: key, bytes: info.size, modifiedAt: info.mtime.toISOString(), sessionId: id, cwd: summary.workspaces[0], title, parentSessionId: summary.parentSessionId, agentName: summary.agentName === undefined ? undefined : sanitize(summary.agentName).value, companions: [] });
           } catch { diagnostics.push({ code: 'read-failed', message: `Antigravity conversation ${id.slice(0, 8)} could not be read safely.` }); }
         }
       }

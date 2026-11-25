@@ -710,7 +710,7 @@ export interface QueueInputChunk { text: string; start: number; next: number; to
 /** One unit of playback. The timeline is what the transport steps through. */
 export type TimelineItem =
   | QueueTimelineItem
-  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; time?: string; permissionMode?: string; /** CONTENT-1: images the person attached. */ images?: OperationImage[] }
+  | { type: 'turn'; id: string; sequence: number; agentId: string; prompt?: string; promptProvenance?: Provenance; time?: string; permissionMode?: string; /** CONTENT-1: images the person attached. */ images?: OperationImage[] }
   | { type: 'op-start'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'op-end'; id: string; operationId: string; sequence: number; agentId: string; time?: string }
   | { type: 'prose'; id: string; proseId: string; sequence: number; agentId: string; time?: string }
@@ -954,4 +954,5 @@ export interface ReplayBundle {
 }
 export { asOfProjection } from './as-of.ts';
 
-export { injectedMessage, injectedLine, isPersonPrompt, type InjectedKind, type InjectedMessage } from './prompt-source.ts';
+export { injectedMessage, injectedLine, isPersonPrompt, isPersonTurn, type InjectedKind, type InjectedMessage } from './prompt-source.ts';
+export { antigravityRequest, ANTIGRAVITY_REQUEST_OPEN, ANTIGRAVITY_REQUEST_RULE } from './antigravity-request.ts';
