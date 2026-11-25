@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import { win32 } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { openBrowser } from '../src/commands.ts';
 
@@ -28,6 +29,9 @@ describe('opening the browser is best effort', () => {
     for (const platform of ['darwin', 'linux', 'win32']) openBrowser('http://127.0.0.1:7878/?a=1&b=2', ((cmd: string, args: string[]) => { seen[platform] = [cmd, args]; return fakeChild(); }) as never, platform);
     expect(seen.darwin).toEqual(['open', ['http://127.0.0.1:7878/?a=1&b=2']]);
     expect(seen.linux).toEqual(['xdg-open', ['http://127.0.0.1:7878/?a=1&b=2']]);
-    expect(seen.win32).toEqual(['cmd', ['/c', 'start', '""', 'http://127.0.0.1:7878/?a=1^&b=2']]);
+    expect(seen.win32).toEqual([
+      win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'cmd.exe'),
+      ['/d', '/c', 'start', '""', 'http://127.0.0.1:7878/?a=1^&b=2'],
+    ]);
   });
 });

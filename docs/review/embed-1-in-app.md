@@ -3,6 +3,8 @@
 14 November 2026 · Contract for EMBED-2a (Codex) and EMBED-2b (Antigravity).
 Yash reports both builders agree to the direction below, including the 360 px embed-only minimum and top-level-only Release 1. This is a design contract, not evidence that an integration has shipped.
 
+**Draft restoration follow-up, 24 Nov:** the desktop host must keep the launch credential out of model-visible results and host persistence. MCP now requires an exact selection and a declared private handoff or the system browser. The local CLI retains explicit `--latest` and the detached, self-stopping worker. See the [restoration review](embed-restoration.md) and [launcher guide](../guides/embed-launcher.md).
+
 ## 1. One session, one click
 
 - Run locally on the computer holding the journals; never proxy the daemon to a remote client.
@@ -51,8 +53,8 @@ If a future host demonstrably needs an iframe, first agree a separate contract: 
 
 ## 4. Host button, MCP and slash launchers
 
-- Host button: **Open in Drishya**. Privileged local host spawns the installed executable with an argv array (no shell), passes its exact native session mapping where available, otherwise uses `--latest --cwd`; consumes JSON privately, then loads the URL in its pane. A native ID is not assumed to equal a recording ID; unsupported mapping is explicit.
-- MCP tool name: `drishya.open_view`, input `{ "sessionId"?: "<recording-id>", "latest"?: true, "cwd"?: "<absolute-directory>" }`; exactly one selector. Its local stdio server uses the same launcher, never model-supplied shell source or arbitrary URL.
+- Host button: **Open in Drishya**. The trusted local host invokes the installed launcher with an argument array, passes the exact native session ID and checkout, then consumes the result privately and loads its guest. If the host has no exact mapping, ask the user to select the recording.
+- MCP tool `drishya.open_view` takes exactly one native session or Drishya recording ID. Its local stdio server uses the same launcher with validated arguments.
 - Return the cleaned non-secret session URL and recording ID in text. A capable host receives the private launch URL through MCP tool-result `_meta` only when the host explicitly guarantees that field is excluded from model content, persistence and logs, and consumes it directly. This exclusion is a required host capability, not a guarantee about every MCP implementation. Document this host requirement; do not assume every MCP client supports opening panes or hiding metadata. Without that capability, report `HOST_HANDOFF_UNAVAILABLE` and use the explicit local CLI/browser fallback, never expose a credential to the model as a workaround.
 - `/drishya` for Claude Code and Codex is user-installed command/skill guidance invoking that tool; it cannot magically add pane support to either harness. If unavailable, explain the manual command. No automatic edits to harness config, startup files or permissions; appendix provides exact opt-in snippets and uninstall steps.
 - Launching observes by default. Existing native controller eligibility, separate workspace approval and idle-client acknowledgement remain mandatory before showing/enabling a composer. Embedding or a model tool call never grants consent. Antigravity and bundles remain passive; no composer. The host gets no generic steer/approve API.
