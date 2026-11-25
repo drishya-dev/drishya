@@ -1,4 +1,4 @@
-import { isPersonPrompt } from '@drishya/contracts';
+import { ANTIGRAVITY_REQUEST_RULE, isPersonTurn } from '@drishya/contracts';
 import { SessionLineage } from './SessionLineage.tsx';
 import {desktopPrompt} from '../lib/desktop-prompt.ts';
 import {DesktopPromptAttachments} from './DesktopPromptAttachments.tsx';
@@ -936,7 +936,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     if (movedUp && follow && performance.now() < userScrollUntil.current) set({ follow: false });
   };
 
-  const prompts = scene.passages.flatMap((ps, index) => (ps.turnPrompt || ps.turnImages?.length) && ps.personPrompt !== false && isPersonPrompt(ps.turnPrompt) ? [{ ps, index }] : []);
+  const prompts = scene.passages.flatMap((ps, index) => (ps.turnPrompt || ps.turnImages?.length) && ps.personPrompt !== false && isPersonTurn({ prompt: ps.turnPrompt, promptProvenance: ps.turnPromptProvenance }) ? [{ ps, index }] : []);
   const readingIndex = Math.max(0, layout.prefix.findIndex((_, index) => index < scene.passages.length && layout.prefix[index + 1]! > viewport.top + 1));
   const activePrompt = prompts.findLast(item => item.index <= readingIndex)?.ps.id ?? prompts[0]?.ps.id;
 
@@ -998,7 +998,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
             const unloaded = ps.unloaded && fold !== 'header';
             return <div className="passage-slot" data-passage-id={ps.id} data-measure-key={keyFor(ps, fold)} data-folded={fold} data-in-turn={ps.inTurn} data-unloaded={unloaded || undefined} key={ps.id}>
               {fold !== 'hidden' && !unloaded && <SessionLineage projection={projection} passageId={ps.id} visibleStep={scene.step} />}
-              {fold === 'hidden' ? null : unloaded ? <HistoryWaitCard minHeight={heights.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT} /> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
+              {fold === 'hidden' ? null : unloaded ? <HistoryWaitCard minHeight={heights.get(ps.id) ?? ESTIMATED_PASSAGE_HEIGHT} /> : <PassageView ps={ps} artifacts={passageArtifacts(ps, ops, artifacts)} ops={passageItems(ps.ops, ops)} prose={passageItems(ps.prose, prose)} notices={passageItems(ps.notices ?? [], notices)} agent={agents.get(ps.agentId)} agents={projection.agents} focus={scene.focus?.passageId === ps.id} foldable={modern && mode === 'history' && ps.turnStep !== undefined && turnBodies.has(ps.turnStep) && !(!ps.turnPromptProvenance && ps.turnPrompt && injectedMessage(ps.turnPrompt) && !contextReport(ps.turnPrompt)) && !(activeNow && ps.turnStep === newestTurn)} folded={fold === 'header'} onFold={toggleFold} {...runProps(ps)} />}
             </div>;
           }),
         ])}
@@ -1022,9 +1022,9 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
         for(const animation of foldAnimations.current)animation.finish();foldAnimations.current=[];foldMotion.current=undefined;
         const keep=targetTurn??expandedTurn??scene.passages.find(ps=>ps.id===readingAnchor.current?.id)?.inTurn;
         setExtentFloor(floor=>Math.max(floor,extentTotal.current));
-        setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&turnBodies.has(ps.turnStep)&&!(ps.turnPrompt&&injectedMessage(ps.turnPrompt)&&!contextReport(ps.turnPrompt))&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
+        setStoredFolds(collapse?scene.passages.filter(ps=>ps.turnStep!==undefined&&turnBodies.has(ps.turnStep)&&!(!ps.turnPromptProvenance&&ps.turnPrompt&&injectedMessage(ps.turnPrompt)&&!contextReport(ps.turnPrompt))&&ps.turnStep!==keep&&!(activeNow&&ps.turnStep===newestTurn)).map(ps=>ps.id):[]);
       }}/>
-      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const text = ps.turnPrompt ?? ''; const note = injectedMessage(text); return note ? injectedLine(note) : text; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
+      {mode === 'history' && prompts.length > 0 && <PromptRail chapters={prompts.map(({ ps, index }) => ({ id: ps.id, label: (() => { const text = ps.turnPrompt ?? ''; const note = ps.turnPromptProvenance ? undefined : injectedMessage(text); return note ? injectedLine(note) : text; })(), index,time:ps.turnTime,turnStep:ps.turnStep }))} activeId={activePrompt} open={({ id, index }) => {
           const ps = scene.passages[index]!;
           // A chapter jump lands on an open turn; it is a jump, so nothing travels.
           if (stored.has(ps.id)) setFolds.current((list) => list.filter((item) => item !== ps.id));
@@ -1057,7 +1057,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
 const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notices, agent, agents, focus, foldable = false, folded = false, onFold, run, onRun }: PassageContent) {
   const color = agentColor(agent, agents);
   const first = ps.ops[0] ? ops.get(ps.ops[0].id) : undefined;
-  const injectedPrompt = ps.turnPrompt ? injectedMessage(ps.turnPrompt) : undefined;
+  const injectedPrompt = ps.turnPrompt && !ps.turnPromptProvenance ? injectedMessage(ps.turnPrompt) : undefined;
   const isCompactPrompt = injectedPrompt?.kind === 'slash-command' && /^\/compact(?:\s|$)/.test(injectedPrompt.detail);
   const hasVisibleCompaction = useHasVisibleCompaction(ps.compactionIds, ps.compactionSummaryIds);
   const compactArgs = isCompactPrompt ? injectedPrompt.detail.replace(/^\/compact\s*/, '').trim() : '';
@@ -1065,7 +1065,7 @@ const PassageView = memo(function PassageView({ ps, artifacts, ops, prose, notic
   const suppressCompactNotice = !folded && isCompactPrompt && hasVisibleCompaction;
   return (
     <HistoryArtifacts.Provider value={artifacts}><section data-passage-id={ps.id} className={`passage${ps.settled ? ' settled' : ''}${ps.matchesFilter ? '' : ' filtered-out'}${focus ? ' focus' : ''}${folded ? ' folded-turn' : ''}${run && !run.open && !ps.prose.length && !ps.notices?.length && !ps.compactionIds?.length && !ps.compactionSummaryIds?.length && !ps.turnPrompt && !ps.turnImages?.length ? ' run-only' : ''}`} style={{ '--agent': color } as React.CSSProperties}>
-      {!suppressCompactNotice && !!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} time={ps.turnTime} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
+      {!suppressCompactNotice && !!(ps.turnPrompt || ps.turnImages?.length) && <TurnBlock prompt={ps.turnPrompt ?? ''} antigravityRequest={ps.turnPromptProvenance?.kind === 'derived' && ps.turnPromptProvenance.rule === ANTIGRAVITY_REQUEST_RULE} time={ps.turnTime} step={ps.turnStep} permissionMode={ps.turnPermissionMode} images={ps.turnImages} plan={ps.turnPlan} fold={foldable && onFold ? { folded, toggle: () => onFold(ps.id) } : undefined} />}
       {!folded && ps.notices?.filter((n) => n.leading).map((n) => { const notice = notices.get(n.id); return notice ? <NoticeLine key={n.id} notice={notice} /> : null; })}
       {!folded && ps.ops.length > 0 && (
         <>
@@ -1502,7 +1502,7 @@ function rawNoticeAddsInfo(raw: string, injected: InjectedMessage): boolean {
   return true;
 }
 
-function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: { prompt: string; time?: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
+function TurnBlock({ prompt, antigravityRequest, time, step, fold, permissionMode, images, plan }: { prompt: string; antigravityRequest?: boolean; time?: string; step?: number; permissionMode?: string; images?: OperationImage[]; plan?: PinnedPlan; fold?: { folded: boolean; toggle: () => void } }) {
   const ledger = useTurns((s) => step === undefined ? undefined : s.byStep.get(step));
   const newest = useTurns((s) => s.lastStep === step);
   const active = useNow((s) => !!s.view?.mark);
@@ -1511,11 +1511,11 @@ function TurnBlock({ prompt, time, step, fold, permissionMode, images, plan }: {
   const [expanded, setExpanded] = useDisclosureChoice(`prompt/${step ?? 'first'}`, false);
   const [overflows, setOverflows] = useState(false);
   // Claude Code writes some notices in the user role (a finished background task, a command echo); those are not the person's words.
-  const injected = injectedMessage(prompt);
-  const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who">You</span>;
-  const report = contextReport(prompt);
+  const injected = antigravityRequest ? undefined : injectedMessage(prompt);
+  const who = injected ? <span className="turn-who turn-source" title={`Written into the journal by Claude Code, not typed by you${injected.hover ? ` · ${injected.hover}` : ''}`}>Claude Code · {injected.label}</span> : <span className="turn-who" title={antigravityRequest ? 'Request text inside the wrapper recorded by Antigravity' : undefined}>You</span>;
+  const report = antigravityRequest ? undefined : contextReport(prompt);
   const isNotice = !!injected && !report;
-  const envelope = !injected && !report ? desktopPrompt(prompt) : undefined;
+  const envelope = !antigravityRequest && !injected && !report ? desktopPrompt(prompt) : undefined;
   const shown = report ? undefined : injected ? injected.detail : envelope?.request ?? prompt;
   useLayoutEffect(() => {
     const el = text.current;

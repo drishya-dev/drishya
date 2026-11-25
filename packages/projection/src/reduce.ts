@@ -34,7 +34,7 @@ import type {
   TimelineItem,
   ItemPayload,
 } from '@drishya/contracts';
-import { isBlobText } from '@drishya/contracts';
+import { antigravityRequest, ANTIGRAVITY_REQUEST_RULE, isBlobText } from '@drishya/contracts';
 import type { ToolIntent, ToolOutcome } from '@drishya/capture-core';
 import { literalPatch, literalPlan, literalPlanConfirmed, parseMcpName, touchesProtectedFile } from '@drishya/capture-core';
 import { applyEdits, applyHunks, diffTexts, hunksFromStrings, parseApplyPatch, parseUnifiedHunks, resolveHunkLines } from './patch.ts';
@@ -52,7 +52,7 @@ import {legacyAgentDelivery} from './agent-delivery.ts';
 /** Longest changed-region snippet kept on a notice. */
 const NOTICE_SNIPPET = 10_000;
 
-export const REDUCER_VERSION = 'r47';
+export const REDUCER_VERSION = 'r48';
 
 /**
  * Records that lose nothing by being unread, so they are no gap in the work. Codex repeats its messages,
@@ -374,7 +374,7 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           }
           const rank = typeof p.titleRank === 'number' ? p.titleRank : 1;
           if (typeof p.title === 'string' && p.title && rank >= titleRank) {
-            title = p.title;
+            title = o.source.adapterId === 'antigravity' ? antigravityRequest(p.title) ?? p.title : p.title;
             titleRank = rank;
           }
           const a = ensureAgent(o);
@@ -554,7 +554,10 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           if (typeof p.nativeQueueId === 'string') timeline.push({type: 'queue', id: `delivery_${o.id}`, sequence: o.receivedSequence,
             agentId: agentKey(o), time: o.sourceTime, sourceObservationId: o.id, ownerRecordingId: o.recordingId,
             nativeQueueId: p.nativeQueueId, sourceId: o.source.sourceId, generation: o.source.generation, operation: 'delivered'});
-          const t = text(p.text) ?? '';
+          const recorded = text(p.text, o.source.adapterId !== 'antigravity');
+          const request = o.source.adapterId === 'antigravity' && o.availability === 'complete' && recorded !== undefined
+            ? antigravityRequest(recorded) : undefined;
+          const t = request ?? recorded ?? text(p.text) ?? '';
           // CONTENT-1: images attached to a prompt. Claude stores them as separate parts of the
           // prompt's record, before or after its text, so they meet the turn through that record.
           const images = Array.isArray(p.images) && p.images.length && o.agentId === 'agent:main' ? imageRefs(p.images) : undefined;
@@ -569,14 +572,20 @@ export function createReducer(recordingId: string, input: Iterable<Observation>,
           // A subagent's first "user" message is its delegation prompt, already shown on the
           // delegating call. It is not a new turn from the person.
           if (o.agentId !== 'agent:main') break;
-          if (!firstPrompt) firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
+          if (!firstPrompt) {
+            firstPrompt = clip(t.replace(/\s+/g, ' ').trim(), 120);
+            // Previous adapters stored the first 160 characters as session metadata.
+            if (request !== undefined && title?.length === 160 && recorded?.startsWith(title)) title = undefined;
+          }
           const id = `turn_${o.id}`;
           turnByRecording.set(correlationOwner(o), id);
           if (o.source.recordId) turnMessageByRecording.set(correlationOwner(o), o.source.recordId);
           const recordKey = `${o.recordingId}|${o.source.recordId ?? o.id}`;
           const attached = [...(pendingTurnImages.get(recordKey)?.images ?? []), ...(images ?? [])];
           pendingTurnImages.delete(recordKey);
-          const turn: TimelineItem & { type: 'turn' } = { type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime, ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}), ...(attached.length ? { images: attached } : {}) };
+          const turn: TimelineItem & { type: 'turn' } = { type: 'turn', id, sequence: o.receivedSequence, agentId: agentKey(o), prompt: clip(t, maxProse), time: o.sourceTime,
+            ...(request !== undefined ? { promptProvenance: derived(ANTIGRAVITY_REQUEST_RULE, [o.id]) } : {}),
+            ...(typeof p.permissionMode === 'string' ? { permissionMode: p.permissionMode } : {}), ...(attached.length ? { images: attached } : {}) };
           turnByRecord.set(recordKey, turn);
           timeline.push(turn);
           break;

@@ -10,7 +10,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { chmodSync, closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { DatabaseSync, type StatementSync } from 'node:sqlite';
-import { isPersonPrompt, isBlobText } from '@drishya/contracts';
+import { antigravityRequest, ANTIGRAVITY_REQUEST_OPEN, isPersonPrompt, isBlobText } from '@drishya/contracts';
 import type { BlobText, Observation, RecordingSummary, RedactionNote, SessionLineageLink, SessionLineageView } from '@drishya/contracts';
 import { PRIVACY_POLICY_VERSION, SECRET_FIELD_MARKER, SECRET_FIELD_RULE, isSecretFieldKey, isSecretReference, redactText } from '../../privacy/src/index.ts';
 import type { LibrarySearchQuery, LibrarySearchPage, SessionSearchHit } from './search-types.ts';
@@ -394,6 +394,7 @@ export class Store {
   readonly dataDir: string;
   private stmts = new Map<string, StatementSync>();
   private policyCache = new Map<string, Set<string>>();
+  private antigravityTitles = new Map<string, { revision: RecordingSummary['revision']; stored: string; display: string }>();
   private readonly isMemory: boolean;
 
   constructor(dataDir: string, opts: { memory?: boolean; readOnly?: boolean } = {}) {
@@ -828,7 +829,21 @@ export class Store {
   }
 
   listRecordings(): RecordingSummary[] {
-    return (this.q('SELECT * FROM recordings ORDER BY COALESCE(last_source_time, updated_at) DESC').all() as any[]).map(rowToRecording);
+    return (this.q('SELECT * FROM recordings ORDER BY COALESCE(last_source_time, updated_at) DESC').all() as any[]).map(row => {
+      const recording = rowToRecording(row);
+      // Older imports may have cached a prefix of the raw wrapped prompt. The
+      // full sealed observations can establish whether that prefix was an envelope.
+      if (recording.harness === 'antigravity' && recording.title.startsWith(ANTIGRAVITY_REQUEST_OPEN)) {
+        const cached = this.antigravityTitles.get(recording.id);
+        if (cached && cached.revision === recording.revision && cached.stored === recording.title) return { ...recording, title: cached.display };
+        const title = this.captureMetadata(recording.id).title ?? recording.title;
+        // Inventory updates can repeat at the same revision while Home is open.
+        this.antigravityTitles.set(recording.id, { revision: recording.revision, stored: recording.title, display: title });
+        if (this.antigravityTitles.size > 256) this.antigravityTitles.delete(this.antigravityTitles.keys().next().value!);
+        return { ...recording, title };
+      }
+      return recording;
+    });
   }
 
   /** Current revision of every recording, for reconnecting viewers to compare with what they rendered. */
@@ -970,6 +985,7 @@ export class Store {
       this.q('DELETE FROM recordings WHERE id = ?').run(id);
     });
     this.policyCache.delete(id);
+    this.antigravityTitles.delete(id);
     this.imageBudgets.delete(id);
     this.blobScopes.delete(id);
     this.blobMisses.clear();
@@ -1313,10 +1329,23 @@ export class Store {
       AND json_type(body,'$.payload.title')='text' AND json_extract(body,'$.payload.title')<>''
       AND COALESCE(json_extract(body,'$.payload.titleRank'),1)>=0
       ORDER BY COALESCE(json_extract(body,'$.payload.titleRank'),1) DESC, seq DESC LIMIT 1`).get(recordingId) as { body: string } | undefined;
-    const capturedTitle = titled ? ((JSON.parse(titled.body) as Observation).payload as { title: string }).title : undefined;
-    const prompt = user ? (JSON.parse(user.body) as Observation).payload as { text?: string | BlobText } : undefined;
-    const text = typeof prompt?.text === 'string' ? prompt.text : prompt?.text?.preview;
-    const normalized = text?.replace(/\s+/g, ' ').trim(); const fallbackTitle = normalized ? (normalized.length > 120 ? `${normalized.slice(0, 119).trimEnd()}…` : normalized) : undefined; return { title: capturedTitle ?? fallbackTitle, workspaceRoot: observation?.workspaceRoot ?? payload?.cwd };
+    const titleObservation = titled ? JSON.parse(titled.body) as Observation : undefined;
+    const capturedTitle = (titleObservation?.payload as { title?: string } | undefined)?.title;
+    const userObservation = user ? JSON.parse(user.body) as Observation : undefined;
+    const prompt = (userObservation?.payload as { text?: string | BlobText } | undefined)?.text;
+    const text = typeof prompt === 'string' ? prompt : prompt?.preview;
+    const workspaceRoot = observation?.workspaceRoot ?? payload?.cwd;
+    const title = capturedTitle !== undefined && titleObservation?.source.adapterId === 'antigravity'
+      ? antigravityRequest(capturedTitle) ?? capturedTitle : capturedTitle;
+    const legacyTitle = capturedTitle?.length === 160 && text?.startsWith(capturedTitle);
+    const fullPrompt = (title === undefined || legacyTitle) && userObservation?.source.adapterId === 'antigravity'
+      && userObservation.availability === 'complete' && text?.startsWith(ANTIGRAVITY_REQUEST_OPEN)
+      ? typeof prompt === 'string' ? prompt : prompt && this.blobs.get(prompt.$blob)
+      : undefined;
+    const request = fullPrompt === undefined ? undefined : antigravityRequest(fullPrompt);
+    const normalized = (request ?? text)?.replace(/\s+/g, ' ').trim();
+    const fallbackTitle = normalized ? (normalized.length > 120 ? `${normalized.slice(0, 119).trimEnd()}…` : normalized) : undefined;
+    return { title: legacyTitle && request !== undefined ? fallbackTitle : title ?? fallbackTitle, workspaceRoot };
   }
 
   /** Moves long strings into blobs, leaving a small reference with a preview. */

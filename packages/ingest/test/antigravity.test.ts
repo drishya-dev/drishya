@@ -8,6 +8,8 @@ import { createAntigravityAdapter } from '../../adapter-antigravity/src/index.ts
 import { App } from '../../../apps/daemon/src/app.ts';
 import { codexAdapter } from '../../adapter-codex/src/index.ts';
 import { orderObservations } from '../../projection/src/reduce.ts';
+import { readingTarget } from '../../scene/src/reading-target.ts';
+import { reviewInsights } from '../../scene/src/review-insights.ts';
 
 let dir: string, journal: string, store: Store, ingest: Ingestor;
 const row = (step_index: number, type: string, content = '', extra: Record<string, unknown> = {}) => ({ step_index, type, source: 'MODEL', status: 'DONE', created_at: `2026-11-13T10:00:${String(step_index).padStart(2, '0')}Z`, content, tool_calls: [], ...extra });
@@ -35,6 +37,78 @@ it('imports idempotently and replaces a repeated result in the projection and se
   expect(store.search(first.recordingId, 'replacementword')).toHaveLength(1);
   expect(JSON.stringify(ingest.projection(first.recordingId))).toContain('replacementword');
   expect(JSON.stringify(ingest.projection(first.recordingId))).not.toContain('obsoleteword');
+});
+
+it('keeps captured Antigravity prompt text and derives the wrapped prompt and title before truncation', async () => {
+  const body = 'Check the <source> tag. ' + 'Synthetic material. '.repeat(1000);
+  const wrapped = '<USER_REQUEST>' + body + '</USER_REQUEST>';
+  writeFileSync(journal, line(row(0, 'USER_INPUT', wrapped, { source: 'USER_EXPLICIT' })));
+  const [source] = await ingest.discover('antigravity');
+  const { recordingId } = await ingest.importSource('antigravity', journal);
+  const captured = store.observations(recordingId).find(o => o.kind === 'message.user')!;
+  const payload = captured.payload as { text: { $blob: string } };
+  expect(store.blobs.get(payload.text.$blob)).toBe(wrapped);
+  expect(source?.title).toMatch(/^Check the <source> tag/);
+  expect(store.getRecording(recordingId)?.title).toMatch(/^Check the <source> tag/);
+  const projection = ingest.projection(recordingId);
+  expect(projection.title).toMatch(/^Check the <source> tag/);
+  expect(projection.timeline.find(item => item.type === 'turn')).toMatchObject({
+    prompt: expect.stringMatching(/^Check the <source> tag/),
+    promptProvenance: { kind: 'derived', rule: 'antigravity-request-envelope-v1', observationIds: [captured.id] },
+  });
+  store.updateRecordingMeta(recordingId, { title: wrapped.slice(0, 160) });
+  expect(store.listRecordings()[0]?.title).toMatch(/^Check the <source> tag/);
+});
+
+it.each([
+  ['<USER_REQUEST><USER_REQUEST>Inner literal</USER_REQUEST></USER_REQUEST>', '<USER_REQUEST>Inner literal</USER_REQUEST>'],
+  ['<USER_REQUEST>outer <USER_REQUEST>broken</USER_REQUEST>', '<USER_REQUEST>outer <USER_REQUEST>broken</USER_REQUEST>'],
+  ['<USER_REQUEST>First</USER_REQUEST><USER_REQUEST>Second</USER_REQUEST>', '<USER_REQUEST>First</USER_REQUEST><USER_REQUEST>Second</USER_REQUEST>'],
+  ['<USER_REQUEST>Text</USER_REQUEST> and literal suffix', '<USER_REQUEST>Text</USER_REQUEST> and literal suffix'],
+  ['Quoted <USER_REQUEST>text</USER_REQUEST>', 'Quoted <USER_REQUEST>text</USER_REQUEST>'],
+  ['<USER_REQUEST id="literal">Text</USER_REQUEST>', '<USER_REQUEST id="literal">Text</USER_REQUEST>'],
+  ['<user_request>Lowercase tag</user_request>', '<user_request>Lowercase tag</user_request>'],
+  ['<div>Ordinary tag</div>', '<div>Ordinary tag</div>'],
+])('presents the expected inner or literal Antigravity text for %s', async (input, expected) => {
+  writeFileSync(journal, line(row(0, 'USER_INPUT', input, { source: 'USER_EXPLICIT' })));
+  const [source] = await ingest.discover('antigravity');
+  const { recordingId } = await ingest.importSource('antigravity', journal);
+  expect(source?.title).toBe(expected);
+  expect(store.getRecording(recordingId)?.title).toBe(expected);
+  expect(ingest.projection(recordingId).timeline.find(item => item.type === 'turn')).toMatchObject({ prompt: expected });
+});
+
+it('does not treat a matching prefix as a complete request when the source continues past it', async () => {
+  const prefix = '<USER_REQUEST>' + 'x'.repeat(131) + '</USER_REQUEST>';
+  expect(prefix).toHaveLength(160);
+  const input = prefix + '\n<ordinary>Keep this suffix</ordinary>';
+  writeFileSync(journal, line(row(0, 'USER_INPUT', input, { source: 'USER_EXPLICIT' })));
+  const [source] = await ingest.discover('antigravity');
+  const { recordingId } = await ingest.importSource('antigravity', journal);
+  expect(source?.title).toBe(prefix);
+  expect(store.getRecording(recordingId)?.title).toMatch(/^<USER_REQUEST>/);
+  const projection = ingest.projection(recordingId);
+  expect(projection.title).toMatch(/^<USER_REQUEST>/);
+  expect(projection.timeline.find(item => item.type === 'turn')).toMatchObject({ prompt: input });
+});
+
+it('keeps a request-shaped partial observation literal', async () => {
+  const input = '<USER_REQUEST>Synthetic partial text</USER_REQUEST>';
+  writeFileSync(journal, line(row(0, 'USER_INPUT', input, { source: 'USER_EXPLICIT', truncated_fields: ['content'] })));
+  const [source] = await ingest.discover('antigravity');
+  const { recordingId } = await ingest.importSource('antigravity', journal);
+  expect(source?.title).toBe(input);
+  expect(store.getRecording(recordingId)?.title).toBe(input);
+  expect(ingest.projection(recordingId).timeline.find(item => item.type === 'turn')).toMatchObject({ prompt: input });
+});
+
+it('keeps quoted Claude tags from changing the kind of an Antigravity request', async () => {
+  const literal = '<system-reminder>Keep this example verbatim</system-reminder>';
+  writeFileSync(journal, line(row(0, 'USER_INPUT', `<USER_REQUEST>${literal}</USER_REQUEST>`, { source: 'USER_EXPLICIT' })));
+  const { recordingId } = await ingest.importSource('antigravity', journal);
+  const projection = ingest.projection(recordingId);
+  expect(readingTarget(projection, { kind: 'turn', direction: 1 })).toMatchObject({ type: 'turn' });
+  expect(reviewInsights(projection, 0).prompts.map(prompt => prompt.preview)).toEqual([literal]);
 });
 
 it('preserves step order when the source clock moves backwards', async () => {

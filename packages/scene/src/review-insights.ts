@@ -1,4 +1,4 @@
-import { isPersonPrompt } from '@drishya/contracts';
+import { isPersonTurn } from '@drishya/contracts';
 import type {Artifact,Operation,Projection} from '@drishya/contracts';
 import {materialOperations,operationFailed} from '@drishya/contracts';
 import {sinceSnapshot,type SinceSnapshot} from './since.ts';
@@ -63,7 +63,7 @@ export function reviewInsights(p:Projection,page=0,kind?:ReviewFinding['kind']):
   if(missing.length)findings.push({key:'missing-change',kind:'missing-change',title:`Change material unavailable · ${missing.length} ${missing.length===1?'operation':'operations'}`,detail:'Open the action to inspect the available metadata and reconstruction note.',count:missing.length,sequence:starts.get(missing[0]!.id)??missing[0]!.startSequence,sequenceBasis:starts.has(missing[0]!.id)?'captured-observation':'timeline-position',examples:examples(missing,starts)});
   if(p.gaps.length){const gap=p.gaps[0]!,entry=p.timeline[gap.sequence],located=entry?.type==='gap'&&entry.reason===gap.reason;findings.push({key:'gaps',kind:'capture-gap',title:`${p.gaps.length} ${p.gaps.length===1?'gap':'gaps'} in the record`,detail:p.gaps.slice(0,3).map(gap=>gap.reason.replace(/-/g,' ')).join(' · '),count:p.gaps.length,sequence:located?entry.sequence:gap.sequence,sequenceBasis:located?'captured-observation':'timeline-position',examples:[]});}
   findings.sort((a,b)=>(b.failed??0)-(a.failed??0)||b.sequence-a.sequence||a.key.localeCompare(b.key));
-  const turns=p.timeline.flatMap((item,step)=>item.type==='turn'&&isPersonPrompt(item.prompt)?[{item,step}]:[]).sort((a,b)=>a.item.sequence-b.item.sequence||a.step-b.step);
+  const turns=p.timeline.flatMap((item,step)=>item.type==='turn'&&isPersonTurn(item)?[{item,step}]:[]).sort((a,b)=>a.item.sequence-b.item.sequence||a.step-b.step);
   const promptOperations=operations.filter(op=>starts.has(op.id)).sort((a,b)=>starts.get(a.id)!-starts.get(b.id)!||a.id.localeCompare(b.id));
   let operation=0;
   const prompts=turns.map(({item,step},index):PromptOverview=>{

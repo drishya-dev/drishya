@@ -13,7 +13,7 @@ test.beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'ag-product-')); app = new App(join(dir, 'store'));
   const journal = join(dir, 'brain', 'synthetic', '.system_generated', 'logs', 'transcript.jsonl');
   mkdirSync(join(journal, '..'), { recursive: true });
-  writeFileSync(journal, JSON.stringify({ step_index: 0, type: 'USER_INPUT', source: 'USER_EXPLICIT', status: 'DONE', created_at: '2026-11-13T10:00:00Z', content: 'Synthetic AG searchable needle', tool_calls: [] }) + '\n');
+  writeFileSync(journal, JSON.stringify({ step_index: 0, type: 'USER_INPUT', source: 'USER_EXPLICIT', status: 'DONE', created_at: '2026-11-13T10:00:00Z', content: '<USER_REQUEST>Synthetic AG searchable needle</USER_REQUEST>', tool_calls: [] }) + '\n');
   const adapter = createAntigravityAdapter([dir]);
   const index = app.ingest.adapters.findIndex(a => a.descriptor.id === 'antigravity');
   app.ingest.adapters.splice(index, 1, adapter);
@@ -38,6 +38,24 @@ test('Antigravity is filterable and read-only', async ({ page }) => {
   await expect(page.getByText('Read-only: Antigravity cannot be steered from Drishya')).toBeVisible();
   await expect(page.getByLabel('Prompt for selected harness session')).toHaveCount(0);
 });
+
+for (const width of [600, 1440]) {
+  test(`wrapped Antigravity prompts and unavailable workspaces at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.route('**/v1/sources', route => route.fulfill({ json: { sources: [], errors: [] } }));
+    await page.goto(server.launchUrl);
+    await page.locator('.mh-session-open').click();
+    await expect(page.locator('.turn-text')).toHaveText('Synthetic AG searchable needle');
+    await expect(page.getByRole('navigation', { name: 'Prompt positions in history' }).getByRole('button')).toHaveAttribute('aria-label', 'Go to prompt: Synthetic AG searchable needle');
+    const files = page.getByRole('complementary', { name: 'Repository files' });
+    if (!(await files.isVisible())) await page.getByRole('button', { name: 'Show files', exact: true }).click();
+    await expect(files.getByText('Workspace unavailable. No workspace metadata could be read from this Antigravity recording.')).toBeVisible();
+    await expect(files.getByRole('button', { name: /Enable workspace reading/ })).toHaveCount(0);
+    if (width === 600) await files.getByRole('button', { name: 'Minimize files', exact: true }).click();
+    await page.getByRole('button', { name: 'Drishya', exact: true }).click();
+    await expect(page.locator('.mh-session strong')).toHaveText('Synthetic AG searchable needle');
+  });
+}
 
 test('native actions reject Antigravity before launching anything', async () => {
   let launches = 0;

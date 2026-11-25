@@ -1,4 +1,4 @@
-import { isPersonPrompt } from '@drishya/contracts';
+import { isPersonTurn } from '@drishya/contracts';
 // P2-A "Since your last visit": what happened after a reading boundary, as deterministic facts.
 // No model call and no inference: each item is a captured operation or gap with its own link.
 // A boundary is an observation sequence (`receivedSequence`), stable across re-import.
@@ -72,7 +72,7 @@ export function sinceFileStats(p: Projection, edits: SinceItem[], paths: string[
   const stats = new Map<string, SinceFileStat>();
   const { starts, ends } = operationObservations(p);
   const turnsByAgent = new Map<string, number[]>(), testsByAgent = new Map<string, { start: number; op: Operation }[]>();
-  for (const item of p.timeline) if (item.type === 'turn' && isPersonPrompt(item.prompt)) (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
+  for (const item of p.timeline) if (item.type === 'turn' && isPersonTurn(item)) (turnsByAgent.get(item.agentId) ?? turnsByAgent.set(item.agentId, []).get(item.agentId)!).push(item.sequence);
   for (const op of p.operations) {
     const start = starts.get(op.id);
     if (op.kind === 'test' && !op.declined && start !== undefined) (testsByAgent.get(op.agentId) ?? testsByAgent.set(op.agentId, []).get(op.agentId)!).push({ start, op });

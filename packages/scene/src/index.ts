@@ -1,10 +1,10 @@
-import { isPersonPrompt } from '@drishya/contracts';
+import { isPersonTurn } from '@drishya/contracts';
 // The scene composer. A PURE function: projection + playback position + preferences in,
 // the semantic scene out. No clock, no DOM, no randomness (AGENTS.md constraint 6). The UI
 // only renders what this returns, so any paused frame can be rebuilt exactly and golden-tested.
 // Runs in both the daemon (tests, export) and the browser.
 
-import { asOfProjection, type Agent, type Operation, type OperationImage, type OperationKind, type Projection, type Prose, type TimelineItem } from '@drishya/contracts';
+import { asOfProjection, type Agent, type Operation, type OperationImage, type OperationKind, type Projection, type Prose, type Provenance, type TimelineItem } from '@drishya/contracts';
 import { pinnedPlans, type PinnedPlan } from './plan-threads.ts';
 export { asOfProjection } from '@drishya/contracts';
 export { sinceBoundary, type SinceDigest, type SinceItem } from './since.ts';
@@ -71,6 +71,7 @@ export interface ScenePassage {
   matchesFilter: boolean;
   /** A user turn that opened this passage, if one did. */
   turnPrompt?: string;
+  turnPromptProvenance?: Provenance;
   /** Derived before worker preview clipping; false only for known harness-written notices. */
   personPrompt?: false;
   /** Captured timestamp of the turn that opens this passage, when supplied. */
@@ -173,7 +174,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
   const proseAt = new Map<string, number>();
   const noticeAt = new Map<string, number>();
   const stoppedAgents = new Set<string>();
-  const turnAt: { id: string; agentId: string; step: number; prompt?: string; time?:string; modeChange?: string; images?: OperationImage[] }[] = [];
+  const turnAt: { id: string; agentId: string; step: number; prompt?: string; promptProvenance?: Provenance; time?:string; modeChange?: string; images?: OperationImage[] }[] = [];
   let lastMode: string | undefined;
   applied.forEach((it, i) => {
     if (it.type === 'op-start') started.set(it.operationId, i);
@@ -184,7 +185,7 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     else if (it.type === 'turn') {
       const modeChange = it.permissionMode && it.permissionMode !== lastMode ? it.permissionMode : undefined;
       if (it.permissionMode) lastMode = it.permissionMode;
-      turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt, time: it.time, ...(modeChange ? { modeChange } : {}), ...(it.images?.length ? { images: it.images } : {}) });
+      turnAt.push({ id: it.id, agentId: it.agentId, step: i, prompt: it.prompt, promptProvenance: it.promptProvenance, time: it.time, ...(modeChange ? { modeChange } : {}), ...(it.images?.length ? { images: it.images } : {}) });
     }
   });
 
@@ -259,7 +260,8 @@ export function compose(p: Projection, input: ComposeInput): Scene {
       settled: latestByAgent.get(ps.agentId) !== ps.id,
       matchesFilter: f ? (f.agentId ? ps.agentId === f.agentId : sceneOps.some((o) => o.matchesFilter)) : true,
       turnPrompt: opensTurn ? turn!.prompt : undefined,
-      ...(opensTurn && turn && !isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
+      ...(opensTurn && turn?.promptProvenance ? { turnPromptProvenance: turn.promptProvenance } : {}),
+      ...(opensTurn && turn && !isPersonTurn(turn) ? { personPrompt: false as const } : {}),
       ...(opensTurn&&turn?.time?{turnTime:turn.time}:{}),
       ...(opensTurn&&turn?{turnStep:turn.step,turnId:turn.id}:{}),
       ...(opensTurn&&turn?.modeChange?{turnPermissionMode:turn.modeChange}:{}),
@@ -278,7 +280,8 @@ export function compose(p: Projection, input: ComposeInput): Scene {
     id: `prompt_${turn.id}`, agentId: turn.agentId, ops: [], prose: [],
     settled: turn.step !== turnAt.at(-1)?.step,
     matchesFilter: !f || (!f.kind && !f.server && !f.tool && (!f.agentId || f.agentId === turn.agentId)),
-    ...(!isPersonPrompt(turn.prompt) ? { personPrompt: false as const } : {}),
+    ...(turn.promptProvenance ? { turnPromptProvenance: turn.promptProvenance } : {}),
+    ...(!isPersonTurn(turn) ? { personPrompt: false as const } : {}),
     turnPrompt: turn.prompt, turnTime: turn.time, turnStep: turn.step, turnId: turn.id, inTurn: turn.step,
     ...(turn.modeChange ? { turnPermissionMode: turn.modeChange } : {}),
     ...(turn.images ? { turnImages: turn.images } : {}),
@@ -422,7 +425,7 @@ export function markers(p: Projection): Marker[] {
   const out: Marker[] = [];
   p.timeline.forEach((it, i) => {
     const step = i + 1; // the step at which this item is visible
-    if (it.type === 'turn' && isPersonPrompt(it.prompt)) out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
+    if (it.type === 'turn' && isPersonTurn(it)) out.push({ step, type: 'turn', label: clip(it.prompt ?? 'Prompt', 60) });
     else if (it.type === 'gap') out.push({ step, type: 'gap', label: it.reason });
     else if (it.type === 'op-start') {
       const op = ops.get(it.operationId)!;

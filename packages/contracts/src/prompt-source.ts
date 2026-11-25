@@ -1,3 +1,6 @@
+import { ANTIGRAVITY_REQUEST_RULE } from './antigravity-request.ts';
+import type { Provenance } from './index.ts';
+
 /**
  * Claude Code writes some of its own notices into the journal in the user role: a finished background task, a slash-command echo and its
  * output, an interruption, a reminder. They are not typed by the person, so History must not call them "You". Recognised by an exact leading
@@ -66,4 +69,10 @@ export function isPersonPrompt(text: string | undefined): boolean {
   if (injectedMessage(text)) return false;
   const s = text.trimStart();
   return !/^(?:<environment_context(?:\s[^>]*)?>|<subagent_notification(?:\s[^>]*)?>|# AGENTS\.md instructions for )/.test(s);
+}
+
+/** A decoded Antigravity envelope establishes its own origin, even if the request quotes a native notice. */
+export function isPersonTurn(turn: { prompt?: string; promptProvenance?: Provenance }): boolean {
+  const provenance = turn.promptProvenance;
+  return (provenance?.kind === 'derived' && provenance.rule === ANTIGRAVITY_REQUEST_RULE) || isPersonPrompt(turn.prompt);
 }
