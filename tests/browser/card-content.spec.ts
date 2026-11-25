@@ -41,9 +41,25 @@ function journal(){
 }
 
 const card=(page:Page,kind:string,nth=0)=>page.locator(`article.op-${kind}`).nth(nth);
-async function open(page:Page,width:number){await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('article.op').first()).toBeVisible();}
+async function open(page:Page,width:number){
+ // Cases share one daemon; fresh browser contexts still restore its saved
+ // expansion. Layout assertions deliberately start from collapsed material.
+ const cleared=await page.request.delete(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`,'content-type':'application/json'}});
+ expect(cleared.ok()).toBe(true);
+ await page.setViewportSize({width,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern&motion=0#/r/${id}`);await expect(page.locator('article.op').first()).toBeVisible();
+}
 const frame=async(el:Locator,name:string)=>{const out=process.env.DRISHYA_FRAMES;if(out){mkdirSync(out,{recursive:true});await el.screenshot({path:join(out,`${name}.png`)});}};
 const settle=async(page:Page,el:Locator)=>{await el.scrollIntoViewIfNeeded();await page.mouse.move(1,1);await page.waitForTimeout(150);};
+
+test('content-layout checks start collapsed even after a previous reading saved expansion',async({page,request})=>{
+ const operation=app.projection(id).operations.find(op=>op.detail.kind==='shell')!;
+ const saved=await request.put(`${server.url}/v1/working-locations`,{headers:{authorization:`Bearer ${server.token}`},data:{version:1,last:id,sessions:[{id,entries:[['location',{expandedOp:operation.id,follow:false}]]}]}});
+ expect(saved.ok()).toBe(true);
+ await open(page,600);
+ const material=page.locator(`article[data-op-id="${operation.id}"]`);
+ await expect(material).not.toHaveClass(/expanded/);
+ await expect(material.locator('.op-body')).toBeAttached();
+});
 
 /** Elements inside the card's body that are wider than their box (a horizontal scroll or a clipped line). */
 const overflowing=(el:Locator)=>el.evaluate(card=>[...card.querySelectorAll<HTMLElement>('.op-body, .op-body *, .op-expanded, .op-expanded *')].filter(e=>!e.closest('.captured-result-views')&&(e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).display!=='inline'&&getComputedStyle(e).overflowX!=='visible'||e.getBoundingClientRect().right>card.getBoundingClientRect().right+1)).map(e=>`${e.tagName}.${e.className}`));

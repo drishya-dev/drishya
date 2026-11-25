@@ -1,3 +1,4 @@
+import {mapActivityCase} from './real-cases/map-activity.ts';
 import { antigravityNativeCases } from './real-cases/antigravity-native.ts';
 import { storageClearAcceptance } from './real-cases/storage-clear.ts';
 import { liveBatches } from './real-cases/live-batches.ts';
@@ -55,7 +56,7 @@ import { claudeCheckpoints } from './real-cases/claude-checkpoints.ts';
 
 
 
-const cases: RealCase[] = [redaction, fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, longDiffLines, widePassages, usageContext, linkProse, claudeCheckpoints];
+const cases: RealCase[] = [mapActivityCase,redaction, fullProse, liveBatches, personPrompts, midTurnPrompts, proseFileReferences, multiImagePrompts, questions, imageOnlyPrompt, completeJson, browserOps, literalCommit, injectedMessages, agentDeliveries, localBranches, worktreeRoots, planMaterial, readingDelimited, turnDetails, sessionBranch, workspaceFiles, computerFrames, toolsAvailable, contentParity, mainRootAliases, compaction, sessionLineage, midTurnInput, desktopPrompts, markdownTables, blobDiffLines, longDiffLines, widePassages, usageContext, linkProse, claudeCheckpoints];
 const { values, positionals } = parseArgs({ args:process.argv.slice(2).filter((arg,index)=>index!==0||arg!=='--'), allowPositionals: true, options: { list: { type: 'boolean' }, harness: { type: 'string' }, 'max-mb': { type: 'string' }, pick: { type: 'string' } } });
 cases.push(antigravity);
 cases.push(antigravityLive);

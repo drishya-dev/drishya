@@ -13,8 +13,8 @@ export const ALLOWED_PATHS: RegExp[] = [
   /^README\.md$/,
   /^BUILD\.json$/,
   /^SHA256SUMS$/,
-  // The bundled daemon: entry, history worker and esbuild's hashed chunks, as ES modules only.
-  /^apps\/daemon\/src\/(?:cli|history-worker)\.mjs$/,
+  // The bundled daemon: entry, bounded reader/discovery workers and hashed ES module chunks.
+  /^apps\/daemon\/src\/(?:cli|history-worker|discovery-worker)\.mjs$/,
   /^apps\/daemon\/src\/[A-Za-z0-9_-]+-[A-Za-z0-9_]{8}\.mjs$/,
   // The built UI: hashed assets, brand images, the committed demo bundle, bundled fonts with their licences.
   /^apps\/ui\/dist\/index\.html$/,

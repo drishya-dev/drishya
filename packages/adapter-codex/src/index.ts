@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import type { AdapterDescriptor, CompactionPayload, DiscoveredSource, Observation, ToolsSnapshotPayload, UsagePayload } from '@drishya/contracts';
 import {
   fileInfo,
+  discoveryTitle,
   headRecords,
   listFiles,
   parseMcpName,
@@ -379,9 +380,14 @@ async function discover(): Promise<DiscoveredSource[]> {
   for (const path of files) {
     const info = await fileInfo(path);
     if (!info || info.bytes === 0) continue;
-    const head = (await headRecords(path)) as Rec[];
+    const eligibleUser=(r:Rec)=>r?.type==='response_item' && r.payload?.type==='message' && r.payload.role==='user' && !isInjectedUserText(textOf(r.payload.content)??'<');
+    let sawMeta=false,sawUser=false;
+    const head = (await headRecords(path,undefined,undefined,record=>{
+      const row=record as Rec;sawMeta ||= row?.type==='session_meta';sawUser ||= eligibleUser(row);
+      return sawMeta&&sawUser;
+    })) as Rec[];
     const meta = head.find((r) => r.type === 'session_meta')?.payload;
-    const firstUser = head.find((r) => r.type === 'response_item' && r.payload?.type === 'message' && r.payload.role === 'user' && !isInjectedUserText(textOf(r.payload.content) ?? '<'));
+    const firstUser = head.find(eligibleUser);
     const t = firstUser ? textOf(firstUser.payload.content) : undefined;
     out.push({
       adapterId: descriptor.id,
@@ -390,7 +396,7 @@ async function discover(): Promise<DiscoveredSource[]> {
       bytes: info.bytes,
       modifiedAt: info.modifiedAt,
       cwd: typeof meta?.cwd === 'string' ? meta.cwd : undefined,
-      title: t ? sanitize(t.slice(0, 160)).value : undefined,
+      title: t ? discoveryTitle(t) : undefined,
       companions: [],
       ...(typeof meta?.id === 'string' ? { sessionId: meta.id } : {}),
       ...(typeof meta?.parent_thread_id === 'string' ? { parentSessionId: meta.parent_thread_id } : {}),

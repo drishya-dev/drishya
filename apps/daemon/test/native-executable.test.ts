@@ -7,6 +7,20 @@ const roots: string[] = [];
 afterEach(() => { for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true }); });
 function fixture() { const root = mkdtempSync(join(tmpdir(), 'drishya-cli-')); roots.push(root); return root; }
 function file(root: string, ...parts: string[]) { const path = join(root, ...parts); mkdirSync(join(path, '..'), { recursive: true }); writeFileSync(path, 'synthetic'); return path; }
+
+for(const launcher of ['cmd','bin'])test(`selects the installed Git core rather than its ${launcher} launcher on Windows`,()=>{
+  const root=fixture();file(root,launcher,'git.exe');
+  const core=file(root,'mingw64','bin','git.exe');
+  expect(executable('git',{env:{PATH:join(root,launcher)},platform:'win32',arch:'x64'})).toBe(core);
+});
+
+test('keeps standalone Git and launcher fallback when no matching installed core exists',()=>{
+  const root=fixture(),launcher=file(root,'cmd','git.exe'),standalone=file(root,'standalone','git.exe');
+  expect(executable('git',{env:{PATH:join(root,'cmd')},platform:'win32',arch:'x64'})).toBe(launcher);
+  file(root,'mingw64','bin','git.exe');
+  expect(executable('git',{env:{PATH:join(root,'standalone')},platform:'win32',arch:'x64'})).toBe(standalone);
+  expect(executable('git',{env:{PATH:join(root,'cmd')},platform:'win32',arch:'arm64'})).toBe(launcher);
+});
 test('finds npm native Codex without PATH and never returns a cmd shim', () => {
   const root = fixture(); file(root, 'npm', 'codex.cmd');
   const native = file(root, 'npm', 'node_modules', '@openai', 'codex', 'node_modules', '@openai', 'codex-win32-x64', 'vendor', 'x86_64-pc-windows-msvc', 'bin', 'codex.exe');

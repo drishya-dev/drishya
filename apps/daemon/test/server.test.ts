@@ -11,6 +11,7 @@ const fixtures = fileURLToPath(new URL('../../../fixtures/synthetic', import.met
 let dir: string;
 let s: RunningServer;
 let recId: string;
+let discoveredJournal: string;
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'drishya-server-'));
   mkdirSync(join(dir, 'no-ui', 'assets'), { recursive: true });
@@ -21,10 +22,16 @@ beforeAll(async () => {
   // A current map belongs to this recording's own captured checkout, not a second fixture root.
   const workspace=join(fixtures,'workspace/shop');const journal=join(dir,'checkout-fix.jsonl');
   writeFileSync(journal,readFileSync(join(fixtures,'claude/checkout-fix.jsonl'),'utf8').replaceAll('/home/dev/shop',workspace.replaceAll('\\','/')));
+  discoveredJournal=journal;
+  // Keep real parsers/import/privacy, but discovery may only offer our fixture.
+  // The rejection test below must not scan the person's native session folders.
+  app.ingest.adapters.splice(0,app.ingest.adapters.length,...app.ingest.adapters.map(adapter=>({...adapter,discover:async()=>adapter.descriptor.id==='claude-code'?[{
+    adapterId:'claude-code',harness:'claude-code' as const,path:journal,bytes:readFileSync(journal).byteLength,modifiedAt:'2026-11-21T00:00:00Z',cwd:workspace,companions:[],
+  }]:[]})));
   const r = await app.ingest.importSource('claude-code', journal);
   app.store.updateRecordingMeta(r.recordingId, { graphRoot: workspace });
   recId = r.recordingId;
-  s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui') });
+  s = await startServer({ app, port: 0, uiDir: join(dir, 'no-ui'),watchRoots:[] });
 });
 afterAll(async () => {
   await s.close();
@@ -159,6 +166,11 @@ describe('local API security', () => {
   it('only imports sources that discovery found — no arbitrary file reads', async () => {
     const r = await call('/v1/import', { method: 'POST', headers: { ...auth(), 'content-type': 'application/json' }, body: { path: join(fixtures, '../../package.json') } });
     expect(r.status).toBe(400);
+    const listed=await call('/v1/sources',{headers:auth()});
+    expect(listed.body.sources.map((source:{path:string})=>source.path)).toEqual([discoveredJournal]);
+    const accepted=await call('/v1/import',{method:'POST',headers:{...auth(),'content-type':'application/json'},body:{path:discoveredJournal}});
+    expect(accepted.status).toBe(200);
+    expect(accepted.body.recordingId).toBe(recId);
   });
 
   it('serves security headers', async () => {

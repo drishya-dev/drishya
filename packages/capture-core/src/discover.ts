@@ -1,32 +1,47 @@
 import { open, readdir, stat, type FileHandle } from 'node:fs/promises';
 import { join } from 'node:path';
+import {sanitize} from '@drishya/privacy';
+
+/** Keep bounded discovery metadata independent of the potentially huge parsed prompt.
+ * UTF-16 preserves the existing code-unit truncation, including isolated surrogates. */
+export function discoveryTitle(value:string):string {
+  return Buffer.from(sanitize(value.slice(0,160)).value,'utf16le').toString('utf16le');
+}
 
 /** Parses the first complete records of a journal, for discovery. Never reads the whole file. */
-export async function headRecords(path: string, maxBytes = 256 * 1024, maxRecords = 400): Promise<unknown[]> {
+export async function headRecords(path: string, maxBytes = 256 * 1024, maxRecords = 400, stop?: (record: unknown) => boolean): Promise<unknown[]> {
   const fh = await open(path, 'r');
   try {
-    return await readHead(fh, maxBytes, maxRecords);
+    return await readHead(fh, maxBytes, maxRecords, undefined, stop);
   } finally {
     await fh.close();
   }
 }
 
-async function readHead(fh: FileHandle, maxBytes: number, maxRecords: number): Promise<unknown[]> {
-  const buf = Buffer.alloc(maxBytes);
-  const { bytesRead } = await fh.read(buf, 0, maxBytes, 0);
-  const text = buf.subarray(0, bytesRead).toString('utf8');
-  const lines = text.split('\n');
-  if (bytesRead === maxBytes) lines.pop(); // last line is probably cut
+async function readHead(fh: FileHandle, maxBytes: number, maxRecords: number, knownSize?: number, stop?: (record: unknown) => boolean): Promise<unknown[]> {
+  const capacity=Math.min(maxBytes,knownSize??(await fh.stat()).size);
+  if(!capacity)return [];
+  const buf = Buffer.alloc(capacity);
+  const { bytesRead } = await fh.read(buf, 0, capacity, 0);
   const out: unknown[] = [];
-  for (const l of lines) {
-    if (out.length >= maxRecords) break;
-    const t = l.trim();
+  let start=0;
+  while(start<bytesRead && out.length<maxRecords) {
+    const newline=buf.indexOf(10,start);
+    if(newline<0 && bytesRead===maxBytes)break; // last line is probably cut
+    const end=newline<0?bytesRead:newline;
+    // Decode only the next record: callers may already have all the metadata
+    // they need, while later tool outputs can fill the rest of the head budget.
+    const t=buf.toString('utf8',start,end).trim();start=end+1;
     if (!t) continue;
+    let record:unknown;
     try {
-      out.push(JSON.parse(t));
+      record=JSON.parse(t);
     } catch {
       // a cut or malformed line tells discovery nothing
+      continue;
     }
+    out.push(record);
+    if(stop?.(record))break;
   }
   return out;
 }
@@ -64,7 +79,7 @@ async function readTail(fh: FileHandle, size: number, maxBytes: number): Promise
 export async function headAndTailRecords(path: string, size: number): Promise<{ head: unknown[]; tail: unknown[] }> {
   const fh = await open(path, 'r');
   try {
-    const head = await readHead(fh, 256 * 1024, 400);
+    const head = await readHead(fh, 256 * 1024, 400, size);
     const tail = size > 256 * 1024 ? await readTail(fh, size, 64 * 1024) : [];
     return { head, tail };
   } finally {

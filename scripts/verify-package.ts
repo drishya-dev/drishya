@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -12,7 +12,7 @@ const root = resolve(import.meta.dirname, '..');
 const scratch = mkdtempSync(join(tmpdir(), 'drishya-package-'));
 const installed = join(scratch, 'installed');
 const entry = join(installed, 'node_modules', 'drishya', 'apps', 'daemon', 'src', 'cli.mjs');
-const env = { ...process.env, DRISHYA_HOME: join(scratch, 'data') };
+const env = { ...process.env, DRISHYA_HOME: join(scratch, 'data'),DRISHYA_CLAUDE_HOME:join(scratch,'claude'),DRISHYA_CODEX_HOME:join(scratch,'codex'),DRISHYA_ANTIGRAVITY_HOME:join(scratch,'antigravity') };
 // SEC-5: the packed server runs with a recorder preloaded; every network attempt it makes is checked at the end.
 const netLog = join(scratch, 'network-attempts.log');
 const serverEnv = { ...env, DRISHYA_NET_LOG: netLog, NODE_OPTIONS: `--import ${pathToFileURL(join(root, 'scripts/lib/net-recorder.mjs')).href}` };
@@ -61,6 +61,11 @@ async function launchServer(): Promise<{ base: string; cookie: string }> {
 }
 
 async function verifyRecordings(base: string, cookie: string) {
+  const discovered=await fetch(`${base}/v1/sources`,{headers:{cookie}});
+  assert.equal(discovered.status,200);
+  const discovery=await discovered.json() as {sources:{adapterId:string}[];errors:unknown[]};
+  assert.deepEqual(discovery.errors,[]);
+  assert.deepEqual(discovery.sources.map(source=>source.adapterId).sort(),['claude-code','codex'],'installed discovery worker reads both synthetic homes');
   const recordings = await fetch(`${base}/v1/recordings`, { headers: { cookie } });
   assert.equal(recordings.status, 200);
   const body = await recordings.text();
@@ -95,6 +100,10 @@ try {
   const manifest = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8')) as { version: string };
   assert.equal(help.split(' ')[1], manifest.version, 'installed CLI help version');
   const fixture = join(installed, 'node_modules', 'drishya', 'fixtures', 'synthetic');
+  mkdirSync(join(env.DRISHYA_CLAUDE_HOME,'projects','synthetic'),{recursive:true});
+  mkdirSync(join(env.DRISHYA_CODEX_HOME,'sessions'),{recursive:true});
+  cpSync(join(fixture,'claude/checkout-fix.jsonl'),join(env.DRISHYA_CLAUDE_HOME,'projects','synthetic','session.jsonl'));
+  cpSync(join(fixture,'codex/rollout-checkout-review.jsonl'),join(env.DRISHYA_CODEX_HOME,'sessions','rollout-synthetic.jsonl'));
   const claude = command(process.execPath, [entry, 'import', join(fixture, 'claude/checkout-fix.jsonl')]);
   const codex = command(process.execPath, [entry, 'import', join(fixture, 'codex/rollout-checkout-review.jsonl')]);
   // The fixture also retains its three captured assistant end_turn boundaries.
@@ -113,7 +122,7 @@ try {
   const outbound = outboundProblems(existsSync(netLog) ? readFileSync(netLog, 'utf8') : '');
   assert.deepEqual(outbound.problems, [], `the packed server tried to reach beyond loopback:\n${outbound.problems.join('\n')}`);
   console.log(`Packed CLI network walk: ${outbound.attempts} attempt(s), all loopback; programs started: ${outbound.programs.join(', ') || 'none'}.`);
-  console.log('Packed CLI: isolated offline install, Claude/Codex import, demo bundle, authenticated API and persisted restart passed.');
+  console.log('Packed CLI: isolated offline install, Claude/Codex discovery/import, demo bundle, authenticated API and persisted restart passed.');
 } finally {
   await stopServer();
   if (!resolve(scratch).startsWith(resolve(tmpdir()) + sep)) throw new Error('test directory escaped system temp');

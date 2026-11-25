@@ -2,10 +2,16 @@ import { mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { headAndTailRecords, headRecords, tailRecords } from '../src/discover.ts';
+import { discoveryTitle, headAndTailRecords, headRecords, tailRecords } from '../src/discover.ts';
+import {sanitize} from '@drishya/privacy';
 
 let dir: string;
 let file: string;
+it('preserves discovery title truncation, redaction and exact UTF-16 units',()=>{
+  for(const input of ['Short title','fixture AKIA0000000000000000','x'.repeat(159)+'😀 tail','x'.repeat(159)+'\ud800 tail','\udc00'+ 'x'.repeat(200)]) {
+    expect(discoveryTitle(input)).toBe(sanitize(input.slice(0,160)).value);
+  }
+});
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'drishya-discovery-tail-')); file = join(dir, 'fixture.jsonl'); });
 afterEach(() => {
   if (!resolve(dir).startsWith(resolve(tmpdir()) + sep)) throw new Error('Unsafe temporary path');
@@ -15,6 +21,26 @@ afterEach(() => {
 it('keeps complete records in journal order when the whole source fits', async () => {
   writeFileSync(file, '{"type":"custom-title","customTitle":"First"}\n{"type":"custom-title","customTitle":"Latest"}\n');
   expect(await tailRecords(file)).toEqual([{ type: 'custom-title', customTitle: 'First' }, { type: 'custom-title', customTitle: 'Latest' }]);
+});
+
+it('stops parsing after the caller has obtained its bounded discovery metadata',async()=>{
+  const rows=[{type:'session_meta'},{type:'user',text:'Synthetic prompt'},...Array.from({length:100},()=>({type:'tool-output',text:'x'.repeat(500)}))];
+  writeFileSync(file,rows.map(row=>JSON.stringify(row)).join('\n')+'\n');
+  const parse=vi.spyOn(JSON,'parse');
+  try {
+    const head=await headRecords(file,undefined,undefined,value=>(value as {type?:string})?.type==='user');
+    expect(head).toEqual(rows.slice(0,2));
+    expect(parse).toHaveBeenCalledTimes(2);
+  } finally {parse.mockRestore();}
+});
+
+it('bounds a discovery head buffer by the small source rather than the maximum read budget',async()=>{
+  const text='{"type":"session_meta","payload":{"id":"synthetic"}}\n';writeFileSync(file,text);
+  const allocations=vi.spyOn(Buffer,'alloc');
+  try {
+    expect(await headRecords(file)).toEqual([{type:'session_meta',payload:{id:'synthetic'}}]);
+    expect(allocations.mock.calls.reduce((bytes,[size])=>bytes+size,0)).toBeLessThanOrEqual(Buffer.byteLength(text));
+  } finally {allocations.mockRestore();}
 });
 
 it('discards the clipped first line, malformed records and an incomplete last record', async () => {

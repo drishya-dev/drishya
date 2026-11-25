@@ -99,6 +99,18 @@ test('the page label keeps the type floor and explains the page crossing', async
   await expect(steps.getByRole('status')).toHaveAttribute('title', /whole session/);
 });
 
+test('rapid Previous input advances each exact ordinal before selection metadata catches up',async({page})=>{
+  const work=await openWork(page),steps=work.getByRole('group',{name:/Step through reads and edits/});
+  const previous=steps.getByRole('button',{name:'Previous change',exact:true});
+  await expect(steps.getByRole('status')).toHaveText('31 of 31');
+  // Multiple activations can share a React commit under input/IPC load. Keep
+  // metadata delayed so navigation is resolved from the current local page.
+  await page.route('**/file-operations?**',async route=>{await new Promise(resolve=>setTimeout(resolve,300));await route.continue();});
+  await previous.evaluate(button=>{button.click();button.click();button.click();});
+  await expect(steps.getByRole('status')).toHaveText('28 of 31');
+  await expect(work).toContainText(line(27));
+});
+
 
 test('retained off-page selection keeps its ordinal and steps relative to itself, not the action page', async ({ page }) => {
   const work = await openWork(page);

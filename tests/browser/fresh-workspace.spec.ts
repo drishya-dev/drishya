@@ -66,10 +66,18 @@ test('prompt minimize and reversal share measured bounds without changing layout
 
 test('toolbox minimizes from actual bounds and keeps its compact icon and independent scroll',async({page})=>{
  await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();await page.goto(`${server.url}/?experience=modern#/r/${ids['claude-code']}`);
- const toolbox=page.locator('.modern-tool-station');await expect(toolbox).toBeVisible();const before=(await toolbox.boundingBox())!;
+ const toolbox=page.locator('.modern-tool-station');await expect(toolbox).toBeVisible();
+ // Inventory may arrive and recenter the expanded dock before the click. The
+ // morph's origin is its actual click-time bounds, not an earlier IPC snapshot.
+ const captureBefore=await toolbox.evaluateHandle(node=>{
+  let before:{x:number;y:number;width:number;height:number}|undefined;
+  node.addEventListener('click',()=>{const box=node.getBoundingClientRect();before={x:box.x,y:box.y,width:box.width,height:box.height};},{capture:true,once:true});
+  return ()=>{if(!before)throw Error('Toolbox click was not captured');return before;};
+ });
  // Pause at creation so an IPC round trip cannot outlast the morph before measurement.
  const restoreToolboxAnimation=await pauseSurfaceAtCreation(toolbox);
  await toolbox.getByRole('button',{name:'Minimize toolbox',exact:true}).click();
+ const before=await captureBefore.evaluate(read=>read());await captureBefore.dispose();
  const start=await toolbox.evaluate(node=>{for(const animation of node.getAnimations({subtree:true})){animation.pause();animation.currentTime=0;}const box=node.getBoundingClientRect();return {x:box.x,y:box.y,width:box.width,height:box.height};});
  for(const key of ['x','y','width','height'] as const)expect(Math.abs(start[key]-before[key]),key).toBeLessThan(1.5);
  expect((await toolbox.locator('[data-surface-label] svg').boundingBox())!.height).toBeLessThan(24);

@@ -7,10 +7,11 @@ import { homedir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import type { Artifact, ArtifactSlice, Projection, RecordingSummary, ReplayBundle, RepoGraph } from '@drishya/contracts';
 import { buildGraph, graphFromPaths, probeGeneration } from '@drishya/indexer';
-import { Ingestor } from '@drishya/ingest';
+import { Ingestor, defaultAdapters } from '@drishya/ingest';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
 import { Store } from '@drishya/store';
 import { HistoryService } from './history.ts';
+import { DiscoveryService } from './discovery.ts';
 import { workingLocations } from '../../../packages/contracts/src/working-locations.ts';
 
 declare const DRISHYA_PACKAGE_VERSION: string | undefined;
@@ -24,6 +25,14 @@ export class App {
   readonly store: Store;
   readonly ingest: Ingestor;
   readonly history: HistoryService;
+  private readonly discovery: DiscoveryService;
+  private closeOwners=new Set<()=>Promise<void>>();
+  private closing:Promise<void>|undefined;
+  /** Read-only services must finish before the store and scratch checkout go away. */
+  onClose(close:()=>Promise<void>):()=>void {
+    if(this.closing)throw new HttpError(503,'Application is closing.');
+    this.closeOwners.add(close);return()=>{this.closeOwners.delete(close);};
+  }
   private graphs = new Map<string, RepoGraph>();
   private probes = new Map<string, { at: number; generation: string }>();
   private readonly graphProbeMs: number;
@@ -69,7 +78,8 @@ export class App {
   /** `graphProbeMs`: how long a freshness probe of a map root is reused (default 15 s). */
   constructor(dir = dataDir(), opts: { memory?: boolean; graphProbeMs?: number } = {}) {
     this.store = new Store(dir, opts);
-    this.ingest = new Ingestor(this.store);
+    this.discovery = new DiscoveryService(defaultAdapters());
+    this.ingest = new Ingestor(this.store,this.discovery.adapters);
     this.history = new HistoryService(dir, id => this.ingest.useHistoryWorker(id), id => this.fullViewReady(id));
     this.graphProbeMs = opts.graphProbeMs ?? 15_000;
   }
@@ -285,9 +295,14 @@ export class App {
   }
 
   async close() {
-    await this.ingest.close();
-    await this.history.close();
-    this.store.close();
+    this.closing??=(async()=>{
+      await Promise.all([...this.closeOwners].map(close=>close()));
+      await this.ingest.close();
+      await this.discovery.close();
+      await this.history.close();
+      this.store.close();
+    })();
+    return this.closing;
   }
 }
 

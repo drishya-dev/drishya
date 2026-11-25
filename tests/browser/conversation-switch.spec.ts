@@ -200,6 +200,58 @@ let tallId: string;
 test.describe('the place survives a reader at any scroll position', () => {
   test.beforeAll(async () => { tallId = (await app.ingest.importSource('claude-code', writeLongSession(dir, 'tall', 170, 30))).recordingId; });
 
+  test('a mode return retains its material anchor through late layout and yields to a new scroll',async({page})=>{
+    await page.setViewportSize({width:1440,height:900});
+    await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${tallId}`);
+    const history=page.locator('.history');await expect(history).toBeVisible();
+    // Earlier journeys can remember Conversation in the shared daemon. This
+    // controlled reflow starts from an explicit Work choice.
+    await mode(page,'Work').click();
+    await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBeGreaterThan(1000);
+    await history.hover();await page.mouse.wheel(0,-200);
+    await history.evaluate(el=>{el.scrollTop=(el.scrollHeight-el.clientHeight)*.25;});
+    await page.waitForTimeout(1500);
+    const passage=await history.evaluate(el=>{
+      const top=el.getBoundingClientRect().top;
+      const rows=[...el.querySelectorAll<HTMLElement>('.passage-slot:not([data-unloaded=true]) .ops-row')].find(row=>row.getBoundingClientRect().height>700&&row.getBoundingClientRect().bottom>top+900)!;
+      if(!rows)throw Error('Tall recorded run missing');
+      el.scrollTop+=rows.getBoundingClientRect().top-top+200;
+      return rows.closest<HTMLElement>('[data-passage-id]')!.dataset.passageId!;
+    });
+    const rows=page.locator(`[data-passage-id="${passage}"] .ops-row`);
+    await page.waitForTimeout(500);
+    const offset=()=>rows.evaluate(node=>node.getBoundingClientRect().top-node.closest('.history')!.getBoundingClientRect().top);
+    const before=await offset();
+    await mode(page,'Conversation').click();await page.waitForTimeout(300);
+    await mode(page,'Work').click();await expect(rows).toBeVisible();await page.waitForTimeout(300);
+    // Model a late material allocation inside the same passage after the old
+    // two-frame switch guard has ended. Captured text itself is not changed.
+    await rows.evaluate(node=>{node.style.marginTop='40px';});
+    await expect.poll(async()=>Math.abs(await offset()-before)).toBeLessThanOrEqual(8);
+    const prior=await history.evaluate(el=>el.scrollTop);
+    await history.hover();await page.mouse.wheel(0,160);
+    await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBeGreaterThan(prior+100);
+  });
+
+  test('returning to unchanged tall material preserves a position with only three pixels visible',async({page})=>{
+    await page.setViewportSize({width:1440,height:900});await page.goto(server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+    await page.goto(`${server.url}/?experience=modern&motion=0#/r/${tallId}`);
+    const history=page.locator('.history');await expect.poll(()=>history.evaluate(el=>el.scrollTop)).toBeGreaterThan(1000);
+    await mode(page,'Work').click();
+    await history.hover();await page.mouse.wheel(0,-200);await history.evaluate(el=>{el.scrollTop=(el.scrollHeight-el.clientHeight)*.25;});await page.waitForTimeout(1000);
+    const passage=await history.evaluate(el=>{
+      const top=el.getBoundingClientRect().top,row=[...el.querySelectorAll<HTMLElement>('.passage-slot:not([data-unloaded=true]) .ops-row')].find(row=>row.getBoundingClientRect().height>700&&row.getBoundingClientRect().bottom>top+900)!;
+      if(!row)throw Error('Tall recorded run missing');el.scrollTop+=row.getBoundingClientRect().bottom-top-3;
+      return row.closest<HTMLElement>('[data-passage-id]')!.dataset.passageId!;
+    });
+    const rows=page.locator(`[data-passage-id="${passage}"] .ops-row`);await page.waitForTimeout(500);
+    const offset=()=>rows.evaluate(node=>node.getBoundingClientRect().top-node.closest('.history')!.getBoundingClientRect().top);
+    const before=await offset();
+    await mode(page,'Conversation').click();await page.waitForTimeout(300);await mode(page,'Work').click();
+    await expect.poll(async()=>Math.abs(await offset()-before)).toBeLessThanOrEqual(8);
+  });
+
   /** Which turn the view is in: the passage slot's own turn (its prompt's step), for whatever part is at the top. */
   const turnAtTop = (page: Page) => page.evaluate((selector) => {
     const history = document.querySelector('.history')!, box = history.getBoundingClientRect();

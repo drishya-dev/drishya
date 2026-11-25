@@ -66,6 +66,7 @@ import { FlowConnections } from './FlowConnections.tsx';
 import { materialRect, materialIsMoving, moveMaterial } from '../lib/material-motion.ts';
 import { useHoverReading } from '../lib/hover-reading.ts';
 import { scrollsInsideMaterial } from '../lib/reading-scroll.ts';
+import {modeAnchorOffset} from '../lib/mode-anchor.ts';
 import { NativeTurn } from './SessionWorkspace.tsx';
 import {useDisclosureChoice} from './Disclosure.tsx';
 import { HistoryWaitCard } from './WaitCard.tsx';
@@ -190,11 +191,11 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const switching = useRef(false);
   // The exact thing at the top of the view when the mode changed: a prompt, a message, or a run's cards (or its line), with the
   // pixels from the top of the view to it. It is read before React re-renders, and put back after.
-  type ModeAnchor = { passageId: string; kind: 'turn' | 'prose' | 'ops'; index: number; offset: number };
+  type ModeAnchor = { passageId: string; kind: 'turn' | 'prose' | 'ops'; index: number; offset: number; height:number };
   const modeAnchor = useRef<ModeAnchor | undefined>(undefined);
   // The place the reader left in the other mode, until they move: scrolling, keys, a scrollbar drag or opening a run end it.
   const modeHome = useRef<{ mode: HistoryMode; anchor: ModeAnchor; moved: boolean } | undefined>(undefined);
-  const leaveHome = () => { if (modeHome.current) modeHome.current.moved = true; };
+  const leaveHome = () => { if (modeHome.current) modeHome.current.moved = true; modeAnchor.current=undefined; };
   const correctionBurst = useRef({ count: 0 });
   const shownMode = useRef(historyMode);
   if (shownMode.current !== historyMode) { shownMode.current = historyMode; switching.current = true; }
@@ -347,6 +348,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   const setFolds = useRef(setStoredFolds);
   setFolds.current = setStoredFolds;
   const toggleFold = useCallback((id: string) => {
+    leaveHome();
     const el = ref.current;
     for (const animation of foldAnimations.current) animation.finish();
     foldAnimations.current = [];
@@ -373,7 +375,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   // from where they were, and a held extent stops the document shrinking under the reader.
   const toggleRun = useCallback((runId: string, passageId: string) => {
     const el = ref.current;
-    if (modeHome.current) modeHome.current.moved = true;
+    leaveHome();
     for (const animation of foldAnimations.current) animation.finish();
     foldAnimations.current = [];
     const closing = !!el?.querySelector(`.passage-slot[data-passage-id="${CSS.escape(passageId)}"] .ops-row`);
@@ -556,7 +558,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     // over that still-unreported user delta while a measurement commits.
     // Switching Work and Conversation reflows everything at once; the browser clamping the scroll to the new, shorter document
     // is not the reader scrolling, so it must not become the new anchor (UI-41c).
-    if(!switching.current&&committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
+    if(!modeAnchor.current&&!switching.current&&committedLayout&&!programmatic.current&&Math.abs(el.scrollTop-lastScrollTop.current)>.5) {
       rememberReading();return;
     }
     // At the document start, late allocation changes must preserve the boundary,
@@ -567,7 +569,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     // The reader's place is a passage and the pixels from the top of the view to it. A passage that moved far (the document
     // got much shorter or longer) is not mounted yet: put the view where the layout says it now is, and the mounted passage
     // refines it on the next pass. A passage that shrank to a line keeps its line in view rather than its old inner offset.
-    if (switching.current && modeAnchor.current) {
+    if (modeAnchor.current) {
       // Put the same prompt, message or run back at the same distance from the top. A run folded into its line uses the line; a
       // run that opened uses its first card; a later passage of a folded run uses the line that now holds it.
       const wanted = modeAnchor.current;
@@ -601,7 +603,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
             ?? leadSlot?.querySelector<HTMLElement>('.turn'));
       if (part) {
         // A tall run's cards that fold to one line cannot keep an offset deep inside them: the line itself stays in view.
-        const height = part.getBoundingClientRect().height, offset = Math.max(wanted.offset, Math.min(0, Math.min(height, 12) - height));
+        const height = part.getBoundingClientRect().height, offset = modeAnchorOffset(wanted.offset,wanted.height,height);
         const delta = part.getBoundingClientRect().top - el.getBoundingClientRect().top - offset;
         if (Math.abs(delta) > 0.5 && correctionRoom()) setScrollTop(el.scrollTop + delta);
         const partSlot = part.closest<HTMLElement>('.passage-slot[data-passage-id]');
@@ -622,7 +624,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
         // one line that stands for them in Conversation. Applied as they were, they put the view hundreds of pixels past the run,
         // on a later turn, or at the end of the page.
         const size = heights.get(targetId) ?? layout.prefix[index + 1]! - layout.prefix[index]!;
-        const offset = Math.max(wanted.offset, Math.min(0, Math.min(size, 12) - size));
+        const offset = modeAnchorOffset(wanted.offset,wanted.height,size);
         // Remember the place as the passage and this offset, so the pass that mounts it aligns that, not the other mode's anchor.
         readingAnchor.current = { id: targetId, offset };
         if (correctionRoom()) setScrollTop(layout.prefix[index]! - offset);
@@ -694,7 +696,10 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   }, [scene.passages, layout, follow, compareAgents, explore, theme, measurementVersion, expandedOp, hoveredOp, readingOp]);
 
   useLayoutEffect(() => useApp.subscribe((state, previous) => {
-    if (state.historyMode === previous.historyMode) return;
+    if (state.historyMode === previous.historyMode) {
+      if(state.selectedOp!==previous.selectedOp || state.promptStep!==previous.promptStep || state.focusObservationId!==previous.focusObservationId || state.follow&&!previous.follow)leaveHome();
+      return;
+    }
     const el = ref.current;
     if (!el) return;
     const box = el.getBoundingClientRect();
@@ -705,7 +710,8 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
     if (!hit || !slot?.dataset.passageId) { modeAnchor.current = undefined; modeHome.current = undefined; return; }
     const kind = hit.matches('.turn') ? 'turn' : hit.matches('.prose') ? 'prose' : 'ops';
     const same = [...slot.querySelectorAll<HTMLElement>(kind === 'ops' ? '.ops-row, .run-line' : kind === 'turn' ? '.turn' : '.prose')];
-    const here: ModeAnchor = { passageId: slot.dataset.passageId, kind, index: kind === 'ops' ? 0 : Math.max(0, same.indexOf(hit)), offset: hit.getBoundingClientRect().top - box.top };
+    const rect=hit.getBoundingClientRect();
+    const here: ModeAnchor = { passageId: slot.dataset.passageId, kind, index: kind === 'ops' ? 0 : Math.max(0, same.indexOf(hit)), offset: rect.top - box.top, height:rect.height };
     // Back where the reader just came from, with no scrolling in between: put them exactly there. The other view may have had to
     // approximate (a tall run's cards are one line in Conversation, and a place near the end cannot sit at the top of a short
     // page), and approximating back from the approximation would drift.
@@ -715,7 +721,10 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
 
   useLayoutEffect(() => {
     if (!switching.current) return;
-    let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => { switching.current = false; modeAnchor.current = undefined; }); });
+    // Material and measured virtual allocations can arrive after these frames.
+    // Keep the exact material anchor until deliberate navigation, rather than
+    // replacing it with the passage-only approximation after a fixed delay.
+    let frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => { switching.current = false; }); });
     return () => cancelAnimationFrame(frame);
   }, [historyMode]);
 
@@ -799,6 +808,7 @@ const HistoryBody = memo(function HistoryBody({ scene, projection, onWindow, fol
   useLayoutEffect(() => {
     const el = ref.current;
     if (navigationIntent.current !== intent) {
+      leaveHome();
       navigationIntent.current = intent; cancelledNavigation.current = undefined;
       lastNavigation.current = undefined; pendingNavigation.current = undefined;
     }

@@ -816,6 +816,7 @@ export async function startServer(opts: ServerOptions = {}): Promise<RunningServ
       });
       // Aborting a socket does not cancel discovery/import already awaiting disk I/O. Let
       // handlers finish before the caller closes SQLite, or they race a finalized statement.
+      await gitReview.close();
       await Promise.allSettled([...inFlight]);
     },
   };

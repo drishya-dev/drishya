@@ -25,7 +25,9 @@ afterAll(()=>{if(dir){if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw n
 it('reads the selected branch and returns exact current/default counts without changing checkout',async()=>{
   const before=git('rev-parse','HEAD'),refs=git('show-ref'),initial=await history();
   const chosen=initial.references.find(ref=>ref.name==='topic')!;
-  const result=await history({reference:chosen.id});
+  const calls:string[][]=[];
+  const result=await gitHistory(args=>{calls.push(args);return readGit(root,args);},{reference:chosen.id});
+  expect(calls.filter(args=>args[0]==='merge-base'&&args.length===3)).toHaveLength(1);
   const [behind,ahead]=git('rev-list','--left-right','--count','main...topic').split(/\s+/).map(Number);
   expect(result.commits[0]?.hash).toBe(topic);expect(result.commits.some(commit=>commit.subject==='Main one')).toBe(false);
   expect(result.branchComparison?.current).toEqual({name:'main',state:'known',ahead,behind});

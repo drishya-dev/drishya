@@ -21,9 +21,9 @@ import { readBeforeWriteFor } from '../../../packages/scene/src/read-before-writ
 import { mkdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
-import type { ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
+import type { AdapterDescriptor, ArtifactSlice, Observation, Operation, Projection } from '@drishya/contracts';
 import { asOfProjection, isBlobText } from '@drishya/contracts';
-import { buildTail, ChunkedFold, defaultAdapters } from '@drishya/ingest';
+import { buildTail, ChunkedFold } from '../../../packages/ingest/src/open-fold.ts';
 import { FOLD_FORMAT, ProjectionFold, REDUCER_VERSION, type FoldHead } from '@drishya/projection';
 import { compose, dwellFor, markers, stepOfObservation, type Marker } from '@drishya/scene';
 import type { HistoryPage, HistoryQuery } from '../../../packages/scene/src/history.ts';
@@ -33,6 +33,7 @@ import { turnLedgers } from '../../../packages/scene/src/turns.ts';
 import { contextReportCandidates } from './context-report-turns.ts';
 import { SqliteBlobStore, Store, type LineageSeen } from '@drishya/store';
 import { PRIVACY_POLICY_VERSION, sanitize } from '@drishya/privacy';
+import {encodeCheckpoint,decodeCheckpoint} from './history-checkpoint.ts';
 
 const source = new Store(workerData.dir, { readOnly: true });
 const dir = join(workerData.dir, 'history');
@@ -87,7 +88,9 @@ const ioFor = (ids: string[]) => ({
     return capturedBlobs.has(sha) && source.blobs.has(sha) ? { sha, bytes: Buffer.byteLength(text) } : blobs.put(text);
   },
 });
-const adapters = Object.fromEntries(defaultAdapters().map((a) => [a.descriptor.id, a.descriptor]));
+// Metadata is already known by the owner. The read-only worker does not need
+// native journal parser modules on every cold start/replacement.
+const adapters = workerData.adapters as Record<string,AdapterDescriptor>;
 const HISTORY_VERSION = `h3-lineage-4096-${PRIVACY_POLICY_VERSION}`;
 // At most one complete reducer workspace is resident, independent of how many recordings exist.
 interface View { id: string; revision: string; projection: Projection; revisions: Record<string, number>; partial?: { observations: number } }
@@ -176,7 +179,7 @@ function saveCheckpoint(force = false): boolean {
   if (!r || (!force && (r.rows < TAIL_FIRST_OBSERVATIONS || (r.saved > 0 && r.rows - r.saved < CHECKPOINT_MIN_GAIN)))) return false;
   const checkpoint = r.fold.checkpoint();
   const meta = JSON.stringify({ head: checkpoint.head, blobs: checkpoint.blobs, sequence: r.sequence, rows: r.rows, ancestors: r.ancestors, lineage: r.lineage?.exportSeen() });
-  db.prepare('INSERT INTO folds VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET key=excluded.key, meta=excluded.meta, state=excluded.state').run(r.id, checkpointKey(r.ids), meta, checkpoint.state);
+  db.prepare('INSERT INTO folds VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET key=excluded.key, meta=excluded.meta, state=excluded.state').run(r.id, checkpointKey(r.ids), meta, encodeCheckpoint(checkpoint.state));
   r.saved = r.rows;
   return true;
 }
@@ -207,7 +210,9 @@ function resume(id: string, ctx: Pick<Lookup, 'ids' | 'counts'>): boolean {
   if (ctx.ids.length > 1 && (!lineage || !meta.lineage)) return reject();
   const reader = lineage ? source.lineageReader(lineage, meta.lineage) : undefined;
   if (meta.blobs.some((sha) => !source.blobs.has(sha) && !blobs.has(sha))) return reject();
-  const fold = ProjectionFold.restore({ head: meta.head, state: Buffer.from(row.state.buffer, row.state.byteOffset, row.state.byteLength), blobs: meta.blobs }, ioFor(ctx.ids), { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
+  let state:Buffer;
+  try{state=decodeCheckpoint(Buffer.from(row.state.buffer,row.state.byteOffset,row.state.byteLength));}catch{return reject();}
+  const fold = ProjectionFold.restore({ head: meta.head, state, blobs: meta.blobs }, ioFor(ctx.ids), { ...reduceOptions(false), ...(lineage ? { lineage } : {}) });
   if (!fold) return reject();
   capturedBlobs.clear();
   resident = { id, ids: ctx.ids, fold, lineage: reader, sequence: meta.sequence, rows: meta.rows, ancestors: meta.ancestors, saved: meta.rows };
@@ -451,11 +456,18 @@ async function page(id: string, query: HistoryQuery): Promise<HistoryPage> {
   const since = query.since === step && query.previousSince !== undefined ? query.previousSince : query.since;
   const scene = compose(full, { step, since, filter: query.filter, selectedOperationId: query.selectedOperationId });
   const count = Math.max(1, Math.min(64, Math.floor(query.count ?? 32)));
-  const opMap = new Map(historical.operations.map((op) => [op.id, op]));
   const proseMap = new Map(historical.prose.map((pr) => [pr.id, pr]));
+  const observationOps=new Set(query.observationId?historical.operations.filter(op=>op.observationIds.includes(query.observationId!)).map(op=>op.id):[]);
+  if(observationOps.size){
+    // Extracted calls replace their script wrapper in the visible passage. A
+    // wrapper receipt still navigates to that exact recorded descendant group.
+    const children=new Map<string,string[]>();
+    for(const op of historical.operations)if(op.parentOperationId){const ids=children.get(op.parentOperationId)??[];ids.push(op.id);children.set(op.parentOperationId,ids);}
+    for(const id of observationOps)for(const child of children.get(id)??[])observationOps.add(child);
+  }
   const promptTarget = query.promptStep === undefined ? undefined : scene.passages.find(p => p.turnStep !== undefined && p.turnStep >= query.promptStep! - 1)?.id;
   const target = scene.passages.findIndex((ps) => ps.id === promptTarget || ps.ops.some((op) => op.id === query.selectedOperationId ||
-    (query.observationId && opMap.get(op.id)?.observationIds.includes(query.observationId))) ||
+    observationOps.has(op.id)) ||
     ps.prose.some((pr) => query.observationId && proseMap.get(pr.id)?.observationIds.includes(query.observationId)));
   const anchor = query.anchorPassageId ? scene.passages.findIndex((ps) => ps.id === query.anchorPassageId) : -1;
   const start = Math.max(0, Math.min(Math.max(0, scene.passages.length - count), Math.floor(query.start ?? (anchor >= 0 ? anchor : target >= 0 ? target - Math.floor(count / 2) : scene.passages.length - count))));

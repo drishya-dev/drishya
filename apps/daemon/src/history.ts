@@ -8,6 +8,7 @@ import type {CommandQuery,CommandPage} from '../../../packages/scene/src/command
 import type {ScreenRun} from '../../../packages/scene/src/screen.ts';
 import type {ToolInventory,ToolTrail,ToolFilter} from '../../../packages/scene/src/tools.ts';
 import { Worker } from 'node:worker_threads';
+import {defaultAdapters} from '@drishya/ingest';
 import { join } from 'node:path';
 import type { ArtifactSlice } from '@drishya/contracts';
 import type { BlobSearchResult } from '@drishya/store';
@@ -58,7 +59,7 @@ export class HistoryService {
 
       const extension = import.meta.url.endsWith('.mjs') ? 'mjs' : 'ts';
       const worker = new Worker(new URL(`./history-worker.${extension}`, import.meta.url), {
-        workerData: { dir: this.dir },
+        workerData: { dir: this.dir,adapters:Object.fromEntries(defaultAdapters().map(adapter=>[adapter.descriptor.id,adapter.descriptor])) },
         resourceLimits: { maxOldGenerationSizeMb: 384, maxYoungGenerationSizeMb: 16 },
       });
 

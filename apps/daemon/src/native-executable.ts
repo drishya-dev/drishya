@@ -1,5 +1,5 @@
 import { accessSync, constants, readdirSync, statSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { basename, isAbsolute, join, resolve } from 'node:path';
 
 /** Only known native installation locations; no shell shims or recursive disk search. */
 export function executable(name: string, options: { env?: NodeJS.ProcessEnv; platform?: string; arch?: string } = {}): string | undefined {
@@ -12,7 +12,17 @@ export function executable(name: string, options: { env?: NodeJS.ProcessEnv; pla
   for (const dir of dirs) {
     const path = join(dir, name + (windows ? '.exe' : ''));
     if (!isFile(path)) continue;
-    if (windows) return path;
+    if (windows) {
+      // Git for Windows' cmd/bin entry is a launcher. Aborting it can leave the
+      // real Git child holding its checkout after the launcher's close event.
+      // Prefer the installed core so process ownership/abort joins that child.
+      if (name === 'git' && /^(cmd|bin)$/i.test(basename(dir))) {
+        const runtime = arch === 'x64' ? 'mingw64' : arch === 'ia32' ? 'mingw32' : arch === 'arm64' ? 'clangarm64' : undefined;
+        const core = runtime && resolve(dir, '..', runtime, 'bin', 'git.exe');
+        if (core && isFile(core)) return core;
+      }
+      return path;
+    }
     try { accessSync(path, constants.X_OK); return path; } catch { /* Continue to the next executable. */ }
   }
   if (!windows || !['codex', 'claude'].includes(name)) return;
