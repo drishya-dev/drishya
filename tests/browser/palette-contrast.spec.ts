@@ -1,3 +1,4 @@
+import {openGitDestination} from './git-navigation.ts';
 import { openChanges } from './git-navigation.ts';
 import { execFileSync, spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
@@ -44,15 +45,16 @@ test('visible text keeps 4.5:1 on every palette on the expanded demo session', a
   for (const card of await page.locator('article.op').all().then(a => a.slice(0, 6))) { await card.focus().catch(() => undefined); await page.keyboard.press('Enter').catch(() => undefined); }
   // Expanded cards show captured source: line numbers prove the guard is looking at real material.
   await expect(page.locator('.ln-no').first()).toBeVisible();
-  for (const palette of ['jet', 'paper', 'midnight']) {
-    await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette);
+  for (const palette of ['jet', 'paper', 'midnight', 'neutral', 'chalk', 'slate', 'aubergine']) {
+    await page.evaluate(v => { document.documentElement.dataset.palette = v; document.documentElement.dataset.theme=['paper','chalk'].includes(v)?'light':'dark'; }, palette);
     await page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
     expect(await measure(page), palette).toEqual([]);
+    if(process.env.DRISHYA_PALETTE_FRAMES){mkdirSync('.local/ui-40/frames',{recursive:true});await page.screenshot({path:`.local/ui-40/frames/History-${palette}-1440.png`});}
   }
 });
 
 // SHIP-17: the four retired palettes are gone from Settings, and a saved retired preference resolves to Jet Black (Royal, a light one, to Daylight).
-test('retired saved palettes fall back to a shipped palette and Settings lists three', async ({ page }) => {
+test('retired saved palettes fall back to a shipped palette and Settings lists saved palettes and review candidates', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   // A fresh page per saved value: a repeated navigation to the same URL would not reload, and init scripts would pile up.
   for (const [stored, palette, scheme] of [['mocha', 'jet', 'dark'], ['nord', 'jet', 'dark'], ['gruvbox', 'jet', 'dark'], ['tokyo', 'paper', 'light'], ['light', 'paper', 'light'], ['midnight', 'midnight', 'dark']] as const) {
@@ -67,7 +69,7 @@ test('retired saved palettes fall back to a shipped palette and Settings lists t
   await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
   await expect(page.locator('.viewer')).toBeVisible();
   await page.getByRole('button', { name: 'Workspace settings', exact: true }).click();
-  await expect(page.locator('.theme-options .theme-option')).toHaveText([/Jet Black/, /Midnight/, /Daylight/]);
+  await expect(page.locator('.theme-options .theme-option')).toHaveText([/Jet Black/, /Midnight/, /Daylight/, /Neutral/, /Chalk/, /Smoked Slate/, /Aubergine/]);
   expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toMatch(/^Inter,/);
 });
 
@@ -76,7 +78,7 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${server.url}/?demo&experience=modern&motion=0#token=${server.token}`);
   await expect(page.locator('.viewer')).toBeVisible();
-  const palettes = ['jet', 'paper', 'midnight'];
+  const palettes = ['jet', 'paper', 'midnight', 'neutral', 'chalk', 'slate', 'aubergine'];
   const settle = () => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
   const overlays: [string, () => Promise<void>, () => Promise<void>][] = [
     ['Settings', async () => { await page.getByRole('button', { name: 'Workspace settings', exact: true }).click(); await expect(page.getByRole('dialog', { name: 'Workspace settings' })).toBeVisible(); }, () => page.keyboard.press('Escape')],
@@ -88,8 +90,9 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
   for (const [name, show, hide] of overlays) {
     await show();
     for (const palette of palettes) {
-      await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette); await settle();
+      await page.evaluate(v => { document.documentElement.dataset.palette = v; document.documentElement.dataset.theme=['paper','chalk'].includes(v)?'light':'dark'; }, palette); await settle();
       for (const line of await measure(page)) found.push(`${name} / ${palette}: ${line}`);
+      if(process.env.DRISHYA_PALETTE_FRAMES){mkdirSync('.local/ui-40/frames',{recursive:true});await page.screenshot({path:`.local/ui-40/frames/${name}-${palette}-1440.png`});}
     }
     await hide(); await settle();
   }
@@ -97,15 +100,16 @@ test('overlays keep 4.5:1 on every palette', async ({ page }) => {
 });
 
 // UI-7 slice 3: the composer and its menus, the toolbox menus, the Workspace editor, the Changes window and the header over the map.
-const ALL_PALETTES = ['jet', 'paper', 'midnight'];
+const ALL_PALETTES = ['jet', 'paper', 'midnight', 'neutral', 'chalk', 'slate', 'aubergine'];
 // Colour transitions must settle before measuring, but a spinner never finishes: wait only for finite running animations, bounded.
 const settled = (page: Page) => page.evaluate(() => Promise.race([Promise.all(document.getAnimations().filter(a => a.playState === 'running' && a.effect?.getComputedTiming().iterations !== Infinity).map(a => a.finished.catch(() => undefined))), new Promise(d => setTimeout(d, 1500))]));
 // With DRISHYA_CONTRAST_REPORT set the lowest ratios per state are printed instead of asserted, so a change can be measured before it is judged.
 const REPORT = !!process.env.DRISHYA_CONTRAST_REPORT;
 async function everyPalette(page: Page, state: string, found: string[], scope = 'body') {
   for (const palette of ALL_PALETTES) {
-    await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette); await settled(page);
+    await page.evaluate(v => { document.documentElement.dataset.palette = v; document.documentElement.dataset.theme=['paper','chalk'].includes(v)?'light':'dark'; }, palette); await settled(page);
     const lines = await measure(page, scope, REPORT ? 99 : 4.5);
+    if(process.env.DRISHYA_PALETTE_FRAMES){mkdirSync('.local/ui-40/frames',{recursive:true});await page.screenshot({path:`.local/ui-40/frames/${state.replace(/[^a-z0-9]+/gi,'-')}-${palette}-${page.viewportSize()!.width}.png`});}
     if (REPORT) console.log(`CONTRAST ${state} / ${palette}: ${lines.slice(0, 2).join(' | ') || 'nothing measured'}`);
     else for (const line of lines) found.push(`${state} / ${palette}: ${line}`);
   }
@@ -299,7 +303,7 @@ test('the header keeps 4.5:1 over the map and over passing cards on every palett
   const found: string[] = [];
   const sweep = async (scene: string) => {
     for (const palette of ALL_PALETTES) {
-      await page.evaluate(v => { document.documentElement.dataset.palette = v; }, palette); await settled(page);
+      await page.evaluate(v => { document.documentElement.dataset.palette = v; document.documentElement.dataset.theme=['paper','chalk'].includes(v)?'light':'dark'; }, palette); await settled(page);
       const lines = await headerOverPixels(page);
       if (REPORT) console.log(`CONTRAST header ${scene} / ${palette}: ${lines.slice(0, 3).join(' | ') || 'nothing measured'}`);
       else if (!lines.length) found.push(`${scene} / ${palette}: nothing measured`);
@@ -362,4 +366,30 @@ test('UI-34: Jet Black resolves azure accent, hover, pressed and focus contrast 
   expect(report.primaryPressedContrast).toBeGreaterThanOrEqual(4.5);
   expect(report.focusOnS3).toBeGreaterThanOrEqual(3);
   expect(report.focusRingOnS3).toBeGreaterThanOrEqual(3);
+});
+
+for(const width of [600,1440])test(`UI-40 Home and Git graph paint at ${width}px on every palette`,async({page})=>{
+ await page.route('**/v1/sources',route=>route.fulfill({json:{sources:[],errors:[]}}));
+ const w=await freshWorkspace();
+ const git=(...args:string[])=>execFileSync('git',args,{cwd:w.root,windowsHide:true,encoding:'utf8'}).trim();
+ const main=git('branch','--show-current');
+ git('add','.');git('commit','-m','Adjust fixture value');
+ git('checkout','-b','feature/palette');writeFileSync(join(w.root,'feature.ts'),'export const feature = true;\n');git('add','.');git('commit','-m','Palette feature');
+ git('checkout',main);writeFileSync(join(w.root,'main.ts'),'export const main = true;\n');git('add','.');git('commit','-m','Main work');git('merge','--no-ff','feature/palette','-m','Merge palette feature');
+ await openSession(page,w);await page.setViewportSize({width,height:900});
+ await page.goto(w.server.launchUrl);await expect(page.locator('.home')).toBeVisible();
+ const found:string[]=[];await everyPalette(page,'Home',found,'.home');
+ await page.goto(`${w.server.url}/?experience=modern&motion=0#/r/${w.id}`);await expect(page.locator('.viewer')).toBeVisible();
+ await openGitDestination(page);const graph=page.getByRole('dialog',{name:'Git graph',exact:true});
+ const approve=graph.getByRole('button',{name:'Approve read-only Git',exact:true});await expect(approve.or(graph.locator('.thread-graph'))).toBeVisible();if(await approve.isVisible())await approve.click();
+ await expect(graph.locator('.thread-commit')).toHaveCount(5);
+ await everyPalette(page,'Git graph',found,'[role="dialog"]');
+ for(const palette of ['neutral','chalk','slate','aubergine']){
+  await page.evaluate(v=>{document.documentElement.dataset.palette=v;document.documentElement.dataset.theme=v==='chalk'?'light':'dark';},palette);await settled(page);
+  const actual=await graph.locator('.atlas-eyebrow').first().evaluate(el=>getComputedStyle(el).color);
+  const expected=await page.evaluate(()=>{const probe=document.createElement('i');probe.style.color='var(--focus)';document.body.append(probe);const ink=getComputedStyle(probe).color;probe.remove();return ink;});
+  expect(actual,`${palette}: Git controls use the palette accent rather than read-evidence ink`).toBe(expected);
+ }
+
+ expect(found).toEqual([]);
 });

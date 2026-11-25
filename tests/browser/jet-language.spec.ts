@@ -61,7 +61,7 @@ test('Jet Black sets its words in the website\'s cream family at 4.5:1 or better
   await palette(page, 'midnight');
   expect(await tokens(page)).toMatchObject({ '--t1': '#f4f8ff', '--t2': '#cbdcf6', '--t3': '#a0b4d3', '--t4': '#8c9ec0' });
   await palette(page, 'paper');
-  expect(await tokens(page)).toMatchObject({ '--t1': '#14202a', '--t2': '#3c4a55', '--t3': '#55636e', '--t4': '#59656f' });
+  expect(await tokens(page)).toMatchObject({ '--t1': '#0d151d', '--t2': '#303b43', '--t3': '#4b565e', '--t4': '#59656f' });
 });
 
 for (const width of [1440, 600]) {

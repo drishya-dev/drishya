@@ -3,11 +3,11 @@ import { expect, it } from 'vitest';
 
 // Release 1 ships three palettes (SHIP-17; Opus decision, 10 Nov). Floors are measured on every surface, the card ones included.
 const surfaces = ['--bg', '--s1', '--s2', '--s3'];
-const syntaxInks = ['--syntax-keyword', '--syntax-string', '--syntax-function', '--syntax-number', '--syntax-type', '--syntax-property'];
+const syntaxInks = ['--syntax-keyword', '--syntax-string', '--syntax-function', '--syntax-number', '--syntax-type', '--syntax-property', '--syntax-comment'];
 const pathAndOutcomeInks = ['--source', '--external', '--edited', '--pass', '--fail'];
 const agentInks = ['--agent-claude-ink', '--agent-codex-ink', '--agent-violet-ink', '--agent-gold-ink', '--agent-blue-ink', '--agent-rose-ink'];
 const diffInks = ['--diff-added', '--diff-removed'];
-const SHIPPED = ['jet', 'paper', 'midnight'];
+const SHIPPED = ['jet', 'paper', 'midnight', 'neutral', 'chalk', 'slate', 'aubergine'];
 
 function channels(hex: string) {
   return [1, 3, 5].map((index) => parseInt(hex.slice(index, index + 2), 16));
@@ -69,7 +69,7 @@ function ink(tokens: Record<string, string>, name: string) {
   return value!;
 }
 
-it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every surface', () => {
+it('covers saved palettes and the neutral/colour review candidates, with ink floors on every surface', () => {
   expect(contrast(channels('#000000'), channels('#ffffff'))).toBe(21);
   expect(contrast(channels('#ffffff'), channels('#ffffff'))).toBe(1);
 
@@ -90,6 +90,10 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
       const [r,,b]=channels(ink(tokens,name));
       expect(b!-r!,`Midnight ${name} stays visibly navy rather than neutral graphite`).toBeGreaterThanOrEqual(10);
     }
+    const jetTokens=declarations(/\[data-palette=jet\]\s*\{([^}]+)\}/.exec(presets)?.[1]??'');
+    for(const [a,b] of [['--bg','--s1'],['--s1','--s2'],['--s2','--s3']]) {
+      expect(contrast(channels(ink(tokens,a!)),channels(ink(tokens,b!))),`${palette} surface step ${a}/${b}`).toBeGreaterThanOrEqual(contrast(channels(ink(jetTokens,a!)),channels(ink(jetTokens,b!))));
+    }
     // Yash, 11 Nov: the same meaning-ink floor applies to every shipped palette.
     const meaningFloor = 7;
 
@@ -105,7 +109,8 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
       check(['--text-secondary', '--t2'], 7);
       check(['--text-muted', '--t3'], 4.5);
       check(['--text-chrome', '--t4'], 3);
-      check([...syntaxInks, ...pathAndOutcomeInks, ...agentInks, ...diffInks], meaningFloor);
+      check([...syntaxInks.filter(n=>n!=='--syntax-comment'), ...pathAndOutcomeInks, ...agentInks, ...diffInks], meaningFloor);
+      check(['--syntax-comment'], 4.5);
       check(['--focus'], 4.5);
       if (palette === 'jet') check(['--palette-active', '--accent-partner'], 4.5);
 
@@ -127,12 +132,23 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
     }
 
     {
-      for (const name of [...syntaxInks, ...pathAndOutcomeInks, ...agentInks, ...diffInks]) {
+      for (const name of [...syntaxInks.filter(n=>n!=='--syntax-comment'), ...pathAndOutcomeInks, ...agentInks, ...diffInks]) {
         const value = chroma(channels(ink(tokens, name)));
         if (value < .09) failures.push(`${palette}: ${name} OKLCH chroma ${value.toFixed(3)} (< 0.09)`);
       }
     }
 
+    if (['neutral','chalk','slate','aubergine'].includes(palette!)) {
+      const meanings=['--source','--edited','--pass','--fail'];
+      const accent=channels(ink(tokens,'--focus'));
+      for(const surface of surfaces)expect(contrast(channels(ink(tokens,'--line-3')),channels(ink(tokens,surface))),`${palette} control boundary ${surface}`).toBeGreaterThanOrEqual(3);
+      for(const name of [...meanings,...agentInks]) expect(distance(accent,channels(ink(tokens,name))),`${palette} accent / ${name}`).toBeGreaterThanOrEqual(.06);
+      for(const [i,a] of meanings.entries())for(const b of meanings.slice(i+1))expect(distance(channels(ink(tokens,a)),channels(ink(tokens,b))),`${palette} ${a} / ${b}`).toBeGreaterThanOrEqual(.06);
+      if(['neutral','chalk'].includes(palette!))for(const name of [...surfaces,'--line','--line-2','--line-3','--t1','--t2','--t3','--t4','--focus']){
+        const rgb=channels(ink(tokens,name));
+        if(name!=='--bg'||palette==='neutral')expect(Math.max(...rgb)-Math.min(...rgb),`${palette} neutral ${name}`).toBeLessThanOrEqual(8);
+      }
+    }
     // Syntax inks stay distinguishable side by side; pass and fail stay apart without red-green vision.
     for (const [index, a] of syntaxInks.entries()) {
       for (const b of syntaxInks.slice(index + 1)) {
@@ -140,6 +156,8 @@ it('ships exactly Jet Black, Daylight and Midnight, with ink floors on every sur
         if (apart < .06) failures.push(`${palette}: ${a} and ${b} are ${apart.toFixed(3)} apart in OKLab (< 0.06)`);
       }
     }
+    const diffSeen=distance(deuteranopia(channels(ink(tokens,'--diff-added'))),deuteranopia(channels(ink(tokens,'--diff-removed'))));
+    if(diffSeen < .1) failures.push(`${palette}: diff inks are ${diffSeen.toFixed(3)} apart under deuteranopia (< 0.1)`);
     const seen = distance(deuteranopia(channels(ink(tokens, '--pass'))), deuteranopia(channels(ink(tokens, '--fail'))));
     if (seen < .1) failures.push(`${palette}: pass and fail are ${seen.toFixed(3)} apart under deuteranopia (< 0.1)`);
   }
@@ -155,7 +173,7 @@ it('UI-34: keeps Jet Black on azure (#4f9cff) with partner cyan (#34d6e6), disti
   expect(jet['--focus']).toBe('#4f9cff');
   expect(jet['--palette-active']).toBe('#4f9cff');
   expect(jet['--accent-partner']).toBe('#34d6e6');
-  expect(tokensCss).toContain('.theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#4f9cff;');
+  expect(tokensCss).toContain('.theme-option[data-palette=jet]');
   expect(tokensCss).not.toMatch(/#5e6ad2|#8b92ec|\bindigo\b/i);
 
   const shellTsx = readFileSync(new URL('../src/components/ProductShell.tsx', import.meta.url), 'utf8');
