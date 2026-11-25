@@ -80,9 +80,14 @@ for(const width of [600,1440])test(`UI-40 previews use product tokens and switch
  await page.evaluate(()=>Promise.all(document.getAnimations().filter(a=>a.effect?.getComputedTiming().iterations!==Infinity).map(a=>a.finished.catch(()=>undefined))));
  const before=await dialog.boundingBox();
  for(const [name,palette] of [['Neutral','neutral'],['Chalk','chalk'],['Smoked Slate','slate'],['Aubergine','aubergine']] as const){
-  const option=dialog.getByRole('button',{name,exact:true});await option.focus();await option.press('Enter');
+  const option=dialog.getByRole('button',{name,exact:true});
+  const unselectedBorder=await option.evaluate(el=>getComputedStyle(el).borderTopColor);
+  await option.focus();await option.press('Enter');
   await expect(page.locator('html')).toHaveAttribute('data-palette',palette);
   await expect(option).toHaveAttribute('aria-pressed','true');
+  const appearance=dialog.getByRole('tab',{name:'Appearance',exact:true});
+  await appearance.focus();await expect(appearance).toBeFocused();
+  await expect.poll(()=>option.evaluate(el=>getComputedStyle(el).borderTopColor)).not.toBe(unselectedBorder);
   const paint=await option.evaluate(el=>({preview:getComputedStyle(el.querySelector('i')!).backgroundColor,root:getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),rect:el.getBoundingClientRect().toJSON()}));
   const actual=await page.evaluate(()=>{const c=document.createElement('canvas').getContext('2d')!;c.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--bg');c.fillRect(0,0,1,1);return [...c.getImageData(0,0,1,1).data].slice(0,3).join(', ');});
   expect(paint.preview).toBe(`rgb(${actual})`);

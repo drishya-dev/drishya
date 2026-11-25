@@ -63,5 +63,6 @@
 }
 
 /* Palette cards carry their own surfaces and ink, including notes on a light card inside a dark Settings window. */
-:root[data-ui-version=modern][data-experience=classic] .settings-dialog .theme-options .theme-option[data-palette] { background:var(--bg); color:var(--t1); border-color:var(--line-3); }
+:root[data-ui-version=modern][data-experience=classic] .settings-dialog .theme-options .theme-option[data-palette] { background:var(--bg); color:var(--t1); }
+:root[data-ui-version=modern][data-experience=classic] .settings-dialog .theme-options .theme-option[data-palette][aria-pressed=false] { border-color:var(--line-3); }
 :root[data-ui-version=modern][data-experience=classic] .settings-dialog .theme-options .theme-option[data-palette] small { color:var(--t3); }

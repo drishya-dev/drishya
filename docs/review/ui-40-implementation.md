@@ -59,3 +59,17 @@ Acceptance remaining: **Yash's actual palette selection and independent maintain
 The strengthened verifier also required the actual file evidence/source reader at 600 px, rather than only an open Files pane. The same genuine Claude `rec_14f29d5f` (28,184,536 bytes / 775 operations / 109 files) and Codex `rec_674a4957` (4,624,942 bytes / 657 operations / 20 files) passed all seven palettes: **14 painted measurements, zero contrast failures or unavailable journeys**. Together with the separate 14 wide-reader checks above, source reading is explicitly verified at both supported widths. These repeat part of the earlier survey and are not additional unique sessions. Real images and detailed count-only results remain ignored in `.local/ui-40/`.
 
 Next action: Yash reviews the committed synthetic comparison gallery and explicitly selects palettes; the maintainer reviews the diff and unresolved full-gate evidence before merge. No actual selection has been received, and no populated genuine Claude Git graph is claimed.
+
+## Current-main and selected-marker follow-up, 25 November 2026
+
+Integrated main `4d87d40d`. The earlier Ubuntu shard failed the 600 px wait-card swap three times with the same 0.0136626 layout shift. Main's `3d35036d` branch-facts correction is included. The exact wait-card layout and reduced-motion checks passed at both widths in the rebuilt draft. The earlier hosted failure remains part of the evidence.
+
+Independent Edge review found that a preview's base border overrode the selected border after focus moved away. The new assertions failed at 600 and 1440 px. The preview uses its unselected border only for unselected palettes, so the existing active accent remains visible. The correction preserves preview tokens and geometry. The rebuilt draft passed both typechecks, five palette/preference/paint units (one worker) and 18 focused Edge browser tests (one worker, zero skips or retries), including colour control floors, map paint, the exact wait-card suite, and selected paint with keyboard focus elsewhere.
+
+Fresh genuine scratch verification at both widths added these observations:
+
+- The seven-palette survey recorded 182 checks with no contrast failures. Claude `rec_50c3031b` had 7,879,647 bytes, 278 operations and ten files. Codex `rec_fa23598c` had 1,083,241 bytes, 68 operations and four files.
+- A separate source-reader run supplied the wide Files cases and verified actual source at both widths with no contrast failures in 28 checks. Claude `rec_14f29d5f` had 28,184,536 bytes, 775 operations and 109 files. The same Codex recording was checked.
+- A separate populated Git graph run used Claude `rec_b4eb42b6` (108,711 bytes, 50 rendered commits at each width) and the same Codex recording (20 at each width). With reduced motion enabled, 28 palette checks had no contrast failures. Real Settings in those same two recording contexts also showed the selected Chalk border with focus elsewhere at both widths.
+
+These are repeated surface measurements in named recording contexts. The full local gate remains unresolved and no palette choice from Yash is recorded. The PR remains draft.
