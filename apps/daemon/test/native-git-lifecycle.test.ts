@@ -1,11 +1,13 @@
 import {execFile,execFileSync} from 'node:child_process';
+import {once} from 'node:events';
 import {mkdtempSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
+import {createInterface} from 'node:readline';
 import {expect,it} from 'vitest';
 import {executable} from '../src/native-executable.ts';
 
-it('an aborted resolved Git process releases its repository when close is delivered',async()=>{
+it('reports native Git exit when the running process is aborted',async()=>{
   const bin=executable('git');expect(bin).toBeDefined();
   const dir=mkdtempSync(join(tmpdir(),'drishya-native-git-close-'));
   if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('Unsafe native Git fixture');
@@ -13,19 +15,26 @@ it('an aborted resolved Git process releases its repository when close is delive
     execFileSync(bin!,['init','-q'],{cwd:dir,windowsHide:true});
     const controller=new AbortController();
     let failure:Error|null|undefined;
-    const child=execFile(bin!,['hash-object','--stdin'],{cwd:dir,signal:controller.signal,windowsHide:true},error=>{failure=error;});
+    const child=execFile(bin!,['cat-file','--batch-check'],{cwd:dir,signal:controller.signal,timeout:3000,windowsHide:true},error=>{failure=error;});
     const closed=new Promise<void>(resolve=>child.once('close',()=>resolve()));
+    const lines=createInterface({input:child.stdout!});
     try{
       await new Promise<void>((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject);});
-      // Hold stdin open through startup so abort exercises the Git process.
-      await new Promise<void>(resolve=>setTimeout(resolve,35));
-      controller.abort();await closed;
+      // Wait for Git to read from the repository while keeping the process open for the abort.
+      const reply=once(lines,'line').then(([line])=>line as string);
+      child.stdin!.write('HEAD\n');
+      expect(await Promise.race([reply,closed])).toBe('HEAD missing');
+      controller.abort();
+      await closed;
       expect(failure).toMatchObject({code:'ABORT_ERR'});
-      expect(()=>rmSync(dir,{recursive:true,force:true})).not.toThrow();
+      expect(child.signalCode).toBe('SIGTERM');
     }finally{
-      child.stdin?.end();controller.abort();await closed;
+      lines.close();
+      controller.abort();
+      await closed;
     }
   }finally{
-    rmSync(dir,{recursive:true,force:true});
+    // Windows may hold a transient filesystem handle after Git has exited.
+    rmSync(dir,{recursive:true,force:true,maxRetries:5,retryDelay:100});
   }
 });
