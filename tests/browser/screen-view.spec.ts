@@ -4,7 +4,7 @@ import {resolve,join,sep} from 'node:path';
 import {crc32,deflateSync} from 'node:zlib';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 // SCREEN-1: a synthetic computer-use run with known coordinates. The demo is a regression guard only; real sessions are checked with check:real.
 let dir:string,app:App,server:RunningServer,id:string;

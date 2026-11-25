@@ -3,7 +3,7 @@ import {join,resolve,sep} from 'node:path';
 import {tmpdir} from 'node:os';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 for(const width of [600,1440])test(`remembered checkout and connection acknowledgement at ${width}`,async({page})=>{
   const dir=mkdtempSync(join(tmpdir(),'drishya-connection-browser-')),root=join(dir,'repository');mkdirSync(root);

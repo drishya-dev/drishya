@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 import {recordedFileRoots} from '../../apps/daemon/src/file-roots.ts';
 
 let dir:string,id:string,mixedId:string,other:string,mainAlias:string,app:App,server:RunningServer;

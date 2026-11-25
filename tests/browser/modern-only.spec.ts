@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-modern-only-')); app = new App(dir); server = await startServer({ app, port: 0, token: 'synthetic-modern-only' }); });

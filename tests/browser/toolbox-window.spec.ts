@@ -5,7 +5,7 @@ import {expect,test,type Locator,type Page} from '@playwright/test';
 import type {Observation} from '../../packages/contracts/src/index.ts';
 import {PRIVACY_POLICY_VERSION} from '../../packages/privacy/src/index.ts';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 // Synthetic dock regression guards. Genuine acceptance runs in a scratch home.
 let dir:string,app:App,server:RunningServer;

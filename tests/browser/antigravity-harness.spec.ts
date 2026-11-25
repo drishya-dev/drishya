@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 import { createAntigravityAdapter } from '../../packages/adapter-antigravity/src/index.ts';
 import { HarnessController } from '../../apps/daemon/src/controller.ts';
 import { WorkspaceAccess } from '../../apps/daemon/src/workspace.ts';

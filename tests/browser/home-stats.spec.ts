@@ -4,7 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import type { RecordingSummary } from '../../packages/contracts/src/index.ts';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 let dir: string, app: App, server: RunningServer;
 test.beforeAll(async () => { dir = mkdtempSync(join(tmpdir(), 'drishya-home-stats-')); app = new App(dir); server = await startServer({ app, port: 0 }); });

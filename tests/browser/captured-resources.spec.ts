@@ -4,7 +4,7 @@ import {join,resolve,sep} from 'node:path';
 import {expect,test} from './legacy-test.ts';
 import {pointAtHistory} from './history-gestures.ts';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{dir=mkdtempSync(join(tmpdir(),'drishya-resource-'));app=new App(dir);server=await startServer({app,port:0,token:'synthetic-resource'});});
 test.afterAll(async()=>{await server.close();await app.close();if(!resolve(dir).startsWith(resolve(tmpdir())+sep))throw Error('unsafe path');rmSync(dir,{recursive:true,force:true});});

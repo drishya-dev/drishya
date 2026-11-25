@@ -4,7 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { buildGraph } from '../../packages/indexer/src/index.ts';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 let dir: string, root: string, app: App, server: RunningServer, id: string, own = 0;
 test.beforeAll(async () => {

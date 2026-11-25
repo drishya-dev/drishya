@@ -4,7 +4,7 @@ import {resolve,join,sep} from 'node:path';
 import {deflateSync} from 'node:zlib';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 // Invented raster, large enough that actual-size reading must scroll in both axes.
 function png(width:number,height:number){

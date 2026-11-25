@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from './legacy-test.ts';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer } from '../../apps/daemon/src/server.ts';
+import { startServer } from './browser-server.ts';
 
 test('paged history loads earlier work, preserves an anchor during capture, and navigates global search and replay', async ({ page }) => {
   const dir = mkdtempSync(join(tmpdir(), 'drishya-b4-history-'));

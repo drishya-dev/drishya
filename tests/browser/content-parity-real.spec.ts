@@ -2,7 +2,7 @@ import {readFileSync,mkdirSync,writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {test,expect,type Locator,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer} from '../../apps/daemon/src/server.ts';
+import {startServer} from './browser-server.ts';
 import {askQuestions} from '../../apps/ui/src/lib/ask-question.ts';
 import {planThreads} from '../../packages/scene/src/plan-threads.ts';
 import {compose} from '../../packages/scene/src/index.ts';

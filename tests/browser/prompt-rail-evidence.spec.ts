@@ -1,5 +1,5 @@
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
-import {test,expect} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {test,expect} from '@playwright/test';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from './browser-server.ts';
 import {build} from 'esbuild';
 let dir:string,id:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{

@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,app:App,server:RunningServer;const ids=new Map<number,string>();
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-inventories-'));app=new App(join(dir,'store'));

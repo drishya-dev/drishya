@@ -3,7 +3,7 @@ import {tmpdir} from 'node:os';
 import {join,resolve,sep,basename} from 'node:path';
 import {test,expect,type Page,type Locator} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 
 const path='src/backend/adapters/very-long-command-registration-and-configuration-handler.spec.ts';
 const extraPaths=['configuration.directory/README-WITHOUT-EXTENSION-AND-A-VERY-LONG-NAME','.project-settings-for-an-extended-runtime'];

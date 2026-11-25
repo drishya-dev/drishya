@@ -1,7 +1,7 @@
 import {resolve} from 'node:path';
 import {expect,test} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 const store=process.env.DRISHYA_REVIEW_STORE,ids=(process.env.DRISHYA_REVIEW_IDS??'').split(',').filter(Boolean);
 let app:App,server:RunningServer;
 test.skip(!store||!ids.length,'Opt in to an isolated copy of an already-redacted local store.');

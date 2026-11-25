@@ -4,7 +4,7 @@ import { join, resolve, sep } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 import { createAntigravityAdapter } from '../../packages/adapter-antigravity/src/index.ts';
 
 let root: string, app: App, server: RunningServer, parent: string, spawn: string;

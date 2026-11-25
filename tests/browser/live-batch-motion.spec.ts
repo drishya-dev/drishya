@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 for (const width of [600, 1440]) test(`batched live arrivals and outcomes survive same-step reading at ${width}`, async ({ page }) => {
   const dir = mkdtempSync(join(tmpdir(), 'drishya-live6-'));

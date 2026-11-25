@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {resolve,join,sep} from 'node:path';
 import {test,expect,type Page} from '@playwright/test';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,app:App,server:RunningServer,id:string,tip:string;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-git-type-'));const root=join(dir,'repo');mkdirSync(root);

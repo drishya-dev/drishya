@@ -1,7 +1,7 @@
 import { readUncommitted } from './git-navigation.ts';
 import { attachBrowserDiagnostics, installBrowserDiagnostics } from './ci-diagnostics.ts';
 import {mkdtempSync,mkdirSync,writeFileSync,rmSync} from 'node:fs';import {tmpdir} from 'node:os';import {join,resolve,sep} from 'node:path';
-import {test,expect,type Page} from '@playwright/test';import {expandCard} from './history-gestures.ts';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {test,expect,type Page} from '@playwright/test';import {expandCard} from './history-gestures.ts';import {App} from '../../apps/daemon/src/app.ts';import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,app:App,server:RunningServer;const ids=new Map<number,string>();
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-collections-'));app=new App(join(dir,'store'));

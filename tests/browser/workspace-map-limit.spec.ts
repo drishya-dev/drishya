@@ -4,7 +4,7 @@ import {join,resolve,sep} from 'node:path';
 import {test,expect} from '@playwright/test';
 import {buildGraph} from '../../packages/indexer/src/index.ts';
 import {App} from '../../apps/daemon/src/app.ts';
-import {startServer,type RunningServer} from '../../apps/daemon/src/server.ts';
+import {startServer,type RunningServer} from './browser-server.ts';
 let dir:string,id:string,app:App,server:RunningServer;
 test.beforeAll(async()=>{
  dir=mkdtempSync(join(tmpdir(),'drishya-map-limit-'));const root=join(dir,'repo');mkdirSync(root);writeFileSync(join(root,'aaa.txt'),'First indexed file');writeFileSync(join(root,'README.md'),'# Current README\n\nThe file exists outside the bounded graph.');

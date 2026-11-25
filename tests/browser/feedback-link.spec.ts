@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { App } from '../../apps/daemon/src/app.ts';
-import { startServer, type RunningServer } from '../../apps/daemon/src/server.ts';
+import { startServer, type RunningServer } from './browser-server.ts';
 
 // FEEDBACK-1: a plain link to GitHub's issue chooser, on Home and in Settings. Drishya sends nothing itself.
 const CHOOSER = 'https://github.com/drishya-dev/drishya/issues/new/choose';
