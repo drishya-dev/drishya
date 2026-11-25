@@ -1,6 +1,6 @@
 # UI-40 implementation and review
 
-Status: implementation and review materials prepared; **awaiting Yash approval and independent review**. Issue #552. Acceptance remains open.
+Status: **all four palettes approved by Yash on 25 November 2026**; final candidate-label cleanup and merge verification recorded below. Issue #552. Earlier pending-selection statements are historical; the original full-batch limitations remain recorded.
 
 The four review candidates extend the existing semantic token owner: Neutral and Chalk (neutral dark/off-white pair), Smoked Slate and Aubergine. Jet Black remains the default. Saved dark/light/midnight/system and retired-theme fallbacks stay compatible. Paper has an off-white ground and stronger layered surfaces; Midnight's ground is deepened to meet the same separation gate. No dimensions or capture/schema/privacy behavior change.
 
@@ -72,4 +72,10 @@ Fresh genuine scratch verification at both widths added these observations:
 - A separate source-reader run supplied the wide Files cases and verified actual source at both widths with no contrast failures in 28 checks. Claude `rec_14f29d5f` had 28,184,536 bytes, 775 operations and 109 files. The same Codex recording was checked.
 - A separate populated Git graph run used Claude `rec_b4eb42b6` (108,711 bytes, 50 rendered commits at each width) and the same Codex recording (20 at each width). With reduced motion enabled, 28 palette checks had no contrast failures. Real Settings in those same two recording contexts also showed the selected Chalk border with focus elsewhere at both widths.
 
-These are repeated surface measurements in named recording contexts. The full local gate remains unresolved and no palette choice from Yash is recorded. The PR remains draft.
+These are repeated surface measurements in named recording contexts. At this follow-up's recording time, the full local gate remained unresolved and no palette choice from Yash was recorded. The PR remained draft.
+
+## Maintainer approval and merge preparation, 25 November 2026
+
+Yash approved all four palettes (`neutral`, `chalk`, `slate`, `aubergine`) in his GitHub approval on `293b035d`. Jet Black remains default. His review records fresh Windows typecheck/build, 284 passing unit files (1,908 tests passed, one skipped, four workers), 126 focused browser passes (two workers), package verification with security 700 passed/five skipped, and all 14 hosted checks passing. These are maintainer-reported results on that head, not a replacement for the earlier frozen batch or a claim that its failures never happened.
+
+The approval supersedes the historical selection-pending statements above. Settings descriptions now omit the candidate labels, as requested by the review. Palette IDs, token values, preference migration, contrast thresholds and layout are unchanged. The final pre-merge follow-up is checked separately and recorded in the PR; other tasks and physical-platform acceptance remain separate.

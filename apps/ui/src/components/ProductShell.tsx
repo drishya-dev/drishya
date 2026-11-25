@@ -99,10 +99,10 @@ const MODERN_THEMES = [
   ['dark', 'Jet Black', 'Neutral graphite · azure'],
   ['midnight', 'Midnight', 'Midnight black · electric blue'],
   ['light', 'Daylight', 'Warm off-white · sky blue'],
-  ['neutral', 'Neutral', 'Neutral dark · review candidate'],
-  ['chalk', 'Chalk', 'Neutral off-white · review candidate'],
-  ['slate', 'Smoked Slate', 'Cool slate · warm mineral accent · candidate'],
-  ['aubergine', 'Aubergine', 'Violet charcoal · bone accent · candidate'],
+  ['neutral', 'Neutral', 'Neutral dark'],
+  ['chalk', 'Chalk', 'Neutral off-white'],
+  ['slate', 'Smoked Slate', 'Cool slate · warm mineral accent'],
+  ['aubergine', 'Aubergine', 'Violet charcoal · bone accent'],
 ] as const;
 
 function Settings() {
