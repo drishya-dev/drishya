@@ -83,8 +83,10 @@ function WorkspaceViewer() {
   const historyPage = useApp((s) => s.historyPage);
   const loadHistoryWindow = useApp((s) => s.loadHistoryWindow);
   const graph = useApp((s) => s.graph);
+  const workspaceRoot = useApp((s) => s.recording?.workspaceRoot);
   const mapVisible = useApp((s) => s.mapVisible);
   const recordingId = useApp((s) => s.recordingId);
+  const readingId = useApp((s) => s.checkoutId ?? s.recordingId);
   const source = useApp((s) => s.source);
   const historyMode = useApp(s=>s.mode==='history');
   const step = useApp((s) => s.step);
@@ -162,14 +164,15 @@ function WorkspaceViewer() {
   }, [scene, selectedOp, readingPassageId]);
 
   useEffect(() => {
-    if (!mapVisible || !projection || graph || !source || !recordingId) return;
+    if (!mapVisible || !projection || graph || !source || !recordingId || !readingId) return;
     let active = true;
     setMapError(undefined);
-    source.graph(recordingId).then((loaded) => {
-      if (active && useApp.getState().source === source && useApp.getState().recordingId === recordingId && useApp.getState().mapVisible) useApp.setState({ graph: loaded });
+    source.graph(readingId).then((loaded) => {
+      const state = useApp.getState();
+      if (active && !state.graph && state.source === source && state.recordingId === recordingId && (state.checkoutId ?? recordingId) === readingId && state.recording?.workspaceRoot === workspaceRoot && state.mapVisible) useApp.setState({ graph: loaded });
     }).catch(error => { if (active && useApp.getState().source === source && useApp.getState().recordingId === recordingId) setMapError(error.message ?? 'Map unavailable'); });
     return () => { active = false; };
-  }, [mapVisible, !!projection, graph, source, recordingId, mapRetry]);
+  }, [mapVisible, !!projection, graph, source, recordingId, readingId, workspaceRoot, mapRetry]);
 
   useEffect(() => {
     if (!mapVisible || source?.kind !== 'daemon' || !recordingId || graph?.temporal !== 'current') return;

@@ -87,6 +87,7 @@ export const useReadingWorkspace=()=>useContext(ReadingContext);
 export function SessionWorkspaceProvider({ children }: { children: ReactNode }) {
   const id = useApp(s => s.recordingId);
   const source = useApp(s => s.source);
+  const recordedRoot = useApp(s => s.recording?.id === s.recordingId ? s.recording?.workspaceRoot : undefined);
   const checkoutId=useApp(s=>s.checkoutId);
   const developerWorkspace=useApp(s=>s.developerWorkspace);
   const [readingWorkspace,setReadingWorkspace]=useState<WorkspaceStatus&{checkoutId:string}>();
@@ -107,33 +108,46 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
   const [acknowledged,acknowledge]=useState(false);
   const [workspace, setWorkspace] = useState<WorkspaceStatus>();
   const [controller, setController] = useState<ControllerStatus>();
-  const [error, setError] = useState<string>();
+  const [workspaceError, setWorkspaceError] = useState<string>();
+  const [controllerError, setControllerError] = useState<string>();
   const [submitting, setSubmitting] = useState(false);
   const currentController = useRef(controller); currentController.current = controller;
   const revision = useRef(0);
+  const workspaceRevision = useRef(0);
   const wake = useRef<(() => void) | undefined>(undefined);
   const eligible = source?.kind === 'daemon' && !!id && !id.includes('+');
-  const refresh = async () => {
+  const refreshWorkspace = async () => {
+    if (!eligible) return;
+    const request = ++workspaceRevision.current;
+    const current = () => useApp.getState().source === source && useApp.getState().recordingId === id && request === workspaceRevision.current;
+    try {
+      const value = await workspaceApi.status(id!);
+      if (current()) { setWorkspace(value); setWorkspaceError(undefined); }
+    } catch (error) {
+      if (current()) { acknowledge(false); setWorkspaceError(`Workspace: ${(error as Error).message}`); }
+    }
+  };
+  const refreshController = async () => {
     if (!eligible) return;
     const request = ++revision.current;
-    const current=()=>useApp.getState().source===source&&useApp.getState().recordingId===id&&request===revision.current;
-    // Reading access must not depend on an installed or responsive native CLI.
-    const results=await Promise.allSettled([
-      workspaceApi.status(id!).then(value=>{if(current())setWorkspace(value);}),
-      workspaceApi.controller(id!).then(value=>{if(current())setController(value);}),
-    ]);
-    if(!current())return;
-    const errors=results.flatMap((result,index)=>result.status==='rejected'?[`${index===0?'Workspace':'Native runtime'}: ${result.reason.message}`]:[]);
-    if(errors.length)acknowledge(false);
-    setError(errors.join(' · ')||undefined);
+    const current = () => useApp.getState().source === source && useApp.getState().recordingId === id && request === revision.current;
+    try {
+      const value = await workspaceApi.controller(id!);
+      if (current()) { setController(value); setControllerError(undefined); }
+    } catch (error) {
+      if (current()) { acknowledge(false); setControllerError(`Native runtime: ${(error as Error).message}`); }
+    }
+  };
+  const refresh = async () => {
+    await Promise.all([refreshWorkspace(), refreshController()]);
   };
   useEffect(() => {
-    setWorkspace(undefined); setController(undefined); setError(undefined); setSubmitting(false); acknowledge(false);
+    setWorkspace(undefined); setController(undefined); setWorkspaceError(undefined); setControllerError(undefined); setSubmitting(false); acknowledge(false);
     let active = true; let busy = false; let timer: ReturnType<typeof setTimeout>;
     const load = async () => {
       if (!active || busy) return;
       busy = true;
-      try { if (document.visibilityState !== 'hidden') await refresh(); } catch (e) { if (active) setError((e as Error).message); } finally {
+      try { if (document.visibilityState !== 'hidden') await refresh(); } finally {
         busy = false;
         const running = ['connecting', 'running', 'approval'].includes(currentController.current?.state ?? '');
         if (active) timer = setTimeout(() => void load(), running ? 500 : 1800);
@@ -141,25 +155,39 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     };
     wake.current = () => { clearTimeout(timer); void load(); };
     void load();
-    return () => { active = false; clearTimeout(timer); revision.current++; wake.current = undefined; };
+    return () => { active = false; clearTimeout(timer); revision.current++; workspaceRevision.current++; wake.current = undefined; };
   }, [id, source]);
+  useEffect(() => {
+    if (!eligible || !recordedRoot) return;
+    // Metadata can arrive while the native readiness probe is still pending.
+    if (workspace?.root !== recordedRoot) void refreshWorkspace();
+    const { graph } = useApp.getState();
+    if (!checkoutId && graph?.temporal === 'recording-files-only' && graph.approvalNeeded?.root !== recordedRoot) {
+      useApp.setState({ graph: undefined });
+    }
+  }, [id, source, eligible, recordedRoot, checkoutId]);
   // Consent belongs to this selected-session connection, never to a saved checkout or turn.
   useEffect(()=>{if(connection!=='connected'||screen!=='viewer'||controller?.state==='failed'||controller?.available===false||workspace?.approved===false)acknowledge(false);},[connection,screen,controller?.state,controller?.available,workspace?.approved]);
   useEffect(()=>{
-    if(!eligible||!workspace?.approved||checkoutId)return;
-    let active=true;
-    void source!.graph(id!).then(graph=>{if(active&&useApp.getState().source===source&&useApp.getState().recordingId===id)useApp.setState({graph});}).catch(()=>{});
-    return()=>{active=false;};
-  },[id,source,workspace?.approved,checkoutId]);
+    if (!eligible || !workspace?.approved || !recordedRoot || workspace.root !== recordedRoot || checkoutId) return;
+    let active = true;
+    void source!.graph(id!).then(graph => {
+      const state = useApp.getState();
+      if (active && state.source === source && state.recordingId === id && state.recording?.workspaceRoot === recordedRoot && !state.checkoutId) useApp.setState({ graph });
+    }).catch(() => {});
+    return () => { active = false; };
+  }, [id, source, workspace?.approved, workspace?.root, recordedRoot, checkoutId]);
   useEffect(() => { if (['connecting', 'running', 'approval'].includes(controller?.state ?? '')) wake.current?.(); }, [controller?.state]);
   const approve = async (remember=false) => {
     if (!eligible) return;
     ++revision.current;
+    ++workspaceRevision.current;
     const w = await workspaceApi.approve(id!,remember);
     const graph = await source!.graph(id!);
     if (useApp.getState().source !== source || useApp.getState().recordingId !== id) return;
     ++revision.current;
-    setWorkspace(w); if(!useApp.getState().checkoutId)useApp.setState({ graph });
+    ++workspaceRevision.current;
+    setWorkspace(w); setWorkspaceError(undefined); if(!useApp.getState().checkoutId)useApp.setState({ graph });
   };
   const inspect = async () => {
     if (!eligible) return;
@@ -181,6 +209,7 @@ export function SessionWorkspaceProvider({ children }: { children: ReactNode }) 
     const graph=await source!.graph(target);
     if(useApp.getState().checkoutId===target){setReadingWorkspace({...value,checkoutId:target});useApp.setState({graph});}
   };
+  const error = [workspaceError, controllerError].filter(Boolean).join(' · ') || undefined;
   return <SessionContext.Provider value={{ workspace, controller, submitting, submit, error, refresh, approve, inspect, acknowledged, acknowledge }}><ReadingContext.Provider value={{workspace:checkoutId?readingWorkspace?.checkoutId===checkoutId?readingWorkspace:undefined:workspace,approve:approveReading}}><ProseFilesProvider approved={!!(checkoutId?readingWorkspace?.checkoutId===checkoutId?readingWorkspace:undefined:workspace)?.approved}>{children}</ProseFilesProvider></ReadingContext.Provider></SessionContext.Provider>;
 }
 
@@ -303,9 +332,12 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
   useEffect(() => {
     if (graph || !source || !id) return;
     let active = true; setError(undefined);
-    void source.graph(readingId!).then(g => { if (active && useApp.getState().recordingId === id && (useApp.getState().checkoutId??id)===readingId) useApp.setState({ graph: g }); }).catch(e => { if (active) setError(e.message); });
+    void source.graph(readingId!).then(g => {
+      const state = useApp.getState();
+      if (active && !state.graph && state.source === source && state.recordingId === id && (state.checkoutId ?? id) === readingId && state.recording?.workspaceRoot === sessionRoot) useApp.setState({ graph: g });
+    }).catch(e => { if (active) setError(e.message); });
     return () => { active = false; };
-  }, [source, id, readingId, graph, graphRetry]);
+  }, [source, id, readingId, sessionRoot, graph, graphRetry]);
   const candidatePaths = useMemo(() => {
     const paths=[...(graph?.nodes.map(n=>n.path)??[]),...(files?.map(f=>f.path)??[])].filter(p=>!(graph?.temporal==='current'&&p.startsWith('.local/'))&&!p.startsWith('/')&&!/^[A-Za-z]:/.test(p));
     if(developerWorkspace)paths.push(...draftFiles);
