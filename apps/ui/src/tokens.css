@@ -30,7 +30,11 @@
 small { font-size: var(--text-2xs); }
 
 /* Modern colour roles resolve at the same root as the selected palette. */
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette] {
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette],
+:root[data-ui-version=modern] .theme-option[data-theme][data-palette] {
+  --syntax-comment: var(--t3);
+  --warning: var(--edited);
+  --brand-ink: var(--t1);
   --text-primary: var(--t1);
   --text-secondary: var(--t2);
   --text-muted: var(--t3);
@@ -51,53 +55,241 @@ small { font-size: var(--text-2xs); }
   --agent-rose-ink: #fa9bc1;
 }
 
-:root[data-ui-version=modern][data-experience=classic][data-theme=light][data-palette] {
-  --diff-added: #015729;
-  --diff-removed: #8c1c2f;
+:root[data-ui-version=modern][data-experience=classic][data-theme=light][data-palette],
+:root[data-ui-version=modern] .theme-option[data-theme=light][data-palette] {
+  --diff-added: #003500;
+  --diff-removed: #800d22;
 
-  --agent-claude-ink: #823110;
-  --agent-codex-ink: #01572a;
-  --agent-violet-ink: #603787;
-  --agent-gold-ink: #703e01;
-  --agent-blue-ink: #184a8c;
-  --agent-rose-ink: #802a5a;
+  --agent-claude-ink: #742800;
+  --agent-codex-ink: #004b20;
+  --agent-violet-ink: #552778;
+  --agent-gold-ink: #643300;
+  --agent-blue-ink: #0e3e80;
+  --agent-rose-ink: #731c4f;
 }
 
 /* SHIP-21: the three shipped palettes and their Settings previews own all paint here.
    UI-39: Jet Black's ink is the website's cream (t1) and three steps below it at the old steps' lightness, same hue. */
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet] {
-  --bg:#000000; --s1:#121212; --s2:#1a1a1a; --s3:#232326;
-  --line:#27272a; --line-2:#333337; --line-3:#525258; --t1:#f1eee4;
-  --t2:#d5d2c8; --t3:#afaca2; --t4:#949187; --focus:#4f9cff;
-  --palette-active:#4f9cff; --accent-partner:#34d6e6; --brand-ink:#f1eee4; --syntax-keyword:#ff9996; --syntax-string:#6bc970; --syntax-function:#cda4fc;
-  --syntax-number:#fc9e47; --syntax-type:#48c1f7; --syntax-property:#30c9c5;
-  --source:#80b8ff; --external:#f296df; --edited:#d4b137;
-  --pass:#83f7d1; --fail:#ff9b8f; --graph-node:#e8edf5; --graph-edge:#b4bfce;
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=jet],
+:root[data-ui-version=modern] .theme-option[data-palette=jet] {
+  --bg:#000000;
+  --s1:#121212;
+  --s2:#1a1a1a;
+  --s3:#232326;
+  --line:#27272a;
+  --line-2:#333337;
+  --line-3:#525258;
+  --t1:#f1eee4;
+  --t2:#d5d2c8;
+  --t3:#afaca2;
+  --t4:#949187;
+  --focus:#4f9cff;
+  --palette-active:#4f9cff;
+  --accent-partner:#34d6e6;
+  --brand-ink:#f1eee4;
+  --syntax-keyword:#ff9996;
+  --syntax-string:#6bc970;
+  --syntax-function:#cda4fc;
+  --syntax-number:#fc9e47;
+  --syntax-type:#48c1f7;
+  --syntax-property:#30c9c5;
+  --source:#80b8ff;
+  --external:#f296df;
+  --edited:#d4b137;
+  --pass:#83f7d1;
+  --fail:#ff9b8f;
+  --graph-node:#e8edf5;
+  --graph-edge:#b4bfce;
   color-scheme:dark;
 }
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper] {
-  --bg:#f6f9fb; --s1:#fcffff; --s2:#eef3f6; --s3:#e3eaef;
-  --line:#d7e0e6; --line-2:#c2ced6; --line-3:#8796a1; --t1:#14202a;
-  --t2:#3c4a55; --t3:#55636e; --t4:#59656f; --focus:#036a8f;
-  --palette-active:#0593c6; --syntax-keyword:#8f0a64; --syntax-string:#00572a; --syntax-function:#004f7a;
-  --syntax-number:#872c03; --syntax-type:#593b87; --syntax-property:#003db0;
-  --source:#004f7a; --external:#800c94; --edited:#872c03;
-  --pass:#003f00; --fail:#990812; --graph-node:#2d4452; --graph-edge:#6d8593;
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=paper],
+:root[data-ui-version=modern] .theme-option[data-palette=paper] {
+  --bg:#efede8;
+  --s1:#fcfaf6;
+  --s2:#eae7e1;
+  --s3:#dedbd5;
+  --line:#d7e0e6;
+  --line-2:#c2ced6;
+  --line-3:#8796a1;
+  --t1:#0d151d;
+  --t2:#303b43;
+  --t3:#4b565e;
+  --t4:#59656f;
+  --focus:#006486;
+  --palette-active:#0593c6;
+  --syntax-keyword:#7e0055;
+  --syntax-string:#00451f;
+  --syntax-function:#003970;
+  --syntax-number:#742200;
+  --syntax-type:#4c2c78;
+  --syntax-property:#002e98;
+  --source:#003970;
+  --external:#700080;
+  --edited:#742200;
+  --pass:#003500;
+  --fail:#85000c;
+  --graph-node:#2d4452;
+  --graph-edge:#6d8593;
   color-scheme:light;
 }
-:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight] {
-  --bg:#070d1b; --s1:#0d1628; --s2:#14213a; --s3:#1a2a43;
-  --line:#253753; --line-2:#344c6c; --line-3:#5c7398; --t1:#f4f8ff;
-  --t2:#cbdcf6; --t3:#a0b4d3; --t4:#8c9ec0; --focus:#8db8ff;
-  --palette-active:#8db8ff; --syntax-keyword:#fc9f9d; --syntax-string:#6ccc71; --syntax-function:#d0a6ff;
-  --syntax-number:#ffa24d; --syntax-type:#56c3f5; --syntax-property:#23ccc6;
-  --source:#7ebcfc; --external:#f09cde; --edited:#d6b542;
-  --pass:#83f7d1; --fail:#ff9e96; --graph-node:#edf5ff; --graph-edge:#9db9e2;
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=midnight],
+:root[data-ui-version=modern] .theme-option[data-palette=midnight] {
+  --bg:#03060d;
+  --s1:#0d1628;
+  --s2:#14213a;
+  --s3:#1a2a43;
+  --line:#253753;
+  --line-2:#344c6c;
+  --line-3:#5c7398;
+  --t1:#f4f8ff;
+  --t2:#cbdcf6;
+  --t3:#a0b4d3;
+  --t4:#8c9ec0;
+  --focus:#8db8ff;
+  --palette-active:#8db8ff;
+  --syntax-keyword:#fc9f9d;
+  --syntax-string:#6ccc71;
+  --syntax-function:#d0a6ff;
+  --syntax-number:#ffa24d;
+  --syntax-type:#56c3f5;
+  --syntax-property:#23ccc6;
+  --source:#7ebcfc;
+  --external:#f09cde;
+  --edited:#d6b542;
+  --pass:#83f7d1;
+  --fail:#ff9e96;
+  --graph-node:#edf5ff;
+  --graph-edge:#9db9e2;
   color-scheme:dark;
 }
-:root[data-ui-version=modern] .theme-dark {--swatch-bg:#000000;--swatch-node:#121212;--swatch-raised:#1a1a1a;--swatch-accent:#4f9cff;--swatch-border:#27272a;}
-:root[data-ui-version=modern] .theme-light {--swatch-bg:#f6f9fb;--swatch-node:#fcffff;--swatch-raised:#eef3f6;--swatch-accent:#0593c6;--swatch-border:#d7e0e6;}
-:root[data-ui-version=modern] .theme-midnight {--swatch-bg:#070d1b;--swatch-node:#0d1628;--swatch-raised:#14213a;--swatch-accent:#8db8ff;--swatch-border:#253753;}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=neutral],
+:root[data-ui-version=modern] .theme-option[data-palette=neutral] {
+  --bg:#000000;
+  --s1:#121212;
+  --s2:#1a1a1a;
+  --s3:#242424;
+  --line:#303030;
+  --line-2:#414141;
+  --line-3:#808080;
+  --t1:#fafafa;
+  --t2:#d4d4d4;
+  --t3:#afafaf;
+  --t4:#949494;
+  --focus:#fafafa;
+  --palette-active:#fafafa;
+  --accent-partner:#d4d4d4;
+  --brand-ink:#fafafa;
+  --syntax-keyword:#ff9996;
+  --syntax-string:#6bc970;
+  --syntax-function:#cda4fc;
+  --syntax-number:#fc9e47;
+  --syntax-type:#48c1f7;
+  --syntax-property:#30c9c5;
+  --source:#80b8ff;
+  --external:#f296df;
+  --edited:#d4b137;
+  --pass:#83f7d1;
+  --fail:#ff9b8f;
+  --graph-node:#e8edf5;
+  --graph-edge:#b4bfce;
+  color-scheme:dark;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=chalk],
+:root[data-ui-version=modern] .theme-option[data-palette=chalk] {
+  --bg:#ededeb;
+  --s1:#fbfbf8;
+  --s2:#e8e8e4;
+  --s3:#dbdbd6;
+  --line:#cacac6;
+  --line-2:#b0b0ac;
+  --line-3:#747470;
+  --t1:#111111;
+  --t2:#363636;
+  --t3:#535353;
+  --t4:#656565;
+  --focus:#111111;
+  --palette-active:#111111;
+  --syntax-keyword:#7e0055;
+  --syntax-string:#00451f;
+  --syntax-function:#003970;
+  --syntax-number:#742200;
+  --syntax-type:#4c2c78;
+  --syntax-property:#002e98;
+  --source:#003970;
+  --external:#700080;
+  --edited:#663100;
+  --pass:#003500;
+  --fail:#85000c;
+  --graph-node:#2d4452;
+  --graph-edge:#6d8593;
+  --accent-partner:#363636;
+  --brand-ink:#111111;
+  color-scheme:light;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=slate],
+:root[data-ui-version=modern] .theme-option[data-palette=slate] {
+  --bg:#070709;
+  --s1:#15171c;
+  --s2:#1d1f25;
+  --s3:#25282f;
+  --line:#363b44;
+  --line-2:#4b5360;
+  --line-3:#707d8d;
+  --t1:#ffffff;
+  --t2:#d6dce5;
+  --t3:#b1bac8;
+  --t4:#97a3b5;
+  --focus:#ead4c9;
+  --palette-active:#ead4c9;
+  --syntax-keyword:#fc9f9d;
+  --syntax-string:#6ccc71;
+  --syntax-function:#d0a6ff;
+  --syntax-number:#ffa24d;
+  --syntax-type:#56c3f5;
+  --syntax-property:#23ccc6;
+  --source:#7ebcfc;
+  --external:#f09cde;
+  --edited:#d6b542;
+  --pass:#83f7d1;
+  --fail:#ff9e96;
+  --graph-node:#edf5ff;
+  --graph-edge:#9db9e2;
+  --accent-partner:#c7d1df;
+  --brand-ink:#ffffff;
+  color-scheme:dark;
+}
+:root[data-ui-version=modern][data-experience=classic][data-theme][data-palette=aubergine],
+:root[data-ui-version=modern] .theme-option[data-palette=aubergine] {
+  --bg:#050307;
+  --s1:#19121f;
+  --s2:#22192a;
+  --s3:#2b2234;
+  --line:#3b2e46;
+  --line-2:#51405e;
+  --line-3:#8e7b9e;
+  --t1:#fffbff;
+  --t2:#ded3e8;
+  --t3:#bdb0ca;
+  --t4:#a596b5;
+  --focus:#eae0f2;
+  --palette-active:#eae0f2;
+  --syntax-keyword:#fc9f9d;
+  --syntax-string:#6ccc71;
+  --syntax-function:#d0a6ff;
+  --syntax-number:#ffa24d;
+  --syntax-type:#56c3f5;
+  --syntax-property:#23ccc6;
+  --source:#7ebcfc;
+  --external:#f09cde;
+  --edited:#d6b542;
+  --pass:#83f7d1;
+  --fail:#ff9e96;
+  --graph-node:#edf5ff;
+  --graph-edge:#9db9e2;
+  --accent-partner:#c7b4d9;
+  --brand-ink:#fffbff;
+  color-scheme:dark;
+}
 
 /* Bootstrap paint retained for unselected/retired base rules. Active Modern palettes override these defaults. */
 :root {

@@ -716,7 +716,7 @@ test('history activity timeline opens recorded failures and edits; named palette
   const dialog = page.getByRole('dialog', { name: 'Workspace settings' });
   await dialog.getByRole('button', { name: 'Midnight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'midnight');
-  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(7, 13, 27)');
+  expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(3, 6, 13)');
   await dialog.getByRole('button', { name: 'Daylight', exact: true }).click();
   await expect(page.locator('html')).toHaveAttribute('data-palette', 'paper');
   await dialog.getByRole('button', { name: 'Jet Black', exact: true }).click();
