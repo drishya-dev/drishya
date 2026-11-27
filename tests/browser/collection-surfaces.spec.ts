@@ -30,6 +30,41 @@ async function open(page:Page,count:number){await page.goto(server.launchUrl);aw
 async function approve(page:Page){const grant=page.getByRole('button',{name:/^Enable workspace reading/});await expect(grant.or(page.locator('.folder-explorer[data-reading-access=current]'))).toBeVisible();if(await grant.isVisible())await grant.click();await expect(page.locator('.folder-explorer')).toHaveAttribute('data-reading-access','current');}
 
 for(const count of [3,300]){
+ test(`${count} files keep newer prompt focus during deferred tree navigation`,async({page})=>{
+  await page.setViewportSize({width:1440,height:900});
+  await open(page,count);await approve(page);
+  const tree=page.getByRole('tree',{name:'Workspace files'});
+  const lastFile=tree.getByRole('treeitem',{name:'main.ts'});
+  await tree.getByRole('treeitem').first().press('End');
+  await expect(lastFile).toBeFocused();
+
+  // Delay only the frame requested by the tree's Home handler, so the next control can receive focus first.
+  const pendingFocus=await lastFile.evaluateHandle(file=>{
+   const requestFrame=window.requestAnimationFrame;
+   const callbacks:FrameRequestCallback[]=[];
+   window.requestAnimationFrame=callback=>callback.toString().includes('data-tree-index')
+    ? callbacks.push(callback)
+    : requestFrame.call(window,callback);
+   try {
+    if(file.dispatchEvent(new KeyboardEvent('keydown',{key:'Home',bubbles:true,cancelable:true})))throw new Error('Files tree did not handle Home');
+   } finally { window.requestAnimationFrame=requestFrame; }
+   if(callbacks.length!==1)throw new Error(`Expected one Files focus frame, got ${callbacks.length}`);
+   return callbacks[0]!;
+  });
+  try {
+   await expect(tree.getByRole('treeitem').first()).toHaveText('collection-000.ts');
+   if(count===300)await expect(lastFile).toHaveCount(0);
+   const rail=page.getByRole('navigation',{name:'Prompt positions in history'});
+   const lastPrompt=rail.locator(`[data-prompt-ordinal="${count}"]`);
+   await rail.press('End');
+   await expect(lastPrompt).toBeFocused();
+   await pendingFocus.evaluate(callback=>new Promise<void>(resolve=>requestAnimationFrame(time=>{
+    callback(time);
+    resolve();
+   })));
+   await expect(lastPrompt).toBeFocused();
+  } finally { await pendingFocus.dispose(); }
+ });
  test(`${count} output lines use a natural hover or bounded reading with complete stored pages`,async({page})=>{
   await open(page,count);const history=page.locator('.history');await history.focus();await page.keyboard.press('g');await page.keyboard.press('j');
   const card=history.locator('article.op-shell').first();await card.scrollIntoViewIfNeeded();await card.locator('.op-head').hover();await expect(card).toHaveAttribute('data-hover-reading','focused');
