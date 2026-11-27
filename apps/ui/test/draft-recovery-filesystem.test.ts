@@ -1,4 +1,4 @@
-import {mkdtempSync,realpathSync,mkdirSync,writeFileSync,readFileSync,statSync,symlinkSync,unlinkSync,rmSync} from 'node:fs';
+import {mkdtempSync,realpathSync,mkdirSync,writeFileSync,readFileSync,statSync,symlinkSync,unlinkSync,rmSync,writeSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join,resolve,sep} from 'node:path';
 import {spawnSync} from 'node:child_process';
@@ -11,8 +11,30 @@ import {WorkspaceAccess} from '../../daemon/src/workspace.ts';
 let directory:string,root:string;
 const base='export const before = 1;\r\n',draft={base,text:'export const recovered = 2;\r\n',modifiedAt:'2026-10-28T00:00:00Z'};
 const sameFile=(a:string,b:string)=>{const x=statSync(a,{bigint:true}),y=statSync(b,{bigint:true});return x.dev===y.dev&&x.ino===y.ino;};
-beforeAll(()=>{directory=realpathSync.native(mkdtempSync(join(tmpdir(),'drishya-files5-filesystem-')));root=join(directory,'repo');mkdirSync(root);});
-afterAll(()=>{if(!resolve(directory).startsWith(resolve(realpathSync.native(tmpdir()))+sep))throw Error('Unsafe temporary directory');rmSync(directory,{recursive:true,force:true});});
+
+type LinkedDraftPhase = 'fixture' | 'junction' | 'store' | 'journal' | 'import' | 'approve-graph' | 'restore' | 'linked-read' | 'app-close' | 'unlink' | 'fixture-cleanup';
+const traceLinkedDraft = process.env.DRISHYA_TEST_LINKED_DRAFT_TRACE === '1';
+const traceStart = performance.now();
+
+function linkedDraftPhase(phase: LinkedDraftPhase, boundary: 'start' | 'done' | 'skipped') {
+  if (!traceLinkedDraft) return;
+  // Use the file descriptor directly so the last start marker is visible even if this worker stops making progress.
+  // The fixed labels and elapsed milliseconds carry no fixture paths or content.
+  try { writeSync(2, `[draft-recovery-link] ${phase} ${boundary} ${Math.round(performance.now() - traceStart)}ms\n`); }
+  catch { /* A closed diagnostic stream does not change the test result. */ }
+}
+
+beforeAll(()=>{
+ linkedDraftPhase('fixture','start');
+ directory=realpathSync.native(mkdtempSync(join(tmpdir(),'drishya-files5-filesystem-')));root=join(directory,'repo');mkdirSync(root);
+ linkedDraftPhase('fixture','done');
+});
+afterAll(()=>{
+ linkedDraftPhase('fixture-cleanup','start');
+ if(!resolve(directory).startsWith(resolve(realpathSync.native(tmpdir()))+sep))throw Error('Unsafe temporary directory');
+ rmSync(directory,{recursive:true,force:true});
+ linkedDraftPhase('fixture-cleanup','done');
+});
 
 it('round trips exact Unicode draft spellings even on normalising volumes and leaves real disk bytes unchanged',async()=>{
  const paths=['résumé.ts','re\u0301sume\u0301.ts','日本語.ts','emoji-🧠.ts'];
@@ -56,15 +78,44 @@ it.skipIf(process.platform!=='win32')('discloses conservative Unicode case colli
 });
 
 it('retains recovered linked paths only as inert drafts and refuses current bytes through a filesystem link',async context=>{
+ linkedDraftPhase('junction','start');
  const target=join(root,'target'),linked=join(root,'linked');mkdirSync(target);writeFileSync(join(target,'file.ts'),base);
- try{symlinkSync(target,linked,process.platform==='win32'?'junction':'dir');}catch(error){if(['EPERM','EACCES','ENOTSUP'].includes((error as NodeJS.ErrnoException).code??'')){context.skip();return;}throw error;}
+ try{symlinkSync(target,linked,process.platform==='win32'?'junction':'dir');}catch(error){
+  if(['EPERM','EACCES','ENOTSUP'].includes((error as NodeJS.ErrnoException).code??'')){
+   linkedDraftPhase('junction','skipped');
+   context.skip();return;
+  }
+  throw error;
+ }
+ linkedDraftPhase('junction','done');
+ linkedDraftPhase('store','start');
  const app=new App(join(directory,'store'));
+ linkedDraftPhase('store','done');
  try{
+  linkedDraftPhase('journal','start');
   expect(sameFile(join(target,'file.ts'),join(linked,'file.ts'))).toBe(true);
   const journal=join(directory,'synthetic.jsonl');writeFileSync(journal,JSON.stringify({type:'user',uuid:'synthetic',sessionId:'filesystem',cwd:root,message:{role:'user',content:'Synthetic recovery acceptance'}})+'\n');
-  const id=(await app.ingest.importSource('claude-code',journal)).recordingId,access=new WorkspaceAccess(app);await access.approve(id);
+  linkedDraftPhase('journal','done');
+  linkedDraftPhase('import','start');
+  const id=(await app.ingest.importSource('claude-code',journal)).recordingId;
+  linkedDraftPhase('import','done');
+  linkedDraftPhase('approve-graph','start');
+  const access=new WorkspaceAccess(app);await access.approve(id);
+  linkedDraftPhase('approve-graph','done');
+  linkedDraftPhase('restore','start');
   const source=new WorkspaceDrafts();source.set(id,'linked/file.ts',draft);const live=new WorkspaceDrafts();restoreRecovery(live,recoverySnapshot(source,id,root),id,root);
-  expect(live.get(id,'linked/file.ts')).toEqual(draft);await expect(access.read(id,'linked/file.ts')).rejects.toThrow('linked files are not readable');
+  expect(live.get(id,'linked/file.ts')).toEqual(draft);
+  linkedDraftPhase('restore','done');
+  linkedDraftPhase('linked-read','start');
+  await expect(access.read(id,'linked/file.ts')).rejects.toThrow('linked files are not readable');
   expect(readFileSync(join(target,'file.ts'),'utf8')).toBe(base);
- }finally{await app.close();unlinkSync(linked);}
+  linkedDraftPhase('linked-read','done');
+ }finally{
+  linkedDraftPhase('app-close','start');
+  await app.close();
+  linkedDraftPhase('app-close','done');
+  linkedDraftPhase('unlink','start');
+  unlinkSync(linked);
+  linkedDraftPhase('unlink','done');
+ }
 });
