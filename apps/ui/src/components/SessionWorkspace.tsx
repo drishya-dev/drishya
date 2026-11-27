@@ -525,7 +525,12 @@ export function FolderExplorer({ scene, projection }: { scene: Scene; projection
       if (next * rowHeight < el.scrollTop) el.scrollTop = next * rowHeight;
       else if ((next + 1) * rowHeight > el.scrollTop + el.clientHeight) el.scrollTop = (next + 1) * rowHeight - el.clientHeight;
       setTreeScroll(el.scrollTop);
-      requestAnimationFrame(() => el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true }));
+      requestAnimationFrame(() => {
+        const { activeElement, body } = el.ownerDocument;
+        // A virtualized row can unmount and leave focus on the body while the new row commits.
+        const ownsFocus = el.contains(activeElement) || (!target.isConnected && activeElement === body);
+        if (el.isConnected && ownsFocus) el.querySelector<HTMLElement>(`[data-tree-index="${next}"]`)?.focus({ preventScroll: true });
+      });
     }}>
       <div aria-hidden="true" style={{ height: firstRow * rowHeight }} />
       {tree.slice(firstRow, lastRow).map((row, i) => <button className={row.folder ? 'folder-row' : 'spine-file'} role="treeitem" aria-selected={row.path===(workspaceFile?activeReveal?.path:revealedFolder)} aria-label={row.name} aria-description={row.description??(draftFiles.includes(row.path)?"Local draft; file not created on disk.":fileEvidenceDescription(evidence.get(row.path), row.folder?touched.folders.get(row.path):undefined))} disabled={approving&&!row.folder} aria-level={row.depth + 1} aria-posinset={siblingPositions.get(row.path)?.position} aria-setsize={siblingPositions.get(row.path)?.size} aria-expanded={row.folder ? opened.has(row.path) : undefined} key={row.path} data-tree-index={firstRow + i} data-tree-path={row.path} data-spine-path={row.folder ? undefined : row.path} data-file-location={row.unplaced ? 'unplaced' : undefined} style={{ paddingLeft: (8 + Math.min(row.depth, 12) * 12)*interfaceScale, height: rowHeight, minHeight: rowHeight }} title={row.unplaced ? `Captured path; repository location unresolved: ${row.path}` : row.location ?? (row.worktree ? row.name : row.path)} onMouseEnter={() => !row.folder && useApp.setState({ hoveredPath: row.path })} onMouseLeave={() => useApp.setState({ hoveredPath: undefined })} onClick={() => {
